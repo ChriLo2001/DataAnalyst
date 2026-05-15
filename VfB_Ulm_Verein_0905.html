@@ -496,7 +496,7 @@ function createSeasonBucket(key,config){
     config,
     status:{loaded:false,loading:false,lastLoadedAt:null},
     cache:{rawGames:null,normalizedGames:null,ulmGames:null,leagueGames:null,standings:null},
-    data:{games:[],gamesData:[],rawGames:[],rawLeagueGames:[],relevantLeagueGames:[],excludedScheduledGames:[],flaggedSuspiciousGames:[],players:[],playersMap:{},events:{},eventsList:[],penalties:{},teamStats:{},teamGoalsPerGame:{},standings:[],playerRegistry:null,allTime:null,warnings:[]},
+    data:{games:[],gamesData:[],rawGames:[],loadedGames:[],failedGames:[],rawLeagueGames:[],relevantLeagueGames:[],excludedGames:[],excludedScheduledGames:[],flaggedSuspiciousGames:[],players:[],playersMap:{},events:{},eventsList:[],penalties:{},teamStats:{},teamGoalsPerGame:{},standings:[],playerRegistry:null,allTime:null,warnings:[]},
     errors:[],
     dbg:[],
   };
@@ -846,7 +846,8 @@ let S={
   activeSeasonKey:CURRENT_SEASON_KEY,
   selectedSeasonKey:CURRENT_SEASON_KEY,
   globalPlayerId:null,globalTab:'overview',showSgOnlyAlltime:false,
-  comparisonItems:[],comparisonSearch:'',comparisonSeasonFilter:'all',comparisonHasRun:false,comparisonMessage:'',
+  comparisonItems:[],comparisonSearch:'',comparisonSeasonFilter:'all',comparisonShowSgOnly:false,comparisonSelectedPlayerId:null,comparisonSelectedVariant:'playerAlltime:',
+  comparisonHasRun:false,comparisonPickerOpen:true,comparisonMessage:'',
   errors:[],dbg:[],
 };
 const setState=p=>{S={...S,...p};render();};
@@ -876,8 +877,11 @@ function getSeasonData(seasonKey=getActiveSeasonKey()){
     games:data.games||data.gamesData||[],
     gamesData:data.gamesData||[],
     rawGames:data.rawGames||[],
+    loadedGames:data.loadedGames||data.rawGames||[],
+    failedGames:data.failedGames||[],
     rawLeagueGames:data.rawLeagueGames||[],
     relevantLeagueGames:data.relevantLeagueGames||[],
+    excludedGames:data.excludedGames||data.excludedScheduledGames||[],
     excludedScheduledGames:data.excludedScheduledGames||[],
     flaggedSuspiciousGames:data.flaggedSuspiciousGames||[],
     players:data.players||[],
@@ -1106,26 +1110,49 @@ function gameClassificationStatusLabel(g,classification=null){
   ].map(v=>cleanText(v||'').trim()).filter(Boolean);
   return fields.length?fields.join(' / '):c.status;
 }
-function appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,errors,dbg}){
+function appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,failedGameLoads,errors,dbg}){
+  const label=seasonConfig.label||seasonKey;
+  const failedEntries=failedGameLoads instanceof Map?[...failedGameLoads.entries()]:[];
+  const excludedRows=excludedScheduledGames||[];
+  const suspiciousRows=flaggedSuspiciousGames||[];
   const duplicateIds=diagnoseGameDuplicates(rawGamesData||leagueGamesData);
   for(const dup of duplicateIds){
-    const msg=`Doppelte Game-ID ${dup.id} in ${seasonConfig.label||seasonKey} erkannt (${dup.count}x). Es wird nur ein Eintrag geladen; Details: ${dup.games.join(' | ')}`;
+    const msg=`Doppelte Game-ID ${dup.id} in ${label} erkannt (${dup.count}x). Es wird nur ein Eintrag geladen; Details: ${dup.games.join(' | ')}`;
     errors.push(msg);
     dbg.push(`⚠️ ${msg}`);
   }
-  if((excludedScheduledGames||[]).length||seasonKey==='24/25'){
-    const msg=`${seasonConfig.label||seasonKey}: ${(leagueGamesData||[]).length} Spiele geladen, ${(relevantLeagueGames||[]).length} ausgetragene reguläre Spiele für Statistiken verwendet, ${(excludedScheduledGames||[]).length} abgesagte/verschobene/nicht relevante Spiele ausgeschlossen.`;
+  if(excludedRows.length||suspiciousRows.length||failedEntries.length||duplicateIds.length||seasonKey==='24/25'){
+    const loadedCount=(rawGamesData||[]).length;
+    const leagueCount=(leagueGamesData||[]).length;
+    const relevantCount=(relevantLeagueGames||[]).length;
+    const failedSuffix=failedEntries.length?`, ${failedEntries.length} echte Ladefehler`:`, keine echten Ladefehler`;
+    const msg=`${label}: ${loadedCount} Spiele geladen (${leagueCount} Ligaspiele erkannt), ${relevantCount} ausgetragene reguläre Spiele für Statistiken verwendet, ${excludedRows.length} abgesagte/verschobene/nicht relevante Spiele ausgeschlossen${failedSuffix}.`;
     errors.push(msg);
     dbg.push(`⚠️ ${msg}`);
   }
-  for(const row of excludedScheduledGames||[]){
+  if(excludedRows.length){
+    const counts=excludedRows.reduce((acc,row)=>{
+      const c=row.classification||classifyGameForStats(row.game||row,seasonConfig);
+      acc[c.status]=(acc[c.status]||0)+1;
+      return acc;
+    },{});
+    const parts=[
+      counts.cancelled?`${counts.cancelled} abgesagt`:'',
+      counts.postponed?`${counts.postponed} verschoben`:'',
+      counts.unplayed?`${counts.unplayed} nicht ausgetragen`:'',
+    ].filter(Boolean).join(', ');
+    const msg=`${label}: Ausgeschlossene Termine nach Status: ${parts||`${excludedRows.length} nicht regulär`}. Diese Spiele bleiben in rawGames/Diagnose sichtbar und zählen nicht für Statistiken.`;
+    errors.push(msg);
+    dbg.push(`⚠️ ${msg}`);
+  }
+  for(const row of excludedRows){
     const g=row.game||row;
     const c=row.classification||classifyGameForStats(g,seasonConfig);
     const msg=`Ausgeschlossen: Game ${g.id||gameStableId(g)} ${g.home_team_name||'?'} - ${g.guest_team_name||'?'} | Status: ${gameClassificationStatusLabel(g,c)} | Grund: ${c.reason}`;
     errors.push(msg);
     dbg.push(`⚠️ ${msg}`);
   }
-  for(const row of flaggedSuspiciousGames||[]){
+  for(const row of suspiciousRows){
     const g=row.game||row;
     const c=row.classification||classifyGameForStats(g,seasonConfig);
     const msg=`Auffällig: Game ${g.id||gameStableId(g)} ${g.home_team_name||'?'} - ${g.guest_team_name||'?'} | Status: ${gameClassificationStatusLabel(g,c)} | Grund: ${c.reason}`;
@@ -3195,7 +3222,7 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   if(failedGameLoads.size){
     const ids=[...failedGameLoads.keys()].sort((a,b)=>a-b);
     const plural=ids.length!==1;
-    errors.push(`${ids.length} Spiel${plural?'e':''} konnte${plural?'n':''} nicht geladen werden und ${plural?'wurden':'wurde'} aus der Analyse ausgeschlossen: ${ids.join(', ')}`);
+    errors.push(`${seasonConfig.label||seasonKey}: ${ids.length} echte Ladefehler bei bekannten Spiel-IDs: ${ids.join(', ')}. Diese IDs konnten über keinen Ladeweg geladen werden und werden getrennt von abgesagten/verschobenen Terminen diagnostiziert.`);
     ids.forEach(id=>errors.push(formatGameLoadError(seasonKey,id,failedGameLoads.get(id))));
     if(ULM_GAME_IDS.length&&ids.length===ULM_GAME_IDS.length){
       errors.push(`Alle bekannten Spiele der Saison ${seasonConfig.label||seasonKey} sind fehlgeschlagen. Siehe Diagnose oben: API-Endpunkt, CORS/Direct-Status, Proxy-Status und HTML-Fallback-Prüfung wurden pro Spiel protokolliert.`);
@@ -3356,7 +3383,7 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   const excludedScheduledGames=classifiedLeagueGames.filter(row=>!row.classification.countsForStats&&['cancelled','postponed','unplayed'].includes(row.classification.status));
   const flaggedSuspiciousGames=classifiedLeagueGames.filter(row=>row.classification.status==='suspicious');
   dbg.push(`📌 Relevante Liga-Spiele für Statistiken: ${relevantLeagueGames.length}/${leagueGamesData.length}; ausgeschlossen: ${excludedScheduledGames.length}; auffällig: ${flaggedSuspiciousGames.length}`);
-  appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,errors,dbg});
+  appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,failedGameLoads,errors,dbg});
   const standings=buildStandings(relevantLeagueGames,seasonConfig);
   dbg.push(`🏆 Tabelle: ${standings.length} Teams`);
   if(standings.length)dbg.push(`📊 SP-Check: `+standings.slice(0,4).map(t=>`${t.name.split(' ').pop()}=${t.sp}`).join(', '));
@@ -3390,7 +3417,7 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   const playersMap=Object.fromEntries(players.map(p=>[p.key,p]));
   const teamStats=aggregateSeasonStats(seasonKey,{gamesData:statGamesData,players,events:evMap,penalties:penMap,teamGoalsPerGame:tgpg,standings});
   seasonBucket.data={
-    games:statGamesData,gamesData:statGamesData,rawGames:rawGamesData,rawLeagueGames:leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,players,playersMap,events:evMap,eventsList,penalties:penMap,teamStats,teamGoalsPerGame:tgpg,standings,
+    games:statGamesData,gamesData:statGamesData,rawGames:rawGamesData,loadedGames:rawGamesData,failedGames:[...failedGameLoads.entries()].map(([id,error])=>({id,error:error?.message||String(error||'Unbekannter Ladefehler')})),rawLeagueGames:leagueGamesData,relevantLeagueGames,excludedGames:excludedScheduledGames,excludedScheduledGames,flaggedSuspiciousGames,players,playersMap,events:evMap,eventsList,penalties:penMap,teamStats,teamGoalsPerGame:tgpg,standings,
     playerRegistry:playerFoundation.registry,playerStatus:playerFoundation.status,allTime:playerFoundation.allTime,warnings:[...errors],
   };
   seasonBucket.errors=[...errors];
@@ -3594,7 +3621,11 @@ window.openComparisonCenter=async()=>{
     comparisonItems:S.comparisonItems||[],
     comparisonSearch:S.comparisonSearch||'',
     comparisonSeasonFilter:S.comparisonSeasonFilter||'all',
+    comparisonShowSgOnly:!!S.comparisonShowSgOnly,
+    comparisonSelectedPlayerId:S.comparisonSelectedPlayerId||null,
+    comparisonSelectedVariant:S.comparisonSelectedVariant||'playerAlltime:',
     comparisonHasRun:S.comparisonHasRun||false,
+    comparisonPickerOpen:S.comparisonPickerOpen!==false,
     comparisonMessage:S.comparisonMessage||'',
   });
 };
@@ -4062,6 +4093,7 @@ function generatePlayerInsights(pd,m){
 function rInsights(pd){
   const ev=S.events[pd.key]||[];
   if(!ev.length)return'<div class="noev">Keine Daten.</div>';
+  return rSeasonPlayerDashboard(pd,{showHeader:false});
   const m=pd.metrics||{};
   const goals=ev.filter(e=>e.type==='Tor');
   const assists=ev.filter(e=>e.type==='Vorlage');
@@ -5103,7 +5135,8 @@ function rSparkline(rows){
     ${rows.map((r,i)=>{const x=pad+(i/Math.max(rows.length-1,1))*(w-pad*2);const y=h-pad-((r.points||0)/max)*(h-pad*2);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.4" fill="#0a0e1a" stroke="#fbbf24" stroke-width="2"/>`;}).join('')}
   </svg>`;
 }
-const COMPARISON_MAX_ITEMS=5;
+const COMPARISON_MAX_ITEMS=6;
+const COMPARE_COLORS=['#EF9F27','#378ADD','#10B981','#8B5CF6','#EF4444','#FACC15'];
 const COMPARISON_STYLE_CATEGORIES=[
   {key:'abschluss',label:'Abschluss',color:'#3b82f6'},
   {key:'kreativitaet',label:'Kreativität',color:'#10b981'},
@@ -5500,6 +5533,732 @@ function rComparisonCenterPage(){
     </div>
   </div>`;
 }
+
+// Comparison Center v2: player-first picker, richer metrics and SVG-only KPI visuals.
+function getComparisonPlayerOptions(){
+  const showSgOnly=!!S.comparisonShowSgOnly;
+  return getAllTimePlayerRows()
+    .filter(row=>showSgOnly||!isSgOnlyAlltimePlayer(row))
+    .filter(row=>(row.allStats?.games||0)>0||(row.allStats?.points||0)>0||Object.values(row.profile?.statsBySeason||{}).some(st=>(st.games||0)>0||(st.points||0)>0))
+    .map(row=>{
+      const variants=getComparisonVariantsForPlayer(row.playerId);
+      return{playerId:String(row.playerId),name:row.name,color:row.color,points:row.allStats?.points||0,seasons:variants.filter(v=>v.type==='seasonPerformance').map(v=>v.season),variants,sgOnly:isSgOnlyAlltimePlayer(row)};
+    })
+    .filter(row=>row.variants.length)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+}
+function getComparisonVariantsForPlayer(playerId){
+  const row=getComparisonPlayerRow(playerId);
+  if(!row)return[];
+  const variants=[];
+  if((row.allStats?.games||0)>0||(row.allStats?.points||0)>0){
+    variants.push({type:'playerAlltime',season:'',value:'playerAlltime:',label:'Alltime',points:row.allStats?.points||0,games:row.allStats?.games||0});
+  }
+  Object.entries(row.profile?.statsBySeason||{})
+    .filter(([,st])=>(st.games||0)>0||(st.points||0)>0)
+    .sort(([a],[b])=>seasonOrderIndex(b)-seasonOrderIndex(a))
+    .forEach(([seasonKey,st])=>{
+      variants.push({type:'seasonPerformance',season:seasonKey,value:`seasonPerformance:${seasonKey}`,label:getComparisonSeasonLabel(seasonKey),points:st.points||0,games:st.games||0});
+    });
+  return variants;
+}
+function parseComparisonVariant(value){
+  const raw=String(value||'playerAlltime:');
+  const idx=raw.indexOf(':');
+  const type=idx===-1?raw:raw.slice(0,idx);
+  const season=idx===-1?'':raw.slice(idx+1);
+  return{type:type==='playerAlltime'?'playerAlltime':'seasonPerformance',season:type==='playerAlltime'?'':season};
+}
+function getComparisonCurrentSelection(){
+  const players=getComparisonPlayerOptions();
+  const selectedId=players.some(p=>p.playerId===String(S.comparisonSelectedPlayerId))?String(S.comparisonSelectedPlayerId):(players[0]?.playerId||'');
+  const variants=getComparisonVariantsForPlayer(selectedId);
+  const selectedVariant=variants.some(v=>v.value===S.comparisonSelectedVariant)?S.comparisonSelectedVariant:(variants[0]?.value||'playerAlltime:');
+  const parsed=parseComparisonVariant(selectedVariant);
+  return{players,playerId:selectedId,variants,variantValue:selectedVariant,variant:parsed};
+}
+window.filterComparisonPlayers=value=>{
+  S.comparisonSearch=String(value||'');
+  const needle=normalizePlayerName(S.comparisonSearch);
+  for(const row of document.querySelectorAll?.('[data-compare-player-row]')||[]){
+    const hay=row.getAttribute('data-compare-search')||'';
+    row.style.display=!needle||hay.includes(needle)?'':'none';
+  }
+};
+window.selectComparisonPlayer=playerId=>{
+  const id=String(playerId||'');
+  const variants=getComparisonVariantsForPlayer(id);
+  setState({comparisonSelectedPlayerId:id,comparisonSelectedVariant:variants[0]?.value||'playerAlltime:',comparisonMessage:''});
+};
+window.setComparisonVariant=value=>setState({comparisonSelectedVariant:String(value||'playerAlltime:'),comparisonMessage:''});
+window.toggleComparisonSgOnly=checked=>setState({comparisonShowSgOnly:!!checked,comparisonMessage:''});
+window.addComparisonItem=(type,playerId,season='')=>{
+  const item=normalizeComparisonItem({type,playerId,season});
+  const current=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  if(!item.playerId)return setState({comparisonMessage:'Nicht genügend Daten vorhanden.'});
+  if(current.some(existing=>comparisonItemKey(existing)===comparisonItemKey(item)))return setState({comparisonMessage:'Dieses Vergleichsobjekt ist bereits ausgewählt.'});
+  if(current.length>=COMPARISON_MAX_ITEMS)return setState({comparisonMessage:`Maximal ${COMPARISON_MAX_ITEMS} Vergleichsobjekte möglich.`});
+  setState({comparisonItems:[...current,item],comparisonHasRun:false,comparisonMessage:''});
+};
+window.addSelectedComparisonItem=()=>{
+  const sel=getComparisonCurrentSelection();
+  if(!sel.playerId||!sel.variants.length)return setState({comparisonMessage:'Nicht genügend Daten vorhanden.'});
+  const item={type:sel.variant.type,playerId:sel.playerId,season:sel.variant.season};
+  return window.addComparisonItem(item.type,item.playerId,item.season);
+};
+window.toggleComparisonPicker=()=>setState({comparisonPickerOpen:!S.comparisonPickerOpen,comparisonMessage:''});
+window.removeComparisonItem=key=>{
+  const next=(S.comparisonItems||[]).map(normalizeComparisonItem).filter(item=>comparisonItemKey(item)!==key);
+  setState({comparisonItems:next,comparisonHasRun:S.comparisonHasRun&&next.length>=2,comparisonMessage:''});
+};
+window.clearComparison=()=>setState({comparisonItems:[],comparisonHasRun:false,comparisonPickerOpen:true,comparisonMessage:''});
+window.runComparison=()=>{
+  const items=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  if(items.length<2)return setState({comparisonMessage:'Für einen Vergleich werden mindestens zwei Objekte benötigt.',comparisonHasRun:false,comparisonPickerOpen:true});
+  const dataset=buildComparisonDataset(items).filter(d=>d.hasData);
+  if(dataset.length<2)return setState({comparisonMessage:'Nicht genügend Daten vorhanden.',comparisonHasRun:false,comparisonPickerOpen:true});
+  setState({comparisonHasRun:true,comparisonPickerOpen:false,comparisonMessage:''});
+};
+function getComparisonEventsForItem(row,item){
+  return item.type==='playerAlltime'?getGlobalProfileEvents(row):getComparisonSeasonEvents(row,item.season);
+}
+function getComparisonRosterGamesForSeason(row,seasonKey){
+  const data=SEASONS[seasonKey]?.data||{};
+  const ui=getLoadedSeasonPlayerUi(row?.profile,seasonKey);
+  if(!ui)return[];
+  const rows=[];
+  const seen=new Set();
+  for(const g of data.relevantLeagueGames||data.gamesData||[]){
+    const side=detectSide(g);if(!side)continue;
+    const roster=g.players?.[side]||[];
+    if(!roster.some(p=>rosterPlayerMatches(ui,p)||rosterPlayerMatches(row.profile,p)))continue;
+    const id=gameStableId(g);
+    if(seen.has(id))continue;
+    seen.add(id);
+    rows.push({seasonKey,gameId:id,date:g.date||'',opponent:normalizeOpponentNameForAllTime(side==='home'?g.guest_team_name:g.home_team_name,seasonKey)});
+  }
+  return rows;
+}
+function getComparisonRosterGames(row,item){
+  if(item.type==='seasonPerformance')return getComparisonRosterGamesForSeason(row,item.season);
+  const rows=[];
+  for(const seasonKey of Object.keys(row?.profile?.statsBySeason||{})){
+    rows.push(...getComparisonRosterGamesForSeason(row,seasonKey));
+  }
+  return rows;
+}
+function comparisonEventGameKey(e,item){
+  return`${e?.seasonKey||item?.season||''}:${e?.gameId||`${e?.date||''}-${e?.opponent||''}`}`;
+}
+function comparisonEventPhaseLabel(phase){
+  if(!phase||phase==='Unbekannt')return'Unbekannt';
+  return PHAS_FULL[PHASES.indexOf(phase)]||phase;
+}
+function comparisonOpponentStrengthTier(e,item){
+  const seasonKey=e?.seasonKey||item?.season;
+  const standings=SEASONS[seasonKey]?.data?.standings||[];
+  const strength=getOppStrength(e?.opponent,standings);
+  return strength?.tier||'unknown';
+}
+function buildComparisonExtraMetrics(row,item,stats,styleProfile){
+  const events=getComparisonEventsForItem(row,item);
+  const goals=events.filter(e=>e.type==='Tor');
+  const assists=events.filter(e=>e.type==='Vorlage');
+  const rosterGames=getComparisonRosterGames(row,item);
+  const games=comparisonNum(stats.games)||rosterGames.length;
+  const points=events.length||comparisonNum(stats.points);
+  const scoringGameKeys=new Set(events.map(e=>comparisonEventGameKey(e,item)).filter(Boolean));
+  const gamePoints={};
+  for(const g of rosterGames)gamePoints[`${g.seasonKey}:${g.gameId}`]=0;
+  for(const e of events){
+    const key=comparisonEventGameKey(e,item);
+    gamePoints[key]=(gamePoints[key]||0)+1;
+  }
+  const gamePointValues=Object.values(gamePoints);
+  while(gamePointValues.length<games)gamePointValues.push(0);
+  const phasePoints={},phaseGoals={},ctxGoals={};
+  for(const e of events){
+    const ph=e.phase||'Unbekannt';
+    phasePoints[ph]=(phasePoints[ph]||0)+1;
+    if(e.type==='Tor'){
+      phaseGoals[ph]=(phaseGoals[ph]||0)+1;
+      const ctx=cleanText(e.ctx||'Unbekannt')||'Unbekannt';
+      ctxGoals[ctx]=(ctxGoals[ctx]||0)+1;
+    }
+  }
+  const bestPhase=Object.entries(phasePoints).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))[0]||null;
+  const partnerRows=countBy(events.filter(e=>e.partner&&e.partner!=='Solo'),e=>cleanText(e.partner));
+  const topPartner=partnerRows[0]?{name:partnerRows[0].name,points:partnerRows[0].val,share:comparisonPct(partnerRows[0].val,points)}:null;
+  const opponentRows=countBy(events.filter(e=>e.opponent),e=>cleanText(e.opponent));
+  const topOpponent=opponentRows[0]?{name:opponentRows[0].name,points:opponentRows[0].val,share:comparisonPct(opponentRows[0].val,points)}:null;
+  const opponentLevels={top:{points:0,goals:0},mid:{points:0,goals:0},low:{points:0,goals:0},unknown:{points:0,goals:0}};
+  for(const e of events){
+    const tier=comparisonOpponentStrengthTier(e,item);
+    const bucket=opponentLevels[tier]||opponentLevels.unknown;
+    bucket.points++;
+    if(e.type==='Tor')bucket.goals++;
+  }
+  const soloGoals=goals.filter(e=>e.partner==='Solo').length;
+  const clutchGoals=goals.filter(e=>e.clutch).length;
+  const lateGoals=goals.filter(isLateGoal).length;
+  const scoringGames=scoringGameKeys.size;
+  const ppg=games?points/games:0;
+  const gpg=games?goals.length/games:0;
+  const consistencyPct=games?comparisonPct(scoringGames,games):0;
+  const opponentDiversity=opponentRows.length;
+  const opponentDiversityScore=points?Math.min(100,Math.round((opponentDiversity/points)*100)):0;
+  const efficiency=Math.min(100,Math.round((ppg/Math.max(1,Math.max(ppg,1.5)))*70+comparisonPct(goals.length,points)*0.3));
+  const impactScore=pctValue((styleProfile?.teamShare||0)*0.55+consistencyPct*0.25+Math.min(100,ppg*18)*0.20);
+  const varPoints=variance(gamePointValues);
+  return{
+    events,goals:goals.length,assists:assists.length,points,games,
+    goalsPerGame:gpg,pointsPerGame:ppg,scoringGames,consistencyPct,soloQuote:comparisonPct(soloGoals,goals.length),
+    clutchGoals,lateGoals,phasePoints,phaseGoals,bestPhase:bestPhase?{key:bestPhase[0],label:comparisonEventPhaseLabel(bestPhase[0]),points:bestPhase[1],goals:phaseGoals[bestPhase[0]]||0}:null,
+    contextGoals:ctxGoals,topPartner,opponentDiversity,opponentDiversityScore,topOpponent,opponentLevels,
+    efficiency,impactScore,variance:varPoints,
+  };
+}
+function buildComparisonDataset(comparisonItems){
+  return(comparisonItems||[]).map(normalizeComparisonItem).slice(0,COMPARISON_MAX_ITEMS).map((item,idx)=>{
+    const row=getComparisonPlayerRow(item.playerId);
+    const fallbackLabel=item.type==='playerAlltime'?`Unbekannter Spieler - Alltime`:`Unbekannter Spieler - ${getComparisonSeasonLabel(item.season)}`;
+    if(!row)return{...item,key:comparisonItemKey(item),label:fallbackLabel,playerName:'Unbekannter Spieler',season:item.season,type:item.type,games:0,goals:0,assists:0,points:0,penalties:0,teamShare:0,goalShare:0,assistShare:0,role:'Nicht genügend Daten vorhanden',traits:[],styleProfile:{},trendData:[],metrics:null,color:COMPARE_COLORS[idx%COMPARE_COLORS.length],hasData:false,assessment:'Nicht genügend Daten vorhanden.'};
+    const st=item.type==='playerAlltime'?getPlayerAlltimeStats(row.playerId):getPlayerSeasonStats(row.playerId,item.season);
+    const teamGoals=item.type==='playerAlltime'?getComparisonAlltimeTeamGoals():getComparisonTeamGoalsForSeason(item.season);
+    const profile=getComparisonProfile(row,item.type,item.season);
+    const role=profile?.coreRole?roleTraitLabel(profile.coreRole):'Nicht genügend Rollendaten';
+    const traits=(profile?.traits||[]).filter(t=>!SPECIAL_CORE_ROLES.has(t)).slice(0,SECONDARY_TRAIT_LIMIT).map(roleTraitLabel);
+    const teamShare=comparisonPct(st.points,teamGoals);
+    const styleProfile=getComparisonStyleProfile(row,item.type,item.season,teamShare);
+    const trendData=item.type==='playerAlltime'?getComparisonAlltimeTrend(row):getComparisonSeasonTrend(row,item.season);
+    const metrics=buildComparisonExtraMetrics(row,item,st,styleProfile);
+    return{
+      ...item,
+      key:comparisonItemKey(item),
+      label:item.type==='playerAlltime'?`${row.name} - Alltime`:`${row.name} - ${getComparisonSeasonLabel(item.season)}`,
+      playerName:row.name,
+      season:item.type==='playerAlltime'?'Alltime':getComparisonSeasonLabel(item.season),
+      games:comparisonNum(st.games),
+      goals:comparisonNum(st.goals),
+      assists:comparisonNum(st.assists),
+      points:comparisonNum(st.points),
+      penalties:comparisonNum(st.penaltyMinutes||st.penalties),
+      teamShare,
+      goalShare:comparisonPct(st.goals,st.points),
+      assistShare:comparisonPct(st.assists,st.points),
+      role,traits,styleProfile,trendData,metrics,
+      color:COMPARE_COLORS[idx%COMPARE_COLORS.length],
+      hasData:(st.games||st.points||st.goals||st.assists)>0,
+      assessment:profile?.text||'Nicht genügend Rollendaten vorhanden.',
+    };
+  });
+}
+window.buildComparisonDataset=buildComparisonDataset;
+function kpiValueText(v,decimals=0,suffix=''){
+  const n=comparisonNum(v);
+  return`${comparisonFmt(n,decimals)}${suffix}`;
+}
+function kpiDelta(a,b,decimals=0){
+  const diff=comparisonNum(a)-comparisonNum(b);
+  const cls=Math.abs(diff)<0.0001?'eq':diff>0?'pos':'neg';
+  const sign=diff>0?'+':'';
+  return`<span class="kpi-delta ${cls}">${sign}${comparisonFmt(diff,decimals)}</span>`;
+}
+function kpiItemColor(d,idx){
+  return d?.color||COMPARE_COLORS[idx%COMPARE_COLORS.length];
+}
+function rKpiCards(dataset){
+  const cards=[
+    ['Spiele',d=>d.games,0,''],
+    ['Tore',d=>d.goals,0,''],
+    ['Assists',d=>d.assists,0,''],
+    ['Punkte',d=>d.points,0,''],
+    ['Tore / Spiel',d=>d.metrics?.goalsPerGame,2,''],
+    ['Punkte / Spiel',d=>d.metrics?.pointsPerGame,2,''],
+  ];
+  return`<div class="kpi-cards">${cards.map(([label,get,dec,suffix])=>`<div class="kpi-card"><div class="kpi-card-label">${label}</div><div class="kpi-multi-values">${dataset.map((d,i)=>`<div class="kpi-multi-value"><i style="background:${kpiItemColor(d,i)}"></i><span>${escHtml(d.label)}</span><strong style="color:${kpiItemColor(d,i)}">${kpiValueText(get(d),dec,suffix)}</strong></div>`).join('')}</div></div>`).join('')}</div>`;
+}
+function rKpiMirrorRows(dataset){
+  const rows=[
+    ['Tore',d=>d.goals,0,''],
+    ['Assists',d=>d.assists,0,''],
+    ['Punkte',d=>d.points,0,''],
+    ['Tore/Spiel',d=>d.metrics?.goalsPerGame,2,''],
+    ['Punkte/Spiel',d=>d.metrics?.pointsPerGame,2,''],
+    ['Team Share',d=>d.teamShare,1,'%'],
+    ['Goal Share',d=>d.goalShare,1,'%'],
+    ['Assist Share',d=>d.assistShare,1,'%'],
+    ['Strafminuten',d=>d.penalties,0,'m'],
+    ['Clutch-Tore',d=>d.metrics?.clutchGoals,0,''],
+    ['Konstanz',d=>d.metrics?.consistencyPct,1,'%'],
+    ['Gegnervielfalt',d=>d.metrics?.opponentDiversity,0,''],
+    ['Top-Partner-Anteil',d=>d.metrics?.topPartner?.share,1,'%'],
+  ];
+  return`<div class="kpi-section kpi-detail-card"><div class="kpi-sec-title">KPI-Detailvergleich</div><div class="kpi-detail-list">${rows.map(([label,get,dec,suffix])=>{
+    const values=dataset.map(d=>comparisonNum(get(d)));
+    const max=Math.max(...values,1);
+    return`<div class="kpi-detail-row">
+      <div class="kpi-detail-label">${label}</div>
+      <div class="kpi-detail-items">${dataset.map((d,i)=>{
+        const value=values[i]||0;
+        const width=Math.max(0,Math.min(100,(value/max)*100));
+        const color=kpiItemColor(d,i);
+        return`<div class="kpi-detail-item"><div class="kpi-detail-head"><span><i style="background:${color}"></i>${escHtml(d.label)}</span><strong style="color:${color}">${kpiValueText(value,dec,suffix)}</strong></div><div class="kpi-detail-bar"><b style="width:${width.toFixed(2)}%;background:${color}"></b></div></div>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('')}</div></div>`;
+}
+function kpiRadarValue(d,key){
+  if(key==='scoring')return pctValue(d.styleProfile?.abschluss);
+  if(key==='playmaking')return pctValue(d.styleProfile?.kreativitaet);
+  if(key==='consistency')return pctValue(d.metrics?.consistencyPct);
+  if(key==='clutch')return pctValue(d.styleProfile?.clutch||comparisonPct(d.metrics?.clutchGoals,d.goals));
+  if(key==='impact')return pctValue(d.metrics?.impactScore);
+  if(key==='efficiency')return pctValue(d.metrics?.efficiency);
+  if(key==='diversity')return pctValue(d.metrics?.opponentDiversityScore);
+  if(key==='chemistry')return pctValue(d.metrics?.topPartner?.share||d.styleProfile?.chemie);
+  return 0;
+}
+function rKpiRadar(dataset){
+  const dims=[
+    ['Scoring','scoring'],
+    ['Playmaking','playmaking'],
+    ['Konstanz','consistency'],
+    ['Clutch','clutch'],
+    ['Team Impact','impact'],
+    ['Effizienz','efficiency'],
+    ['Gegnervielfalt','diversity'],
+    ['Chemie / Duo','chemistry'],
+  ];
+  const w=360,h=330,cx=180,cy=145,r=92,labelR=126,levels=[25,50,75,100];
+  const point=(idx,val=100,rad=r)=>{
+    const angle=-Math.PI/2+(idx/dims.length)*Math.PI*2;
+    const rr=rad*(pctValue(val)/100);
+    return{x:cx+Math.cos(angle)*rr,y:cy+Math.sin(angle)*rr,angle};
+  };
+  const grid=levels.map(level=>`<polygon points="${dims.map((_,i)=>{const p=point(i,level);return`${p.x.toFixed(1)},${p.y.toFixed(1)}`;}).join(' ')}" fill="none" stroke="rgba(148,163,184,.14)" stroke-width="1"/>`).join('');
+  const axes=dims.map(([label],i)=>{
+    const p=point(i,100),lp=point(i,100,labelR);
+    const anchor=lp.x<cx-12?'end':lp.x>cx+12?'start':'middle';
+    return`<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="rgba(148,163,184,.16)"/><text x="${lp.x.toFixed(1)}" y="${lp.y.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${escHtml(label)}</text>`;
+  }).join('');
+  const fillOpacity=dataset.length>4?.04:.12;
+  const polys=dataset.map((d,i)=>{
+    const color=kpiItemColor(d,i);
+    const points=dims.map(([,key],idx)=>{const p=point(idx,kpiRadarValue(d,key));return`${p.x.toFixed(1)},${p.y.toFixed(1)}`;}).join(' ');
+    return`<polygon points="${points}" fill="${color}" fill-opacity="${fillOpacity}" stroke="${color}" stroke-width="${dataset.length>4?2:2.5}" stroke-linejoin="round"/>`;
+  }).join('');
+  return`<div class="kpi-section kpi-radar-card"><div class="kpi-sec-title">Radarvergleich</div><svg class="kpi-radar-svg" viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Radarvergleich der ausgewählten Leistungen">${grid}${axes}${polys}</svg><div class="kpi-legend">${dataset.map((d,i)=>`<span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span>`).join('')}</div></div>`;
+}
+function rKpiTrendCompare(dataset){
+  const lines=(dataset||[]).filter(d=>(d.trendData||[]).length>=2);
+  if(!lines.length)return'<div class="kpi-section"><div class="kpi-sec-title">Kumulativer Verlauf</div><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
+  const w=560,h=190,pad=28;
+  const max=Math.max(...lines.flatMap(d=>(d.trendData||[]).map(r=>comparisonNum(r.points))),1);
+  const line=(rows,color)=>{
+    if(rows.length<2)return'';
+    const points=rows.map((r,i)=>{
+      const x=pad+(i/Math.max(rows.length-1,1))*(w-pad*2);
+      const y=h-pad-(comparisonNum(r.points)/max)*(h-pad*2);
+      return`${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return`<polyline points="${points}" fill="none" stroke="${color}" stroke-width="${lines.length>4?2.2:3.5}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  };
+  return`<div class="kpi-section"><div class="kpi-sec-title">Kumulativer Verlauf</div><svg class="kpi-trend-svg" viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Kumulativer Punkteverlauf">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(148,163,184,.22)"/>
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="rgba(148,163,184,.14)"/>
+    ${lines.map((d,i)=>line(d.trendData||[],kpiItemColor(d,i))).join('')}
+  </svg><div class="kpi-legend">${lines.map((d,i)=>`<span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span>`).join('')}</div></div>`;
+}
+function rKpiShareBars(dataset){
+  const rows=[
+    ['Team Share',d=>d.teamShare],
+    ['Goal Share',d=>d.goalShare],
+    ['Assist Share',d=>d.assistShare],
+  ];
+  return`<div class="kpi-section"><div class="kpi-sec-title">Share-Profil</div>${rows.map(([label,get])=>`<div class="kpi-metric-block"><div class="kpi-metric-name">${label}</div>${dataset.map((d,i)=>{const value=pctValue(get(d));return`<div class="kpi-metric-row"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><div class="kpi-metric-bar"><b style="width:${value}%;background:${kpiItemColor(d,i)}"></b></div><strong>${comparisonPctFmt(value)}</strong></div>`;}).join('')}</div>`).join('')}</div>`;
+}
+function rKpiMetricCard(dataset,label,getValue,fmt=(v)=>comparisonFmt(v,0),opts={}){
+  const values=dataset.map(d=>comparisonNum(getValue(d)));
+  const max=opts.max??Math.max(...values,1);
+  return`<div class="kpi-metric-card"><div class="kpi-metric-name">${label}</div>${dataset.map((d,i)=>{const value=comparisonNum(getValue(d));const width=max>0?Math.max(0,Math.min(100,(value/max)*100)):0;return`<div class="kpi-metric-row"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><div class="kpi-metric-bar"><b style="width:${width.toFixed(2)}%;background:${kpiItemColor(d,i)}"></b></div><strong>${escHtml(fmt(value,d))}</strong></div>`;}).join('')}</div>`;
+}
+function rKpiTextMetricCard(dataset,label,getText){
+  return`<div class="kpi-metric-card"><div class="kpi-metric-name">${label}</div><div class="kpi-chip-list">${dataset.map((d,i)=>`<span class="kpi-text-chip" style="--chip:${kpiItemColor(d,i)}"><i></i><b>${escHtml(d.label)}</b>${escHtml(getText(d)||'Nicht genügend Daten')}</span>`).join('')}</div></div>`;
+}
+function rKpiExtendedMetrics(dataset){
+  const cards=[
+    rKpiMetricCard(dataset,'Solo-Quote',d=>d.metrics?.soloQuote,comparisonPctFmt,{max:100}),
+    rKpiMetricCard(dataset,'Clutch-Tore',d=>d.metrics?.clutchGoals),
+    rKpiMetricCard(dataset,'Konstanz',d=>d.metrics?.consistencyPct,comparisonPctFmt,{max:100}),
+    rKpiMetricCard(dataset,'Effizienz',d=>d.metrics?.efficiency,v=>comparisonFmt(v,0),{max:100}),
+    rKpiMetricCard(dataset,'Impact Score',d=>d.metrics?.impactScore,v=>comparisonFmt(v,0),{max:100}),
+    rKpiMetricCard(dataset,'Gegnervielfalt',d=>d.metrics?.opponentDiversity),
+    rKpiMetricCard(dataset,'Späte Tore',d=>d.metrics?.lateGoals),
+    rKpiTextMetricCard(dataset,'Bester Duo-Partner',d=>d.metrics?.topPartner?`${d.metrics.topPartner.name} (${comparisonFmt(d.metrics.topPartner.points)} P, ${comparisonPctFmt(d.metrics.topPartner.share)})`:'Nicht genügend Daten'),
+    rKpiTextMetricCard(dataset,'Stärkste Phase',d=>d.metrics?.bestPhase?`${d.metrics.bestPhase.label} (${d.metrics.bestPhase.points} P)`: 'Nicht genügend Daten'),
+    rKpiTextMetricCard(dataset,'Stärkster Gegner',d=>d.metrics?.topOpponent?`${d.metrics.topOpponent.name} (${comparisonFmt(d.metrics.topOpponent.points)} P)`: 'Nicht genügend Daten'),
+  ];
+  return`<div class="kpi-section"><div class="kpi-sec-title">Erweiterte Metriken</div><div class="kpi-metric-grid">${cards.join('')}</div></div>`;
+}
+function rKpiOpponentStrength(dataset){
+  const tiers=[
+    ['top','Topteams','#EF9F27'],
+    ['mid','Mittelfeld','#378ADD'],
+    ['low','Schwächere Teams','#10B981'],
+    ['unknown','Unklar','#94A3B8'],
+  ];
+  return`<div class="kpi-section"><div class="kpi-sec-title">Punkte nach Gegnerstärke</div>${dataset.map((d,i)=>{
+    const levels=d.metrics?.opponentLevels||{};
+    const total=tiers.reduce((sum,[key])=>sum+comparisonNum(levels[key]?.points),0);
+    return`<div class="kpi-strength-row"><div class="kpi-strength-head"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><strong>${comparisonFmt(total,0)} P</strong></div><div class="kpi-strength-bar">${tiers.map(([key,label,color])=>{const val=comparisonNum(levels[key]?.points);const width=total>0?(val/total*100):0;return`<b title="${escAttr(label)}: ${comparisonFmt(val,0)} P" style="width:${width.toFixed(2)}%;background:${color}"></b>`;}).join('')}</div><div class="kpi-strength-meta">${tiers.map(([key,label])=>`${label}: ${comparisonFmt(levels[key]?.points||0,0)}`).join(' · ')}</div></div>`;
+  }).join('')}</div>`;
+}
+function rKpiInfoCards(dataset){
+  const fmtPartner=d=>d.metrics?.topPartner?`${d.metrics.topPartner.name} (${comparisonFmt(d.metrics.topPartner.points)} P)`: 'Nicht genügend Daten';
+  const fmtOpp=d=>d.metrics?.topOpponent?`${d.metrics.topOpponent.name} (${comparisonFmt(d.metrics.topOpponent.points)} P)`: 'Nicht genügend Daten';
+  const fmtPhase=d=>d.metrics?.bestPhase?`${d.metrics.bestPhase.label} (${d.metrics.bestPhase.points} P)`: 'Nicht genügend Daten';
+  return`<div class="kpi-info-grid">
+    <div class="kpi-section"><div class="kpi-sec-title">Timing</div>${dataset.map((d,i)=>`<div class="kpi-info-line"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><strong>${d.metrics?.lateGoals||0} späte Tore · ${d.metrics?.clutchGoals||0} Clutch · ${escHtml(fmtPhase(d))}</strong></div>`).join('')}</div>
+    <div class="kpi-section"><div class="kpi-sec-title">Duo-Partner</div>${dataset.map((d,i)=>`<div class="kpi-info-line"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><strong>${escHtml(fmtPartner(d))}</strong></div>`).join('')}</div>
+    <div class="kpi-section"><div class="kpi-sec-title">Gegnerprofil</div>${dataset.map((d,i)=>`<div class="kpi-info-line"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><strong>${d.metrics?.opponentDiversity||0} Gegner · ${escHtml(fmtOpp(d))}</strong></div>`).join('')}</div>
+  </div>`;
+}
+function kpiNiceMax(value){
+  const n=Math.max(1,comparisonNum(value));
+  if(n<=5)return Math.ceil(n);
+  const step=n>80?20:n>40?10:5;
+  return Math.ceil(n/step)*step;
+}
+function kpiTrendRows(d){
+  return(d?.trendData||[]).map((r,i)=>({
+    ...r,
+    _idx:i,
+    points:comparisonNum(r.points),
+    goals:comparisonNum(r.goals),
+    label:String(r.label||r.seasonLabel||r.season||r.index||i+1),
+  })).filter(r=>Number.isFinite(r.points)&&Number.isFinite(r.goals));
+}
+function rKpiTrendCompare(dataset){
+  const lines=(dataset||[]).map(d=>({...d,_trend:kpiTrendRows(d)})).filter(d=>d._trend.length>=2);
+  if(!lines.length)return'<div class="kpi-section"><div class="kpi-sec-title">Kumulativer Verlauf</div><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
+  const w=780,h=300,padL=62,padR=24,padT=24,padB=58;
+  const plotW=w-padL-padR,plotH=h-padT-padB;
+  const rawMax=Math.max(...lines.flatMap(d=>d._trend.flatMap(r=>[r.points,r.goals])),1);
+  const maxY=kpiNiceMax(rawMax);
+  const maxLen=Math.max(...lines.map(d=>d._trend.length),2);
+  const allAlltime=lines.every(d=>d.type==='playerAlltime');
+  const allSeason=lines.every(d=>d.type==='seasonPerformance');
+  const xLabel=allAlltime?'Saison':allSeason?'Spiel':'Spiel / Saison';
+  const xTicks=[0,.25,.5,.75,1].map(t=>Math.round((maxLen-1)*t)).filter((v,i,a)=>a.indexOf(v)===i);
+  const yTicks=[0,.25,.5,.75,1].map(t=>Math.round(maxY*t)).filter((v,i,a)=>a.indexOf(v)===i);
+  const xFor=(idx,len)=>padL+(len<=1?0:(idx/(len-1))*plotW);
+  const yFor=value=>padT+plotH-(Math.max(0,Math.min(maxY,comparisonNum(value)))/maxY)*plotH;
+  const lineFor=(d,key,dash='')=>{
+    const rows=d._trend;
+    const points=rows.map((r,i)=>`${xFor(i,rows.length).toFixed(1)},${yFor(r[key]).toFixed(1)}`).join(' ');
+    if(!points)return'';
+    const hasValue=rows.some(r=>comparisonNum(r[key])>0);
+    if(key==='goals'&&!hasValue)return'';
+    return`<polyline points="${points}" fill="none" stroke="${kpiItemColor(d,lines.indexOf(d))}" stroke-width="${lines.length>4?2:3}" ${dash} stroke-linecap="round" stroke-linejoin="round"/>`;
+  };
+  const grid=yTicks.map(v=>{
+    const y=yFor(v);
+    return`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="rgba(148,163,184,.11)"/><text x="${padL-10}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle">${comparisonFmt(v,0)}</text>`;
+  }).join('');
+  const xAxis=xTicks.map(idx=>{
+    const x=padL+(idx/Math.max(maxLen-1,1))*plotW;
+    const tickLabel=allAlltime?(lines[0]?._trend?.[idx]?.label||String(idx+1)):String(idx+1);
+    return`<line x1="${x.toFixed(1)}" y1="${h-padB}" x2="${x.toFixed(1)}" y2="${h-padB+5}" stroke="rgba(148,163,184,.35)"/><text x="${x.toFixed(1)}" y="${h-padB+20}" text-anchor="middle">${escHtml(tickLabel)}</text>`;
+  }).join('');
+  const pointsLines=lines.map(d=>lineFor(d,'points')).join('');
+  const goalLines=lines.map(d=>lineFor(d,'goals','stroke-dasharray="6 5" opacity=".82"')).join('');
+  return`<div class="kpi-section kpi-trend-card"><div class="kpi-sec-title">Kumulativer Verlauf</div><svg class="kpi-trend-svg" viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Kumulativer Punkteverlauf mit Achsen">
+    <rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="rgba(0,0,0,.12)" rx="6"/>
+    ${grid}
+    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="rgba(148,163,184,.32)"/>
+    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="rgba(148,163,184,.24)"/>
+    ${xAxis}
+    ${pointsLines}${goalLines}
+    <text class="kpi-axis-label" x="${padL+plotW/2}" y="${h-14}" text-anchor="middle">${escHtml(xLabel)}</text>
+    <text class="kpi-axis-label" x="18" y="${padT+plotH/2}" text-anchor="middle" transform="rotate(-90 18 ${padT+plotH/2})">Kumulative Punkte</text>
+  </svg><div class="kpi-legend"><span><i style="background:#f8fafc"></i>Punkte</span><span class="kpi-dash-key"><i></i>Tore</span>${lines.map((d,i)=>`<span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span>`).join('')}</div></div>`;
+}
+function rKpiOpponentStrength(dataset){
+  const tiers=[
+    ['top','Topteams','#EF9F27'],
+    ['mid','Mittelfeld','#378ADD'],
+    ['low','Schwächere Teams','#10B981'],
+  ];
+  const rows=(dataset||[]).map((d,i)=>{
+    const levels=d.metrics?.opponentLevels||{};
+    const unknown=comparisonNum(levels.unknown?.points);
+    const total=tiers.reduce((sum,[key])=>sum+comparisonNum(levels[key]?.points),0)+unknown;
+    return{d,i,levels,total,unknown};
+  });
+  const maxP=Math.max(...rows.map(r=>r.total),1);
+  const ticks=[0,.25,.5,.75,1].map(t=>Math.round(maxP*t));
+  const hasAny=rows.some(r=>r.total>0);
+  return`<div class="kpi-section kpi-strength-section"><div class="kpi-sec-title">Punkte nach Gegnerstärke</div>
+    <div class="kpi-strength-legend">${tiers.map(([,label,color])=>`<span><i style="background:${color}"></i>${escHtml(label)}</span>`).join('')}${rows.some(r=>r.unknown>0)?'<span><i style="background:#94A3B8"></i>Unklar</span>':''}</div>
+    ${hasAny?rows.map(({d,i,levels,total,unknown})=>`<div class="kpi-strength-row">
+      <div class="kpi-strength-head"><span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span><strong>${comparisonFmt(total,0)} P</strong></div>
+      <div class="kpi-strength-bar kpi-strength-stacked">
+        ${tiers.map(([key,label,color])=>{const val=comparisonNum(levels[key]?.points);const width=maxP>0?(val/maxP*100):0;return`<b title="${escAttr(label)}: ${comparisonFmt(val,0)} P" style="width:${width.toFixed(2)}%;background:${color}"></b>`;}).join('')}
+        ${unknown>0?`<b title="Unklar: ${comparisonFmt(unknown,0)} P" style="width:${(unknown/maxP*100).toFixed(2)}%;background:#94A3B8"></b>`:''}
+      </div>
+      <div class="kpi-strength-scale">${ticks.map(v=>`<span>${comparisonFmt(v,0)} P</span>`).join('')}</div>
+      <div class="kpi-strength-meta">${tiers.map(([key,label])=>`${label}: ${comparisonFmt(levels[key]?.points||0,0)}`).join(' · ')}${unknown>0?` · Unklar: ${comparisonFmt(unknown,0)}`:''}</div>
+    </div>`).join(''):'<div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div>'}
+  </div>`;
+}
+function kpiBadge(text,color){
+  return`<span class="kpi-mini-badge" style="--badge:${color||'#94a3b8'}">${escHtml(text)}</span>`;
+}
+function rKpiObjectMini(d,i,body){
+  const color=kpiItemColor(d,i);
+  return`<div class="kpi-profile-card" style="--item:${color}">
+    <div class="kpi-profile-head"><span><i></i>${escHtml(d.label)}</span></div>
+    ${body}
+  </div>`;
+}
+function rKpiInfoCards(dataset){
+  const timing=dataset.map((d,i)=>{
+    const m=d.metrics||{};
+    const phase=m.bestPhase;
+    const color=kpiItemColor(d,i);
+    return rKpiObjectMini(d,i,`<div class="kpi-profile-stats">
+      <div><b>${comparisonFmt(m.lateGoals||0,0)}</b><span>späte Tore</span></div>
+      <div><b>${comparisonFmt(m.clutchGoals||0,0)}</b><span>Clutch-Tore</span></div>
+    </div>
+    <div class="kpi-badge-row">${phase?kpiBadge(`${phase.label} · ${comparisonFmt(phase.points,0)} P`,color):kpiBadge('Nicht genügend Daten','#94a3b8')}</div>`);
+  }).join('');
+  const duos=dataset.map((d,i)=>{
+    const p=d.metrics?.topPartner;
+    const color=kpiItemColor(d,i);
+    return rKpiObjectMini(d,i,p?`<div class="kpi-profile-main">${escHtml(p.name)}</div><div class="kpi-badge-row">${kpiBadge(`${comparisonFmt(p.points,0)} gemeinsame Punkte`,color)}${kpiBadge(`${comparisonPctFmt(p.share)} Anteil`,color)}</div>`:`<div class="kpi-profile-main muted">Nicht genügend Daten</div>`);
+  }).join('');
+  const opponents=dataset.map((d,i)=>{
+    const m=d.metrics||{};
+    const o=m.topOpponent;
+    const color=kpiItemColor(d,i);
+    return rKpiObjectMini(d,i,`<div class="kpi-profile-stats">
+      <div><b>${comparisonFmt(m.opponentDiversity||0,0)}</b><span>Gegner</span></div>
+      <div><b>${o?comparisonFmt(o.points,0):0}</b><span>Top-Gegner-Punkte</span></div>
+    </div>
+    <div class="kpi-badge-row">${o?kpiBadge(o.name,color):kpiBadge('Nicht genügend Daten','#94a3b8')}</div>`);
+  }).join('');
+  return`<div class="kpi-insight-grid">
+    <div class="kpi-section"><div class="kpi-sec-title">Timing</div><div class="kpi-profile-list">${timing}</div></div>
+    <div class="kpi-section"><div class="kpi-sec-title">Duo-Partner</div><div class="kpi-profile-list">${duos}</div></div>
+    <div class="kpi-section"><div class="kpi-sec-title">Gegnerprofil</div><div class="kpi-profile-list">${opponents}</div></div>
+  </div>`;
+}
+function buildComparisonSummary(dataset){
+  const [a,b]=dataset;
+  if(!a||!b)return'Nicht genügend Daten vorhanden, um ein belastbares Fazit zu erzeugen.';
+  const facts=[];
+  const better=(label,av,bv,fmt=v=>comparisonFmt(v,1))=>{
+    const va=comparisonNum(av),vb=comparisonNum(bv);
+    if(Math.abs(va-vb)<0.05)return null;
+    const leader=va>vb?a:b;
+    return`${leader.label} liegt bei ${label} vorne (${fmt(Math.max(va,vb))}).`;
+  };
+  const share=better('Team Share',a.teamShare,b.teamShare,comparisonPctFmt);
+  if(share)facts.push(share);
+  const opp=better('Gegnervielfalt',a.metrics?.opponentDiversity,b.metrics?.opponentDiversity,v=>comparisonFmt(v,0));
+  if(opp)facts.push(opp);
+  const finishDelta=comparisonNum(a.styleProfile?.abschluss)-comparisonNum(b.styleProfile?.abschluss);
+  const playDelta=comparisonNum(a.styleProfile?.kreativitaet)-comparisonNum(b.styleProfile?.kreativitaet);
+  if(Math.abs(finishDelta)>=8||Math.abs(playDelta)>=8){
+    const fin=finishDelta>0?a:b;
+    const play=playDelta>0?a:b;
+    if(Math.abs(finishDelta)>=8&&Math.abs(playDelta)>=8&&fin.key!==play.key)facts.push(`${fin.label} ist stärker im Abschluss, während ${play.label} mehr Playmaking-Profil zeigt.`);
+    else if(Math.abs(finishDelta)>=8)facts.push(`${fin.label} hat das klarere Abschlussprofil.`);
+    else facts.push(`${play.label} hat das stärkere Playmaking-Profil.`);
+  }
+  const deltas=[
+    ['Konstanz',a.metrics?.consistencyPct,b.metrics?.consistencyPct],
+    ['Punkte pro Spiel',a.metrics?.pointsPerGame,b.metrics?.pointsPerGame],
+    ['Top-Partner-Anteil',a.metrics?.topPartner?.share,b.metrics?.topPartner?.share],
+    ['Clutch-Tore',a.metrics?.clutchGoals,b.metrics?.clutchGoals],
+  ].map(([label,av,bv])=>({label,d:Math.abs(comparisonNum(av)-comparisonNum(bv))})).sort((x,y)=>y.d-x.d)[0];
+  if(deltas&&deltas.d>0.1)facts.push(`Der größte Unterschied liegt bei ${deltas.label}.`);
+  return facts.length?facts.slice(0,3).join(' '):'Die ausgewählten Profile liegen in den verfügbaren Vergleichsdaten eng beieinander.';
+}
+function rKPIVergleich(dataset){
+  const valid=(dataset||[]).filter(d=>d.hasData);
+  if(valid.length<2)return'<div class="kpi-wrap"><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
+  return`<div class="kpi-wrap">
+    <div class="kpi-header"><strong>Detailvergleich</strong><span class="kpi-count">${valid.length} Leistungen</span></div>
+    ${rKpiCards(valid)}
+    ${rKpiMirrorRows(valid)}
+    <div class="kpi-grid"><div class="kpi-col">${rKpiRadar(valid)}${rKpiOpponentStrength(valid)}</div><div class="kpi-col">${rKpiExtendedMetrics(valid)}${rKpiShareBars(valid)}</div></div>
+    ${rKpiTrendCompare(valid)}
+    ${rKpiInfoCards(valid)}
+  </div>`;
+}
+function rKPIVergleich(dataset){
+  const valid=(dataset||[]).filter(d=>d.hasData);
+  if(valid.length<2)return'<div class="kpi-wrap"><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
+  return`<div class="kpi-wrap">
+    <div class="kpi-header"><strong>Detailvergleich</strong><span class="kpi-count">${valid.length} Leistungen</span></div>
+    ${rKpiCards(valid)}
+    ${rKpiMirrorRows(valid)}
+    <div class="kpi-grid"><div class="kpi-col">${rKpiRadar(valid)}</div><div class="kpi-col">${rKpiExtendedMetrics(valid)}</div></div>
+    ${rKpiTrendCompare(valid)}
+    ${rKpiOpponentStrength(valid)}
+    ${rKpiInfoCards(valid)}
+    ${rKpiShareBars(valid)}
+  </div>`;
+}
+function rComparisonMiniOverview(dataset){
+  if((dataset||[]).length<=2)return'';
+  return`<div class="compare-card"><div class="compare-card-title">Weitere Vergleichsobjekte</div><div class="compare-mini-grid">${dataset.map(d=>`<div class="compare-mini"><strong>${escHtml(d.label)}</strong><span>${d.points} P · ${comparisonPctFmt(d.teamShare)} Team Share · ${escHtml(d.role)}</span></div>`).join('')}</div></div>`;
+}
+function rComparisonRoles(dataset){
+  return`<div class="compare-card"><div class="compare-card-title">Rollen und Traits</div><div class="compare-role-grid">${dataset.map(d=>`<div class="compare-role" style="--compare-color:${d.color}">
+    <div class="compare-row-name" style="color:${d.color}">${escHtml(d.label)}</div>
+    <div class="compare-role-main">${escHtml(d.role)}</div>
+    <div class="compare-tags">${d.traits.length?d.traits.map(t=>`<span class="compare-tag">${escHtml(t)}</span>`).join(''):'<span class="compare-tag">Keine Traits</span>'}</div>
+    <div class="compare-sub">${escHtml(d.assessment||'Nicht genügend Rollendaten vorhanden.')}</div>
+  </div>`).join('')}</div></div>`;
+}
+function rComparisonDashboard(){
+  const dataset=buildComparisonDataset(S.comparisonItems||[]);
+  const valid=dataset.filter(d=>d.hasData);
+  if(valid.length<2)return`<div class="compare-card"><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>`;
+  return`<div class="compare-dashboard">
+    <div class="compare-card"><div class="compare-card-title">Automatisches Fazit</div><div class="compare-summary">${escHtml(buildComparisonSummary(valid))}</div></div>
+    ${rKPIVergleich(valid)}
+    ${rComparisonMiniOverview(valid)}
+    ${rComparisonRoles(valid)}
+  </div>`;
+}
+function rComparisonStyles(){
+  return`<style>
+    .compare-shell,.compare-shell *{box-sizing:border-box}.compare-shell{display:grid;gap:16px;min-width:0}.compare-title{font-size:20px;font-weight:900;letter-spacing:0;margin-bottom:3px}.compare-sub{font-size:12px;color:var(--tx3);line-height:1.5}
+    .compare-grid{display:grid;grid-template-columns:minmax(300px,.9fr) minmax(0,1.5fr);gap:16px;align-items:start;min-width:0}.compare-card,.kpi-section{min-width:0;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));border:1px solid rgba(148,163,184,.18);border-radius:8px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+    .compare-card-title,.kpi-sec-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--tx2);margin-bottom:10px}.compare-input,.compare-select{width:100%;background:#070b14;border:1px solid rgba(148,163,184,.25);border-radius:7px;color:var(--tx);padding:10px 11px;font:12px Inter,system-ui,sans-serif;outline:none}
+    .compare-picker{display:grid;gap:12px}.compare-player-list{display:grid;gap:8px;max-height:430px;overflow:auto;padding-right:3px}.compare-player-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid rgba(148,163,184,.14);border-radius:8px;padding:10px;background:rgba(7,11,20,.48);cursor:pointer;text-align:left;color:var(--tx);min-width:0}
+    .compare-player-row.active{border-color:rgba(239,159,39,.55);box-shadow:0 0 0 1px rgba(239,159,39,.22) inset}.compare-row-name{font-weight:850;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.compare-row-meta{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--tx3);margin-top:3px;line-height:1.35}
+    .compare-toggle{display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--tx2);line-height:1.4}.compare-toggle input{accent-color:#EF9F27}.compare-sg-badge{display:inline-flex;align-items:center;margin-left:6px;border:1px solid rgba(148,163,184,.25);border-radius:999px;padding:1px 6px;font-size:9px;color:var(--tx3);background:rgba(148,163,184,.1);vertical-align:middle}
+    .compare-player-dot{width:9px;height:9px;border-radius:999px;background:var(--compare-color,#94a3b8);box-shadow:0 0 12px var(--compare-color,#94a3b8)}.compare-current{display:grid;gap:9px;border:1px solid rgba(148,163,184,.14);border-radius:8px;padding:12px;background:rgba(255,255,255,.035);min-width:0}
+    .compare-btn{border:1px solid rgba(196,30,58,.45);background:rgba(196,30,58,.15);color:#fecdd3;border-radius:7px;padding:9px 11px;font-weight:850;font-size:11px;cursor:pointer;white-space:nowrap}.compare-btn:hover{background:rgba(196,30,58,.25)}.compare-btn:disabled{opacity:.45;cursor:not-allowed;background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.22);color:var(--tx3)}
+    .compare-selected{display:flex;gap:8px;flex-wrap:wrap;min-height:46px;align-items:center}.compare-chip{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;min-width:168px;max-width:260px;border:1px solid rgba(148,163,184,.18);border-radius:8px;padding:9px 10px;background:rgba(255,255,255,.04)}
+    .compare-chip strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.compare-chip span{font-family:'DM Mono',monospace;font-size:10px;color:var(--tx3)}.compare-x{width:24px;height:24px;border:1px solid rgba(148,163,184,.2);border-radius:50%;background:transparent;color:var(--tx2);cursor:pointer;font-weight:900}
+    .compare-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}.compare-primary{background:linear-gradient(135deg,#c41e3a,#ef4444);border:0;color:white}.compare-note,.kpi-note{font-size:11px;color:#fbbf24;margin-top:10px;line-height:1.5}.compare-dashboard{display:grid;gap:18px;margin-top:14px;min-width:0}.compare-summary{font-size:13px;line-height:1.7;color:var(--tx2)}
+    .kpi-wrap{display:grid;gap:18px;min-width:0}.kpi-header{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;font-size:15px;line-height:1.35}.kpi-count{border:1px solid rgba(148,163,184,.22);border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;color:var(--tx2);background:rgba(148,163,184,.08)}.kpi-pill{display:inline-flex;align-items:center;border-radius:99px;font-size:11px;font-weight:700;padding:4px 9px;margin-left:5px;border:1px solid}.kpi-pill.a{color:#EF9F27;background:#EF9F2718;border-color:#EF9F2755}.kpi-pill.b{color:#378ADD;background:#378ADD18;border-color:#378ADD55}.kpi-vs{font-family:'DM Mono',monospace;color:var(--tx3)}
+    .kpi-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-width:0}.kpi-card{background:var(--surf2);border-radius:8px;padding:11px 12px;border:1px solid rgba(148,163,184,.14);min-width:0}.kpi-card-label{font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}.kpi-multi-values{display:grid;gap:6px}.kpi-multi-value{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:7px;align-items:center;font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;line-height:1.35}.kpi-multi-value i{width:8px;height:8px;border-radius:999px}.kpi-multi-value span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx3)}.kpi-multi-value strong{font-size:12px}
+    .kpi-a{color:#EF9F27}.kpi-b{color:#378ADD}.kpi-sep{color:var(--tx3);margin:0 6px}.kpi-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start;min-width:0}.kpi-col{display:grid;gap:18px;min-width:0}
+    .kpi-detail-list{display:grid;gap:14px}.kpi-detail-row{display:grid;grid-template-columns:140px minmax(0,1fr);gap:14px;border-top:1px solid rgba(148,163,184,.1);padding-top:12px;min-width:0}.kpi-detail-row:first-child{border-top:0;padding-top:0}.kpi-detail-label{font-size:12px;font-weight:900;color:var(--tx2);line-height:1.35}.kpi-detail-items{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px;min-width:0}.kpi-detail-item{background:rgba(255,255,255,.032);border:1px solid rgba(148,163,184,.12);border-radius:8px;padding:9px;min-width:0}.kpi-detail-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:7px}.kpi-detail-head span{display:flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--tx2)}.kpi-detail-head i{width:8px;height:8px;border-radius:99px;margin-right:6px;flex:0 0 auto}.kpi-detail-head strong{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px}.kpi-detail-bar{height:8px;background:rgba(148,163,184,.13);border-radius:999px;overflow:hidden}.kpi-detail-bar b{display:block;height:100%;border-radius:999px}
+    .kpi-mirror-row{display:grid;grid-template-columns:56px minmax(70px,1fr) 132px minmax(70px,1fr) 56px;gap:8px;align-items:center;margin:10px 0;min-width:0}.kpi-mval{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:11px;line-height:1.2}.kpi-mval.kpi-a{text-align:right}.kpi-mval.kpi-b{text-align:left}.kpi-bar-bg{height:9px;background:rgba(148,163,184,.14);border-radius:999px;overflow:hidden;min-width:0}.kpi-left .kpi-bar-fill{margin-left:auto;background:#EF9F27}.kpi-right .kpi-bar-fill{background:#378ADD}.kpi-bar-fill{height:100%;border-radius:999px}.kpi-label{text-align:center;font-size:11px;color:var(--tx2);font-weight:800;line-height:1.25;min-width:0}.kpi-delta{display:inline-block;margin-top:2px;border-radius:999px;padding:1px 6px;font-family:'DM Mono',monospace;font-size:10px;line-height:1.4}.kpi-delta.pos{color:#22c55e;background:#22c55e18}.kpi-delta.neg{color:#ef4444;background:#ef444418}.kpi-delta.eq{color:var(--tx3);background:rgba(148,163,184,.14)}
+    .kpi-radar-card{display:grid;gap:10px}.kpi-radar-svg{display:block;max-width:520px;margin:0 auto}.kpi-radar-svg text{font-size:10.5px;fill:var(--tx2);font-weight:750}.kpi-trend-svg{display:block;background:rgba(0,0,0,.18);border:1px solid rgba(148,163,184,.12);border-radius:8px;min-width:0}.kpi-legend{display:flex;gap:9px 12px;flex-wrap:wrap;margin-top:8px;font-size:11px;line-height:1.35;color:var(--tx3)}.kpi-legend i,.kpi-info-line i,.kpi-metric-row i,.kpi-strength-head i{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:6px;flex:0 0 auto}
+    .kpi-metric-block{display:grid;gap:7px;margin-top:11px}.kpi-metric-name{font-size:11px;color:var(--tx2);font-weight:900;margin-bottom:5px}.kpi-metric-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(70px,1.2fr) 54px;gap:8px;align-items:center;font-size:11px;line-height:1.35;min-width:0}.kpi-metric-row span{display:flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2)}.kpi-metric-row strong{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;text-align:right;color:var(--tx);font-size:11px}.kpi-metric-bar{height:8px;background:rgba(148,163,184,.14);border-radius:999px;overflow:hidden;min-width:0}.kpi-metric-bar b{display:block;height:100%;border-radius:999px}
+    .kpi-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.kpi-metric-card{background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.14);border-radius:8px;padding:12px;min-width:0}.kpi-chip-list{display:flex;gap:8px;flex-wrap:wrap}.kpi-text-chip{--chip:#94a3b8;display:grid;gap:3px;border:1px solid rgba(148,163,184,.18);box-shadow:inset 3px 0 0 var(--chip);background:rgba(255,255,255,.035);border-radius:8px;padding:8px 9px;font-size:11px;color:var(--tx2);line-height:1.35;min-width:145px}.kpi-text-chip i{width:8px;height:8px;border-radius:999px;background:var(--chip)}.kpi-text-chip b{color:var(--tx);font-size:10.5px}
+    .kpi-strength-row{display:grid;gap:7px;margin:12px 0}.kpi-strength-head{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:11.5px;color:var(--tx2);min-width:0}.kpi-strength-head span{display:flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kpi-strength-head strong{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;color:var(--tx)}.kpi-strength-bar{display:flex;height:12px;background:rgba(148,163,184,.12);border-radius:999px;overflow:hidden}.kpi-strength-bar b{display:block;min-width:0}.kpi-strength-meta{font-size:10.5px;color:var(--tx3);line-height:1.45}
+    .kpi-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.kpi-info-line{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;border-bottom:1px solid rgba(148,163,184,.12);padding:8px 0;font-size:11.5px;color:var(--tx2);line-height:1.45}.kpi-info-line span{display:flex;align-items:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kpi-info-line strong{color:var(--tx);font-weight:750;line-height:1.45;word-break:break-word}
+    .compare-mini-grid,.compare-role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.compare-mini,.compare-role{background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.16);border-radius:8px;padding:12px;min-width:0}.compare-mini strong,.compare-role-main{display:block;font-size:13px;font-weight:900;margin-bottom:5px}.compare-mini span,.compare-sub{font-size:11px;color:var(--tx3);line-height:1.5}.compare-role{border-top:2.5px solid var(--compare-color,#94a3b8)}.compare-role-main{font-size:14px}.compare-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.compare-tag{font-size:10px;border-radius:999px;padding:4px 7px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.18);color:var(--tx2)}
+    .compare-shell.compare-results-mode{width:calc(100vw - 48px);max-width:calc(100vw - 48px);margin-left:calc(50% - 50vw + 24px)}.compare-grid.compare-grid-full{grid-template-columns:1fr}.compare-main{min-width:0}.compare-selected-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.compare-selected-head .compare-card-title{margin-bottom:0}.compare-selected-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .kpi-trend-card,.kpi-strength-section{grid-column:1/-1}.kpi-trend-svg text{fill:var(--tx3);font-family:'DM Mono',monospace;font-size:10px;font-variant-numeric:tabular-nums}.kpi-trend-svg .kpi-axis-label{fill:var(--tx2);font-family:Inter,system-ui,sans-serif;font-size:11px;font-weight:850;letter-spacing:0}.kpi-dash-key i{width:18px!important;height:0!important;border-radius:0!important;border-top:2px dashed currentColor;background:transparent!important;margin-top:6px}
+    .kpi-strength-legend{display:flex;gap:10px 14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:var(--tx2);line-height:1.35}.kpi-strength-legend i,.kpi-profile-head i{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:6px;flex:0 0 auto}.kpi-strength-stacked{height:18px;border-radius:8px;background:rgba(148,163,184,.12)}.kpi-strength-stacked b{display:block;height:100%}.kpi-strength-scale{display:flex;justify-content:space-between;gap:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--tx3);line-height:1.35}.kpi-strength-scale span{white-space:nowrap}
+    .kpi-insight-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;min-width:0}.kpi-profile-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;min-width:0}.kpi-profile-card{border:1px solid rgba(148,163,184,.14);border-left:3px solid var(--item,#94a3b8);border-radius:8px;background:rgba(255,255,255,.035);padding:11px;display:grid;gap:9px;min-width:0}.kpi-profile-head span{display:flex;align-items:center;min-width:0;font-size:11px;font-weight:850;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kpi-profile-head i{background:var(--item,#94a3b8)}.kpi-profile-main{font-size:13px;font-weight:900;color:var(--tx);line-height:1.35;word-break:break-word}.kpi-profile-main.muted{color:var(--tx3);font-weight:750}.kpi-profile-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kpi-profile-stats div{border:1px solid rgba(148,163,184,.12);border-radius:7px;background:rgba(0,0,0,.14);padding:8px;min-width:0}.kpi-profile-stats b{display:block;font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:15px;color:var(--tx)}.kpi-profile-stats span{display:block;font-size:10px;color:var(--tx3);line-height:1.35;margin-top:2px}.kpi-badge-row{display:flex;gap:7px;flex-wrap:wrap;min-width:0}.kpi-mini-badge{--badge:#94a3b8;display:inline-flex;max-width:100%;border:1px solid var(--badge);background:rgba(255,255,255,.035);color:var(--tx2);border-radius:999px;padding:4px 8px;font-size:10.5px;font-weight:800;line-height:1.25;overflow:hidden;text-overflow:ellipsis}
+    @media(max-width:900px){.compare-grid,.kpi-grid,.kpi-info-grid,.kpi-detail-row{grid-template-columns:1fr}.kpi-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-mirror-row{grid-template-columns:56px minmax(80px,1fr);grid-template-areas:'av label' 'abar abar' 'bbar bbar' 'bv bv';gap:7px 10px}.kpi-mirror-row .kpi-mval.kpi-a{grid-area:av}.kpi-mirror-row .kpi-label{grid-area:label;text-align:right}.kpi-mirror-row .kpi-left{grid-area:abar}.kpi-mirror-row .kpi-right{grid-area:bbar}.kpi-mirror-row .kpi-mval.kpi-b{grid-area:bv;text-align:right}.compare-btn{width:100%}}
+    @media(max-width:900px){.compare-shell.compare-results-mode{width:100%;max-width:100%;margin-left:0}.compare-grid.compare-grid-full,.kpi-insight-grid{grid-template-columns:1fr}.compare-selected-head{align-items:flex-start;flex-direction:column}.compare-selected-tools{width:100%}.compare-selected-tools .compare-btn{width:100%}}
+    @media(max-width:600px){.kpi-header{justify-content:flex-start}.kpi-cards,.kpi-metric-grid{grid-template-columns:1fr}.kpi-metric-row{grid-template-columns:minmax(0,1fr);gap:5px}.kpi-metric-row strong{text-align:left}.compare-chip{max-width:none;width:100%}.kpi-radar-svg text{font-size:9.5px}}
+    @media(max-width:600px){.kpi-profile-list{grid-template-columns:1fr}.kpi-profile-stats{grid-template-columns:1fr}.kpi-strength-scale{font-size:9px}}
+  </style>`;
+}
+function rComparisonCenterPage(){
+  const selected=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  const selectedKeys=new Set(selected.map(comparisonItemKey));
+  const sel=getComparisonCurrentSelection();
+  const search=normalizePlayerName(S.comparisonSearch||'');
+  const players=sel.players;
+  const currentItem={type:sel.variant.type,playerId:sel.playerId,season:sel.variant.season};
+  const currentKey=comparisonItemKey(currentItem);
+  const alreadySelected=selectedKeys.has(currentKey);
+  const selectedRows=buildComparisonDataset(selected);
+  const currentPlayer=sel.players.find(p=>p.playerId===sel.playerId);
+  return`${rComparisonStyles()}<div class="compare-shell">
+    <div><div class="compare-title">Vergleichszentrum</div><div class="compare-sub">Spieler auswählen, Saison oder Alltime wählen und per Klick zum Vergleich hinzufügen.</div></div>
+    <div class="compare-grid">
+      <div class="compare-card compare-picker">
+        <div class="compare-card-title">Spieler auswählen</div>
+        <input class="compare-input" value="${escAttr(S.comparisonSearch||'')}" placeholder="Spieler suchen" oninput="filterComparisonPlayers(this.value)" autocomplete="off">
+        <label class="compare-toggle"><input type="checkbox" ${S.comparisonShowSgOnly?'checked':''} onchange="toggleComparisonSgOnly(this.checked)"> SG-/Tübingen-only Spieler anzeigen</label>
+        <div class="compare-player-list">${players.length?players.map(p=>{const visible=!search||normalizePlayerName(p.name).includes(search);return`<button class="compare-player-row${p.playerId===sel.playerId?' active':''}" data-compare-player-row data-compare-search="${escAttr(normalizePlayerName(p.name))}"${visible?'':' style="display:none"'} onclick="selectComparisonPlayer(${comparisonJsArg(p.playerId)})">
+          <div><div class="compare-row-name">${escHtml(p.name)}${p.sgOnly?' <span class="compare-sg-badge">SG</span>':''}</div><div class="compare-row-meta">${p.points} Alltime-Punkte · ${p.seasons.map(getComparisonSeasonLabel).join(', ')||'keine Saisonleistung'}</div></div><i class="compare-player-dot" style="--compare-color:${p.color}"></i>
+        </button>`}).join(''):'<div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div>'}</div>
+        <div class="compare-current">
+          <div class="compare-card-title" style="margin-bottom:0">Leistung wählen</div>
+          <div class="compare-row-name">${escHtml(currentPlayer?.name||'Kein Spieler')}</div>
+          <select class="compare-select" onchange="setComparisonVariant(this.value)">
+            ${sel.variants.map(v=>`<option value="${escAttr(v.value)}"${v.value===sel.variantValue?' selected':''}>${escHtml(v.label)} · ${v.points} P · ${v.games} Sp</option>`).join('')}
+          </select>
+          <button class="compare-btn compare-primary" ${!sel.playerId||!sel.variants.length||alreadySelected?'disabled':''} onclick="addSelectedComparisonItem()">${alreadySelected?'Bereits ausgewählt':'+ Zum Vergleich hinzufügen'}</button>
+        </div>
+      </div>
+      <div>
+        <div class="compare-card">
+          <div class="compare-card-title">Ausgewählte Vergleichsobjekte</div>
+          <div class="compare-selected">${selectedRows.length?selectedRows.map(d=>`<div class="compare-chip" style="border-color:${d.color}55"><div><strong>${escHtml(d.playerName)}</strong><br><span>${escHtml(d.season)} · ${d.type==='playerAlltime'?'Spieler-Alltime':'Saisonleistung'}</span></div><button class="compare-x" title="Entfernen" onclick="removeComparisonItem(${comparisonJsArg(d.key)})">×</button></div>`).join(''):'<div class="noev" style="font-size:12px;padding:0">Noch keine Vergleichsobjekte ausgewählt.</div>'}</div>
+          <div class="compare-actions"><button class="compare-btn compare-primary" ${selected.length<2?'disabled':''} onclick="runComparison()">Vergleichen</button><button class="compare-btn" ${selected.length?'':'disabled'} onclick="clearComparison()">Auswahl leeren</button><span class="compare-sub">${selected.length}/${COMPARISON_MAX_ITEMS} ausgewählt</span></div>
+          ${S.comparisonMessage?`<div class="compare-note">${escHtml(S.comparisonMessage)}</div>`:''}
+        </div>
+        ${S.comparisonHasRun?rComparisonDashboard():'<div class="compare-card" style="margin-top:14px"><div class="noev" style="font-size:12px">Mindestens zwei Objekte auswählen und dann vergleichen.</div></div>'}
+      </div>
+    </div>
+  </div>`;
+}
+function rComparisonCenterPage(){
+  const selected=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  const selectedKeys=new Set(selected.map(comparisonItemKey));
+  const sel=getComparisonCurrentSelection();
+  const search=normalizePlayerName(S.comparisonSearch||'');
+  const players=sel.players;
+  const currentItem={type:sel.variant.type,playerId:sel.playerId,season:sel.variant.season};
+  const currentKey=comparisonItemKey(currentItem);
+  const alreadySelected=selectedKeys.has(currentKey);
+  const selectedRows=buildComparisonDataset(selected);
+  const currentPlayer=players.find(p=>p.playerId===sel.playerId);
+  const resultsMode=!!S.comparisonHasRun;
+  const pickerOpen=!resultsMode||S.comparisonPickerOpen!==false;
+  const pickerHtml=`<div class="compare-card compare-picker">
+    <div class="compare-card-title">Spieler auswählen</div>
+    <input class="compare-input" value="${escAttr(S.comparisonSearch||'')}" placeholder="Spieler suchen" oninput="filterComparisonPlayers(this.value)" autocomplete="off">
+    <label class="compare-toggle"><input type="checkbox" ${S.comparisonShowSgOnly?'checked':''} onchange="toggleComparisonSgOnly(this.checked)"> SG-/Tübingen-only Spieler anzeigen</label>
+    <div class="compare-player-list">${players.length?players.map(p=>{const visible=!search||normalizePlayerName(p.name).includes(search);return`<button class="compare-player-row${p.playerId===sel.playerId?' active':''}" data-compare-player-row data-compare-search="${escAttr(normalizePlayerName(p.name))}"${visible?'':' style="display:none"'} onclick="selectComparisonPlayer(${comparisonJsArg(p.playerId)})">
+      <div><div class="compare-row-name">${escHtml(p.name)}${p.sgOnly?' <span class="compare-sg-badge">SG</span>':''}</div><div class="compare-row-meta">${p.points} Alltime-Punkte · ${p.seasons.map(getComparisonSeasonLabel).join(', ')||'keine Saisonleistung'}</div></div><i class="compare-player-dot" style="--compare-color:${p.color}"></i>
+    </button>`}).join(''):'<div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div>'}</div>
+    <div class="compare-current">
+      <div class="compare-card-title" style="margin-bottom:0">Leistung wählen</div>
+      <div class="compare-row-name">${escHtml(currentPlayer?.name||'Kein Spieler')}</div>
+      <select class="compare-select" onchange="setComparisonVariant(this.value)">
+        ${sel.variants.map(v=>`<option value="${escAttr(v.value)}"${v.value===sel.variantValue?' selected':''}>${escHtml(v.label)} · ${v.points} P · ${v.games} Sp</option>`).join('')}
+      </select>
+      <button class="compare-btn compare-primary" ${!sel.playerId||!sel.variants.length||alreadySelected?'disabled':''} onclick="addSelectedComparisonItem()">${alreadySelected?'Bereits ausgewählt':'+ Zum Vergleich hinzufügen'}</button>
+    </div>
+  </div>`;
+  return`${rComparisonStyles()}<div class="compare-shell${resultsMode?' compare-results-mode':''}">
+    <div><div class="compare-title">Vergleichszentrum</div><div class="compare-sub">Spieler auswählen, Saison oder Alltime wählen und per Klick zum Vergleich hinzufügen.</div></div>
+    <div class="compare-grid${pickerOpen?'':' compare-grid-full'}">
+      ${pickerOpen?pickerHtml:''}
+      <div class="compare-main">
+        <div class="compare-card">
+          <div class="compare-selected-head">
+            <div class="compare-card-title">Ausgewählte Vergleichsobjekte</div>
+            ${resultsMode?`<div class="compare-selected-tools"><button class="compare-btn" onclick="toggleComparisonPicker()">${pickerOpen?'Auswahl ausblenden':'Leistungen bearbeiten'}</button></div>`:''}
+          </div>
+          <div class="compare-selected">${selectedRows.length?selectedRows.map(d=>`<div class="compare-chip" style="border-color:${d.color}55"><div><strong>${escHtml(d.playerName)}</strong><br><span>${escHtml(d.season)} · ${d.type==='playerAlltime'?'Spieler-Alltime':'Saisonleistung'}</span></div><button class="compare-x" title="Entfernen" onclick="removeComparisonItem(${comparisonJsArg(d.key)})">×</button></div>`).join(''):'<div class="noev" style="font-size:12px;padding:0">Noch keine Vergleichsobjekte ausgewählt.</div>'}</div>
+          <div class="compare-actions"><button class="compare-btn compare-primary" ${selected.length<2?'disabled':''} onclick="runComparison()">Vergleichen</button><button class="compare-btn" ${selected.length?'':'disabled'} onclick="clearComparison()">Auswahl leeren</button><span class="compare-sub">${selected.length}/${COMPARISON_MAX_ITEMS} ausgewählt</span></div>
+          ${S.comparisonMessage?`<div class="compare-note">${escHtml(S.comparisonMessage)}</div>`:''}
+        </div>
+        ${resultsMode?rComparisonDashboard():'<div class="compare-card" style="margin-top:14px"><div class="noev" style="font-size:12px">Mindestens zwei Objekte auswählen und dann vergleichen.</div></div>'}
+      </div>
+    </div>
+  </div>`;
+}
 function rSeasonTrendRows(rows){
   if(!(rows||[]).length)return'<div class="noev" style="padding:10px 0;font-size:11px">Nicht genügend Daten vorhanden.</div>';
   const max=Math.max(...rows.map(r=>r.points),1);
@@ -5570,6 +6329,218 @@ function rGlobalDnaBars(row){
     <div class="dna-bg"><div class="dna-fill" style="--dna:${color};width:${pctValue(val)===0?0:Math.max(5,pctValue(val))}%"></div></div>
     <div class="dna-val">${pctValue(val)}</div>
   </div>`).join('');
+}
+function pdashNum(value,decimals=0){
+  const n=Number(value);
+  return Number.isFinite(n)?n.toFixed(decimals).replace(/\.0$/,''):'-';
+}
+function pdashPct(value,decimals=0){
+  const n=Number(value);
+  return Number.isFinite(n)?`${n.toFixed(decimals).replace(/\.0$/,'')}%`:'-';
+}
+function pdashPhaseLabel(phase){
+  if(!phase)return'Nicht genügend Daten';
+  return PHAS_FULL[PHASES.indexOf(phase)]||phase;
+}
+function pdashTopCount(events,keyFn){
+  const rows=countBy((events||[]).filter(Boolean),keyFn).filter(r=>r.name);
+  return rows[0]||null;
+}
+function pdashBestPhase(events){
+  const rows=pdashTopCount(events,e=>e.phase||'');
+  return rows?{label:pdashPhaseLabel(rows.name),points:rows.val}:null;
+}
+function pdashTopPartner(events){
+  const rows=countBy((events||[]).filter(e=>e.partner&&e.partner!=='Solo'&&!String(e.partner).startsWith('#')),e=>cleanText(e.partner));
+  return rows[0]?{name:rows[0].name,points:rows[0].val}:null;
+}
+function pdashTopOpponent(events){
+  const rows=pdashTopCount((events||[]).filter(e=>e.opponent),e=>cleanText(e.opponent));
+  return rows?{name:rows.name,points:rows.val}:null;
+}
+function pdashOpponentTier(e,seasonKey){
+  const sk=e?.seasonKey||seasonKey||getActiveSeasonKey();
+  const standings=SEASONS[sk]?.data?.standings?.length?SEASONS[sk].data.standings:S.standings;
+  const strength=standings?.length?getOppStrength(e?.opponent,standings):null;
+  return strength?.tier||'unknown';
+}
+function pdashOpponentStrength(events,seasonKey){
+  const buckets={
+    top:{key:'top',label:'Topteams',range:'oberes Tabellenfeld',color:'#EF9F27',points:0,goals:0,games:new Set()},
+    mid:{key:'mid',label:'Mittelfeld',range:'mittleres Tabellenfeld',color:'#378ADD',points:0,goals:0,games:new Set()},
+    low:{key:'low',label:'Schwächere Teams',range:'unteres Tabellenfeld',color:'#10B981',points:0,goals:0,games:new Set()},
+    unknown:{key:'unknown',label:'Unklar',range:'ohne Tabellenkontext',color:'#94A3B8',points:0,goals:0,games:new Set()},
+  };
+  for(const e of events||[]){
+    const tier=pdashOpponentTier(e,seasonKey);
+    const bucket=buckets[tier]||buckets.unknown;
+    bucket.points++;
+    if(e.type==='Tor')bucket.goals++;
+    const gameKey=`${e.seasonKey||seasonKey||''}:${e.gameId||`${e.date||''}-${e.opponent||''}`}`;
+    if(gameKey.trim()!==':-')bucket.games.add(gameKey);
+  }
+  const rows=['top','mid','low'].map(key=>({...buckets[key],gamesCount:buckets[key].games.size}));
+  const total=rows.reduce((sum,row)=>sum+row.points,0);
+  const unknown={...buckets.unknown,gamesCount:buckets.unknown.games.size};
+  return{rows,total,unknown};
+}
+function pdashInsight(color,badge,main,sub){
+  return{color,badge,main,sub};
+}
+function pdashInsights(model){
+  const insights=[];
+  if(model.impact>=75)insights.push(pdashInsight('#EF4444','Game Changer',`Impact ${pdashNum(model.impact,0)} / 100`,'Überragender Einfluss auf das Spielgeschehen.'));
+  else if(model.impact>=50)insights.push(pdashInsight('#EF9F27','Impact',`Impact ${pdashNum(model.impact,0)} / 100`,'Deutlicher Beitrag im Offensivspiel.'));
+  if(model.clutch>=60)insights.push(pdashInsight('#EF9F27','Druckspieler',`Clutch ${pdashNum(model.clutch,0)} / 100`,'Wichtige Aktionen in engen Spielsituationen.'));
+  if(model.timingTag)insights.push(pdashInsight('#8B5CF6','Timing',model.timingValue||'Timing-Profil',model.timingTag));
+  if(model.teamShare>=25)insights.push(pdashInsight('#378ADD','Offensiv-Motor',`${pdashPct(model.teamShare,0)} Team-Anteil`,`${model.points} von ${model.teamGoals||0} Team-Scorerpunkten.`));
+  if(model.assistShare>=60)insights.push(pdashInsight('#10B981','Kreativmotor',`${pdashPct(model.assistShare,0)} Assist Share`,'Bereitet mehr vor als er selbst abschließt.'));
+  else if(model.goalShare>=65)insights.push(pdashInsight('#EF4444','Abschlussfokus',`${pdashPct(model.goalShare,0)} Goal Share`,'Profil klar Richtung Abschluss.'));
+  if(model.topPartner)insights.push(pdashInsight('#EC4899','Chemiezentrum',model.topPartner.name,`${model.topPartner.points} gemeinsame Punkte.`));
+  return insights.slice(0,4);
+}
+function buildSeasonPlayerDashModel(pd){
+  const ev=S.events[pd.key]||[];
+  const goals=ev.filter(e=>e.type==='Tor');
+  const assists=ev.filter(e=>e.type==='Vorlage');
+  const m=pd.metrics||{};
+  const teamGoals=Object.values(S.teamGoalsPerGame||{}).reduce((s,v)=>s+comparisonNum(v),0);
+  const games=m.gamesPlayed||new Set(ev.map(e=>e.gameId).filter(Boolean)).size;
+  const points=ev.length;
+  const bestPhase=pdashBestPhase(ev);
+  const topPartner=pdashTopPartner(ev);
+  const topOpponent=pdashTopOpponent(ev);
+  const soloGoals=goals.filter(e=>e.partner==='Solo').length;
+  const clutchGoals=goals.filter(e=>e.clutch).length;
+  const lateGoals=goals.filter(isLateGoal).length;
+  const timingShare=(m.timingType==='LATE_PLAYER'?m.lateShare2:m.earlyShare)||0;
+  const timingValue=m.timingType==='LATE_PLAYER'?'Late':m.timingType==='EARLY_PLAYER'?'Early':'Balanced';
+  return{
+    context:'season',
+    name:pd.label,
+    subtitle:`Saison ${SEASON_CONFIG[getActiveSeasonKey()]?.label||getActiveSeasonKey()} · Saisonreport`,
+    report:'Saisonprofil',
+    color:pd.color||'#EF9F27',
+    events:ev,goals:goals.length,assists:assists.length,points,games,
+    pointsPerGame:games?points/games:0,
+    teamGoals,
+    teamShare:teamGoals?points/teamGoals*100:0,
+    goalShare:points?goals.length/points*100:0,
+    assistShare:points?assists.length/points*100:0,
+    soloGoals,assistedGoals:Math.max(0,goals.length-soloGoals),soloQuote:goals.length?soloGoals/goals.length*100:0,
+    clutch:comparisonNum(m.clutchIndex),impact:comparisonNum(m.impactScore),clutchGoals,lateGoals,
+    consistency:comparisonNum(m.consistency)*100,
+    timingValue,timingTag:timingShare?`${pdashPct(timingShare*100,0)} der Punkte mit ${timingValue}-Schwerpunkt`:'',
+    bestPhase,topPartner,topOpponent,opponentDiversity:new Set(ev.map(e=>e.opponent).filter(Boolean)).size,
+    penalties:comparisonNum(m.penMins||(S.penalties[pd.key]||[]).reduce((s,p)=>s+(p.minutes||0),0)),
+    strength:pdashOpponentStrength(ev,getActiveSeasonKey()),
+  };
+}
+function buildAlltimePlayerDashModel(row){
+  const item=buildComparisonDataset([{type:'playerAlltime',playerId:row.playerId}])[0]||{};
+  const ev=getGlobalProfileEvents(row);
+  const goals=ev.filter(e=>e.type==='Tor');
+  const assists=ev.filter(e=>e.type==='Vorlage');
+  const st=getPlayerAlltimeStats(row.playerId);
+  const bestSeason=getGlobalPlayerBestSeason(row);
+  const topPartner=item.metrics?.topPartner||pdashTopPartner(ev);
+  const topOpponent=item.metrics?.topOpponent||pdashTopOpponent(ev);
+  const bestPhase=item.metrics?.bestPhase||pdashBestPhase(ev);
+  const teamGoals=getComparisonAlltimeTeamGoals();
+  const points=st.points||ev.length||0;
+  const games=st.games||item.games||0;
+  const clutchGoals=goals.filter(e=>e.clutch).length;
+  return{
+    context:'alltime',
+    name:row.name,
+    subtitle:`${(st.seasons||row.profile?.seasons||[]).length||0} aktive Saisons · Alltimeprofil`,
+    report:'Alltimeprofil',
+    color:row.color||'#EF9F27',
+    events:ev,goals:st.goals||goals.length,assists:st.assists||assists.length,points,games,
+    pointsPerGame:games?points/games:0,
+    teamGoals,
+    teamShare:item.teamShare||comparisonPct(points,teamGoals),
+    goalShare:item.goalShare||comparisonPct(st.goals||goals.length,points),
+    assistShare:item.assistShare||comparisonPct(st.assists||assists.length,points),
+    soloGoals:goals.filter(e=>e.partner==='Solo').length,
+    assistedGoals:Math.max(0,goals.length-goals.filter(e=>e.partner==='Solo').length),
+    soloQuote:goals.length?goals.filter(e=>e.partner==='Solo').length/goals.length*100:0,
+    clutch:item.styleProfile?.clutch||comparisonPct(clutchGoals,goals.length),
+    impact:item.metrics?.impactScore||0,
+    clutchGoals,
+    lateGoals:item.metrics?.lateGoals||goals.filter(isLateGoal).length,
+    consistency:item.metrics?.consistencyPct||0,
+    timingValue:bestPhase?.label||'Alltime',
+    timingTag:bestPhase?`${bestPhase.points} Punkte in stärkster Phase`:(bestSeason?`Stärkste Saison: ${bestSeason.label}`:''),
+    bestPhase,topPartner,topOpponent,
+    opponentDiversity:item.metrics?.opponentDiversity||new Set(ev.map(e=>e.opponent).filter(Boolean)).size,
+    penalties:comparisonNum(st.penaltyMinutes||st.penalties||0),
+    bestSeason,
+    strength:pdashOpponentStrength(ev,null),
+  };
+}
+function rPlayerDashStyles(){
+  return`<style>
+    .pdash,.pdash *{box-sizing:border-box}.pdash{display:grid;gap:18px;margin:0 0 18px 0;min-width:0}.pdash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}.pdash-name{font-size:19px;font-weight:900;color:var(--tx);line-height:1.15}.pdash-sub{font-size:12px;color:var(--tx3);margin-top:3px;line-height:1.45}.pdash-report{font-size:11px;color:var(--tx2);background:var(--surf2);border:1px solid var(--brd);border-radius:999px;padding:5px 10px;white-space:nowrap}
+    .pdash-section-label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2);margin-bottom:10px}.pdash-section-label i{width:7px;height:7px;border-radius:99px;background:var(--pdash,#EF9F27);box-shadow:0 0 14px var(--pdash,#EF9F27)}
+    .pdash-kpi-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.pdash-card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));border:1px solid rgba(148,163,184,.16);border-radius:8px;min-width:0}.pdash-kpi{position:relative;overflow:hidden;padding:13px 14px}.pdash-accent{position:absolute;top:0;left:0;right:0;height:3px;background:var(--pdash,#EF9F27)}.pdash-val{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:24px;font-weight:900;line-height:1;color:var(--tx);white-space:nowrap}.pdash-lbl{font-size:10.5px;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-top:6px}.pdash-tag{display:inline-flex;margin-top:7px;border:1px solid var(--pdash,#EF9F27);border-radius:999px;color:var(--pdash,#EF9F27);background:rgba(255,255,255,.035);padding:3px 7px;font-size:10px;font-weight:800;line-height:1.2}
+    .pdash-insight-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.pdash-insight{position:relative;overflow:hidden;padding:13px 14px 13px 17px}.pdash-stripe{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--pdash,#EF9F27)}.pdash-badge{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--pdash,#EF9F27);margin-bottom:7px}.pdash-main{font-size:16px;font-weight:900;color:var(--tx);line-height:1.25;word-break:break-word}.pdash-subtxt{font-size:12px;color:var(--tx3);line-height:1.45;margin-top:5px}
+    .pdash-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.pdash-stat{padding:13px 14px}.pdash-stat-badge{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--pdash,#EF9F27);margin-bottom:8px}.pdash-stat-main{font-size:15px;font-weight:900;color:var(--tx);line-height:1.35;word-break:break-word}.pdash-stat-sub{font-size:11.5px;color:var(--tx3);line-height:1.45;margin-top:4px}.pdash-num{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums}
+    .pdash-strength{padding:14px}.pdash-stack{display:flex;height:16px;border-radius:7px;overflow:hidden;background:rgba(148,163,184,.13);margin-bottom:8px}.pdash-stack b{display:block;height:100%}.pdash-legend{display:flex;gap:10px 16px;flex-wrap:wrap;font-size:11px;color:var(--tx2);line-height:1.4}.pdash-legend span{display:flex;align-items:center;gap:6px}.pdash-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}.pdash-geg-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.pdash-geg{position:relative;overflow:hidden;padding:15px;text-align:center}.pdash-geg-foot{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--pdash,#EF9F27)}.pdash-geg-num{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:31px;font-weight:900;line-height:1;color:var(--pdash,#EF9F27)}.pdash-geg-tier{font-size:11px;color:var(--tx3);margin-top:5px}.pdash-geg-name{font-size:13px;font-weight:900;color:var(--tx);margin-top:2px}.pdash-mini-track{height:7px;background:rgba(148,163,184,.13);border-radius:999px;overflow:hidden;margin:11px 0 7px}.pdash-mini-track b{display:block;height:100%;background:var(--pdash,#EF9F27);border-radius:999px}.pdash-geg-meta{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--tx3);line-height:1.35}.pdash-empty{font-size:12px;color:var(--tx3);line-height:1.5;padding:12px 0}
+    @media(max-width:980px){.pdash-kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))}.pdash-insight-grid,.pdash-stat-grid,.pdash-geg-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:620px){.pdash-head{align-items:flex-start;flex-direction:column}.pdash-kpi-row,.pdash-insight-grid,.pdash-stat-grid,.pdash-geg-row{grid-template-columns:1fr}.pdash-val{font-size:22px}.pdash-report{white-space:normal}}
+  </style>`;
+}
+function rPdashLabel(label,color,icon=''){
+  return`<div class="pdash-section-label" style="--pdash:${color||'#EF9F27'}"><i></i>${icon?`${icon} `:''}${escHtml(label)}</div>`;
+}
+function rPdashStat(color,badge,main,sub){
+  return`<div class="pdash-card pdash-stat" style="--pdash:${color}"><div class="pdash-stat-badge"><span>◆</span>${escHtml(badge)}</div><div class="pdash-stat-main">${main}</div><div class="pdash-stat-sub">${sub}</div></div>`;
+}
+function rPlayerDash(model,{showHeader=true}={}){
+  if(!model||!model.points&&!model.games)return`${rPlayerDashStyles()}<div class="pdash"><div class="noev">Nicht genügend Daten vorhanden.</div></div>`;
+  const kpis=[
+    ['Impact',pdashNum(model.impact,0),model.impact>=75?'Game Changer':model.impact>=50?'Key Factor':'Analyse','#EF4444'],
+    ['Clutch',pdashNum(model.clutch,0),model.clutch>=60?'Druckspieler':'Index','#EF9F27'],
+    ['Timing',model.timingValue||'-',model.timingTag||'Phasenprofil','#8B5CF6'],
+    ['Konstanz',pdashPct(model.consistency,0),`${model.games} Spiele`,'#10B981'],
+    ['Team-Anteil',pdashPct(model.teamShare,0),model.teamShare>=25?'Carry-Player':'Team Share','#378ADD'],
+  ];
+  const insights=pdashInsights(model);
+  const statCards=[
+    rPdashStat('#378ADD','Überblick',`${model.goals} Tore · ${model.assists} Assists · ${model.points} P`,`Ø ${pdashNum(model.pointsPerGame,2)} Punkte pro Spiel · ${model.games} Spiele`),
+    rPdashStat('#EF9F27','Team-Beteiligung',`${pdashPct(model.teamShare,1)} Team-Anteil`,model.teamGoals?`${model.points} / ${model.teamGoals} Team-Scorerpunkte`:'Teamkontext nicht genügend verfügbar'),
+    rPdashStat('#10B981','Solo-Quote',`${pdashPct(model.soloQuote,0)} Solo-Tore`,`${model.soloGoals} Solo · ${model.assistedGoals} mit Vorlage`),
+    model.topPartner?rPdashStat('#EC4899','Beste Kombination',escHtml(model.topPartner.name),`${model.topPartner.points} gemeinsame Punkte`):'',
+    rPdashStat('#EF4444','Clutch',`${model.clutchGoals} Clutch-Tore`,`${model.lateGoals} späte Tore · Index ${pdashNum(model.clutch,0)}`),
+    model.bestPhase?rPdashStat('#8B5CF6','Stärkste Phase',escHtml(model.bestPhase.label),`${model.bestPhase.points} Punkte in dieser Phase`):'',
+    model.topOpponent?rPdashStat('#14B8A6','Gegnerprofil',escHtml(model.topOpponent.name),`${model.topOpponent.points} Punkte · ${model.opponentDiversity} Gegner insgesamt`):'',
+    model.penalties?rPdashStat('#94A3B8','Disziplin',`${model.penalties} Strafminuten`,model.points?`${pdashNum(model.points/Math.max(model.penalties,1),2)} Punkte pro Strafminute`:'Keine Scorerpunkte im Kontext'):'',
+  ].filter(Boolean).join('');
+  const strength=model.strength||{rows:[],total:0};
+  const strengthHtml=strength.total>0?`<div class="pdash-card pdash-strength">
+    <div class="pdash-stack">${strength.rows.map(row=>`<b title="${escAttr(row.label)}: ${row.points} P" style="width:${Math.max(0,row.points/strength.total*100).toFixed(2)}%;background:${row.color}"></b>`).join('')}</div>
+    <div class="pdash-legend">${strength.rows.map(row=>`<span><i style="background:${row.color}"></i>${escHtml(row.label)} ${pdashPct(row.points/strength.total*100,0)}</span>`).join('')}</div>
+  </div>
+  <div class="pdash-geg-row">${strength.rows.map(row=>`<div class="pdash-card pdash-geg" style="--pdash:${row.color}">
+    <div class="pdash-geg-num">${row.points}</div><div class="pdash-geg-tier">${escHtml(row.range)}</div><div class="pdash-geg-name">${escHtml(row.label)}</div>
+    <div class="pdash-mini-track"><b style="width:${Math.max(0,row.points/strength.total*100).toFixed(2)}%"></b></div>
+    <div class="pdash-geg-meta"><span>${row.gamesCount} Sp · ${row.goals} Tore</span><strong>${pdashPct(row.points/strength.total*100,0)}</strong></div><div class="pdash-geg-foot"></div>
+  </div>`).join('')}</div>`:'<div class="pdash-card pdash-strength"><div class="pdash-empty">Nicht genügend Tabellenkontext für Gegnerstärke vorhanden.</div></div>';
+  return`${rPlayerDashStyles()}<div class="pdash">
+    ${showHeader?`<div class="pdash-head"><div><div class="pdash-name">${escHtml(model.name)}</div><div class="pdash-sub">${escHtml(model.subtitle||'')}</div></div><div class="pdash-report">${escHtml(model.report||'Spielerprofil')}</div></div>`:''}
+    <div>${rPdashLabel('Insights',model.color,'')}</div>
+    <div class="pdash-kpi-row">${kpis.map(([label,value,tag,color])=>`<div class="pdash-card pdash-kpi" style="--pdash:${color}"><div class="pdash-accent"></div><div class="pdash-val">${escHtml(String(value))}</div><div class="pdash-lbl">${escHtml(label)}</div>${tag?`<span class="pdash-tag">${escHtml(tag)}</span>`:''}</div>`).join('')}</div>
+    ${insights.length?`<div>${rPdashLabel('Auto-Insights',model.color,'')}<div class="pdash-insight-grid">${insights.map(ins=>`<div class="pdash-card pdash-insight" style="--pdash:${ins.color}"><div class="pdash-stripe"></div><div class="pdash-badge">${escHtml(ins.badge)}</div><div class="pdash-main">${escHtml(ins.main)}</div><div class="pdash-subtxt">${escHtml(ins.sub)}</div></div>`).join('')}</div></div>`:''}
+    <div>${rPdashLabel('Statistiken',model.color,'')}<div class="pdash-stat-grid">${statCards}</div></div>
+    <div>${rPdashLabel('Punkte nach Gegner-Stärke',model.color,'')}${strengthHtml}</div>
+  </div>`;
+}
+function rSeasonPlayerDashboard(pd,opts){
+  return rPlayerDash(buildSeasonPlayerDashModel(pd),opts);
+}
+function rAlltimePlayerDashboard(row,opts){
+  return rPlayerDash(buildAlltimePlayerDashModel(row),opts);
 }
 function rGlobalPartnerOpponentPanel(row){
   const partners=getAllTimeDuoRowsForPlayer(row.playerId).slice(0,5);
@@ -5781,7 +6752,7 @@ function rGlobalOverview(row){
   const peakDetail=peakGame?`${peakSeason} · ${peakGame.goals||0} Tore · ${peakGame.assists||0} Assists`:'';
   const bestText=bestSeason?`${bestSeasonLabel} · ${bestSeason.points||0} Punkte`:'Nicht genügend Daten vorhanden';
   const milestoneHtml=milestones.length?`<div class="mono" style="line-height:1.9;color:var(--tx2)">${milestones.join('<br>')}</div>`:'<div class="noev" style="padding:10px">Noch keine Karrieremeilensteine.</div>';
-  return`${rAlltimeKpis(row)}
+  return`${rAlltimePlayerDashboard(row)}
     <div class="at-grid">
       <div class="at-card">
         <div class="at-card-title" style="color:#f8d98b">Entwicklung / Verlauf</div>
@@ -5822,7 +6793,7 @@ function rGlobalOverview(row){
 function rGlobalAllTimeStats(row){
   if(!row)return'<div class="noev">Kein Spieler ausgewählt.</div>';
   const duoRows=getAllTimeDuoRowsForPlayer(row.playerId).slice(0,8);
-  return`${rAlltimeKpis(row)}
+  return`${rAlltimePlayerDashboard(row,{showHeader:false})}
     <div class="at-grid">
       <div class="at-card">
         <div class="at-card-title" style="color:#ec4899">Alltime Duo Partner Ranking</div>
@@ -5849,7 +6820,8 @@ function rGlobalDevelopment(row){
     const roleKey=identity?.coreRole||null;
     return{...r,role:(roleKey&&(CORE_ROLE_LABELS?.[roleKey]||roleKey))||'Keine Rolle',status:getRosterStatus(row.playerId,r.seasonKey||r.season)?.label||'Kein Status'};
   });
-  return`<div class="at-grid">
+  return`${rAlltimePlayerDashboard(row,{showHeader:false})}
+  <div class="at-grid">
     <div class="at-card">
       <div class="at-card-title" style="color:#f8d98b">Saisonverlauf</div>
       ${rSparkline(seasonRows)}
@@ -6837,11 +7809,6 @@ function _render(root){
   // ── PLAYER PAGE ──
   if(!pd){root.innerHTML=hdrHtml+'<div class="noev">Keine Spieler gefunden.</div>';return;}
   const ev=S.events[pd.key]||[];
-  const goals=ev.filter(e=>e.type==='Tor');
-  const assists=ev.filter(e=>e.type==='Vorlage');
-  const gCnt=new Set(ev.map(e=>e.gameId)).size;
-  const teamShare=totalTeam>0?((goals.length+assists.length)/totalTeam*100):0;
-  const penMins=(S.penalties[pd.key]||[]).reduce((s,p)=>s+p.minutes,0);
 
   const ptabs=S.players.map(p=>{
     const hasEnforcer=(p.tags.status&&p.tags.status.includes('ENFORCER'))||(p.classicTags?.status||[]).includes('ENFORCER');
@@ -6878,21 +7845,14 @@ function _render(root){
     else tabContent=rMatrix(ev,pd.color);
   }catch(e){tabContent=`<div class="wrn-box">⚠️ Fehler im Tab "${S.activeTab}": ${e.message}</div>`;}
 
+  const seasonDashboardHtml=ev.length?rSeasonPlayerDashboard(pd,{showHeader:false}):'';
   root.innerHTML=`${hdrHtml}
   ${errHtml}
   <div class="ptabs">${ptabs}</div>
   ${renderTags(pd)}
-  ${ev.length?`<div class="stats">
-    <div class="sc c1"><div class="sv">${goals.length}</div><div class="sl">Tore</div></div>
-    <div class="sc c2"><div class="sv">${assists.length}</div><div class="sl">Vorlagen</div></div>
-    <div class="sc c3"><div class="sv">${ev.length}</div><div class="sl">Punkte</div></div>
-    <div class="sc c4"><div class="sv">${gCnt}</div><div class="sl">Spiele</div></div>
-    <div class="sc c5"><div class="sv">${goals.filter(e=>e.partner==='Solo').length}</div><div class="sl">Solo</div></div>
-    <div class="sc cr"><div class="sv">${teamShare.toFixed(0)}%</div><div class="sl">Team-Anteil</div></div>
-    ${penMins?`<div class="sc" style=""><div class="sv" style="color:#8b5cf6;font-size:22px">${penMins}m</div><div class="sl">Strafmin.</div></div>`:'' }
-  </div>`:ev.length===0?`<div class="wrn-box">⚠️ Keine Scorer-Ereignisse für ${pd.label}.</div>`:''}
   <div class="tabs">${tabsDef.map(t=>`<button class="tb${S.activeTab===t.k?' active':''}" onclick="setTab('${t.k}')">${t.lbl}</button>`).join('')}</div>
-  <div>${tabContent}</div>`;
+  <div>${tabContent}</div>
+  ${ev.length&&S.activeTab!=='insights'?`<div style="margin-top:18px">${seasonDashboardHtml}</div>`:ev.length===0?`<div class="wrn-box">⚠️ Keine Scorer-Ereignisse für ${escHtml(pd.label)}.</div>`:''}`;
 }
 
 // Init
