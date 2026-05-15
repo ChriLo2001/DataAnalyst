@@ -366,6 +366,7 @@ tbody td{padding:6px 9px;vertical-align:middle}
   </div>
   <div class="cv-nav-extra">
     <button class="cv-btn" style="padding:12px 28px;font-size:13px" onclick="openHallOfFame()">Hall of Fame</button>
+    <button class="nav-btn" onclick="openComparisonCenter()">Vergleichszentrum</button>
     <button class="nav-btn" onclick="openLexicon()">Lexikon</button>
     <button class="nav-btn" onclick="openAllTimePlayers()">Alltime Spieler</button>
   </div>
@@ -495,7 +496,7 @@ function createSeasonBucket(key,config){
     config,
     status:{loaded:false,loading:false,lastLoadedAt:null},
     cache:{rawGames:null,normalizedGames:null,ulmGames:null,leagueGames:null,standings:null},
-    data:{games:[],gamesData:[],players:[],playersMap:{},events:{},eventsList:[],penalties:{},teamStats:{},teamGoalsPerGame:{},standings:[],playerRegistry:null,allTime:null,warnings:[]},
+    data:{games:[],gamesData:[],rawGames:[],rawLeagueGames:[],relevantLeagueGames:[],excludedScheduledGames:[],flaggedSuspiciousGames:[],players:[],playersMap:{},events:{},eventsList:[],penalties:{},teamStats:{},teamGoalsPerGame:{},standings:[],playerRegistry:null,allTime:null,warnings:[]},
     errors:[],
     dbg:[],
   };
@@ -845,6 +846,7 @@ let S={
   activeSeasonKey:CURRENT_SEASON_KEY,
   selectedSeasonKey:CURRENT_SEASON_KEY,
   globalPlayerId:null,globalTab:'overview',showSgOnlyAlltime:false,
+  comparisonItems:[],comparisonSearch:'',comparisonSeasonFilter:'all',comparisonHasRun:false,comparisonMessage:'',
   errors:[],dbg:[],
 };
 const setState=p=>{S={...S,...p};render();};
@@ -857,6 +859,7 @@ window.setTab=t=>setState({activeTab:t});
 window.setPage=p=>{
   if(p==='alltimePlayers')return window.openAllTimePlayers?.();
   if(p==='hallOfFame')return window.openHallOfFame?.();
+  if(p==='comparisonCenter')return window.openComparisonCenter?.();
   setState({page:p});
 };
 window.setGlobalPlayer=id=>setState({page:'alltimePlayers',globalPlayerId:id,globalTab:'overview'});
@@ -872,6 +875,11 @@ function getSeasonData(seasonKey=getActiveSeasonKey()){
   return{
     games:data.games||data.gamesData||[],
     gamesData:data.gamesData||[],
+    rawGames:data.rawGames||[],
+    rawLeagueGames:data.rawLeagueGames||[],
+    relevantLeagueGames:data.relevantLeagueGames||[],
+    excludedScheduledGames:data.excludedScheduledGames||[],
+    flaggedSuspiciousGames:data.flaggedSuspiciousGames||[],
     players:data.players||[],
     playersMap:data.playersMap||{},
     events:data.events||{},
@@ -1090,31 +1098,37 @@ function diagnoseGameDuplicates(gamesData){
     games:rows.map(g=>`${g.date||g.game_date||'kein Datum'} ${g.home_team_name||'?'} - ${g.guest_team_name||'?'}`),
   }));
 }
-function appendSeasonGameDiagnostics({seasonKey,seasonConfig,allGamesData,leagueGamesData,leagueTeams,errors,dbg}){
-  const duplicateIds=diagnoseGameDuplicates(allGamesData);
+function gameClassificationStatusLabel(g,classification=null){
+  const c=classification||classifyGameForStats(g);
+  const fields=[
+    g?.notice_type,g?.notice_string,g?.status,g?.game_status,g?.state,
+    g?.result?.postfix?.short,g?.result?.postfix?.long,
+  ].map(v=>cleanText(v||'').trim()).filter(Boolean);
+  return fields.length?fields.join(' / '):c.status;
+}
+function appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,errors,dbg}){
+  const duplicateIds=diagnoseGameDuplicates(rawGamesData||leagueGamesData);
   for(const dup of duplicateIds){
     const msg=`Doppelte Game-ID ${dup.id} in ${seasonConfig.label||seasonKey} erkannt (${dup.count}x). Es wird nur ein Eintrag geladen; Details: ${dup.games.join(' | ')}`;
     errors.push(msg);
     dbg.push(`⚠️ ${msg}`);
   }
-  const pairCounts={};
-  for(const g of leagueGamesData||[]){
-    const pair=[g.home_team_name||'?',g.guest_team_name||'?'].sort().join(' vs ');
-    if(!pairCounts[pair])pairCounts[pair]=[];
-    pairCounts[pair].push(g);
+  if((excludedScheduledGames||[]).length||seasonKey==='24/25'){
+    const msg=`${seasonConfig.label||seasonKey}: ${(leagueGamesData||[]).length} Spiele geladen, ${(relevantLeagueGames||[]).length} ausgetragene reguläre Spiele für Statistiken verwendet, ${(excludedScheduledGames||[]).length} abgesagte/verschobene/nicht relevante Spiele ausgeschlossen.`;
+    errors.push(msg);
+    dbg.push(`⚠️ ${msg}`);
   }
-  const extraPairs=Object.entries(pairCounts).filter(([,rows])=>rows.length>2);
-  if(seasonKey==='24/25'){
-    for(const [pair,rows] of extraPairs){
-      const msg=`Mögliche Zusatzspiele/Playoffs/Freundschaftsspiele ${seasonConfig.label||seasonKey}: ${pair} (${rows.length} Spiele: ${rows.map(g=>g.id||gameStableId(g)).join(', ')})`;
-      errors.push(msg);
-      dbg.push(`⚠️ ${msg}`);
-    }
+  for(const row of excludedScheduledGames||[]){
+    const g=row.game||row;
+    const c=row.classification||classifyGameForStats(g,seasonConfig);
+    const msg=`Ausgeschlossen: Game ${g.id||gameStableId(g)} ${g.home_team_name||'?'} - ${g.guest_team_name||'?'} | Status: ${gameClassificationStatusLabel(g,c)} | Grund: ${c.reason}`;
+    errors.push(msg);
+    dbg.push(`⚠️ ${msg}`);
   }
-  const teamCount=leagueTeams?.size||0;
-  const expectedDoubleRoundRobin=teamCount>1?teamCount*(teamCount-1):0;
-  if(seasonKey==='24/25'&&expectedDoubleRoundRobin&&leagueGamesData.length>expectedDoubleRoundRobin){
-    const msg=`Diagnose ${seasonConfig.label||seasonKey}: ${leagueGamesData.length} Ligaspiele bei ${teamCount} Teams (Doppelrunde erwartet ${expectedDoubleRoundRobin}). Auffällige Spiele werden markiert, nicht automatisch entfernt.`;
+  for(const row of flaggedSuspiciousGames||[]){
+    const g=row.game||row;
+    const c=row.classification||classifyGameForStats(g,seasonConfig);
+    const msg=`Auffällig: Game ${g.id||gameStableId(g)} ${g.home_team_name||'?'} - ${g.guest_team_name||'?'} | Status: ${gameClassificationStatusLabel(g,c)} | Grund: ${c.reason}`;
     errors.push(msg);
     dbg.push(`⚠️ ${msg}`);
   }
@@ -1145,8 +1159,7 @@ function rosterPlayerMatches(ref,rosterPlayer){
 }
 function getRosterGameIdsForPlayer(ref,gamesData){
   const ids=new Set();
-  for(const g of gamesData||[]){
-    if(!isGamePlayed(g))continue;
+  for(const g of getRelevantSeasonGames(gamesData||[])){
     const side=detectSide(g);if(!side)continue;
     const roster=g.players?.[side]||[];
     if(roster.some(p=>rosterPlayerMatches(ref,p)))ids.add(gameStableId(g));
@@ -1160,8 +1173,7 @@ function isGoalieRosterEntry(p){
 }
 function getGoalieGameIdsForPlayer(ref,gamesData){
   const ids=new Set();
-  for(const g of gamesData||[]){
-    if(!isGamePlayed(g))continue;
+  for(const g of getRelevantSeasonGames(gamesData||[])){
     const side=detectSide(g);if(!side)continue;
     const roster=g.players?.[side]||[];
     if(roster.some(p=>rosterPlayerMatches(ref,p)&&isGoalieRosterEntry(p)))ids.add(gameStableId(g));
@@ -1170,8 +1182,7 @@ function getGoalieGameIdsForPlayer(ref,gamesData){
 }
 function countPlayedUlmGames(gamesData){
   const ids=new Set();
-  for(const g of gamesData||[]){
-    if(!isGamePlayed(g))continue;
+  for(const g of getRelevantSeasonGames(gamesData||[])){
     if(!detectSide(g))continue;
     ids.add(gameStableId(g));
   }
@@ -1354,26 +1365,8 @@ function processGame(game,ulmSide){
   return out;
 }
 
-// A game is "played" if it has goal events, OR if it ended 0:0 with evidence it was played
-// (roster data or any events). Scores alone are NOT sufficient — postponed games can have
-// placeholder scores in saisonmanager.de but no roster/events.
 function isGamePlayed(game){
-  const status=(game.status||game.game_status||'').toLowerCase();
-  if(status.includes('cancel')||status.includes('postpone')||
-     status.includes('abgesagt')||status.includes('verlegt'))return false;
-  // Explicitly finished
-  if(status.includes('finish')||status.includes('beendet')||status.includes('gespielt'))return true;
-  // Has goal events → definitely played
-  if((game.events||[]).some(e=>e.event_type==='goal'))return true;
-  // Non-zero score → almost certainly played
-  const hg=parseInt(game.home_goals),gg=parseInt(game.guest_goals);
-  if(!isNaN(hg)&&!isNaN(gg)&&hg+gg>0)return true;
-  // 0:0: only accept if there are actual events (penalties etc.) — NOT roster data alone
-  // (postponed games like 10/26 Heidelberg can have pre-planned rosters but score 0:0)
-  if(!isNaN(hg)&&!isNaN(gg)&&hg===0&&gg===0){
-    if((game.events||[]).length>0)return true;
-  }
-  return false;
+  return classifyGameForStats(game).countsForStats;
 }
 
 // Detect youth/junior games — these must never enter standings or player stats
@@ -1385,6 +1378,83 @@ function isYouthGame(g){
     g.season_name,g.league?.name,g.season?.name,g.spielplan?.name,
   ].filter(Boolean);
   return fields.some(f=>YOUTH.test(String(f)));
+}
+
+function gameStatusText(game){
+  return [
+    game?.status,game?.game_status,game?.state,game?.notice_type,game?.notice_string,
+    game?.remarks,game?.remark,game?.comment,game?.comments,
+    game?.result?.postfix?.short,game?.result?.postfix?.long,
+  ].map(v=>cleanText(v||'')).join(' ').trim().toLowerCase();
+}
+function gameScore(game){
+  const hg=game?.home_goals??game?.home_score??game?.result?.home_goals??game?.result?.home;
+  const gg=game?.guest_goals??game?.guest_score??game?.result?.guest_goals??game?.result?.guest;
+  const home=Number.parseInt(hg,10);
+  const guest=Number.parseInt(gg,10);
+  return{
+    home,guest,
+    hasScore:Number.isFinite(home)&&Number.isFinite(guest),
+  };
+}
+function classifyGameForStats(game,season=null){
+  const statusText=gameStatusText(game);
+  const score=gameScore(game);
+  const events=Array.isArray(game?.events)?game.events:[];
+  const goalEvents=events.filter(e=>e?.event_type==='goal').length;
+  const eventCount=events.length;
+  const finished=game?.ended===true||
+    /match_record_closed|finalized|aftergame|finished|finish|closed|beendet|gespielt/.test(statusText);
+  const started=game?.started===true||eventCount>0;
+  const isForfeit=!!game?.result?.forfait||/forfait|kampflos/.test(statusText);
+  const cancelled=!!(game?.canceled||game?.cancelled||game?.is_canceled)||
+    /cancelled|canceled|cancel|abgesagt/.test(statusText);
+  const postponed=!!game?.postponed||!!game?.is_postponed||
+    /postponed|postpone|verschoben|verlegt/.test(statusText);
+  const hasRealResult=score.hasScore&&(goalEvents>0||eventCount>0||finished||isForfeit);
+  const hasPlayedEvidence=goalEvents>0||(finished&&score.hasScore)||(isForfeit&&score.hasScore);
+  if(isYouthGame(game)){
+    return{isRelevantLeagueGame:false,status:'unplayed',reason:'Nachwuchs-/Jugendspiel',countsForStats:false};
+  }
+  if(cancelled){
+    return{isRelevantLeagueGame:false,status:'cancelled',reason:'Saisonmanager markiert das Spiel als abgesagt',countsForStats:false};
+  }
+  if(postponed&&!hasPlayedEvidence){
+    return{isRelevantLeagueGame:false,status:'postponed',reason:'Saisonmanager markiert das Spiel als verschoben und es gibt keinen echten Endstand/keine Events',countsForStats:false};
+  }
+  if(postponed&&hasPlayedEvidence){
+    return{isRelevantLeagueGame:true,status:'suspicious',reason:'Verschoben-Flag vorhanden, aber Endstand/Events deuten auf ausgetragenes Spiel hin',countsForStats:true};
+  }
+  if(!score.hasScore&&!eventCount){
+    return{isRelevantLeagueGame:false,status:'unplayed',reason:'Kein Endstand und keine Events vorhanden',countsForStats:false};
+  }
+  if(hasPlayedEvidence){
+    return{isRelevantLeagueGame:true,status:'played',reason:isForfeit?'Offizielles Forfait-Ergebnis':'Ausgetragenes Spiel mit Endstand/Eventdaten',countsForStats:true};
+  }
+  if(hasRealResult){
+    return{isRelevantLeagueGame:true,status:'played',reason:'Offizieller Endstand vorhanden',countsForStats:true};
+  }
+  return{isRelevantLeagueGame:false,status:'suspicious',reason:'Status/Endstand/Eventdaten sind nicht eindeutig genug für Statistikzählung',countsForStats:false};
+}
+function getRelevantSeasonGames(season){
+  let games=[],seasonInfo=null;
+  if(Array.isArray(season)){
+    games=season;
+  }else if(season?.gamesData){
+    games=season.gamesData;
+    seasonInfo=season;
+  }else if(season?.games){
+    games=season.games;
+    seasonInfo=season;
+  }else if(season?.data){
+    const data=season.data;
+    games=data.rawLeagueGames?.length?data.rawLeagueGames:
+      data.relevantLeagueGames?.length?data.relevantLeagueGames:
+      data.gamesData?.length?data.gamesData:
+      data.games||[];
+    seasonInfo=season;
+  }
+  return (games||[]).filter(g=>classifyGameForStats(g,seasonInfo).countsForStats);
 }
 
 function gameResult(game,side){
@@ -1405,6 +1475,7 @@ function buildStandings(gamesData,seasonConfig=ACTIVE_SEASON_CONFIG){
   const map={};
   const seenIds=new Set(); // deduplicate: same game may appear from season-API + team-API fetch
   for(const g of gamesData){
+    if(!classifyGameForStats(g,seasonConfig).countsForStats)continue;
     // ── Deduplication by game ID ──────────────────────────
     const gid=Number(g.id||0);
     if(gid){if(seenIds.has(gid))continue;seenIds.add(gid);}
@@ -1418,10 +1489,7 @@ function buildStandings(gamesData,seasonConfig=ACTIVE_SEASON_CONFIG){
     const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
     if(isNaN(hg)||isNaN(gg))continue;
     // ── Reject postponed/cancelled ────────────────────────
-    const _st=(g.status||g.game_status||'').toLowerCase();
-    if(_st.includes('cancel')||_st.includes('postpone')||_st.includes('abgesagt')||_st.includes('verlegt'))continue;
     // ── 0:0 requires real events (not just a placeholder) ─
-    if(hg+gg===0&&!isGamePlayed(g))continue;
     const hn=g.home_team_name||'?',gn=g.guest_team_name||'?';
     if(!map[hn])map[hn]={name:hn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
     if(!map[gn])map[gn]={name:gn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
@@ -1751,7 +1819,7 @@ function aggregateAllTimeDuos(seasonKey,players,events){
 }
 
 function aggregateSeasonStats(seasonKey,{gamesData,players,events,penalties,teamGoalsPerGame,standings}){
-  const played=gamesData.filter(isGamePlayed);
+  const played=getRelevantSeasonGames(gamesData||[]);
   const totalPoints=Object.values(events).reduce((sum,arr)=>sum+arr.length,0);
   const totalPenMins=Object.values(penalties).flat().reduce((sum,p)=>sum+p.minutes,0);
   return{
@@ -1787,8 +1855,7 @@ function buildPlayerDataFoundation(seasonKey,{gamesData,players,events,penalties
 
 function buildRegistry(gamesData){
   const names=new Set();
-  for(const g of gamesData){
-    if(!isGamePlayed(g))continue;
+  for(const g of getRelevantSeasonGames(gamesData||[])){
     const side=detectSide(g);if(!side)continue;
     const roster=g.players[side]||[];
     for(const p of roster){
@@ -1818,7 +1885,7 @@ function buildRegistry(gamesData){
 // ═══════════════════════════════════════════════════════
 function buildPlayerEvents(label,gamesData){
   const events=[],pens=[];
-  for(const g of gamesData){
+  for(const g of getRelevantSeasonGames(gamesData||[])){
     const side=detectSide(g);if(!side)continue;
     const roster=g.players[side]||[];
     const opp=g[side==='home'?'guest_team_name':'home_team_name']||'?';
@@ -2903,7 +2970,7 @@ function getStaticSeasonGames(seasonKey){
 function buildStaticSeasonDataBlock(seasonKey=getActiveSeasonKey()){
   const bucket=SEASONS[seasonKey];
   const cfg=SEASON_CONFIG[seasonKey]||{label:seasonKey};
-  const games=(bucket?.data?.gamesData||bucket?.data?.games||[]).map(g=>({...g,_raw:undefined}));
+  const games=(bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[])).map(g=>({...g,_raw:undefined}));
   return `STATIC_SEASON_DATA[${JSON.stringify(seasonKey)}]=${JSON.stringify({
     season:seasonKey,
     label:cfg.label||seasonKey,
@@ -3222,14 +3289,11 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
     dbg.push(`🔄 Nachholspiele geprüft: ${extraArr.length} IDs, ${allGamesData.length} Spiele total`);
   }
 
+  const rawGamesData=allGamesData.slice();
+
   // ── Step 3c: Deduplicate allGamesData before standings ──────────────
   // Remove exact ID duplicates (string vs number) and
   // same-match duplicates (same date + home + guest team).
-  for(const dup of diagnoseGameDuplicates(allGamesData)){
-    const msg=`Doppelte Game-ID ${dup.id} in ${seasonConfig.label||seasonKey} erkannt (${dup.count}x). Es wird nur ein Eintrag geladen; Details: ${dup.games.join(' | ')}`;
-    errors.push(msg);
-    dbg.push(`⚠️ ${msg}`);
-  }
   (function dedupeGamesData(){
     const seenG=new Set();
     for(let i=allGamesData.length-1;i>=0;i--){
@@ -3285,40 +3349,48 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
       type:g.competition_type||g.match_type||g.game_type||g.spielplan_name||g.league_name||'—'});
   }
   for(const [pair,games] of Object.entries(_pairCounts)){
-    if(games.length>2)dbg.push(`⚠️ EXTRA: ${pair} → ${games.length}× | `+games.map(g=>`ID${g.id} ${g.date} sid=${g.sid} typ=${g.type}`).join(' | '));
+    if(games.length>2)dbg.push(`Mehrfachpaarung statusbasiert geprüft: ${pair} → ${games.length}× | `+games.map(g=>`ID${g.id} ${g.date} sid=${g.sid} typ=${g.type}`).join(' | '));
   }
-  appendSeasonGameDiagnostics({seasonKey,seasonConfig,allGamesData,leagueGamesData,leagueTeams,errors,dbg});
-  const standings=buildStandings(leagueGamesData,seasonConfig);
+  const classifiedLeagueGames=leagueGamesData.map(game=>({game,classification:classifyGameForStats(game,{seasonKey,seasonConfig})}));
+  const relevantLeagueGames=classifiedLeagueGames.filter(row=>row.classification.countsForStats).map(row=>row.game);
+  const excludedScheduledGames=classifiedLeagueGames.filter(row=>!row.classification.countsForStats&&['cancelled','postponed','unplayed'].includes(row.classification.status));
+  const flaggedSuspiciousGames=classifiedLeagueGames.filter(row=>row.classification.status==='suspicious');
+  dbg.push(`📌 Relevante Liga-Spiele für Statistiken: ${relevantLeagueGames.length}/${leagueGamesData.length}; ausgeschlossen: ${excludedScheduledGames.length}; auffällig: ${flaggedSuspiciousGames.length}`);
+  appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,errors,dbg});
+  const standings=buildStandings(relevantLeagueGames,seasonConfig);
   dbg.push(`🏆 Tabelle: ${standings.length} Teams`);
   if(standings.length)dbg.push(`📊 SP-Check: `+standings.slice(0,4).map(t=>`${t.name.split(' ').pop()}=${t.sp}`).join(', '));
 
   // ── Step 4: Player stats from Ulm games only ──────────────────────
   reportProgress({prog:96,progMsg:'Berechne Spielerstatistiken...'});
-  const players=buildRegistry(gamesData);
+  const relevantLeagueGameKeys=new Set(relevantLeagueGames.map(g=>String(g.id||gameStableId(g))));
+  const statGamesData=gamesData.filter(g=>detectSide(g)&&classifyGameForStats(g,{seasonKey,seasonConfig}).countsForStats&&relevantLeagueGameKeys.has(String(g.id||gameStableId(g))));
+  dbg.push(`👥 Relevante Ulm/SG-Spiele für Spielerstatistiken: ${statGamesData.length}/${gamesData.length}`);
+  const players=buildRegistry(statGamesData);
   const evMap={},penMap={};
   for(const pd of players){
-    const{events,pens}=buildPlayerEvents(pd.label,gamesData);
+    const{events,pens}=buildPlayerEvents(pd.label,statGamesData);
     evMap[pd.key]=events;penMap[pd.key]=pens;
   }
   const tgpg={};
-  for(const g of gamesData){
+  for(const g of statGamesData){
     const side=detectSide(g);if(!side)continue;
     tgpg[g.id]=(g.events||[]).filter(e=>e.event_type==='goal'&&e.event_team===side).length;
   }
-  S.players=players;S.events=evMap;S.penalties=penMap;S.teamGoalsPerGame=tgpg;S.gamesData=gamesData;S.standings=standings;
+  S.players=players;S.events=evMap;S.penalties=penMap;S.teamGoalsPerGame=tgpg;S.gamesData=statGamesData;S.standings=standings;
   for(const p of players){
-    const m=computeMetrics(p.key,evMap,penMap,gamesData,standings);
+    const m=computeMetrics(p.key,evMap,penMap,statGamesData,standings);
     p.metrics=m;p.tags.types=detectTypes(m);
   }
-  assignStatus(players,evMap,penMap,standings,gamesData,seasonKey);
+  assignStatus(players,evMap,penMap,standings,statGamesData,seasonKey);
   const playerFoundation=buildPlayerDataFoundation(seasonKey,{
-    gamesData,players,events:evMap,penalties:penMap,teamGoalsPerGame:tgpg,standings
+    gamesData:statGamesData,players,events:evMap,penalties:penMap,teamGoalsPerGame:tgpg,standings
   });
   const eventsList=Object.values(evMap).flat();
   const playersMap=Object.fromEntries(players.map(p=>[p.key,p]));
-  const teamStats=aggregateSeasonStats(seasonKey,{gamesData,players,events:evMap,penalties:penMap,teamGoalsPerGame:tgpg,standings});
+  const teamStats=aggregateSeasonStats(seasonKey,{gamesData:statGamesData,players,events:evMap,penalties:penMap,teamGoalsPerGame:tgpg,standings});
   seasonBucket.data={
-    games:gamesData,gamesData,players,playersMap,events:evMap,eventsList,penalties:penMap,teamStats,teamGoalsPerGame:tgpg,standings,
+    games:statGamesData,gamesData:statGamesData,rawGames:rawGamesData,rawLeagueGames:leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,players,playersMap,events:evMap,eventsList,penalties:penMap,teamStats,teamGoalsPerGame:tgpg,standings,
     playerRegistry:playerFoundation.registry,playerStatus:playerFoundation.status,allTime:playerFoundation.allTime,warnings:[...errors],
   };
   seasonBucket.errors=[...errors];
@@ -3326,7 +3398,7 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   seasonBucket.status={loaded:true,loading:false,lastLoadedAt:new Date().toISOString()};
   seasonLoadStatus[seasonKey]='loaded';
 
-  const playedGames=gamesData.filter(isGamePlayed);
+  const playedGames=statGamesData;
   const totalPts=Object.values(evMap).reduce((s,v)=>s+v.length,0);
   if(!silent){
   document.getElementById('cvs-players').textContent=players.length||'–';
@@ -3334,7 +3406,7 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   document.getElementById('cvs-games').textContent=playedGames.length||'–';
 
   setState({
-    screen:'main',gamesData,players,events:evMap,penalties:penMap,
+    screen:'main',gamesData:statGamesData,players,events:evMap,penalties:penMap,
     teamGoalsPerGame:tgpg,standings,errors,dbg,
     playerRegistry:playerFoundation.registry,
     playerStatus:playerFoundation.status,
@@ -3510,6 +3582,21 @@ window.openHallOfFame=async()=>{
   await ensureGlobalDataLoaded();
   showMainShell();
   setState({screen:'main',playerRegistry:toPublicPlayerRegistry(),allTime:getGlobalAllTimeSnapshot(),page:'hallOfFame'});
+};
+window.openComparisonCenter=async()=>{
+  await ensureGlobalDataLoaded();
+  showMainShell();
+  setState({
+    screen:'main',
+    playerRegistry:toPublicPlayerRegistry(),
+    allTime:getGlobalAllTimeSnapshot(),
+    page:'comparisonCenter',
+    comparisonItems:S.comparisonItems||[],
+    comparisonSearch:S.comparisonSearch||'',
+    comparisonSeasonFilter:S.comparisonSeasonFilter||'all',
+    comparisonHasRun:S.comparisonHasRun||false,
+    comparisonMessage:S.comparisonMessage||'',
+  });
 };
 window.openLexicon=()=>{
   showMainShell();
@@ -4547,7 +4634,7 @@ function rDuoRows(rows,color='#ec4899',limit=8){
 function getAllLoadedSeasonGames(){
   const rows=[],seen=new Set();
   for(const [seasonKey,bucket] of Object.entries(SEASONS)){
-    for(const g of (bucket.data?.gamesData||[])){
+    for(const g of (bucket.data?.relevantLeagueGames||bucket.data?.gamesData||[])){
       const id=g.id||`${g.date}-${g.home_team_name}-${g.guest_team_name}`;
       const key=`${seasonKey}:${id}`;
       if(seen.has(key))continue;
@@ -5015,6 +5102,403 @@ function rSparkline(rows){
     <polyline points="${points}" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     ${rows.map((r,i)=>{const x=pad+(i/Math.max(rows.length-1,1))*(w-pad*2);const y=h-pad-((r.points||0)/max)*(h-pad*2);return`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.4" fill="#0a0e1a" stroke="#fbbf24" stroke-width="2"/>`;}).join('')}
   </svg>`;
+}
+const COMPARISON_MAX_ITEMS=5;
+const COMPARISON_STYLE_CATEGORIES=[
+  {key:'abschluss',label:'Abschluss',color:'#3b82f6'},
+  {key:'kreativitaet',label:'Kreativität',color:'#10b981'},
+  {key:'konstanz',label:'Konstanz',color:'#14b8a6'},
+  {key:'clutch',label:'Clutch',color:'#f59e0b'},
+  {key:'gegnerqualitaet',label:'Gegnerqualität',color:'#fbbf24'},
+  {key:'chemie',label:'Chemie',color:'#ec4899'},
+  {key:'teamShare',label:'Team Share',color:'#c41e3a'},
+];
+function comparisonItemKey(item){
+  const type=item?.type==='playerAlltime'?'playerAlltime':'seasonPerformance';
+  const season=type==='seasonPerformance'?(item?.season||''):'alltime';
+  return`${type}:${item?.playerId||''}:${season}`;
+}
+function normalizeComparisonItem(item){
+  const type=item?.type==='playerAlltime'?'playerAlltime':'seasonPerformance';
+  return{type,playerId:String(item?.playerId||''),season:type==='seasonPerformance'?String(item?.season||''):''};
+}
+function comparisonJsArg(value){
+  return escAttr(JSON.stringify(String(value??'')));
+}
+function comparisonNum(value){
+  const n=Number(value);
+  return Number.isFinite(n)?n:0;
+}
+function comparisonPct(part,total){
+  const p=comparisonNum(part),t=comparisonNum(total);
+  return t>0?(p/t*100):0;
+}
+function comparisonFmt(value,decimals=0){
+  const n=comparisonNum(value);
+  return n.toLocaleString('de-DE',{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+}
+function comparisonPctFmt(value){
+  return`${comparisonFmt(value,1)}%`;
+}
+function getComparisonPlayerRow(playerId){
+  return getAllTimePlayerRows().find(row=>String(row.playerId)===String(playerId))||null;
+}
+function getComparisonSeasonLabel(seasonKey){
+  return SEASON_CONFIG[seasonKey]?.label||seasonKey||'Saison';
+}
+function getComparisonTeamGoalsForSeason(seasonKey){
+  const seasonStats=S.allTime?.seasonStats?.[seasonKey];
+  if(Number.isFinite(Number(seasonStats?.teamGoals))&&Number(seasonStats.teamGoals)>0)return Number(seasonStats.teamGoals);
+  const data=SEASONS[seasonKey]?.data||{};
+  const fromPerGame=Object.values(data.teamGoalsPerGame||{}).reduce((sum,v)=>sum+comparisonNum(v),0);
+  if(fromPerGame>0)return fromPerGame;
+  return(data.relevantLeagueGames||data.gamesData||[]).reduce((sum,g)=>{
+    const side=detectSide(g);if(!side)return sum;
+    const goals=side==='home'?g.home_goals:g.guest_goals;
+    return sum+comparisonNum(goals);
+  },0);
+}
+function getComparisonAlltimeTeamGoals(){
+  return Object.keys(S.allTime?.seasonStats||{}).reduce((sum,seasonKey)=>sum+getComparisonTeamGoalsForSeason(seasonKey),0);
+}
+function getComparisonSeasonEvents(row,seasonKey){
+  const ui=getLoadedSeasonPlayerUi(row?.profile,seasonKey);
+  const data=SEASONS[seasonKey]?.data||{};
+  return ui?[...(data.events?.[ui.key]||[])]:[];
+}
+function getComparisonChemistryFromEvents(events){
+  const partners=countBy((events||[]).filter(e=>e.partner&&e.partner!=='Solo'),e=>normalizePlayerName(e.partner));
+  const total=partners.reduce((sum,p)=>sum+p.val,0);
+  return total>0?Math.round((partners[0]?.val||0)/total*100):0;
+}
+function getComparisonClutchFromEvents(events){
+  const goals=(events||[]).filter(e=>e.type==='Tor');
+  const clutchGoals=goals.filter(e=>e.clutch).length;
+  return goals.length?Math.min(100,Math.round((clutchGoals/goals.length)*160)):0;
+}
+function getComparisonStyleProfile(row,type,seasonKey,teamShare){
+  const events=type==='playerAlltime'?getGlobalProfileEvents(row):getComparisonSeasonEvents(row,seasonKey);
+  const seasonProfile=type==='seasonPerformance'?getSeasonIdentityProfile(row.playerId,seasonKey):null;
+  const dynamic=type==='playerAlltime'?dedupeIdentityProfileTags(getGlobalIdentityProfile(row)):null;
+  const aggregated=type==='playerAlltime'?getAlltimeAggregatedStyleProfile(row):null;
+  const dynamicStyle=dynamic?.styleProfile||{};
+  const dynamicCore=(dynamicStyle.abschluss||0)+(dynamicStyle.kreativitaet||0)+(dynamicStyle.konstanz||0)+(dynamicStyle.gegnerqualitaet||0);
+  const aggregatedCore=(aggregated?.abschluss||0)+(aggregated?.kreativitaet||0)+(aggregated?.konstanz||0)+(aggregated?.gegnerqualitaet||0);
+  const style=type==='playerAlltime'
+    ?(aggregatedCore>0&&(!dynamic||dynamicCore<20||aggregatedCore>dynamicCore*2)?aggregated:dynamicStyle)
+    :(seasonProfile?.styleProfile||{});
+  const chemistry=type==='playerAlltime'
+    ?(getAllTimeDuoRowsForPlayer(row.playerId)[0]?.share||0)
+    :getComparisonChemistryFromEvents(events);
+  return{
+    abschluss:pctValue(style.abschluss),
+    kreativitaet:pctValue(style.kreativitaet),
+    konstanz:pctValue(style.konstanz),
+    gegnerqualitaet:pctValue(style.gegnerqualitaet),
+    eigenstaendigkeit:pctValue(style.teamabhaengigkeit),
+    clutch:pctValue(getComparisonClutchFromEvents(events)),
+    chemie:pctValue(chemistry),
+    teamShare:pctValue(teamShare),
+  };
+}
+function getComparisonProfile(row,type,seasonKey){
+  if(type==='playerAlltime')return dedupeIdentityProfileTags(getGlobalIdentityProfile(row))||fallbackIdentityProfile(row?.ui||row?.profile,'global');
+  const ui=getLoadedSeasonPlayerUi(row?.profile,seasonKey);
+  return dedupeIdentityProfileTags(ui?.analysisProfile||getSeasonIdentityProfile(row.playerId,seasonKey)||fallbackIdentityProfile(ui||row?.profile,'season'));
+}
+function getComparisonSeasonTrend(row,seasonKey){
+  const data=SEASONS[seasonKey]?.data||{};
+  const ui=getLoadedSeasonPlayerUi(row?.profile,seasonKey);
+  const events=ui?[...(data.events?.[ui.key]||[])]:[];
+  const byGame=new Map();
+  for(const g of data.relevantLeagueGames||data.gamesData||[]){
+    const side=detectSide(g);if(!side||!ui)continue;
+    const roster=g.players?.[side]||[];
+    if(!roster.some(p=>rosterPlayerMatches(ui,p)||rosterPlayerMatches(row.profile,p)))continue;
+    const gid=gameStableId(g);
+    byGame.set(gid,{gameId:gid,label:g.date||gid,date:g.date||'',opponent:normalizeOpponentNameForAllTime(side==='home'?g.guest_team_name:g.home_team_name,seasonKey),goals:0,assists:0,points:0});
+  }
+  for(const e of events){
+    const gid=e.gameId||`${e.date||''}-${e.opponent||''}`;
+    if(!byGame.has(gid))byGame.set(gid,{gameId:gid,label:e.date||e.opponent||gid,date:e.date||'',opponent:e.opponent||'',goals:0,assists:0,points:0});
+    const rowGame=byGame.get(gid);
+    if(e.type==='Tor')rowGame.goals++;
+    else if(e.type==='Vorlage')rowGame.assists++;
+    rowGame.points++;
+  }
+  let goals=0,assists=0,points=0;
+  return[...byGame.values()].sort((a,b)=>(a.date||'').localeCompare(b.date||'')||String(a.gameId).localeCompare(String(b.gameId))).map((g,i)=>{
+    goals+=g.goals;assists+=g.assists;points+=g.points;
+    return{...g,index:i+1,label:String(i+1),goals,assists,points};
+  });
+}
+function getComparisonAlltimeTrend(row){
+  return getGlobalSeasonStatRows(row).map(r=>{
+    const teamGoals=getComparisonTeamGoalsForSeason(r.seasonKey);
+    return{...r,label:r.label,teamShare:comparisonPct(r.points,teamGoals)};
+  });
+}
+function getComparisonCandidates(){
+  const rows=getAllTimePlayerRows().filter(row=>(row.allStats?.games||0)>0||(row.allStats?.points||0)>0);
+  const out=[];
+  for(const row of rows){
+    out.push({type:'playerAlltime',playerId:row.playerId,playerName:row.name,season:'',label:`${row.name} - Alltime`,points:row.allStats?.points||0});
+    for(const [seasonKey,st] of Object.entries(row.profile?.statsBySeason||{})){
+      if(!((st.games||0)>0||(st.points||0)>0))continue;
+      out.push({type:'seasonPerformance',playerId:row.playerId,playerName:row.name,season:seasonKey,label:`${row.name} - ${getComparisonSeasonLabel(seasonKey)}`,points:st.points||0});
+    }
+  }
+  const typeOrder=c=>c.type==='playerAlltime'?0:1;
+  return out.sort((a,b)=>a.playerName.localeCompare(b.playerName)||typeOrder(a)-typeOrder(b)||seasonOrderIndex(a.season)-seasonOrderIndex(b.season));
+}
+function getComparisonSeasonOptions(candidates=getComparisonCandidates()){
+  return[...new Set(candidates.filter(c=>c.type==='seasonPerformance').map(c=>c.season).filter(Boolean))]
+    .sort((a,b)=>seasonOrderIndex(a)-seasonOrderIndex(b));
+}
+function buildComparisonDataset(comparisonItems){
+  return(comparisonItems||[]).map(normalizeComparisonItem).slice(0,COMPARISON_MAX_ITEMS).map((item,idx)=>{
+    const row=getComparisonPlayerRow(item.playerId);
+    const fallbackLabel=item.type==='playerAlltime'?`Unbekannter Spieler - Alltime`:`Unbekannter Spieler - ${getComparisonSeasonLabel(item.season)}`;
+    if(!row)return{...item,key:comparisonItemKey(item),label:fallbackLabel,playerName:'Unbekannter Spieler',season:item.season,type:item.type,games:0,goals:0,assists:0,points:0,penalties:0,teamShare:0,goalShare:0,assistShare:0,role:'Nicht genügend Daten vorhanden',traits:[],styleProfile:{},trendData:[],color:PCOLS[idx%PCOLS.length],hasData:false,assessment:'Nicht genügend Daten vorhanden.'};
+    const st=item.type==='playerAlltime'?getPlayerAlltimeStats(row.playerId):getPlayerSeasonStats(row.playerId,item.season);
+    const teamGoals=item.type==='playerAlltime'?getComparisonAlltimeTeamGoals():getComparisonTeamGoalsForSeason(item.season);
+    const profile=getComparisonProfile(row,item.type,item.season);
+    const role=profile?.coreRole?roleTraitLabel(profile.coreRole):'Nicht genügend Rollendaten';
+    const traits=(profile?.traits||[]).filter(t=>!SPECIAL_CORE_ROLES.has(t)).slice(0,SECONDARY_TRAIT_LIMIT).map(roleTraitLabel);
+    const teamShare=comparisonPct(st.points,teamGoals);
+    const styleProfile=getComparisonStyleProfile(row,item.type,item.season,teamShare);
+    return{
+      ...item,
+      key:comparisonItemKey(item),
+      label:item.type==='playerAlltime'?`${row.name} - Alltime`:`${row.name} - ${getComparisonSeasonLabel(item.season)}`,
+      playerName:row.name,
+      season:item.type==='playerAlltime'?'Alltime':getComparisonSeasonLabel(item.season),
+      games:comparisonNum(st.games),
+      goals:comparisonNum(st.goals),
+      assists:comparisonNum(st.assists),
+      points:comparisonNum(st.points),
+      penalties:comparisonNum(st.penaltyMinutes||st.penalties),
+      teamShare,
+      goalShare:comparisonPct(st.goals,st.points),
+      assistShare:comparisonPct(st.assists,st.points),
+      role,
+      traits,
+      styleProfile,
+      trendData:item.type==='playerAlltime'?getComparisonAlltimeTrend(row):getComparisonSeasonTrend(row,item.season),
+      color:row.color||PCOLS[idx%PCOLS.length],
+      hasData:(st.games||st.points||st.goals||st.assists)>0,
+      assessment:profile?.text||'Nicht genügend Rollendaten vorhanden.',
+    };
+  });
+}
+window.buildComparisonDataset=buildComparisonDataset;
+window.setComparisonSearch=value=>setState({comparisonSearch:String(value||''),comparisonMessage:''});
+window.setComparisonSeasonFilter=value=>setState({comparisonSeasonFilter:String(value||'all'),comparisonMessage:''});
+window.addComparisonItem=(type,playerId,season='')=>{
+  const item=normalizeComparisonItem({type,playerId,season});
+  const current=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  if(!item.playerId)return setState({comparisonMessage:'Nicht genügend Daten vorhanden.'});
+  if(current.some(existing=>comparisonItemKey(existing)===comparisonItemKey(item)))return setState({comparisonMessage:'Dieses Vergleichsobjekt ist bereits ausgewählt.'});
+  if(current.length>=COMPARISON_MAX_ITEMS)return setState({comparisonMessage:`Maximal ${COMPARISON_MAX_ITEMS} Vergleichsobjekte möglich.`});
+  setState({comparisonItems:[...current,item],comparisonHasRun:false,comparisonMessage:''});
+};
+window.removeComparisonItem=key=>{
+  const next=(S.comparisonItems||[]).map(normalizeComparisonItem).filter(item=>comparisonItemKey(item)!==key);
+  setState({comparisonItems:next,comparisonHasRun:S.comparisonHasRun&&next.length>=2,comparisonMessage:''});
+};
+window.clearComparison=()=>setState({comparisonItems:[],comparisonHasRun:false,comparisonMessage:''});
+window.runComparison=()=>{
+  const items=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  if(items.length<2)return setState({comparisonMessage:'Für einen Vergleich werden mindestens zwei Objekte benötigt.',comparisonHasRun:false});
+  const dataset=buildComparisonDataset(items).filter(d=>d.hasData);
+  if(dataset.length<2)return setState({comparisonMessage:'Nicht genügend Daten vorhanden.',comparisonHasRun:false});
+  setState({comparisonHasRun:true,comparisonMessage:''});
+};
+function rComparisonStyles(){
+  return`<style>
+    .cmp-shell{display:grid;gap:16px}
+    .cmp-title{font-size:20px;font-weight:900;letter-spacing:0;margin-bottom:3px}
+    .cmp-sub{font-size:12px;color:var(--tx3);line-height:1.5}
+    .cmp-grid{display:grid;grid-template-columns:minmax(290px,.92fr) minmax(0,1.5fr);gap:14px;align-items:start}
+    .cmp-card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));border:1px solid rgba(148,163,184,.18);border-radius:8px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+    .cmp-card-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--tx2);margin-bottom:10px}
+    .cmp-controls{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:8px;margin-bottom:12px}
+    .cmp-input,.cmp-select{width:100%;box-sizing:border-box;background:#070b14;border:1px solid rgba(148,163,184,.25);border-radius:7px;color:var(--tx);padding:10px 11px;font:12px Inter,system-ui,sans-serif;outline:none}
+    .cmp-list{display:grid;gap:8px;max-height:520px;overflow:auto;padding-right:3px}
+    .cmp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid rgba(148,163,184,.14);border-radius:8px;padding:10px;background:rgba(7,11,20,.48)}
+    .cmp-row-name{font-weight:850;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cmp-row-meta{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--tx3);margin-top:3px}
+    .cmp-btn{border:1px solid rgba(196,30,58,.45);background:rgba(196,30,58,.15);color:#fecdd3;border-radius:7px;padding:8px 10px;font-weight:850;font-size:11px;cursor:pointer;white-space:nowrap}
+    .cmp-btn:hover{background:rgba(196,30,58,.25)}
+    .cmp-btn:disabled{opacity:.45;cursor:not-allowed;background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.22);color:var(--tx3)}
+    .cmp-selected{display:flex;gap:8px;flex-wrap:wrap;min-height:46px;align-items:center}
+    .cmp-chip{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;min-width:168px;max-width:260px;border:1px solid rgba(148,163,184,.18);border-radius:8px;padding:9px 10px;background:rgba(255,255,255,.04)}
+    .cmp-chip strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cmp-chip span{font-family:'DM Mono',monospace;font-size:10px;color:var(--tx3)}
+    .cmp-x{width:24px;height:24px;border:1px solid rgba(148,163,184,.2);border-radius:50%;background:transparent;color:var(--tx2);cursor:pointer;font-weight:900}
+    .cmp-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+    .cmp-primary{background:linear-gradient(135deg,#c41e3a,#ef4444);border:0;color:white}
+    .cmp-note{font-size:11px;color:#fbbf24;margin-top:10px}
+    .cmp-dashboard{display:grid;gap:14px;margin-top:14px}
+    .cmp-kpi-table{width:100%;border-collapse:collapse;font-size:12px}
+    .cmp-kpi-table th,.cmp-kpi-table td{border-bottom:1px solid rgba(148,163,184,.13);padding:9px 8px;text-align:right;vertical-align:middle}
+    .cmp-kpi-table th:first-child,.cmp-kpi-table td:first-child{text-align:left;color:var(--tx2);font-weight:800}
+    .cmp-kpi-table thead th{color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+    .cmp-num{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;color:var(--tx)}
+    .cmp-trends{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+    .cmp-trend-title{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:850;margin-bottom:8px}
+    .cmp-svg{width:100%;height:128px;background:rgba(0,0,0,.18);border-radius:8px;border:1px solid rgba(148,163,184,.12)}
+    .cmp-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:7px;font-size:10px;color:var(--tx3)}
+    .cmp-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+    .cmp-style-row{display:grid;grid-template-columns:132px minmax(0,1fr);gap:10px;align-items:center;margin:9px 0}
+    .cmp-style-label{font-size:12px;font-weight:850;color:var(--tx2)}
+    .cmp-style-values{display:grid;gap:6px}
+    .cmp-style-value{display:grid;grid-template-columns:82px minmax(70px,1fr) 38px;gap:7px;align-items:center}
+    .cmp-mini-name{font-size:10px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cmp-mini-bg{height:8px;background:rgba(148,163,184,.14);border-radius:999px;overflow:hidden}
+    .cmp-mini-fill{height:100%;border-radius:999px}
+    .cmp-role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .cmp-role-panel{background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.16);border-radius:8px;padding:12px}
+    .cmp-role{border-top:2.5px solid var(--cmp-color,#94a3b8)}
+    .cmp-role-main{font-size:14px;font-weight:900;margin-bottom:8px}
+    .cmp-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .cmp-tag{font-size:10px;border-radius:999px;padding:4px 7px;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.18);color:var(--tx2)}
+    .cmp-summary{font-size:13px;line-height:1.7;color:var(--tx2)}
+    @media(max-width:880px){.cmp-grid{grid-template-columns:1fr}.cmp-controls{grid-template-columns:1fr}.cmp-style-row{grid-template-columns:1fr}.cmp-kpi-table{font-size:11px}.cmp-kpi-table th,.cmp-kpi-table td{padding:8px 5px}.cmp-row{grid-template-columns:1fr}.cmp-btn{width:100%}}
+  </style>`;
+}
+function rComparisonTrendSvg(rows){
+  if((rows||[]).length<2)return'<div class="noev" style="padding:18px 0;font-size:12px">Nicht genügend Daten vorhanden.</div>';
+  const w=360,h=118,pad=14;
+  const max=Math.max(...rows.flatMap(r=>[r.points||0,r.goals||0,r.assists||0]),1);
+  const line=(key,color)=>`<polyline points="${rows.map((r,i)=>{
+    const x=pad+(i/Math.max(rows.length-1,1))*(w-pad*2);
+    const y=h-pad-((r[key]||0)/max)*(h-pad*2);
+    return`${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ')}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return`<svg class="cmp-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(148,163,184,.18)" stroke-width="1"/>
+    ${line('points','#fbbf24')}${line('goals','#3b82f6')}${line('assists','#10b981')}
+  </svg>
+  <div class="cmp-legend"><span><i class="cmp-dot" style="background:#fbbf24"></i>Punkte</span><span><i class="cmp-dot" style="background:#3b82f6"></i>Tore</span><span><i class="cmp-dot" style="background:#10b981"></i>Assists</span></div>`;
+}
+function rComparisonKpis(dataset){
+  const kpis=[
+    ['Spiele','games',0,''],
+    ['Tore','goals',0,''],
+    ['Assists','assists',0,''],
+    ['Punkte','points',0,''],
+    ['Strafminuten','penalties',0,'m'],
+    ['Team Share','teamShare',1,'%'],
+    ['Goal Share','goalShare',1,'%'],
+    ['Assist Share','assistShare',1,'%'],
+  ];
+  return`<div class="cmp-card"><div class="cmp-card-title">KPI-Vergleich</div><div style="overflow:auto"><table class="cmp-kpi-table"><thead><tr><th>KPI</th>${dataset.map(d=>`<th>${escHtml(d.label)}</th>`).join('')}</tr></thead><tbody>${kpis.map(([label,key,decimals,suffix])=>`<tr><td>${label}</td>${dataset.map(d=>`<td class="cmp-num">${comparisonFmt(d[key],decimals)}${suffix}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+}
+function rComparisonTrends(dataset){
+  return`<div class="cmp-card"><div class="cmp-card-title">Trendlinien</div><div class="cmp-trends">${dataset.map(d=>`<div>
+    <div class="cmp-trend-title"><span style="color:${d.color}">${escHtml(d.label)}</span><span class="cmp-num">${d.trendData?.length||0} Stationen</span></div>
+    ${rComparisonTrendSvg(d.trendData)}
+  </div>`).join('')}</div></div>`;
+}
+function rComparisonStyleDashboard(dataset){
+  return`<div class="cmp-card"><div class="cmp-card-title">Spielstil-Vergleich</div>${COMPARISON_STYLE_CATEGORIES.map(cat=>`<div class="cmp-style-row">
+    <div class="cmp-style-label">${cat.label}</div>
+    <div class="cmp-style-values">${dataset.map(d=>{const val=pctValue(d.styleProfile?.[cat.key]);return`<div class="cmp-style-value">
+      <div class="cmp-mini-name">${escHtml(d.label)}</div>
+      <div class="cmp-mini-bg"><div class="cmp-mini-fill" style="width:${val?Math.max(5,val):0}%;background:${cat.color}"></div></div>
+      <div class="cmp-num">${val}</div>
+    </div>`;}).join('')}</div>
+  </div>`).join('')}</div>`;
+}
+function rComparisonRoles(dataset){
+  return`<div class="cmp-card"><div class="cmp-card-title">Rollen und Traits</div><div class="cmp-role-grid">${dataset.map(d=>`<div class="cmp-role-panel cmp-role" style="--cmp-color:${d.color}">
+    <div class="cmp-row-name" style="color:${d.color}">${escHtml(d.label)}</div>
+    <div class="cmp-role-main">${escHtml(d.role)}</div>
+    <div class="cmp-tags">${d.traits.length?d.traits.map(t=>`<span class="cmp-tag">${escHtml(t)}</span>`).join(''):'<span class="cmp-tag">Keine Traits</span>'}</div>
+    <div class="cmp-sub">${escHtml(d.assessment||'Nicht genügend Rollendaten vorhanden.')}</div>
+  </div>`).join('')}</div></div>`;
+}
+function comparisonLeader(dataset,key){
+  const rows=dataset.filter(d=>d.hasData&&Number.isFinite(Number(d[key]))).sort((a,b)=>comparisonNum(b[key])-comparisonNum(a[key]));
+  return rows[0]&&comparisonNum(rows[0][key])>0?rows[0]:null;
+}
+function buildComparisonSummary(dataset){
+  const facts=[];
+  const share=comparisonLeader(dataset,'teamShare');
+  if(share)facts.push(`${share.label} hat mit ${comparisonPctFmt(share.teamShare)} den höchsten Team Share im Vergleich.`);
+  const ppg=[...dataset].filter(d=>d.games>0).map(d=>({...d,ppg:d.points/d.games})).sort((a,b)=>b.ppg-a.ppg)[0];
+  if(ppg&&ppg.ppg>0)facts.push(`${ppg.label} liefert die stärkste Punktequote mit ${comparisonFmt(ppg.ppg,2)} Punkten pro Spiel.`);
+  const creative=[...dataset].sort((a,b)=>comparisonNum(b.styleProfile?.kreativitaet)-comparisonNum(a.styleProfile?.kreativitaet))[0];
+  if(creative&&comparisonNum(creative.styleProfile?.kreativitaet)>0)facts.push(`${creative.label} ist im Profil der kreativste Eintrag (${comparisonNum(creative.styleProfile.kreativitaet)} Kreativität).`);
+  const chem=[...dataset].sort((a,b)=>comparisonNum(b.styleProfile?.chemie)-comparisonNum(a.styleProfile?.chemie))[0];
+  if(chem&&comparisonNum(chem.styleProfile?.chemie)>0)facts.push(`${chem.label} zeigt die stärkste Partnerbindung (${comparisonNum(chem.styleProfile.chemie)} Chemie).`);
+  return facts.length?facts.slice(0,3).join(' '):'Nicht genügend Daten vorhanden, um ein belastbares Fazit zu erzeugen.';
+}
+function rComparisonDashboard(){
+  const dataset=buildComparisonDataset(S.comparisonItems||[]);
+  const valid=dataset.filter(d=>d.hasData);
+  if(valid.length<2)return`<div class="cmp-card"><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>`;
+  return`<div class="cmp-dashboard">
+    <div class="cmp-card"><div class="cmp-card-title">Automatisches Fazit</div><div class="cmp-summary">${escHtml(buildComparisonSummary(valid))}</div></div>
+    ${rComparisonKpis(valid)}
+    ${rComparisonTrends(valid)}
+    ${rComparisonStyleDashboard(valid)}
+    ${rComparisonRoles(valid)}
+  </div>`;
+}
+function rComparisonCenterPage(){
+  const selected=(S.comparisonItems||[]).map(normalizeComparisonItem);
+  const selectedKeys=new Set(selected.map(comparisonItemKey));
+  const allCandidates=getComparisonCandidates();
+  const search=normalizePlayerName(S.comparisonSearch||'');
+  const seasonFilter=S.comparisonSeasonFilter||'all';
+  const candidates=allCandidates.filter(c=>{
+    const matchesSearch=!search||normalizePlayerName(`${c.playerName} ${c.label}`).includes(search);
+    const matchesSeason=seasonFilter==='all'||(c.type==='playerAlltime'&&seasonFilter==='alltime')||c.season===seasonFilter;
+    return matchesSearch&&matchesSeason;
+  }).slice(0,120);
+  const seasons=getComparisonSeasonOptions(allCandidates);
+  const selectedRows=buildComparisonDataset(selected);
+  return`${rComparisonStyles()}<div class="cmp-shell">
+    <div>
+      <div class="cmp-title">Vergleichszentrum</div>
+      <div class="cmp-sub">Spieler-Alltime und einzelne Saisonleistungen per Klick auswählen und stabil vergleichen.</div>
+    </div>
+    <div class="cmp-grid">
+      <div class="cmp-card">
+        <div class="cmp-card-title">Auswahl</div>
+        <div class="cmp-controls">
+          <input class="cmp-input" value="${escAttr(S.comparisonSearch||'')}" placeholder="Spieler suchen" oninput="setComparisonSearch(this.value)">
+          <select class="cmp-select" onchange="setComparisonSeasonFilter(this.value)">
+            <option value="all"${seasonFilter==='all'?' selected':''}>Alle</option>
+            <option value="alltime"${seasonFilter==='alltime'?' selected':''}>Alltime</option>
+            ${seasons.map(seasonKey=>`<option value="${escAttr(seasonKey)}"${seasonFilter===seasonKey?' selected':''}>${escHtml(getComparisonSeasonLabel(seasonKey))}</option>`).join('')}
+          </select>
+        </div>
+        <div class="cmp-list">${candidates.length?candidates.map(c=>{const key=comparisonItemKey(c);const active=selectedKeys.has(key);return`<div class="cmp-row">
+          <div><div class="cmp-row-name">${escHtml(c.playerName)}</div><div class="cmp-row-meta">${escHtml(c.type==='playerAlltime'?'Alltime':getComparisonSeasonLabel(c.season))} · ${c.points||0} Punkte</div></div>
+          <button class="cmp-btn" ${active?'disabled':''} onclick="addComparisonItem(${comparisonJsArg(c.type)},${comparisonJsArg(c.playerId)},${comparisonJsArg(c.season||'')})">${active?'Ausgewählt':'+ Zum Vergleich hinzufügen'}</button>
+        </div>`;}).join(''):'<div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div>'}</div>
+      </div>
+      <div>
+        <div class="cmp-card">
+          <div class="cmp-card-title">Ausgewählte Vergleichsobjekte</div>
+          <div class="cmp-selected">${selectedRows.length?selectedRows.map(d=>`<div class="cmp-chip" style="border-color:${d.color}55">
+            <div><strong>${escHtml(d.playerName)}</strong><br><span>${escHtml(d.season)} · ${d.type==='playerAlltime'?'Spieler-Alltime':'Saisonleistung'}</span></div>
+            <button class="cmp-x" title="Entfernen" onclick="removeComparisonItem(${comparisonJsArg(d.key)})">×</button>
+          </div>`).join(''):'<div class="noev" style="font-size:12px;padding:0">Noch keine Vergleichsobjekte ausgewählt.</div>'}</div>
+          <div class="cmp-actions">
+            <button class="cmp-btn cmp-primary" ${selected.length<2?'disabled':''} onclick="runComparison()">Vergleichen</button>
+            <button class="cmp-btn" ${selected.length?'':'disabled'} onclick="clearComparison()">Auswahl leeren</button>
+            <span class="cmp-sub">${selected.length}/${COMPARISON_MAX_ITEMS} ausgewählt</span>
+          </div>
+          ${S.comparisonMessage?`<div class="cmp-note">${escHtml(S.comparisonMessage)}</div>`:''}
+        </div>
+        ${S.comparisonHasRun?rComparisonDashboard():'<div class="cmp-card" style="margin-top:14px"><div class="noev" style="font-size:12px">Mindestens zwei Objekte auswählen und dann vergleichen.</div></div>'}
+      </div>
+    </div>
+  </div>`;
 }
 function rSeasonTrendRows(rows){
   if(!(rows||[]).length)return'<div class="noev" style="padding:10px 0;font-size:11px">Nicht genügend Daten vorhanden.</div>';
@@ -6312,6 +6796,7 @@ function _render(root){
     <div class="hdr-nav">
       <button class="nav-btn${S.page==='player'?' active':''}" onclick="setPage('player')">👤 Spieler</button>
       <button class="nav-btn${S.page==='team'?' active':''}" onclick="setPage('team')">🏒 Team</button>
+      <button class="nav-btn${S.page==='comparisonCenter'?' active':''}" onclick="setPage('comparisonCenter')">Vergleichszentrum</button>
       <button class="btn-back" onclick="document.getElementById('cover').classList.remove('hidden');document.getElementById('main').style.display='none'">← Cover</button>
       <button class="btn-exp" onclick="exportExcel()">📥 Excel</button>
     </div>
@@ -6330,6 +6815,10 @@ function _render(root){
   }
   if(S.page==='hallOfFame'){
     root.innerHTML=hdrHtml+errHtml+`<div>${rHallOfFamePage()}</div>`;
+    return;
+  }
+  if(S.page==='comparisonCenter'){
+    root.innerHTML=hdrHtml+errHtml+`<div>${rComparisonCenterPage()}</div>`;
     return;
   }
   if(S.page==='lexicon'){
