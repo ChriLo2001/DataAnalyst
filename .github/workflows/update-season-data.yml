@@ -1,11 +1,11 @@
 name: Update season data
 
-# Bewusst NUR schedule + workflow_dispatch. Kein `push`-Trigger: der Commit,
-# den dieser Workflow selbst erzeugt (Schritt "Commit & push"), darf sich
-# nicht erneut selbst auslösen.
+# Bewusst NUR workflow_dispatch (manuell auslösbar). Der schedule-Trigger ist
+# deaktiviert, solange kein SAISONMANAGER_API_KEY-Secret hinterlegt ist — sonst
+# schlägt der Lauf alle 30 Minuten automatisch und sichtbar fehl (siehe Audit).
+# Kein `push`-Trigger: der Commit, den dieser Workflow selbst erzeugt (Schritt
+# "Commit & push"), darf sich nicht erneut selbst auslösen.
 on:
-  schedule:
-    - cron: '*/30 * * * *'
   workflow_dispatch: {}
 
 # Verhindert überlappende Läufe (z.B. manueller Dispatch während der Cron-Lauf
