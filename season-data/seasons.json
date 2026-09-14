@@ -1,0 +1,9 @@
+{
+  "seasons": [
+    { "key": "21/22", "label": "2021/22", "file": "21-22.json", "status": "archived" },
+    { "key": "22/23", "label": "2022/23", "file": "22-23.json", "status": "archived" },
+    { "key": "23/24", "label": "2023/24", "file": "23-24.json", "status": "archived" },
+    { "key": "24/25", "label": "2024/25", "file": "24-25.json", "status": "archived" },
+    { "key": "25/26", "label": "2025/26", "file": "25-26.json", "status": "current", "leagueId": 1897, "gameOperationId": 4 }
+  ]
+}

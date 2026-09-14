@@ -292,6 +292,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;min-hei
 .mc-social-title{font:900 10px 'DM Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#94a3b8}
 .mc-social-text{font-size:13px;line-height:1.5;color:#e2e8f0;overflow-wrap:anywhere}
 .mc-social-copy{justify-self:start;border:1px solid rgba(148,163,184,.18);border-radius:999px;background:rgba(148,163,184,.08);color:#cbd5e1;padding:7px 10px;font:900 9px 'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.mc-social-copy.copied{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.12);color:#bbf7d0}
 .mc-social-facts{display:grid;gap:8px}
 .mc-social-fact{border-left:3px solid #f59e0b;border-radius:12px;background:rgba(245,158,11,.07);padding:10px;font-size:12px;line-height:1.42;color:#f8fafc;overflow-wrap:anywhere}
 .mc-social-hashtags{display:flex;gap:7px;flex-wrap:wrap}
@@ -1254,6 +1255,49 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 .season-profile .season-duo-visual svg{min-height:360px}
 .season-profile .season-duo-visual .cli{font-size:11px!important;padding:5px 9px!important}
 .season-profile .noev,.season-profile .wrn-box{font-size:13px;line-height:1.55}
+
+/* Readable analysis cards: keep long labels horizontal and compare values in rows. */
+.difficult-connections-card,.difficult-impact-list,.difficult-impact-row,.difficult-details,.difficult-impact-box,.response-momentum-grid,.response-momentum-card{overflow:visible!important;overflow-wrap:normal!important;word-break:normal!important}
+.difficult-connections-card{grid-column:1/-1}
+.difficult-impact-row{gap:13px!important}
+.difficult-impact-name{font-size:17px!important;line-height:1.2!important;word-break:normal!important;overflow-wrap:break-word!important}
+.difficult-impact-list{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px!important;align-items:start}
+.difficult-compact-compare{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px!important;align-items:stretch!important}
+.difficult-compare-chip{border:1px solid rgba(148,163,184,.16);border-radius:12px;background:rgba(8,11,20,.42);padding:10px 12px;display:grid;gap:4px;min-width:0}
+.difficult-compare-chip span{font:900 10.5px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;white-space:normal;word-break:normal;overflow-wrap:break-word}
+.difficult-compare-chip strong{font:900 16px/1.2 'DM Mono',monospace;color:#f8fafc;font-variant-numeric:tabular-nums;white-space:normal;word-break:normal;overflow-wrap:break-word}
+.difficult-compare-chip small{font-size:12px;line-height:1.35;color:#cbd5e1;word-break:normal;overflow-wrap:break-word}
+.difficult-compare-chip.difference,.difficult-compare-chip.negative{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.08)}
+.difficult-compare-chip.positive{border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.08)}
+.difficult-compare-chip .negative{color:#fecaca}.difficult-compare-chip .positive{color:#bbf7d0}
+.difficult-impact-grid{grid-template-columns:1fr!important;gap:8px!important}
+.difficult-metric-list{display:grid;gap:8px;margin-top:9px}
+.difficult-metric-row{display:grid;grid-template-columns:minmax(112px,1fr) repeat(3,minmax(68px,max-content));gap:8px;align-items:center;border:1px solid rgba(148,163,184,.13);border-radius:12px;background:rgba(15,23,42,.48);padding:10px 12px}
+.difficult-metric-row-label{font-weight:900;color:#e5e7eb;line-height:1.25;word-break:normal;overflow-wrap:break-word}
+.difficult-metric-row-value{display:grid;gap:2px;font-variant-numeric:tabular-nums;min-width:0}
+.difficult-metric-row-value span{font:900 9.5px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;white-space:nowrap}
+.difficult-metric-row-value strong{font:900 14px 'DM Mono',monospace;color:#f8fafc;white-space:nowrap}
+.difficult-metric-row-value.delta strong.negative{color:#fecaca}.difficult-metric-row-value.delta strong.positive{color:#bbf7d0}
+.difficult-details summary{font-size:11.5px!important;line-height:1.35!important;word-break:normal!important}
+.difficult-direct-context,.difficult-impact-note{word-break:normal!important;overflow-wrap:break-word!important}
+.response-momentum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:12px}
+.response-momentum-card{border:1px solid rgba(148,163,184,.16);border-top:3px solid var(--rm-color,#f59e0b);border-radius:14px;background:linear-gradient(180deg,rgba(17,24,39,.94),rgba(8,11,20,.98));padding:16px;display:grid;gap:8px;min-width:0;box-shadow:0 13px 34px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.04)}
+.response-momentum-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.response-momentum-value{font:900 28px/1 'DM Mono',monospace;color:var(--rm-color,#f59e0b);font-variant-numeric:tabular-nums;white-space:nowrap}
+.response-momentum-info{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1px solid rgba(148,163,184,.24);background:rgba(148,163,184,.08);color:#bfdbfe;font:900 13px/1 'DM Mono',monospace;cursor:help;flex:0 0 auto}
+.response-momentum-label{font:900 14px/1.25 'Syne',sans-serif;color:#fff;letter-spacing:0;word-break:normal;overflow-wrap:break-word}
+.response-momentum-sub{font-size:12.5px;line-height:1.45;color:#cbd5e1;word-break:normal;overflow-wrap:break-word}
+.rm-term{word-break:normal!important;overflow-wrap:break-word!important}
+.player-explain-headline,.player-explain-summary,.player-explain-main,.player-explain-text{word-break:normal!important;overflow-wrap:break-word!important}
+.player-explain-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.player-explain-chip{border:1px solid rgba(245,158,11,.24);border-radius:999px;background:rgba(245,158,11,.08);padding:5px 9px;font:900 10px/1.25 'DM Mono',monospace;color:#fde68a;letter-spacing:.04em}
+@media(max-width:720px){
+  .difficult-impact-list,.response-momentum-grid{grid-template-columns:1fr!important}
+  .difficult-compact-compare{grid-template-columns:1fr!important}
+  .difficult-metric-row{grid-template-columns:1fr 1fr 1fr}
+  .difficult-metric-row-label{grid-column:1/-1}
+  .difficult-metric-row-value{align-items:baseline}
+}
 @media(max-width:900px){
   .season-profile .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
@@ -1328,9 +1372,9 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
         <span>Spielgemeinschaft mit Tübingen</span>
       </div>
       <div class="cv-season-buttons sg">
-        <button class="cv-season-btn sg" onclick="openSeason('21/22')">21/22</button>
-        <button class="cv-season-btn sg" onclick="openSeason('22/23')">22/23</button>
-        <button class="cv-season-btn sg" onclick="openSeason('23/24')">23/24</button>
+        <button class="cv-season-btn sg" data-season-key="21/22" onclick="openSeason('21/22')">21/22</button>
+        <button class="cv-season-btn sg" data-season-key="22/23" onclick="openSeason('22/23')">22/23</button>
+        <button class="cv-season-btn sg" data-season-key="23/24" onclick="openSeason('23/24')">23/24</button>
       </div>
     </div>
     <div class="cv-season-separator" aria-hidden="true"></div>
@@ -1340,8 +1384,9 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
         <span>VfB Ulm</span>
       </div>
       <div class="cv-season-buttons ulm">
-        <button class="cv-season-btn ulm" onclick="openSeason('24/25')">24/25</button>
-        <button class="cv-season-btn ulm current" onclick="openSeason('25/26')">25/26</button>
+        <button class="cv-season-btn ulm" data-season-key="24/25" onclick="openSeason('24/25')">24/25</button>
+        <button class="cv-season-btn ulm current" data-season-key="25/26" onclick="openSeason('25/26')">25/26</button>
+        <button class="cv-season-btn ulm" data-season-key="26/27" onclick="openSeason('26/27')">26/27</button>
       </div>
     </div>
   </div>
@@ -1449,10 +1494,24 @@ const SEASON_CONFIG={
     },
     features:{teamSeasonLookup:false,extraIdScan:false},
   },
+  // Saison ist abgeschlossen und wird ausschließlich über season-data/25-26.json
+  // geladen (ensureExternalSeasonData(), siehe Bericht) — kein Live-Fetch mehr.
+  // Bewusst NICHT loaderStrategy:'embeddedStatic': hasEmbeddedSeasonData()/
+  // getGlobalLoadableSeasonKeys() würden dann synchron beim allerersten Aufruf
+  // prüfen, ob STATIC_SEASON_DATA['25/26'] schon Spiele enthält — das ist beim
+  // Start von ensureGlobalDataLoaded() aber immer noch der leere Embedded-Stub,
+  // da die externe Datei erst asynchron NACH diesem Check geladen wird (anders
+  // als bei 21/22–24/25, deren Daten synchron im Skript eingebettet sind).
+  // 25/26 würde dadurch fälschlich wie eine leere Saison übersprungen. Der
+  // eigene Wert 'archivedExternal' fällt stattdessen weiterhin in den
+  // bestehenden, bereits funktionierenden Fallback-Zweig (key===CURRENT_SEASON_KEY
+  // && hasSeasonSource(key)) und entfernt zugleich die 'currentApi'-Spezialbehandlung
+  // (Zeile ~6062: Live-Fetch-Fehlschlag-Reset), die für eine dateibasierte Saison
+  // ohnehin nicht mehr zutrifft.
   '25/26':{
     label:'2025/26',isCurrent:true,sourceType:'saisonmanager',seasonId:1897,
     gameIds:CURRENT_SEASON_GAME_IDS,knownUlmGameIds:CURRENT_SEASON_ULM_GAME_IDS,sourceUrl:'',
-    loaderStrategy:'currentApi',
+    loaderStrategy:'archivedExternal',
     dateRange:{start:'2025-08-01',end:'2026-04-30'},
     urls:{
       table:'',
@@ -1461,6 +1520,23 @@ const SEASON_CONFIG={
     },
     features:{teamSeasonLookup:false},
     skipGameIds:[44393,44394,44395,44404],
+  },
+  // Noch ohne Spielplan (Saisonmanager führt 26/27 bereits als Saison, siehe
+  // Bericht) — bewusst NICHT isCurrent:true, CURRENT_SEASON_KEY bleibt '25/26'.
+  // loaderStrategy:'embeddedStatic' ist hier entscheidend: dadurch behandelt
+  // loadSeasonData() sie wie die Archiv-Saisons (nur season-data/26-27.json
+  // bzw. STATIC_SEASON_DATA, nie ein Live-Fetch) und hasSeasonSource() lässt
+  // sie öffnen, obwohl aktuell 0 Spiele vorhanden sind. hasEmbeddedSeasonData()
+  // verlangt zusätzlich mindestens 1 Spiel, bevor die globale Alltime-/Hall-of-
+  // Fame-Aggregation sie einbezieht — genau das schützt Alltime automatisch vor
+  // einer leeren Saison, ganz ohne Änderung an dieser Funktion.
+  '26/27':{
+    label:'2026/27',isCurrent:false,isArchive:false,sourceType:'static',seasonId:null,
+    gameIds:[],knownUlmGameIds:[],sourceUrl:'',
+    loaderStrategy:'embeddedStatic',
+    dateRange:{start:'2026-08-01',end:'2027-07-31'},
+    urls:{table:'',scorer:'',games:''},
+    features:{teamSeasonLookup:false,extraIdScan:false},
   },
 };
 function createSeasonBucket(key,config){
@@ -1884,11 +1960,30 @@ window.setMatchcenterTab=tab=>setState({matchcenterTab:tab||'overview'});
 window.openMatchcenterStoryPreview=()=>setState({matchcenterStoryOpen:true});
 window.closeMatchcenterStoryPreview=()=>setState({matchcenterStoryOpen:false});
 window.toggleHallOfFamePureSGPlayers=()=>setState({showPureSGPlayersInHallOfFame:!S.showPureSGPlayersInHallOfFame});
-window.copyMatchcenterText=text=>{
+window.copyMatchcenterText=(text,button=null)=>{
   const value=String(text||'').trim();
   if(!value)return;
+  const done=()=>{
+    if(!button)return;
+    const old=button.textContent;
+    button.textContent='Kopiert';
+    button.classList.add('copied');
+    setTimeout(()=>{button.textContent=old;button.classList.remove('copied');},1200);
+  };
+  const fallback=()=>{
+    const ta=document.createElement('textarea');
+    ta.value=value;
+    ta.style.position='fixed';
+    ta.style.left='-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try{document.execCommand('copy');done();}catch(e){}
+    ta.remove();
+  };
   if(navigator.clipboard?.writeText){
-    navigator.clipboard.writeText(value).catch(()=>{});
+    navigator.clipboard.writeText(value).then(done).catch(fallback);
+  }else{
+    fallback();
   }
 };
 window.addLineupPlayer=id=>{
@@ -1916,14 +2011,14 @@ function normalizeLineupLines(lines){
 }
 window.setLineupBuilderSeason=value=>{
   const seasonKey=value||CURRENT_SEASON_KEY;
-  const poolIds=lineupBuilderPoolIds(seasonKey);
   setState({
     lineupBuilderSeasonKey:seasonKey,
     lineupBuilderOpponent:'',
-    lineupAvailablePlayerIds:poolIds,
+    lineupAvailablePlayerIds:[],
     lineupLines:[[],[],[]],
     lineupActiveLine:0,
     lineupComplementLine:null,
+    lineupSyntheticPlayers:[],
   });
 };
 window.setLineupBuilderOpponent=value=>setState({lineupBuilderOpponent:value||'',lineupComplementLine:null});
@@ -2132,8 +2227,34 @@ function repairMojibake(value){
   }
   return out;
 }
+const UI_TEXT_REPLACEMENTS=[
+  [/\bUebersicht\b/g,'Übersicht'],[/\buebersicht\b/g,'übersicht'],
+  [/\bVerfuegbarkeit\b/g,'Verfügbarkeit'],[/\bverfuegbar\b/g,'verfügbar'],[/\bverfuegbare\b/g,'verfügbare'],[/\bverfuegbaren\b/g,'verfügbaren'],[/\bVerfuegbar\b/g,'Verfügbar'],[/\bVerfuegbare\b/g,'Verfügbare'],
+  [/\bauswaehlen\b/g,'auswählen'],[/\bauswaehlt\b/g,'auswählt'],[/\bausgewaehlt\b/g,'ausgewählt'],[/\bgewaehlt\b/g,'gewählt'],[/\bAusgewaehlte\b/g,'Ausgewählte'],[/\bGewaehlt\b/g,'Gewählt'],[/\bWaehle\b/g,'Wähle'],[/\bWaehlen\b/g,'Wählen'],[/\bwaehle\b/g,'wähle'],[/\bwaehlen\b/g,'wählen'],
+  [/\boeffnen\b/g,'öffnen'],[/\boeffnet\b/g,'öffnet'],[/\boffen\b/g,'offen'],
+  [/\bmoeglich\b/g,'möglich'],[/\bmoegliche\b/g,'mögliche'],[/\bmoeglichen\b/g,'möglichen'],[/\bmoeglichst\b/g,'möglichst'],[/\bMoegliche\b/g,'Mögliche'],
+  [/\bSchluesselspieler\b/g,'Schlüsselspieler'],[/\bSchluesselduo\b/g,'Schlüsselduo'],[/\bSchluesselduos\b/g,'Schlüsselduos'],[/\bSchluesselakteure\b/g,'Schlüsselakteure'],
+  [/\bStaerke\b/g,'Stärke'],[/\bStaerken\b/g,'Stärken'],[/\bstaerksten\b/g,'stärksten'],[/\bstaerkste\b/g,'stärkste'],[/\bstaerker\b/g,'stärker'],[/\bpraegende\b/g,'prägende'],
+  [/\bErgaenzung\b/g,'Ergänzung'],[/\bErgaenzungen\b/g,'Ergänzungen'],[/\bergaenzen\b/g,'ergänzen'],[/\bergaenzt\b/g,'ergänzt'],[/\bErgaenzungsbaustein\b/g,'Ergänzungsbaustein'],
+  [/\bLuecke\b/g,'Lücke'],[/\bLuecken\b/g,'Lücken'],[/\bLueckenanalyse\b/g,'Lückenanalyse'],
+  [/\bGegnerqualitaet\b/g,'Gegnerqualität'],[/\bEigenstaendigkeit\b/g,'Eigenständigkeit'],[/\bKreativitaet\b/g,'Kreativität'],[/\bStabilitaet\b/g,'Stabilität'],
+  [/\bUeberzahl\b/g,'Überzahl'],[/\bUeberzahltore\b/g,'Überzahltore'],[/\bueber\b/g,'über'],[/\bUeber\b/g,'Über'],
+  [/\bTorschuetzen\b/g,'Torschützen'],[/\bRueckschlaege\b/g,'Rückschläge'],[/\bRueckenwind\b/g,'Rückenwind'],
+  [/\bfrueh\b/g,'früh'],[/\bFrueh\b/g,'Früh'],[/\bspaet\b/g,'spät'],[/\bSpaet\b/g,'Spät'],[/\bhaeufige\b/g,'häufige'],[/\bauffaellig\b/g,'auffällig'],[/\bauffaelligste\b/g,'auffälligste'],
+  [/\bkuenstlichen\b/g,'künstlichen'],[/\bkuenstliche\b/g,'künstliche'],[/\bduerfen\b/g,'dürfen'],[/\bduerfte\b/g,'dürfte'],[/\bmoechte\b/g,'möchte'],
+  [/\bgrossen\b/g,'großen'],[/\bgrosse\b/g,'große'],[/\bgrosses\b/g,'großes'],[/\bgroesseren\b/g,'größeren'],[/\bgroesste\b/g,'größte'],
+  [/\bfuer\b/g,'für'],[/\bFuer\b/g,'Für']
+];
+function fixKnownUiTransliterations(value){
+  let out=String(value??'');
+  for(const [pattern,replacement] of UI_TEXT_REPLACEMENTS)out=out.replace(pattern,replacement);
+  return out;
+}
 function cleanText(value){
-  return repairMojibake(String(value??''));
+  return fixKnownUiTransliterations(repairMojibake(String(value??'')));
+}
+function fixMojibakeText(value){
+  return cleanText(value);
 }
 function repairRenderedMojibake(root=document.body){
   if(!root)return;
@@ -2146,13 +2267,13 @@ function repairRenderedMojibake(root=document.body){
   const textNodes=[];
   while(walker.nextNode())textNodes.push(walker.currentNode);
   for(const node of textNodes){
-    const fixed=repairMojibake(node.nodeValue);
+    const fixed=cleanText(node.nodeValue);
     if(fixed!==node.nodeValue)node.nodeValue=fixed;
   }
   for(const el of root.querySelectorAll?.('*')||[]){
     for(const attr of ['title','alt','placeholder','aria-label','data-tip']){
       if(!el.hasAttribute(attr))continue;
-      const fixed=repairMojibake(el.getAttribute(attr));
+      const fixed=cleanText(el.getAttribute(attr));
       if(fixed!==el.getAttribute(attr))el.setAttribute(attr,fixed);
     }
   }
@@ -2369,11 +2490,44 @@ function isGoalieRosterEntry(p){
   return pos.includes('gk')||pos.includes('goal')||pos.includes('keeper')||
     pos.includes('torwart')||pos.includes('tw')||p?.is_goalkeeper||p?.goalkeeper||p?.is_goalie||p?.goalie;
 }
+const GOALIE_APPEARANCE_EXCLUSIONS=[
+  {
+    seasonKey:'21/22',
+    gameId:'25675',
+    sourceId:'7662',
+    name:'Charlotte Wenner',
+    reason:'Roster anomaly: Charlotte is marked as goalie, but no starting goalie slot, goalie event basis or duration supports it; Kirsten Knott is also marked as goalie in the same Ulm/SG roster.',
+  },
+];
+function goalieEntryRecognitionReason(p){
+  const reasons=[];
+  const pos=(p?.position||p?.role||p?.pos||'').toLowerCase();
+  if(pos)reasons.push(`position=${p.position||p.role||p.pos}`);
+  if(p?.goalkeeper)reasons.push('goalkeeper=true');
+  if(p?.is_goalkeeper)reasons.push('is_goalkeeper=true');
+  if(p?.goalie)reasons.push('goalie=true');
+  if(p?.is_goalie)reasons.push('is_goalie=true');
+  return reasons.join(', ')||'no goalie marker';
+}
+function isExcludedGoalieAppearance(ref,rosterPlayer,game,seasonKey=''){
+  const gameId=String(game?.id||gameStableId(game)||'');
+  const refSource=String(ref?.sourceId??ref?.playerSourceId??ref?.source_id??getPlayerSourceId(ref)??'');
+  const rosterSource=String(getPlayerSourceId(rosterPlayer)??'');
+  const refName=normalizePlayerName(ref?.name||ref?.label||pFull(ref)||'');
+  const rosterName=normalizePlayerName(pFull(rosterPlayer));
+  return GOALIE_APPEARANCE_EXCLUSIONS.some(ex=>{
+    const gameMatches=String(ex.gameId||'')===gameId;
+    const seasonMatches=!ex.seasonKey||!seasonKey||String(ex.seasonKey)===String(seasonKey);
+    const sourceMatches=String(ex.sourceId||'')&&(String(ex.sourceId)===refSource||String(ex.sourceId)===rosterSource);
+    const nameMatches=normalizePlayerName(ex.name)&&(normalizePlayerName(ex.name)===refName||normalizePlayerName(ex.name)===rosterName);
+    return gameMatches&&seasonMatches&&(sourceMatches||nameMatches);
+  });
+}
 function isGoalieAppearance(playerId,game,seasonKey=''){
   const ref=typeof playerId==='object'?playerId:getPlayerRegistryProfile(playerId)||{playerId};
   const side=detectSide(game);if(!side)return false;
   const roster=game.players?.[side]||[];
-  return roster.some(p=>rosterPlayerMatches(ref,p)&&isGoalieRosterEntry(p));
+  return roster.some(p=>rosterPlayerMatches(ref,p)&&isGoalieRosterEntry(p)&&!isExcludedGoalieAppearance(ref,p,game,seasonKey));
 }
 function isFieldAppearance(playerId,game,seasonKey=''){
   const ref=typeof playerId==='object'?playerId:getPlayerRegistryProfile(playerId)||{playerId};
@@ -2946,7 +3100,7 @@ function buildPlayerIdentity(player,context={}){
 }
 
 function resetPlayerRegistrySeason(seasonKey){
-  PLAYER_REGISTRY.seasons[seasonKey]={players:[],statusCounts:{ulm:0,sg:0,tuebingen_only:0},duplicates:[],goalieDiagnostics:{recognized:[],unassignedGames:[],sharedGoalieGames:[]}};
+  PLAYER_REGISTRY.seasons[seasonKey]={players:[],statusCounts:{ulm:0,sg:0,tuebingen_only:0},duplicates:[],goalieDiagnostics:{recognized:[],unassignedGames:[],sharedGoalieGames:[],excludedGoalieGames:[]}};
   for(const profile of Object.values(PLAYER_REGISTRY.players)){
     delete profile.statsBySeason[seasonKey];
     if(profile.goalieStatsBySeason)delete profile.goalieStatsBySeason[seasonKey];
@@ -3834,20 +3988,35 @@ function buildGoalieGameRecord(game,seasonKey,side,standings){
 
 function buildGoalieStatsForSeason(seasonKey,{gamesData,standings}){
   const season=PLAYER_REGISTRY.seasons[seasonKey]||{players:[],statusCounts:{ulm:0,sg:0,tuebingen_only:0},duplicates:[]};
-  season.goalieDiagnostics=season.goalieDiagnostics||{recognized:[],unassignedGames:[],sharedGoalieGames:[]};
+  season.goalieDiagnostics=season.goalieDiagnostics||{recognized:[],unassignedGames:[],sharedGoalieGames:[],excludedGoalieGames:[]};
   const diagnostics=season.goalieDiagnostics;
   diagnostics.recognized=[];
   diagnostics.unassignedGames=[];
   diagnostics.sharedGoalieGames=[];
+  diagnostics.excludedGoalieGames=[];
   for(const game of getRelevantSeasonGames(gamesData||[])){
     const side=detectSide(game);
     if(!side)continue;
     const teamName=game?.[`${side}_team_name`]||'';
     const teamStatus=getUlmTeamStatus(teamName)||'ulm';
     const roster=game?.players?.[side]||[];
-    const goalies=roster.filter(isGoalieRosterEntry);
     const gameId=gameStableId(game);
     const opponent=getGoalieOpponentName(game,side,seasonKey);
+    const excludedGoalies=roster.filter(p=>isGoalieRosterEntry(p)&&isExcludedGoalieAppearance(p,p,game,seasonKey));
+    for(const goalie of excludedGoalies){
+      diagnostics.excludedGoalieGames.push({
+        seasonKey,
+        gameId,
+        date:game?.date||game?.game_date||'',
+        team:teamName,
+        opponent,
+        playerId:getPlayerSourceId(goalie),
+        name:pFull(goalie),
+        reason:GOALIE_APPEARANCE_EXCLUSIONS.find(ex=>isExcludedGoalieAppearance(goalie,goalie,game,seasonKey))?.reason||'Goalie appearance excluded by validation rule',
+        marker:goalieEntryRecognitionReason(goalie),
+      });
+    }
+    const goalies=roster.filter(p=>isGoalieRosterEntry(p)&&!isExcludedGoalieAppearance(p,p,game,seasonKey));
     if(!goalies.length){
       diagnostics.unassignedGames.push({
         seasonKey,
@@ -3948,7 +4117,7 @@ function updatePlayerRoleAvailability(registry=PLAYER_REGISTRY){
 function getGoalieDiagnostics(){
   return Object.fromEntries(Object.entries(PLAYER_REGISTRY.seasons||{}).map(([seasonKey,season])=>[
     seasonKey,
-    season.goalieDiagnostics||{recognized:[],unassignedGames:[],sharedGoalieGames:[]},
+    season.goalieDiagnostics||{recognized:[],unassignedGames:[],sharedGoalieGames:[],excludedGoalieGames:[]},
   ]));
 }
 window.getGoalieDiagnostics=getGoalieDiagnostics;
@@ -5261,6 +5430,117 @@ function getStaticSeasonGames(seasonKey){
   const data=STATIC_SEASON_DATA[seasonKey];
   return Array.isArray(data?.games)?data.games:[];
 }
+
+// ═══ Externe Saison-Daten (season-data/*.json) ══════════════════════════
+// Ersetzt schrittweise die inline in STATIC_SEASON_DATA eingebetteten Saisons,
+// ohne dass normalizeGame()/Analytics/UI etwas davon merken: Bei Erfolg wird
+// STATIC_SEASON_DATA[seasonKey] einfach überschrieben, bevor getStaticSeasonGames()
+// gelesen wird. Schlägt der Fetch fehl (Manifest/Datei fehlt, Netzwerkfehler,
+// GitHub Pages nicht erreichbar, lokal per file:// geöffnet …), bleibt ein
+// bereits vorhandener STATIC_SEASON_DATA[seasonKey]-Eintrag unverändert stehen
+// und dient als Fallback — deshalb darf STATIC_SEASON_DATA für 21/22–24/25
+// nicht entfernt werden, bevor season-data/*.json sich als zuverlässig erwiesen hat.
+let _seasonManifestPromise=null;
+function loadSeasonManifest(){
+  if(_seasonManifestPromise)return _seasonManifestPromise;
+  _seasonManifestPromise=(async()=>{
+    try{
+      const res=await fetch('season-data/seasons.json',{headers:{'Accept':'application/json'}});
+      if(!res.ok)throw new Error(`HTTP ${res.status}`);
+      const json=await res.json();
+      const list=Array.isArray(json?.seasons)?json.seasons:[];
+      const map={};
+      for(const entry of list){if(entry?.key)map[entry.key]=entry;}
+      return map;
+    }catch(e){
+      return null;// kein Manifest erreichbar -> Aufrufer bleibt beim eingebetteten Fallback
+    }
+  })();
+  return _seasonManifestPromise;
+}
+
+// ═══ Dynamische "aktuelle Saison" aus dem Manifest ══════════════════════
+// CURRENT_SEASON_KEY bleibt bewusst unangetastet: Aus ihr werden beim Parsen
+// synchron ACTIVE_SEASON_CONFIG/SEASON_ID/SEASON_START/SEASON_END abgeleitet
+// (index.html:~1552) — ein nachträgliches Überschreiben dieser Konstante würde
+// diese Werte NICHT rückwirkend aktualisieren und eine stille Inkonsistenz
+// erzeugen. CURRENT_SEASON_KEY dient daher weiterhin als statischer
+// Default/Fallback (u.a. für alle bestehenden Funktionsparameter), während
+// RESOLVED_CURRENT_SEASON_KEY separat und rein additiv die tatsächlich aus
+// season-data/seasons.json ("status":"current") ermittelte Saison hält, für
+// die zwei tatsächlichen UI-Stellen, die "welche Saison ist aktuell" anzeigen
+// (Cover-Button, rSeasonLandingPage). Kein bestehender Aufrufer von
+// CURRENT_SEASON_KEY wird verändert.
+let RESOLVED_CURRENT_SEASON_KEY=CURRENT_SEASON_KEY;
+let _resolvedCurrentSeasonKeyPromise=null;
+function resolveCurrentSeasonKey(){
+  if(_resolvedCurrentSeasonKeyPromise)return _resolvedCurrentSeasonKeyPromise;
+  _resolvedCurrentSeasonKeyPromise=(async()=>{
+    try{
+      const manifest=await loadSeasonManifest();
+      const currentEntry=manifest&&Object.values(manifest).find(e=>e?.status==='current');
+      // Nur übernehmen, wenn die Saison auch technisch bekannt ist (SEASON_CONFIG-
+      // Eintrag vorhanden) — sonst bliebe z.B. ACTIVE_SEASON_CONFIG-abhängige
+      // Logik ohne Grundlage. Fehlt der Eintrag, bleibt der statische Default.
+      if(currentEntry?.key&&SEASON_CONFIG[currentEntry.key]){
+        RESOLVED_CURRENT_SEASON_KEY=currentEntry.key;
+      }
+    }catch(e){
+      // Manifest nicht verfügbar/fehlerhaft -> RESOLVED_CURRENT_SEASON_KEY bleibt
+      // beim statischen CURRENT_SEASON_KEY-Default (bestehendes Fallback-Verhalten).
+    }
+    return RESOLVED_CURRENT_SEASON_KEY;
+  })();
+  return _resolvedCurrentSeasonKeyPromise;
+}
+function applyCurrentSeasonCoverHighlight(seasonKey){
+  document.querySelectorAll('.cv-season-btn[data-season-key]').forEach(btn=>{
+    btn.classList.toggle('current',btn.getAttribute('data-season-key')===seasonKey);
+  });
+}
+const _externalSeasonLoaded=new Set();
+/**
+ * Entscheidet, ob eine per fetch() geladene season-data/<datei>.json geeignet
+ * ist, STATIC_SEASON_DATA[seasonKey] zu ersetzen. Prüft bewusst NICHT nur
+ * "ist games ein Array", sondern vergleicht die Spielanzahl gegen die bereits
+ * bekannte eingebettete Basis (Stand VOR diesem Aufruf) — eine bereits befüllte
+ * Saison darf durch eine leere/kleinere externe Datei nicht überschrieben
+ * werden, eine echte neue Saison ohne bisherige Daten (z.B. 26/27) darf mit
+ * games:[] dagegen gültig sein. Die externe Datei gilt in dieser Architektur
+ * als vollständige Quelle (kein inkrementelles Mergen), daher: kleiner als die
+ * bekannte Basis => ablehnen, nicht mischen.
+ */
+function isUsableExternalSeasonData(data,seasonKey){
+  if(!data||typeof data!=='object')return false;
+  if(!Array.isArray(data.games))return false;
+  if(data.season!==undefined&&data.season!==seasonKey)return false;
+  const incoming=data.games.length;
+  const embedded=getStaticSeasonGames(seasonKey).length;
+  if(embedded===0)return true;// noch keine bekannte Basis -> auch leer/klein ist gültig (neue Saison)
+  return incoming>=embedded;// bereits bekannte Saison -> externe Datei darf nicht kleiner sein
+}
+async function ensureExternalSeasonData(seasonKey){
+  if(_externalSeasonLoaded.has(seasonKey))return true;
+  try{
+    const manifest=await loadSeasonManifest();
+    const entry=manifest?.[seasonKey];
+    if(!entry?.file)return false;
+    const res=await fetch(`season-data/${entry.file}`,{headers:{'Accept':'application/json'}});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const json=await res.json();
+    if(!isUsableExternalSeasonData(json,seasonKey)){
+      const incoming=Array.isArray(json?.games)?json.games.length:'?';
+      const embedded=getStaticSeasonGames(seasonKey).length;
+      console.warn(`[season-data] ${entry.file} wirkt unvollständig (${incoming} Spiele, bekannte Basis: ${embedded}) — eingebettete Daten bleiben gültig, externe Datei wird verworfen.`);
+      return false;
+    }
+    STATIC_SEASON_DATA[seasonKey]=json;
+    _externalSeasonLoaded.add(seasonKey);
+    return true;
+  }catch(e){
+    return false;// extern nicht verfügbar/fehlerhaft -> bestehendes STATIC_SEASON_DATA[seasonKey] bleibt gültig
+  }
+}
 function buildStaticSeasonDataBlock(seasonKey=getActiveSeasonKey()){
   const bucket=SEASONS[seasonKey];
   const cfg=SEASON_CONFIG[seasonKey]||{label:seasonKey};
@@ -5283,7 +5563,17 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   const seasonEnd=seasonConfig.dateRange?.end||SEASON_END;
   const configuredGameIds=(seasonConfig.gameIds||[]).map(Number).filter(Boolean);
   const knownUlmGameIds=(seasonConfig.knownUlmGameIds?.length?seasonConfig.knownUlmGameIds:configuredGameIds).map(Number).filter(Boolean);
-  const isEmbeddedStatic=seasonConfig.loaderStrategy==='embeddedStatic';
+  // Erst versuchen, season-data/<datei>.json zu laden (überschreibt STATIC_SEASON_DATA[seasonKey]
+  // bei Erfolg); schlägt das fehl, bleibt ein evtl. vorhandener eingebetteter Datensatz gültig.
+  await ensureExternalSeasonData(seasonKey);
+  // Der Browser ruft Saisonmanager nie direkt auf (kein X-Api-Key im Frontend,
+  // siehe season-data/-Architektur) — einzige Datenquellen sind season-data/*.json
+  // (oben) und die eingebettete STATIC_SEASON_DATA. Der frühere Live-Scan über
+  // saisonmanager.de (usingFallback-Zweige weiter unten) wird deshalb nie mehr
+  // betreten; seasonConfig.loaderStrategy selbst bleibt unverändert, da andere
+  // Stellen (hasSeasonSource, getGlobalLoadableSeasonKeys, loadSeasonForGlobal)
+  // ihn weiterhin für ihre eigenen, unveränderten Zwecke lesen.
+  const isEmbeddedStatic=true;
   seasonBucket.status={...seasonBucket.status,loading:true};
   if(!silent){
     document.getElementById('cover').classList.add('hidden');
@@ -5516,6 +5806,11 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   // ── Step 3b: Secondary fetch — team-based game lookup ─────────────
   // Extract team IDs from loaded games for league opponents, then try to
   // fetch their full game list to catch rescheduled games we may have missed.
+  // Ruft saisonmanager.de direkt aus dem Browser auf — läuft deshalb nur noch,
+  // wenn isEmbeddedStatic false ist (siehe Kommentar bei dessen Definition
+  // oben; aktuell nie der Fall, Block bleibt als bewusst inaktiver Codepfad
+  // erhalten statt entfernt zu werden).
+  if(!isEmbeddedStatic){
   reportProgress({prog:86,progMsg:'Suche Nachholspiele (Team-API)...'});
   const teamIdsSeen=new Set();
   // Seed with IDs from Ulm games directly — covers name-variant cases
@@ -5581,6 +5876,7 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
       reportProgress({prog:88+Math.round(((i+BATCH)/extraArr.length)*8),progMsg:`Nachholspiele: ${Math.min(i+BATCH,extraArr.length)}/${extraArr.length}...`});
     }
     dbg.push(`🔄 Nachholspiele geprüft: ${extraArr.length} IDs, ${allGamesData.length} Spiele total`);
+  }
   }
 
   const rawGamesData=allGamesData.slice();
@@ -6097,16 +6393,16 @@ window.openLineupBuilder=async()=>{
     await ensureGlobalDataLoaded();
   }catch(e){}
   const seasonKey=matchcenterSeasonHasGames(S.lineupBuilderSeasonKey)?S.lineupBuilderSeasonKey:matchcenterDefaultSeasonKey();
-  const poolIds=lineupBuilderPoolIds(seasonKey);
-  const currentAvailable=(S.lineupAvailablePlayerIds||[]).map(String).filter(id=>poolIds.includes(id));
   showMainShell();
   setState({
     screen:'main',
     page:'lineupBuilder',
     lineupBuilderSeasonKey:seasonKey,
-    lineupAvailablePlayerIds:currentAvailable.length?currentAvailable:poolIds,
-    lineupLines:normalizeLineupLines(S.lineupLines).map(line=>line.filter(id=>poolIds.includes(id))),
-    lineupActiveLine:S.lineupActiveLine||0,
+    lineupAvailablePlayerIds:[],
+    lineupLines:[[],[],[]],
+    lineupSelectedPlayerIds:[],
+    lineupSyntheticPlayers:[],
+    lineupActiveLine:0,
     lineupComplementLine:null,
   });
 };
@@ -6132,7 +6428,7 @@ function rClutchBadge(c){
   }).join(' ');
 }
 function escAttr(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return cleanText(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function roleTraitLabel(key){
   return CORE_ROLE_LABELS[key]||TRAIT_LABELS[key]||TYPE_LABELS[key]||key;
@@ -7214,7 +7510,7 @@ const GOALIE_ROLE_TEXT={
   GOALIE_PK_BACKSTOP:'Ulm überstand mit ihm im Tor viele Unterzahlphasen.',
   GOALIE_STABILIZER:'Ausgeglichenes Goalie-Profil mit stabilen Gegentorwerten.',
   GOALIE_MOMENTUM_STOPPER:'Wenige Gegentor-Cluster und gute Abstände zwischen Gegentoren.',
-  GOALIE_CRUNCHTIME:'Starke Schlussphasenwerte und wenige späte Gegentore.',
+  GOALIE_CRUNCHTIME:'Stark in späten Phasen und mit wenigen späten Gegentoren.',
   GOALIE_FIREFIGHTER:'Viele schwierige Einsätze, aber weiterhin solide Gegentorwerte.',
 };
 const GOALIE_DNA_META=[
@@ -9327,6 +9623,32 @@ function rAntiSynergyDelta(value,label,decimals=2,suffix=''){
   const sign=n>0?'+':'';
   return`<span class="difficult-delta ${cls}">${escHtml(label)} ${sign}${n.toFixed(decimals)}${suffix}</span>`;
 }
+function antiSynergyDeltaClass(value){
+  const n=Number(value);
+  return n<0?'negative':n>0?'positive':'';
+}
+function antiSynergySigned(value,decimals=2,suffix=''){
+  const n=Number(value);
+  if(!Number.isFinite(n))return`0${suffix}`;
+  return`${n>0?'+':''}${n.toFixed(decimals)}${suffix}`;
+}
+function rAntiSynergyCompareChip(label,value,sub='',kind=''){
+  const cls=kind||'';
+  return`<div class="difficult-compare-chip ${cls}">
+    <span>${escHtml(label)}</span>
+    <strong class="${escAttr(cls)}">${escHtml(value)}</strong>
+    ${sub?`<small>${escHtml(sub)}</small>`:''}
+  </div>`;
+}
+function rAntiSynergyMetricRow(label,withValue,withoutValue,delta,{decimals=2,suffix=''}={}){
+  const deltaCls=antiSynergyDeltaClass(delta);
+  return`<div class="difficult-metric-row">
+    <div class="difficult-metric-row-label">${escHtml(label)}</div>
+    <div class="difficult-metric-row-value"><span>Mit</span><strong>${escHtml(Number(withValue||0).toFixed(decimals)+suffix)}</strong></div>
+    <div class="difficult-metric-row-value"><span>Ohne</span><strong>${escHtml(Number(withoutValue||0).toFixed(decimals)+suffix)}</strong></div>
+    <div class="difficult-metric-row-value delta"><span>Delta</span><strong class="${escAttr(deltaCls)}">${escHtml(antiSynergySigned(delta,decimals,suffix))}</strong></div>
+  </div>`;
+}
 function rRosterImpactStatLine(stats){
   const s=stats||emptyRosterImpactStats();
   return`${s.pointsPerGame.toFixed(2)} P/Sp · ${s.goalsPerGame.toFixed(2)} T/Sp · ${s.assistsPerGame.toFixed(2)} A/Sp`;
@@ -9370,7 +9692,7 @@ function rDifficultConnectionList(rows,title,emptyText='Keine belastbare Antisyn
     <div class="difficult-impact-note">${escHtml(r.note||'Auffaellige Differenz mit diesem Mitspieler im Feldspieler-Kader.')} ${r.outlierWarning?`<span class="difficult-confidence">${escHtml(r.outlierWarning)}</span>`:''}</div>
   </div>`).join('')}</div>`;
 }
-function rDifficultConnectionListCompact(rows,title,emptyText='Keine belastbare Antisynergie gefunden.',options={}){
+function rDifficultConnectionListCompactLegacy(rows,title,emptyText='Keine belastbare Antisynergie gefunden.',options={}){
   const header=`<div class="difficult-list-title">${escHtml(title)}</div>`;
   if(!rows.length)return`${header}<div class="noev difficult-empty">${escHtml(emptyText)}<br><span>Fuer diese Auswertung braucht es mehrere Feldspieler-Spiele mit und ohne denselben Mitspieler.</span></div>`;
   const limit=options.showAll?rows.length:Math.min(3,rows.length);
@@ -9406,6 +9728,45 @@ function rDifficultConnectionListCompact(rows,title,emptyText='Keine belastbare 
           </div></div>
         </div>
         <div class="difficult-direct-context">${r.assistsToPartner} Assists zu ${escHtml(r.partnerName)} Â· ${r.assistsFromPartner} Assists von ${escHtml(r.partnerName)} Â· ${r.directDuoScorersPerSharedFieldGame.toFixed(2)} direkte Scorer pro gemeinsamem Spiel</div>
+      </details>
+    </div>`;
+  }).join('');
+  const more=rows.length>3?`<button class="lineup-builder-btn ghost difficult-more" onclick="toggleAntiSynergyShowAll()">${options.showAll?'Weniger anzeigen':'Alle anzeigen'}</button>`:'';
+  return`${header}<div class="difficult-impact-list">${body}</div>${more}`;
+}
+function rDifficultConnectionListCompact(rows,title,emptyText='Keine belastbare Antisynergie gefunden.',options={}){
+  const header=`<div class="difficult-list-title">${escHtml(title)}</div>`;
+  if(!rows.length)return`${header}<div class="noev difficult-empty">${escHtml(emptyText)}<br><span>Für diese Auswertung braucht es mehrere Feldspieler-Spiele mit und ohne denselben Mitspieler.</span></div>`;
+  const limit=options.showAll?rows.length:Math.min(3,rows.length);
+  const visible=rows.slice(0,limit);
+  const body=visible.map(r=>{
+    const main=rAntiSynergyMainDelta(r);
+    const mainCls=antiSynergyDeltaClass(main.value);
+    const winCls=antiSynergyDeltaClass(r.deltas?.winRate);
+    return`<div class="difficult-impact-row ${r.confidence==='klein'?'low':''}">
+      <div class="difficult-impact-head">
+        <div class="difficult-impact-name">${escHtml(r.partnerName)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span class="difficult-score">Antisynergie ${clampScore(r.antiSynergyScore)}</span>
+          <span class="difficult-confidence">${escHtml(r.confidence)}</span>
+        </div>
+      </div>
+      <div class="difficult-compact-compare">
+        ${rAntiSynergyCompareChip(`Mit ${r.partnerName}`,`${r.withStats.pointsPerGame.toFixed(2)} P/Sp`,`${r.withStats.games} Spiele · ${r.withStats.winRate}% Winrate`)}
+        ${rAntiSynergyCompareChip(`Ohne ${r.partnerName}`,`${r.withoutStats.pointsPerGame.toFixed(2)} P/Sp`,`${r.withoutStats.games} Spiele · ${r.withoutStats.winRate}% Winrate`)}
+        ${rAntiSynergyCompareChip('Differenz',`${main.label}: ${antiSynergySigned(main.value,main.decimals,main.suffix)}`,main.label!=='Winrate'?`Winrate ${antiSynergySigned(r.deltas.winRate,0,'%')}`:'',mainCls||winCls)}
+      </div>
+      <div class="difficult-direct-context">${r.togetherGames} gemeinsame Feldspieler-Spiele · ${r.withoutGames} Vergleichsspiele · ${r.directDuoScorers} direkte Duo-Scorer</div>
+      <div class="difficult-impact-note">${escHtml(r.note||'Auffällige Differenz mit diesem Mitspieler im Feldspieler-Kader.')} ${r.outlierWarning?`<span class="difficult-confidence">${escHtml(r.outlierWarning)}</span>`:''}</div>
+      <details class="difficult-details">
+        <summary>Details anzeigen</summary>
+        <div class="difficult-metric-list">
+          ${rAntiSynergyMetricRow('Punkte/Spiel',r.withStats.pointsPerGame,r.withoutStats.pointsPerGame,r.deltas.pointsPerGame)}
+          ${rAntiSynergyMetricRow('Tore/Spiel',r.withStats.goalsPerGame,r.withoutStats.goalsPerGame,r.deltas.goalsPerGame)}
+          ${rAntiSynergyMetricRow('Assists/Spiel',r.withStats.assistsPerGame,r.withoutStats.assistsPerGame,r.deltas.assistsPerGame)}
+          ${rAntiSynergyMetricRow('Winrate',r.withStats.winRate,r.withoutStats.winRate,r.deltas.winRate,{decimals:0,suffix:'%'})}
+        </div>
+        <div class="difficult-direct-context">${r.assistsToPartner} Assists zu ${escHtml(r.partnerName)} · ${r.assistsFromPartner} Assists von ${escHtml(r.partnerName)} · ${r.directDuoScorersPerSharedFieldGame.toFixed(2)} direkte Scorer pro gemeinsamem Spiel</div>
       </details>
     </div>`;
   }).join('');
@@ -9483,6 +9844,16 @@ const RESPONSE_MOMENTUM_TOOLTIPS={
   'momentum':'Bewertet Torlaeufe, Doppelschlaege und das Stoppen gegnerischer Laeufe.',
   'mehrfach-badges':'Ein Tor kann gleichzeitig Clutch, Response und Momentum sein. Diese Kategorien schliessen sich nicht gegenseitig aus.',
 };
+Object.assign(RESPONSE_MOMENTUM_TOOLTIPS,{
+  'response point':'Tor oder Assist bei einem Response Goal.',
+  'response assist':'Assist bei einem Tor, das als Antwort auf ein Gegentor gezählt wird.',
+  'antwort unter 2 minuten':'Ulm trifft innerhalb von 2 Minuten nach einem Gegentor.',
+  'antwort unter 5 minuten':'Ulm trifft innerhalb von 5 Minuten nach einem Gegentor.',
+  'momentum-punkte':'Scorerpunkte, die in Torläufen, schnellen Phasen oder beim Stoppen gegnerischer Läufe entstehen.',
+  'momentum punkte':'Scorerpunkte, die in Torläufen, schnellen Phasen oder beim Stoppen gegnerischer Läufe entstehen.',
+  'mehrfachbedeutung':'Ein Tor kann gleichzeitig Clutch, Response und Momentum sein. Diese Kategorien schließen sich nicht aus.',
+  'clutch abgrenzung':'Clutch bewertet, ob ein Tor den Spielstand in einer wichtigen Situation verändert. Response bewertet Antworten nach Gegentoren. Momentum bewertet Torläufe, Doppelschläge und Stopper.'
+});
 function responseMomentumTooltipFor(label,key=''){
   const candidates=[key,label,String(label||'').replace(/^Ø\s*/,'ø '),String(label||'').replace(/ae/g,'ä')].map(v=>normalizePlayerName(v||''));
   for(const candidate of candidates){
@@ -9495,10 +9866,14 @@ function rmTerm(label,key=''){
   return`<span class="th-tip rm-term" title="${escAttr(tip)}" data-tip="${escAttr(tip)}">${escHtml(label)}</span>`;
 }
 function rRmKpi(label,value,sub='',color='#f59e0b',termKey=''){
-  return`<div class="mc-card" style="border-top:2px solid ${color}">
-    <div class="mc-kpi-value" style="color:${color}">${escHtml(String(value))}</div>
-    <div class="mc-kpi-label">${rmTerm(label,termKey)}</div>
-    ${sub?`<div class="mc-kpi-sub">${escHtml(sub)}</div>`:''}
+  const tip=responseMomentumTooltipFor(label,termKey);
+  return`<div class="response-momentum-card" style="--rm-color:${escAttr(color)}">
+    <div class="response-momentum-top">
+      <div class="response-momentum-value">${escHtml(String(value))}</div>
+      <span class="response-momentum-info th-tip" title="${escAttr(tip)}" data-tip="${escAttr(tip)}">?</span>
+    </div>
+    <div class="response-momentum-label">${escHtml(label)}</div>
+    ${sub?`<div class="response-momentum-sub">${escHtml(sub)}</div>`:''}
   </div>`;
 }
 function rRmTopList(rows,formatter,empty='Keine Daten verfuegbar.'){
@@ -9522,7 +9897,7 @@ function rResponseMomentumOverviewCard(response,momentum,{title='Response & Mome
   return`<div class="${cardClass}">
     <div class="${cardClass==='team-card'?'team-card-title':'at-card-title'}" style="color:#38bdf8">${escHtml(title)} <span class="th-tip" data-tip="${escAttr('Response Goals sind Tore nach Gegentoren. Momentum Runs sind mindestens zwei Tore desselben Teams in Folge. Clutch bleibt eine separate Logik.')}">?</span></div>
     <div class="difficult-note">Clutch, Response und Momentum werden getrennt gelesen. Ein Tor kann mehrere Bedeutungen gleichzeitig haben.</div>
-    <div class="mc-kpi-grid">
+    <div class="response-momentum-grid">
       ${rRmKpi('Response Rate',rs.concededGoals?`${Math.round((rs.responseRate||0)*100)}%`:'-',`${rs.nextResponses||0}/${rs.concededGoals||0} Gegentore beantwortet`,'#38bdf8','response rate')}
       ${rRmKpi('Ø Antwortzeit',Number.isFinite(rs.avgResponseSeconds)?responseMomentumTime(rs.avgResponseSeconds):'-',`${rs.within5||0} Antworten unter 5 Minuten`,'#f59e0b','antwortzeit')}
       ${rRmKpi('Schnelle Antworten',`${rs.within2||0} / ${rs.within5||0}`,'2-Min / 5-Min Fenster','#10b981','schnelle antwort')}
@@ -9545,10 +9920,10 @@ function rPlayerResponseMomentumCard(playerId,{mode='season',seasonKey=getActive
   if(!pr&&!pm)return`<div class="${cardClass}"><div class="${cardClass==='team-card'?'team-card-title':'at-card-title'}" style="color:#38bdf8">${escHtml(title)}</div><div class="mc-empty">Keine eigenen Response- oder Momentum-Beteiligungen mit Eventzeiten gefunden.</div></div>`;
   return`<div class="${cardClass}">
     <div class="${cardClass==='team-card'?'team-card-title':'at-card-title'}" style="color:#38bdf8">${escHtml(title)} <span class="th-tip" data-tip="${escAttr('Response und Momentum sind Zusatzstatistiken. Bestehende Clutch-Werte bleiben getrennt.')}">?</span></div>
-    <div class="mc-kpi-grid">
+    <div class="response-momentum-grid">
       ${rRmKpi('Response Goals',pr?.responseGoals||0,`${pr?.responseAssists||0} Response-Assists`,'#38bdf8','response goal')}
       ${rRmKpi('Response Points',pr?.responsePoints||0,`Ø ${Number.isFinite(pr?.avgResponseSeconds)?responseMomentumTime(pr.avgResponseSeconds):'-'} Antwortzeit`,'#f59e0b','response points')}
-      ${rRmKpi('Schnell',`${pr?.response2||0}/${pr?.response5||0}`,'unter 2 / 5 Minuten','#10b981','schnelle antwort')}
+      ${rRmKpi('Schnelle Antworten',`${pr?.response2||0}/${pr?.response5||0}`,'unter 2 / 5 Minuten','#10b981','schnelle antwort')}
       ${rRmKpi('Momentum Starter',pm?.momentumStarter||0,`${pm?.momentumExtender||0} Extender`,'#c41e3a','momentum starter')}
       ${rRmKpi('Momentum Stopper',pm?.momentumStopper||0,'beendet gegnerische Torlaeufe','#8b5cf6','momentum stopper')}
       ${rRmKpi('Doppelschlag',pm?.doubleStrikePoints||0,`${pm?.momentumPoints||0} Momentum-Punkte`,'#14b8a6','doppelschlag')}
@@ -9601,7 +9976,7 @@ function rMatchcenterResponseMomentum(opponentKey,context,seasonKey,opponentLabe
     <div class="mc-split">
       <div class="mc-card">
         <div class="mc-card-title">Ulm / SG</div>
-        <div class="mc-kpi-grid">
+        <div class="response-momentum-grid">
           ${rRmKpi('Response Rate',ur.concededGoals?`${Math.round((ur.responseRate||0)*100)}%`:'-',`${ur.nextResponses||0}/${ur.concededGoals||0} Gegentore`,'#38bdf8','response rate')}
           ${rRmKpi('Ø Antwort',Number.isFinite(ur.avgResponseSeconds)?responseMomentumTime(ur.avgResponseSeconds):'-',`${ur.within5||0} unter 5 Minuten`,'#f59e0b','antwortzeit')}
           ${rRmKpi('Torlaeufe',um.targetRuns2||0,`laengster Lauf ${um.longestTargetRun||0}`,'#c41e3a','momentum run')}
@@ -9610,7 +9985,7 @@ function rMatchcenterResponseMomentum(opponentKey,context,seasonKey,opponentLabe
       </div>
       <div class="mc-card">
         <div class="mc-card-title">${escHtml(opponentLabel)}</div>
-        <div class="mc-kpi-grid">
+        <div class="response-momentum-grid">
           ${rRmKpi('Response Rate',or.concededGoals?`${Math.round((or.responseRate||0)*100)}%`:'-',`${or.nextResponses||0}/${or.concededGoals||0} Gegentore`,'#f59e0b','response rate')}
           ${rRmKpi('Ø Antwort',Number.isFinite(or.avgResponseSeconds)?responseMomentumTime(or.avgResponseSeconds):'-',`${or.within5||0} unter 5 Minuten`,'#38bdf8','antwortzeit')}
           ${rRmKpi('Torlaeufe',om.targetRuns2||0,`laengster Lauf ${om.longestTargetRun||0}`,'#8b5cf6','momentum run')}
@@ -10017,7 +10392,7 @@ function rGlobalRoles(row){
 }
 
 function escHtml(s){
-  return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return cleanText(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function pctValue(v){
   const n=Number(v);
@@ -12409,7 +12784,7 @@ function rSeasonLandingPage(){
     'Saisonansicht vorbereitet.';
   return`<div class="stitle" style="font-size:18px;margin-bottom:18px">Saison ${cfg.label}</div>
     <div class="team-card">
-      <div class="team-card-title" style="color:${cfg.isCurrent?'var(--red2)':'var(--tx2)'}">🏒 Saisonansicht</div>
+      <div class="team-card-title" style="color:${key===RESOLVED_CURRENT_SEASON_KEY?'var(--red2)':'var(--tx2)'}">🏒 Saisonansicht</div>
       <div class="mono" style="line-height:1.7;color:var(--tx2)">${msg}</div>
     </div>`;
 }
@@ -12962,15 +13337,53 @@ function playerExplainAdd(list,title,text,metric='',confidence='mittel'){
 }
 function playerExplainStyleSignature(style={},dynamic=null){
   const rows=[
-    {key:'abschluss',label:'Abschluss',text:'wird vor allem ueber Tore und Abschlussanteil auffaellig'},
-    {key:'kreativitaet',label:'Kreativitaet',text:'erzeugt Wert ueber Vorlagen, Verbindungen und Spielaufbau'},
-    {key:'konstanz',label:'Konstanz',text:'bleibt ueber Spiele und Saisons regelmaessig im Profil'},
-    {key:'gegnerqualitaet',label:'Gegner-Fit',text:'liefert besonders gegen relevante Gegner Wirkung'},
-    {key:'teamabhaengigkeit',label:'Eigenstaendigkeit',text:'kann Scoring auch ohne eine einzelne feste Verbindung erzeugen'},
+    {key:'abschluss',label:'Torgefahr',text:'er wird vor allem über Tore und Abschlussanteil sichtbar'},
+    {key:'kreativitaet',label:'Verbindungsspiel',text:'er erzeugt Wert über Vorlagen, direkte Verbindungen und Spielaufbau'},
+    {key:'konstanz',label:'konstante Beteiligung',text:'er bleibt über viele Spiele regelmäßig im Profil'},
+    {key:'gegnerqualitaet',label:'Leistung gegen stärkere Gegner',text:'seine Wirkung bleibt auch gegen relevante Gegner sichtbar'},
+    {key:'teamabhaengigkeit',label:'Eigenständigkeit',text:'er wirkt weniger abhängig von einer einzelnen festen Verbindung'},
   ].map(row=>({...row,val:pctValue(style[row.key])})).sort((a,b)=>b.val-a.val);
   const traits=dynamic?.traits||[];
-  if(traits.includes('CLUTCH')||traits.includes('COMEBACK_KING'))return{label:'Schlussphasenwert',text:'wird in engen und spaeten Spielmomenten auffaellig',value:Math.max(rows[0]?.val||0,70)};
-  return rows[0]||{label:'Profil',text:'wird durch mehrere kleinere Signale gepraegt',value:0};
+  if(traits.includes('CLUTCH')||traits.includes('COMEBACK_KING'))return{label:'Wirkung in engen Phasen',text:'er wird besonders dann sichtbar, wenn Spiele enger werden oder spät kippen können',value:Math.max(rows[0]?.val||0,70)};
+  return rows[0]||{label:'ausgeglichenes Profil',text:'mehrere kleinere Signale prägen sein Profil',value:0};
+}
+function playerExplainRolePhrase(roleLabel=''){
+  const raw=cleanText(roleLabel||'Alltime-Spieler').replace(/[^\p{L}\p{N}\s#-]/gu,'').trim()||'Alltime-Spieler';
+  const n=normalizePlayerName(raw);
+  if(/mvp|star|scorer|tor|abschluss|offensiv|#1/.test(n))return'produktiver Offensivspieler';
+  if(/connector|playmaker|vorlagen|kreativ|duo/.test(n))return'Verbindungsspieler';
+  if(/konstant|balanced|allround/.test(n))return'konstanter Allrounder';
+  if(/defensiv|stabil/.test(n))return'stabiler Rollenspieler';
+  return raw;
+}
+function playerExplainHeadline(roleLabel,signature,st={},duos=[],clutchGoals=0,lateGoals=0){
+  const role=playerExplainRolePhrase(roleLabel);
+  const points=Number(st.points)||0;
+  if((/offensiv|scorer/i.test(role)||points>=40)&&(clutchGoals||lateGoals))return'Produktiver Offensivanker mit Wirkung in engen Phasen';
+  if(duos?.[0]&&points>=20)return'Konstanter Scorer mit klarer Chemie-Achse';
+  if(points>=40)return'Alltime-Offensivspieler mit starkem Output';
+  if(/Verbindungsspieler/i.test(role))return'Verbindungsspieler mit sichtbarem Einfluss auf direkte Scorer';
+  if(/konstant/i.test(role))return'Konstanter Faktor über viele Spiele';
+  return`${role} mit ${cleanText(signature?.label||'erkennbarem Profil')}`;
+}
+function playerExplainContextSentence(signature,clutchGoals,lateGoals,bestOpponent){
+  const label=normalizePlayerName(signature?.label||'');
+  if(/enge phasen|schluss|clutch/.test(label)||clutchGoals||lateGoals){
+    return`Auffällig ist nicht nur die Menge der Punkte, sondern wann sie entstehen: ${clutchGoals||lateGoals} Scorer-Momente liegen in wichtigen oder späten Spielphasen.`;
+  }
+  if(/gegner/.test(label)&&bestOpponent){
+    return`Ein hilfreicher Kontextpunkt: gegen ${bestOpponent.name} bleibt sein Output besonders sichtbar, was die Gesamtwerte besser einordnet.`;
+  }
+  if(/eigen/.test(label)){
+    return'Bemerkenswert ist die Verteilung der Wirkung: Er wirkt weniger abhängig von nur einem festen Partner und taucht in mehreren Verbindungen auf.';
+  }
+  if(/verbindung|kreativ/.test(label)){
+    return'Sein Mehrwert liegt nicht nur im Abschluss, sondern auch darin, andere Spieler in direkte Scorer zu bringen.';
+  }
+  if(/konstant/.test(label)){
+    return'Das macht ihn vor allem als verlässlichen Faktor interessant: Er ist nicht nur über einzelne Ausreißer sichtbar.';
+  }
+  return`Besonders sichtbar wird ${cleanText(signature?.label||'sein Profil')}: ${cleanText(signature?.text||'mehrere Signale stützen diese Einordnung')}.`;
 }
 function buildFieldPlayerExplanation(playerId,row){
   const st=getPlayerAlltimeStats(playerId);
@@ -12993,18 +13406,21 @@ function buildFieldPlayerExplanation(playerId,row){
   const clutchGoals=goals.filter(e=>e.clutch).length;
   const lateGoals=goals.filter(isLateGoal).length;
   const prefix=confidence==='klein'?'Tendenz: ':'';
-  const headline=`${prefix}${roleLabel} mit ${signature.label}`;
+  const humanRole=playerExplainRolePhrase(roleLabel);
+  const topPartnerName=duos[0]?(duos[0].names?.find(name=>normalizePlayerName(name)!==normalizePlayerName(row.name))||duos[0].names?.[0]||duos[0].name||'dem wichtigsten Duo-Partner'):null;
+  const headline=`${prefix}${playerExplainHeadline(roleLabel,signature,st,duos,clutchGoals,lateGoals)}`;
   const summaryParts=[
-    `${row.name} wird im Alltime-Profil vor allem als ${roleLabel} sichtbar; die praegende Staerke ist ${signature.label.toLowerCase()}.`,
-    games?`Der Wert entsteht aus ${st.points||events.length||0} Punkten in ${games} Spielen und einem Schnitt von ${ppg.toFixed(2).replace('.',',')} Punkten pro Spiel.`:'Die direkte Spielbasis ist noch klein.',
+    `${row.name} wird im Alltime-Profil vor allem als ${humanRole} sichtbar.`,
+    games?`${st.points||events.length||0} Punkte in ${games} Spielen und ${ppg.toFixed(2).replace('.',',')} Punkte pro Spiel zeigen, dass sein Einfluss nicht nur aus einzelnen Ausreißern kommt.`:'Die direkte Spielbasis ist noch klein.',
+    playerExplainContextSentence(signature,clutchGoals,lateGoals,bestOpponent),
   ];
-  if(duos[0])summaryParts.push(`Die staerkste Verbindung ist ${duos[0].names?.[0]||duos[0].name||'ein Duo-Partner'}, was auf eine erkennbare Chemie-Achse hindeutet.`);
+  if(topPartnerName)summaryParts.push(`Seine stärkste direkte Verbindung läuft über ${topPartnerName}; das spricht für eine erkennbare Chemie-Achse, nicht automatisch für eine feste Reihe.`);
   const keyReasons=[];
-  playerExplainAdd(keyReasons,'Rolle',`${roleLabel} ist das dominante Rollen-Signal im Alltime-Profil.`,roleLabel,confidence);
-  if(st.points||events.length)playerExplainAdd(keyReasons,'Produktion',`${st.points||events.length} Punkte in ${games} Spielen zeigen den Beitrag ueber mehrere Spiele hinweg.`,`${st.points||events.length} P`,confidence);
-  if(signature.value>0)playerExplainAdd(keyReasons,'Signature Strength',`${signature.label}: ${signature.text}.`,`${signature.value}/100`,confidence);
-  if(duos[0])playerExplainAdd(keyReasons,'Chemie',`Die Verbindung zu ${duos[0].names?.[0]||duos[0].name||'dem Top-Partner'} ist die auffaelligste Duo-Spur.`,`${duos[0].val||0} P`,confidence);
-  if(clutchGoals||lateGoals)playerExplainAdd(keyReasons,'Spielphasen',`${clutchGoals} wichtige Treffer und ${lateGoals} spaete Tore geben dem Profil Timing-Kontext.`,`${clutchGoals} / ${lateGoals}`,confidence);
+  playerExplainAdd(keyReasons,'Kurzprofil',`${humanRole} ist die sinnvollste Einordnung aus Rolle, Output und Profilwerten.`,roleLabel,confidence);
+  if(st.points||events.length)playerExplainAdd(keyReasons,'Produktion',`${st.points||events.length} Punkte in ${games} Spielen ergeben ${ppg.toFixed(2).replace('.',',')} Punkte pro Spiel.`,`${st.points||events.length} P`,confidence);
+  if(signature.value>0)playerExplainAdd(keyReasons,'Auffälliges Muster',`${signature.text}.`,`${signature.value}/100`,confidence);
+  if(duos[0])playerExplainAdd(keyReasons,'Chemie-Achse',`Die Verbindung zu ${topPartnerName||'dem Top-Partner'} ist die sichtbarste direkte Duo-Spur.`,`${duos[0].val||0} P`,confidence);
+  if(clutchGoals||lateGoals)playerExplainAdd(keyReasons,'Wichtige Phasen',`${clutchGoals} wichtige Treffer und ${lateGoals} späte Tore geben seinem Profil echten Timing-Kontext.`,`${clutchGoals} / ${lateGoals}`,confidence);
   const strongestConnections=duos.map(d=>({
     title:d.names?.[0]||d.name||'Duo-Partner',
     text:`${d.val||0} gemeinsame Punkte${d.share?` (${d.share}% Anteil an den Top-Verbindungen)`:''}.`,
@@ -13032,7 +13448,7 @@ function buildFieldPlayerExplanation(playerId,row){
     playerName:row.name,
     mode:'field',
     headline,
-    summary:summaryParts.slice(0,3).join(' '),
+    summary:summaryParts.slice(0,4).join(' '),
     signatureStrength:{label:signature.label,text:signature.text,metric:signature.value?`${signature.value}/100`:''},
     playerArchetype:roleLabel,
     keyReasons:keyReasons.slice(0,5),
@@ -13064,21 +13480,21 @@ function buildGoaliePlayerExplanation(playerId,row){
   const summary=[
     `${row?.name||'Dieser Goalie'} wird im Alltime-Goalieprofil vor allem als ${roleLabel} eingeordnet.`,
     games?`Die Erklaerung basiert auf ${games} Goalie-Einsaetzen mit ${goalieNum(stats.goalsAgainstPerGame,2)} Gegentoren pro Spiel.`:'Die Goalie-Datenbasis ist noch klein.',
-    signature.val?`Die Signature Strength ist ${signature.label.toLowerCase()}: ${signature.text}.`:''
+    signature.val?`Das prägende Muster ist ${signature.label.toLowerCase()}: ${signature.text}.`:''
   ].filter(Boolean).join(' ');
   const keyReasons=[];
   playerExplainAdd(keyReasons,'Goalie-Rolle',roleProfile.text||`${roleLabel} aus der bestehenden Goalie-Logik.`,roleLabel,confidence);
   if(games)playerExplainAdd(keyReasons,'Gegentor-Kontext',`${goalieNum(stats.goalsAgainstPerGame,2)} Gegentore pro Spiel in ${games} Einsaetzen.`,`${goalieNum(stats.goalsAgainstPerGame,2)} GT/Sp`,confidence);
   if(stats.cleanSheets)playerExplainAdd(keyReasons,'Clean Sheets',`${stats.cleanSheets} Spiele ohne Gegentor staerken den Low-Goal-Kontext.`,`${stats.cleanSheets}`,confidence);
   if(Number.isFinite(Number(stats.longestNoGoalStretch)))playerExplainAdd(keyReasons,'Laengste Phase',`Laengste Phase ohne Gegentor: ${goalieTime(stats.longestNoGoalStretch)}.`,goalieTime(stats.longestNoGoalStretch),confidence);
-  if(signature.val)playerExplainAdd(keyReasons,'Signature Strength',`${signature.label}: ${signature.text}.`,`${signature.val}/100`,confidence);
+  if(signature.val)playerExplainAdd(keyReasons,'Prägendes Muster',`${signature.label}: ${signature.text}.`,`${signature.val}/100`,confidence);
   const opponentProfile=[];
   if(model.bestOpponent)playerExplainAdd(opponentProfile,model.bestOpponent.name,`Bester Gegnerkontext mit ${goalieNum(model.bestOpponent.gaa,2)} Gegentoren pro Spiel.`,`${goalieNum(model.bestOpponent.gaa,2)} GT/Sp`,model.bestOpponent.games>=2?'mittel':'klein');
   if(model.difficultOpponent)playerExplainAdd(opponentProfile,model.difficultOpponent.name,`Schwierigster Gegnerkontext in der vorhandenen Goalie-Datenbasis.`,`${model.difficultOpponent.goalsAgainst} GT`,model.difficultOpponent.games>=2?'mittel':'klein');
   const developmentNotes=[];
   if(roleProfile.traitLabels?.length)playerExplainAdd(developmentNotes,'Traits',`Zusaetzliche Goalie-Traits: ${roleProfile.traitLabels.join(', ')}.`,roleProfile.traitLabels.length,confidence);
   const clutchNotes=[];
-  if(pctValue(dna.finish)>=55)playerExplainAdd(clutchNotes,'Schlussphase',`Die Goalie-DNA zeigt einen erkennbaren Schlussphasenwert.`,`${pctValue(dna.finish)}/100`,confidence);
+  if(pctValue(dna.finish)>=55)playerExplainAdd(clutchNotes,'Schlussphase',`In späten Spielphasen ist ein erkennbares Stabilitätssignal vorhanden.`,`${pctValue(dna.finish)}/100`,confidence);
   if(pctValue(dna.start)>=55)playerExplainAdd(clutchNotes,'Startphase',`Die Startstaerke ist im Goalieprofil auffaellig.`,`${pctValue(dna.start)}/100`,confidence);
   const caveats=[];
   if(confidence==='klein')caveats.push('Kleine Goalie-Datenbasis: Aussagen vorsichtig bewerten.');
@@ -13150,11 +13566,12 @@ function rPlayerExplanation(explanation){
       <div class="mc-eyebrow">Explain this Player</div>
       <div class="player-explain-headline">${escHtml(exp.headline||'Spielerprofil erklaeren')}</div>
       <div class="player-explain-summary">${escHtml(exp.summary||'Noch nicht genuegend Daten fuer eine belastbare Erklaerung.')}</div>
+      ${(exp.keyReasons||[]).filter(item=>item.metric).slice(0,3).length?`<div class="player-explain-chips">${(exp.keyReasons||[]).filter(item=>item.metric).slice(0,3).map(item=>`<span class="player-explain-chip">${escHtml(item.title)}: ${escHtml(item.metric)}</span>`).join('')}</div>`:''}
       <span class="mc-confidence-badge ${escAttr(matchcenterConfidenceClass(exp.confidence||'klein'))}">${escHtml(playerExplainConfidenceLabel(exp.confidence||'klein'))}</span>
     </div>
     <div class="player-explain-grid">
       <div class="player-explain-card player-explain-strength">
-        <div class="player-explain-title">Signature Strength</div>
+        <div class="player-explain-title">Prägendes Muster</div>
         <div class="player-explain-main">${escHtml(sig.label||'Offenes Profil')}</div>
         <div class="player-explain-text">${escHtml(sig.text||'Keine einzelne dominante Staerke ableitbar.')}</div>
         ${sig.metric?`<div class="mono" style="color:#fbbf24">${escHtml(sig.metric)}</div>`:''}
@@ -16693,6 +17110,73 @@ function matchcenterSocialCaption(opponentName,oneThing,extra=''){
   const suffix=extra?` ${extra}`:'';
   return`Matchday gegen ${opp}.${focus}${suffix}`;
 }
+function socialSentence(text){
+  return cleanText(text||'').replace(/\s+/g,' ').trim().replace(/\s+([,.!?])/g,'$1');
+}
+function socialEnsurePeriod(text){
+  const clean=socialSentence(text);
+  return clean&&/[.!?]$/.test(clean)?clean:(clean?`${clean}.`:'');
+}
+function socialFirstUseful(items){
+  return (items||[]).map(item=>socialSentence(item?.text||item)).find(Boolean)||'';
+}
+function socialPlayerFocusLine(player,opponent='den Gegner'){
+  if(!player)return`Ein Name, ein Moment, ein Matchday: Ulm sucht gegen ${opponent} den nächsten Hebel.`;
+  const name=player.name||'Ulm-Spieler';
+  const reason=socialSentence(player.reason||player.impactReason||player.fact||'kommt mit guter Form in diesen Matchday');
+  if(/\d/.test(reason))return`${name} kommt heiß in dieses Duell: ${reason} spricht für sich.`;
+  return`Wenn Ulm offensiv gefährlich wird, ist ${name} einer der Namen, auf die man vor dem Spiel schauen sollte. ${socialEnsurePeriod(reason)}`;
+}
+function socialDuoFocusLine(duo,opponent='den Gegner'){
+  if(!duo)return`Ulm braucht Verbindungen, die sofort greifen. Genau dort kann dieser Matchday entschieden werden.`;
+  const name=duo.name||[duo.playerAName,duo.playerBName].filter(Boolean).join(' + ')||'dieses Duo';
+  const reason=socialSentence(duo.reason||duo.impactReason||duo.fact||'bringt eine auffällige direkte Verbindung mit');
+  return`Wenn ${name} ins Rollen kommt, wird es schnell unangenehm. ${socialEnsurePeriod(reason)}`;
+}
+function socialOpponentLine(alarm,opponent='Gegner'){
+  if(alarm)return`${opponent} bringt einen klaren Watchpoint mit: ${socialEnsurePeriod(alarm.title||alarm.reason)}`;
+  return`${opponent} ist der nächste Prüfstein. Die Zahlen liefern genug Gesprächsstoff, aber entschieden wird auf dem Feld.`;
+}
+function socialKeyFactLine(fact,opponent='den Gegner'){
+  const text=socialSentence(fact?.text||fact);
+  if(!text)return'Ein Detail kann reichen, um diesen Matchday kippen zu lassen.';
+  const lower=text.toLowerCase();
+  if(lower.startsWith('direkte bilanz'))return`Die direkten Duelle liefern Ulm Rückenwind: ${text.replace(/^direkte bilanz:\s*/i,'')}. Kein Ruhekissen, aber ein Signal.`;
+  if(lower.startsWith('letztes duell'))return`Das letzte Duell steckt noch in den Zahlen: ${text.replace(/^letztes duell:\s*/i,'')}. Genau daran lässt sich anknüpfen.`;
+  if(/:.*\d/.test(text))return`Zahl mit Story-Potenzial: ${text}`;
+  if(/alarm/i.test(text))return`Watchpoint vor dem Anpfiff: ${text}`;
+  return text;
+}
+function buildMatchdayCaptionBlocks(matchContext={}){
+  const opponent=matchContext.opponent||'den Gegner';
+  const oneThing=socialSentence(matchContext.oneThing||'');
+  const keyFacts=(matchContext.keyFacts||[]).map(f=>({text:socialKeyFactLine(f,opponent)})).filter(f=>f.text);
+  const playerLine=socialPlayerFocusLine(matchContext.player,opponent);
+  const duoLine=socialDuoFocusLine(matchContext.duo,opponent);
+  const opponentLine=socialOpponentLine(matchContext.alarm,opponent);
+  const openerOptions=[
+    `Matchday gegen ${opponent}.`,
+    `Nächstes Duell, nächster Prüfstein: Ulm trifft auf ${opponent}.`,
+    `Ulm gegen ${opponent}: Die Zahlen liefern genug Stoff für einen heißen Matchday.`,
+  ];
+  const ctaBase=matchContext.storyData?.storyMeta?`Matchday-Setup: ${matchContext.storyData.storyMeta}.`:'Alle Augen auf den Matchday.';
+  const ctaOptions=[`${ctaBase} Auf geht's Ulm.`,`Bereit für das nächste Duell. Auf geht's Ulm.`];
+  const mainFact=keyFacts[0]?.text||oneThing||opponentLine;
+  const short=`${openerOptions[0]} ${playerLine}`;
+  const storytelling=[openerOptions[1],opponentLine,duoLine,mainFact].map(socialEnsurePeriod).join(' ');
+  const statFocus=[openerOptions[0],mainFact,playerLine].map(socialEnsurePeriod).join(' ');
+  const casual=`Neuer Matchday, neues Kribbeln: ${opponent} wartet. ${duoLine}`;
+  const callToAction=[openerOptions[0],mainFact,ctaOptions[0]].map(socialEnsurePeriod).join(' ');
+  return{
+    openerOptions,
+    playerFocusOptions:[playerLine],
+    duoFocusOptions:[duoLine],
+    opponentOptions:[opponentLine],
+    keyFactOptions:keyFacts,
+    ctaOptions,
+    fullCaptionVariants:{short,storytelling,statFocus,casual,callToAction}
+  };
+}
 function buildSocialMediaContent(matchIntelligence,digitalCoachReport,storyData){
   const intel=matchIntelligence||{};
   const report=digitalCoachReport||buildDigitalCoachReport(intel);
@@ -16707,31 +17191,35 @@ function buildSocialMediaContent(matchIntelligence,digitalCoachReport,storyData)
   const player=intel.keyUlmPlayer||null;
   const duo=intel.keyUlmDuo||intel.keyOpponentDuo||null;
   const alarm=intel.opponentAlarm?.[0]||null;
+  const captionBlocks=buildMatchdayCaptionBlocks({opponent,oneThing,keyFacts:rankedKeyFacts,player,duo,alarm,storyData,report});
   const captions=[
-    matchcenterSocialCaption(opponent,oneThing),
-    `${opponent} im Matchcenter-Fokus. ${report.gameModel?.label||intel.opponentDNA?.typeLabel||'Pre-Match'} - ${oneThing}`,
+    {label:'Kurz & knackig',text:captionBlocks.fullCaptionVariants.short},
+    {label:'Storytelling',text:captionBlocks.fullCaptionVariants.storytelling},
+    {label:'Stat-Fokus',text:captionBlocks.fullCaptionVariants.statFocus},
+    {label:'Locker / Team-Vibe',text:captionBlocks.fullCaptionVariants.casual},
+    {label:'Call-to-Action',text:captionBlocks.fullCaptionVariants.callToAction},
   ];
-  if(player)captions.push(`Player to Watch: ${player.name}. ${player.reason||'Ein wichtiger Ulmer Hebel vor dem Spiel.'}`);
   return{
     matchdayStory:storyData||null,
-    captions:captions.slice(0,3),
+    captions,
+    captionBlocks,
     oneThingToWatch:oneThing,
-    keyFacts:rankedKeyFacts,
+    keyFacts:captionBlocks.keyFactOptions.length?captionBlocks.keyFactOptions:rankedKeyFacts,
     playerSpotlight:player?{
-      title:'Ulm-Spieler im Fokus',
+      title:'Spieler im Fokus',
       name:player.name,
       fact:player.reason||'wichtiger Ulmer Hebel',
-      text:`${player.name} kann wichtig werden, weil die Match Intelligence ihn als Ulmer Hebel markiert.`
+      text:captionBlocks.playerFocusOptions[0]
     }:null,
     duoSpotlight:duo?{
-      title:intel.keyUlmDuo?'Ulm-Duo im Fokus':'Gegner-Duo im Fokus',
+      title:intel.keyUlmDuo?'Duo im Fokus':'Gegner-Duo im Fokus',
       name:duo.name,
       fact:duo.reason||'auffaellige Verbindung',
-      text:`${duo.name} ist eine der zentralen Verbindungen in der Vorbereitung.`
+      text:captionBlocks.duoFocusOptions[0]
     }:null,
     opponentAlarmPost:alarm?{
-      title:'Gegner-Alarm',
-      text:`${alarm.title}: ${alarm.reason}`,
+      title:'Gegner-Watchpoint',
+      text:captionBlocks.opponentOptions[0],
       source:alarm.source||'Match Intelligence'
     }:null,
     hashtags:['#VfBUlm','#Floorball','#Matchday',`#${String(opponent).replace(/[^\p{L}\p{N}]+/gu,'').slice(0,28)}`].filter(tag=>tag.length>1),
@@ -17994,7 +18482,7 @@ function rMatchcenterDigitalCoach(report,intel){
 function rMatchcenterCopyButton(text,label='Kopieren'){
   const value=String(text||'').trim();
   if(!value)return'';
-  return`<button class="mc-social-copy" data-copy="${escAttr(value)}" onclick="copyMatchcenterText(this.dataset.copy)">${escHtml(label)}</button>`;
+  return`<button class="mc-social-copy" data-copy="${escAttr(value)}" onclick="copyMatchcenterText(this.dataset.copy,this)">${escHtml(label)}</button>`;
 }
 function rMatchcenterLockerList(items,kind='text',emptyText='Keine Hinweise verfuegbar.'){
   const rows=(items||[]).filter(Boolean);
@@ -18072,9 +18560,71 @@ function rMatchcenterSocialBlock(title,text,accent=false){
     ${rMatchcenterCopyButton(text)}
   </div>`;
 }
+function matchcenterStoryDownloadFileName(story={}){
+  const opponent=cleanText(story.opponentName||story.away?.name||'gegner')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'')
+    .slice(0,42)||'gegner';
+  const date=(story.date||story.matchDate||new Date().toISOString().slice(0,10)).replace(/[^0-9-]+/g,'');
+  return`vfb-ulm-matchday-${opponent}-${date}.png`;
+}
+window.downloadMatchdayStory=async(button=null)=>{
+  const card=document.querySelector('.mc-social-panel .mc-story-card')||document.querySelector('.mc-story-card');
+  if(!card){
+    alert('Keine Matchday Story zum Herunterladen gefunden.');
+    return;
+  }
+  const oldText=button?.textContent;
+  if(button)button.textContent='Export läuft...';
+  try{
+    const clone=card.cloneNode(true);
+    clone.querySelectorAll('img').forEach(img=>{
+      const src=String(img.getAttribute('src')||'');
+      if(/^https?:\/\//i.test(src)){
+        img.style.display='none';
+        const fallback=img.nextElementSibling;
+        if(fallback)fallback.style.display='grid';
+      }
+    });
+    const styles=[...document.querySelectorAll('style')].map(style=>style.textContent||'').join('\n');
+    const width=1080,height=1920;
+    const html=`<html xmlns="http://www.w3.org/1999/xhtml"><head><style>${styles}body{margin:0;background:#020617}.mc-story-frame{width:${width}px!important;height:${height}px!important;border-radius:0!important}.mc-story-panel,.mc-story-stage{margin:0!important;padding:0!important;background:transparent!important;border:0!important}</style></head><body>${clone.outerHTML}</body></html>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    const img=new Image();
+    await new Promise((resolve,reject)=>{
+      img.onload=resolve;
+      img.onerror=reject;
+      img.src=url;
+    });
+    const canvas=document.createElement('canvas');
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,width,height);
+    URL.revokeObjectURL(url);
+    const png=canvas.toDataURL('image/png');
+    const a=document.createElement('a');
+    a.href=png;
+    a.download=matchcenterStoryDownloadFileName(window.__lastMatchdayStoryData||{});
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }catch(e){
+    console.warn('Story export failed:',e);
+    alert('Story-Download ist in diesem Browser gerade nicht möglich. Bitte die Story-Vorschau als Screenshot exportieren.');
+  }finally{
+    if(button)button.textContent=oldText||'Story als PNG herunterladen';
+  }
+};
 function rMatchcenterSocialMediaCenter(content){
   const story=content?.matchdayStory||{};
+  const hasStory=!!content?.matchdayStory;
+  window.__lastMatchdayStoryData=story;
   const storyText=[content?.oneThingToWatch,...(content?.keyFacts||[]).map(f=>f.text)].filter(Boolean).join('\n');
+  const allCaptions=(content?.captions||[]).map(c=>typeof c==='string'?c:c.text).filter(Boolean).join('\n\n');
+  const blocks=content?.captionBlocks||{};
   return`<section class="mc-section">
     <div class="mc-section-head">
       <div>
@@ -18083,6 +18633,7 @@ function rMatchcenterSocialMediaCenter(content){
       </div>
       <div class="mc-output-actions">
         <button class="mc-output-btn" onclick="render()">Story aktualisieren</button>
+        ${hasStory?`<button class="mc-output-btn" onclick="downloadMatchdayStory(this)">Story als PNG herunterladen</button>`:''}
         ${rMatchcenterCopyButton(storyText,'Story-Text kopieren')}
       </div>
     </div>
@@ -18093,18 +18644,21 @@ function rMatchcenterSocialMediaCenter(content){
       </div>
       <div class="mc-social-stack">
         <div class="mc-social-panel">
-          <div class="mc-card-title">Caption-Vorschlaege</div>
-          ${(content?.captions||[]).map((caption,i)=>rMatchcenterSocialBlock(`Caption ${i+1}`,caption)).join('')||rEmptyState('story')}
+          <div class="mc-card-title">Caption-Varianten</div>
+          ${(content?.captions||[]).map((caption,i)=>rMatchcenterSocialBlock(caption.label||`Caption ${i+1}`,caption.text||caption)).join('')||rEmptyState('story')}
+          ${rMatchcenterCopyButton(allCaptions,'Alle Captions kopieren')}
         </div>
+        ${rMatchcenterSocialBlock('Opener',blocks.openerOptions?.[0],true)}
         ${rMatchcenterSocialBlock('One Thing To Watch',content?.oneThingToWatch,true)}
         <div class="mc-social-card">
-          <div class="mc-social-title">Key Facts</div>
+          <div class="mc-social-title">Key-Fact-Bausteine</div>
           <div class="mc-social-facts">${(content?.keyFacts||[]).length?(content.keyFacts.map(f=>`<div class="mc-social-fact">${escHtml(f.text||f)}</div>`).join('')):rEmptyState('story')}</div>
           ${rMatchcenterCopyButton((content?.keyFacts||[]).map(f=>f.text||f).join('\n'))}
         </div>
-        ${content?.playerSpotlight?rMatchcenterSocialBlock(content.playerSpotlight.title,`${content.playerSpotlight.name}: ${content.playerSpotlight.fact}. ${content.playerSpotlight.text}`):''}
-        ${content?.duoSpotlight?rMatchcenterSocialBlock(content.duoSpotlight.title,`${content.duoSpotlight.name}: ${content.duoSpotlight.fact}. ${content.duoSpotlight.text}`):''}
+        ${content?.playerSpotlight?rMatchcenterSocialBlock(content.playerSpotlight.title,content.playerSpotlight.text):''}
+        ${content?.duoSpotlight?rMatchcenterSocialBlock(content.duoSpotlight.title,content.duoSpotlight.text):''}
         ${content?.opponentAlarmPost?rMatchcenterSocialBlock(content.opponentAlarmPost.title,content.opponentAlarmPost.text,true):''}
+        ${rMatchcenterSocialBlock('CTA',blocks.ctaOptions?.[0])}
         <div class="mc-social-card">
           <div class="mc-social-title">Hashtags</div>
           <div class="mc-social-hashtags">${(content?.hashtags||[]).map(tag=>`<span class="mc-social-hashtag">${escHtml(tag)}</span>`).join('')}</div>
@@ -18154,19 +18708,19 @@ function rMatchcenterLineupBuilder(analysis,pool,selectedIds,context={}){
     <div class="mc-section-head">
       <div>
         <div class="mc-section-title">Lineup Builder / Chemistry Lab</div>
-        <div class="mc-scout-note">Manuelle Gruppe aus 2 bis 5 Spielern waehlen. Die Analyse nutzt vorhandene Rollen-, Form-, Duo- und Matchcenter-Signale.</div>
+        <div class="mc-scout-note">Manuelle Gruppe aus 2 bis 5 Spielern wählen. Die Analyse nutzt vorhandene Rollen-, Form-, Duo- und Matchcenter-Signale.</div>
       </div>
       <div class="lineup-builder-row-actions">
         <span class="mc-confidence-badge medium">${escHtml(contextText)}</span>
-        <button class="lineup-builder-btn gold" onclick="openLineupBuilder()">Als Hauptfunktion oeffnen</button>
+        <button class="lineup-builder-btn gold" onclick="openLineupBuilder()">Als Hauptfunktion öffnen</button>
       </div>
     </div>
     <div class="lineup-builder-grid">
       <div class="lineup-builder-panel">
-        <div class="mc-card-title">Spieler waehlen</div>
+        <div class="mc-card-title">Spieler wählen</div>
         <input class="lineup-builder-search" type="search" placeholder="Spieler suchen..." oninput="filterLineupPlayers(this.value)">
         <div class="lineup-builder-selected">
-          ${selectedPlayers.length?selectedPlayers.map(p=>`<div class="lineup-builder-chip"><div><strong>${escHtml(p.name)}</strong><span>${escHtml(p.role)}</span></div><button class="lineup-builder-x" onclick="removeLineupPlayer('${escAttr(p.playerId)}')">x</button></div>`).join(''):'<div class="mc-empty">Noch keine Spieler gewaehlt.</div>'}
+          ${selectedPlayers.length?selectedPlayers.map(p=>`<div class="lineup-builder-chip"><div><strong>${escHtml(p.name)}</strong><span>${escHtml(p.role)}</span></div><button class="lineup-builder-x" onclick="removeLineupPlayer('${escAttr(p.playerId)}')">x</button></div>`).join(''):'<div class="mc-empty">Noch keine Spieler gewählt.</div>'}
         </div>
         ${selectedPlayers.length?`<button class="lineup-builder-btn" onclick="clearLineupPlayers()">Auswahl leeren</button>`:''}
         <div class="lineup-builder-list">
@@ -18177,14 +18731,14 @@ function rMatchcenterLineupBuilder(analysis,pool,selectedIds,context={}){
             const meta=`${Number(st.points)||0} P Saison - ${row.allStats?.points||0} P Alltime`;
             return`<div class="lineup-builder-row" data-lineup-player="${escAttr(normalizePlayerName(row.name))}">
               <div><div class="lineup-builder-row-name">${escHtml(row.name)}</div><div class="lineup-builder-row-meta">${escHtml(meta)}</div></div>
-              <button class="lineup-builder-btn" ${disabled?'disabled':''} onclick="addLineupPlayer('${escAttr(pid)}')">${selected.has(pid)?'Gewaehlt':'Add'}</button>
+              <button class="lineup-builder-btn" ${disabled?'disabled':''} onclick="addLineupPlayer('${escAttr(pid)}')">${selected.has(pid)?'Gewählt':'Add'}</button>
             </div>`;
           }).join('')||'<div class="mc-empty">Keine Spieler im Pool.</div>'}
         </div>
       </div>
       <div class="lineup-builder-panel">
         <div class="mc-card-title">Analyse</div>
-        <div class="player-explain-main">${escHtml(analysis?.recommendationSummary||'Waehle 2 bis 5 Spieler, um die Gruppe zu analysieren.')}</div>
+        <div class="player-explain-main">${escHtml(analysis?.recommendationSummary||'Wähle 2 bis 5 Spieler, um die Gruppe zu analysieren.')}</div>
         ${analysis?.lineIdentity?`<div class="lineup-builder-summary"><strong>${escHtml(analysis.lineIdentity.typeLabel)}.</strong> ${escHtml(analysis.lineIdentity.explanation)}</div>`:''}
         ${rLineupScoreRows(analysis||{})}
         ${analysis?.experienceProfile?`<div class="lineup-builder-card">
@@ -18193,8 +18747,8 @@ function rMatchcenterLineupBuilder(analysis,pool,selectedIds,context={}){
         </div>`:''}
         <div class="lineup-builder-two">
           <div>
-            <div class="mc-card-title">Staerken</div>
-            ${rLineupSimpleCards(analysis?.strengths,'Noch keine klaren Staerken.')}
+            <div class="mc-card-title">Stärken</div>
+            ${rLineupSimpleCards(analysis?.strengths,'Noch keine klaren Stärken.')}
           </div>
           <div>
             <div class="mc-card-title">Risiken</div>
@@ -18213,7 +18767,7 @@ function rMatchcenterLineupBuilder(analysis,pool,selectedIds,context={}){
         </div>
         <div class="lineup-builder-card">
           <div class="lineup-builder-card-title">Fehlende Elemente</div>
-          <div class="lineup-builder-card-text">${(analysis?.missingElements||[]).length?escHtml(analysis.missingElements.join(', ')):'Keine grossen Luecken sichtbar.'}</div>
+          <div class="lineup-builder-card-text">${(analysis?.missingElements||[]).length?escHtml(analysis.missingElements.join(', ')):'Keine großen Lücken sichtbar.'}</div>
         </div>
       </div>
     </div>
@@ -18243,8 +18797,8 @@ function rLineupBuilderAvailablePanel(pool,availableIds,lines,activeLine,mode,se
   return`<div class="lineup-builder-panel">
     <div class="mc-section-head">
       <div>
-        <div class="mc-card-title">Verfuegbare Spieler</div>
-        <div class="mc-section-note">${selectedRows.length} von ${(pool||[]).length} Feldspielern ausgewaehlt</div>
+        <div class="mc-card-title">Verfügbare Spieler</div>
+        <div class="mc-section-note">${selectedRows.length} von ${(pool||[]).length} Feldspielern ausgewählt</div>
       </div>
       <div class="lineup-builder-row-actions">
         <button class="lineup-builder-btn gold" onclick="selectAllLineupAvailable()">Alle</button>
@@ -18257,11 +18811,11 @@ function rLineupBuilderAvailablePanel(pool,availableIds,lines,activeLine,mode,se
         <option value="defensiv" ${S.lineupNewPlayerProfile==='defensiv'?'selected':''}>defensiv</option>
         <option value="variabel" ${S.lineupNewPlayerProfile==='variabel'?'selected':''}>variabel</option>
       </select></label>
-      <button class="lineup-builder-btn gold" onclick="addSyntheticLineupPlayer()">Neuer Spieler hinzufuegen</button>
+      <button class="lineup-builder-btn gold" onclick="addSyntheticLineupPlayer()">Neuen Spieler hinzufügen</button>
     </div>
     <input class="lineup-builder-search" type="search" placeholder="Spieler suchen..." oninput="filterLineupBuilderAvailable(this.value)">
     <div class="lineup-builder-selected">
-      ${selectedRows.length?selectedRows.map(row=>`<div class="lineup-builder-chip ${row.isSyntheticPlayer?'synthetic':''}"><div><strong>${escHtml(row.name)}</strong><span>${escHtml(lineupRowMeta(row,seasonKey))}</span></div><button class="lineup-builder-x" onclick="toggleLineupBuilderAvailable('${escAttr(row.playerId)}')">x</button></div>`).join(''):'<div class="mc-empty">Noch keine verfuegbaren Spieler gewaehlt.</div>'}
+      ${selectedRows.length?selectedRows.map(row=>`<div class="lineup-builder-chip ${row.isSyntheticPlayer?'synthetic':''}"><div><strong>${escHtml(row.name)}</strong><span>${escHtml(lineupRowMeta(row,seasonKey))}</span></div><button class="lineup-builder-x" onclick="toggleLineupBuilderAvailable('${escAttr(row.playerId)}')">x</button></div>`).join(''):'<div class="mc-empty">Noch keine verfügbaren Spieler gewählt.</div>'}
     </div>
     <div class="lineup-builder-list">
       ${(pool||[]).map(row=>{
@@ -18273,7 +18827,7 @@ function rLineupBuilderAvailablePanel(pool,availableIds,lines,activeLine,mode,se
         return`<div class="lineup-builder-row" data-lineup-builder-player="${escAttr(normalizePlayerName(row.name))}">
           <div><div class="lineup-builder-row-name">${escHtml(row.name)}</div><div class="lineup-builder-row-meta">${escHtml(meta)}</div></div>
           <div class="lineup-builder-row-actions">
-            <button class="lineup-builder-btn ${isAvailable?'gold':'ghost'}" onclick="toggleLineupBuilderAvailable('${escAttr(pid)}')">${isAvailable?'Verfuegbar':'Waehlen'}</button>
+            <button class="lineup-builder-btn ${isAvailable?'gold':'ghost'}" onclick="toggleLineupBuilderAvailable('${escAttr(pid)}')">${isAvailable?'Verfügbar':'Wählen'}</button>
             ${mode==='test'?`<button class="lineup-builder-btn" ${addDisabled?'disabled':''} onclick="addLineupBuilderPlayerToActiveLine('${escAttr(pid)}')">${lineIdx!==null?`R${lineIdx+1}`:`Zu R${active+1}`}</button>`:''}
           </div>
         </div>`;
@@ -18291,12 +18845,24 @@ function rLineupRecommendationCards(lines){
     ${rScoreBreakdown('Warum diese Reihe?',line.analysis?.scoreBreakdowns?.balance)}
     ${line.analysis?.experienceProfile?.notes?.length?`<div class="lineup-builder-card-text">${escHtml(line.analysis.experienceProfile.notes.slice(0,2).join(' '))}</div>`:''}
     <div class="lineup-builder-two">
-      <div>${rLineupSimpleCards(line.analysis?.strengths?.slice(0,2),'Keine klaren Staerken.')}</div>
-      <div>${rLineupSimpleCards(line.analysis?.risks?.slice(0,2),'Keine groesseren Risiken.')}</div>
+      <div>${rLineupSimpleCards(line.analysis?.strengths?.slice(0,2),'Keine klaren Stärken.')}</div>
+      <div>${rLineupSimpleCards(line.analysis?.risks?.slice(0,2),'Keine größeren Risiken.')}</div>
     </div>
   </div>`).join('');
 }
 function rLineupRecommendationMode(context,availableIds){
+  if((availableIds||[]).length<2){
+    return`<div class="lineup-builder-panel">
+      <div class="mc-section-head">
+        <div>
+          <div class="mc-card-title">Lineup-Empfehlungen</div>
+          <div class="mc-section-note">Wähle verfügbare Spieler aus, um Reihen zu planen.</div>
+        </div>
+        <span class="mc-confidence-badge low">noch leer</span>
+      </div>
+      <div class="mc-empty">Noch keine Empfehlung berechnet. Wähle mindestens zwei verfügbare Feldspieler oder nutze „Alle“, wenn du den kompletten Kader planen möchtest.</div>
+    </div>`;
+  }
   const recs=buildLineupRecommendations({...context,availablePlayerIds:availableIds});
   const offensive=recs.variants?.find(v=>v.title==='Offensive Variante');
   return`<div class="lineup-builder-panel">
@@ -18320,10 +18886,10 @@ function rLineupRecommendationMode(context,availableIds){
 }
 function rLineupComplementCards(lineIds,lineIndex,availableIds,context,usedPlayerIds){
   const suggestions=recommendLineComplements(lineIds,availableIds,{...context,usedPlayerIds});
-  if(!suggestions.length)return'<div class="mc-empty">Keine passenden freien Ergaenzungsspieler gefunden.</div>';
+  if(!suggestions.length)return'<div class="mc-empty">Keine passenden freien Ergänzungsspieler gefunden.</div>';
   return`<div class="lineup-builder-recs">${suggestions.map(s=>`<div class="lineup-builder-rec-card">
     <div class="lineup-builder-rec-title"><span>${escHtml(s.playerName)}</span><span class="lineup-builder-score-badge">Fit ${pctValue(s.fitScore)}</span></div>
-    <div class="lineup-builder-summary"><strong>${escHtml(s.fitCategory||'Ergaenzung')}.</strong> ${escHtml(s.projectedLineAnalysis?.lineIdentity?.explanation||'Diese Option verbessert die Reihe in mehreren Bereichen.')}</div>
+    <div class="lineup-builder-summary"><strong>${escHtml(s.fitCategory||'Ergänzung')}.</strong> ${escHtml(s.projectedLineAnalysis?.lineIdentity?.explanation||'Diese Option verbessert die Reihe in mehreren Bereichen.')}</div>
     <div class="lineup-builder-player-list"><span class="lineup-builder-mini-player">Hidden Fit ${pctValue(s.hiddenFitScore)}</span><span class="lineup-builder-mini-player">Direkte Chemie ${pctValue(s.provenChemistryScore??s.directChemistryScore)}</span><span class="lineup-builder-mini-player">Erfahrung ${pctValue(s.experienceFitScore)}</span></div>
     <div class="lineup-builder-card-text">${escHtml((s.reasons||[]).join(' '))}</div>
     ${(s.addedStrengths||[]).length?`<div class="lineup-builder-player-list">${s.addedStrengths.map(t=>`<span class="lineup-builder-mini-player">${escHtml(t)}</span>`).join('')}</div>`:''}
@@ -18350,7 +18916,7 @@ function rLineupTestLine(lineIds,lineIndex,context,availableIds,allLines){
       </div>
     </div>
     <div class="lineup-builder-selected">
-      ${rows.length?rows.map(row=>`<div class="lineup-builder-chip ${row.isSyntheticPlayer?'synthetic':''}"><div><strong>${escHtml(row.name)}</strong><span>${escHtml(lineupRowMeta(row,context.seasonKey))}</span></div><button class="lineup-builder-x" onclick="removeLineupBuilderPlayerFromLine(${lineIndex},'${escAttr(row.playerId)}')">x</button></div>`).join(''):'<div class="mc-empty">Spieler links auswaehlen und zu dieser Reihe hinzufuegen.</div>'}
+      ${rows.length?rows.map(row=>`<div class="lineup-builder-chip ${row.isSyntheticPlayer?'synthetic':''}"><div><strong>${escHtml(row.name)}</strong><span>${escHtml(lineupRowMeta(row,context.seasonKey))}</span></div><button class="lineup-builder-x" onclick="removeLineupBuilderPlayerFromLine(${lineIndex},'${escAttr(row.playerId)}')">x</button></div>`).join(''):'<div class="mc-empty">Spieler links auswählen und zu dieser Reihe hinzufügen.</div>'}
     </div>
     ${canAnalyze?`
       <div class="lineup-builder-summary">${escHtml(analysis.recommendationSummary)}</div>
@@ -18368,7 +18934,7 @@ function rLineupTestLine(lineIds,lineIndex,context,availableIds,allLines){
         <div class="lineup-builder-card-text"><strong>${pctValue(analysis.opponentDNAFit.score)}/100 gegen ${escHtml(analysis.opponentDNAFit.typeMatch||'Gegnerprofil')}.</strong> ${escHtml(analysis.opponentDNAFit.explanation||'')}</div>
       </div>`:''}
       <div class="lineup-builder-two">
-        <div><div class="mc-card-title">Staerken</div>${rLineupSimpleCards(analysis.strengths?.slice(0,3),'Noch keine klaren Staerken.')}</div>
+        <div><div class="mc-card-title">Stärken</div>${rLineupSimpleCards(analysis.strengths?.slice(0,3),'Noch keine klaren Stärken.')}</div>
         <div><div class="mc-card-title">Risiken</div>${rLineupSimpleCards(analysis.risks?.slice(0,3),'Noch keine klaren Risiken.')}</div>
       </div>
       <div class="lineup-builder-two">
@@ -18376,7 +18942,7 @@ function rLineupTestLine(lineIds,lineIndex,context,availableIds,allLines){
         <div><div class="mc-card-title">Best Use Cases</div>${rLineupSimpleCards(analysis.bestUseCases?.slice(0,3),'Noch kein klarer Einsatzkontext.')}</div>
       </div>
       ${lineIds.length===2?`<button class="lineup-builder-btn gold" onclick="showLineupComplements(${lineIndex})">Dritten Spieler empfehlen</button>`:''}
-      ${S.lineupComplementLine===lineIndex&&lineIds.length===2?`<div><div class="mc-card-title">Passende Ergaenzungen</div>${rLineupComplementCards(lineIds,lineIndex,availableIds,context,usedIds)}</div>`:''}
+      ${S.lineupComplementLine===lineIndex&&lineIds.length===2?`<div><div class="mc-card-title">Passende Ergänzungen</div>${rLineupComplementCards(lineIds,lineIndex,availableIds,context,usedIds)}</div>`:''}
     `:'<div class="mc-empty">Ab zwei Spielern bewertet die App Rollenmix, Chemie und Kontext.</div>'}
   </div>`;
 }
@@ -18386,7 +18952,7 @@ function rLineupTestMode(context,availableIds,lines){
     <div class="mc-section-head">
       <div>
         <div class="mc-card-title">Reihen testen</div>
-        <div class="mc-section-note">Aktive Reihe waehlen, links Spieler hinzufuegen und Kombinationen bewerten.</div>
+        <div class="mc-section-note">Aktive Reihe wählen, links Spieler hinzufügen und Kombinationen bewerten.</div>
       </div>
       <div class="lineup-builder-line-tabs">
         ${[0,1,2].map(idx=>`<button class="lineup-builder-mode ${active===idx?'active':''}" onclick="setLineupActiveLine(${idx})">Reihe ${idx+1}</button>`).join('')}
@@ -18410,13 +18976,13 @@ function rLineupBuilderPage(){
   const seasonOptions=Object.keys(SEASON_CONFIG||{}).map(key=>`<option value="${escAttr(key)}" ${key===seasonKey?'selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
   const opponentOptions=`<option value="">Kein Gegner</option>`+opponents.map(o=>`<option value="${escAttr(o.key)}" ${o.key===S.lineupBuilderOpponent?'selected':''}>${escHtml(o.label)}</option>`).join('');
   return`<section class="lineup-builder-page">
-    <div class="view-back-row"><button class="lineup-builder-btn ghost" onclick="backToHome()">&larr; Zurueck</button></div>
+    <div class="view-back-row"><button class="lineup-builder-btn ghost" onclick="backToHome()">&larr; Zurück</button></div>
     <div class="lineup-builder-hero">
       <div class="lineup-builder-hero-grid">
         <div>
           <div class="mc-eyebrow">Chemistry Lab</div>
           <div class="lineup-builder-title">Lineup Builder</div>
-          <div class="lineup-builder-subtitle">Verfuegbare Spieler auswaehlen, Reihen vorschlagen lassen und Kombinationen manuell testen. Die App liefert Vorschlaege mit Begruendung, aber keine harte Trainerentscheidung.</div>
+          <div class="lineup-builder-subtitle">Verfügbare Spieler auswählen, Reihen vorschlagen lassen und Kombinationen manuell testen. Die App liefert Vorschläge mit Begründung, aber keine harte Trainerentscheidung.</div>
         </div>
         <div class="lineup-builder-controls">
           <label class="mc-field"><span class="mc-label">Saison</span><select class="mc-select" onchange="setLineupBuilderSeason(this.value)">${seasonOptions}</select></label>
@@ -19939,6 +20505,11 @@ document.addEventListener('DOMContentLoaded',()=>{
     console.warn('Alltime preload fehlgeschlagen:',e.message);
     updateCoverAllTimeStats(false);
   });
+  // Aus season-data/seasons.json ("status":"current") ermitteln, welche Saison
+  // aktuell ist, und den Cover-Button entsprechend hervorheben. Schlägt das
+  // fehl/dauert es, bleibt die im HTML fest hinterlegte 25/26-Markierung als
+  // Fallback sichtbar (siehe Kommentar bei RESOLVED_CURRENT_SEASON_KEY).
+  resolveCurrentSeasonKey().then(applyCurrentSeasonCoverHighlight).catch(()=>{});
 
   // Global tooltip for .th-tip elements (avoids overflow clipping)
   const tip=document.createElement('div');
