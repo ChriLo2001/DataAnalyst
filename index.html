@@ -1906,6 +1906,7 @@ let S={
   matchcenterShowPlayerDetails:false,matchcenterShowDuoDetails:false,matchcenterTab:'overview',matchcenterStoryOpen:false,lineupSelectedPlayerIds:[],
   lineupBuilderSeasonKey:CURRENT_SEASON_KEY,lineupBuilderOpponent:'',lineupBuilderMode:'recommend',lineupAvailablePlayerIds:[],lineupLines:[[],[],[]],lineupActiveLine:0,lineupComplementLine:null,lineupSyntheticPlayers:[],lineupNewPlayerProfile:'offensiv',
   antiSynergyView:'overall',antiSynergyShowAll:false,antiSynergyHideSgOnly:true,duoProSelections:{},duoProPickerOpen:{},duoProPickerMessages:{},
+  einsatzCenterSeasonKey:CURRENT_SEASON_KEY,
   errors:[],dbg:[],
 };
 const analysisCache=new Map();
@@ -2100,6 +2101,7 @@ window.setPage=p=>{
   if(p==='comparisonCenter')return window.openComparisonCenter?.();
   if(p==='matchcenter')return window.openMatchcenter?.();
   if(p==='lineupBuilder')return window.openLineupBuilder?.();
+  if(p==='einsatzCenter')return window.openEinsatzCenter?.();
   setState({page:p});
 };
 window.backToHome=()=>{
@@ -5626,6 +5628,101 @@ async function ensureLineupGroupsRegistryLoaded(){
 }
 window.ensureLineupDataLoaded=ensureLineupDataLoaded;
 window.ensureLineupGroupsRegistryLoaded=ensureLineupGroupsRegistryLoaded;
+
+// ═══ Einsatz-Center (Phase 5 — read-only Anzeige) ════════════════════════
+// Reine Anzeige der lineup-data-Inhalte. Keine Bearbeitung, keine
+// Analyse/Kennzahlen, keine automatische Kombinationserzeugung — das bleibt
+// späteren Phasen vorbehalten. Liest PLAYER_REGISTRY/SEASONS ausschließlich
+// per exakter ID für Anzeigezwecke (kein Namens-Fuzzy-Match, kein Raten),
+// schreibt niemals in diese oder andere bestehende Datenstrukturen zurück.
+
+/** Exakte, nicht ratende Spieler-Namensauflösung für die Einsatz-Center-Anzeige. */
+function resolveLineupPlayerName(playerId){
+  const profile=(S.playerRegistry?.players||{})[playerId]||PLAYER_REGISTRY.players[playerId]||null;
+  return profile?.name?escHtml(profile.name):`Unbekannter Spieler (${escHtml(String(playerId))})`;
+}
+
+/** Rein lesender Spielkontext (Datum/Gegner) aus den bereits geladenen season-data-Rohspielen. */
+function findLineupGameContext(seasonKey,gameId){
+  const bucket=SEASONS[seasonKey];
+  const rawGames=bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[]);
+  const match=(rawGames||[]).find(g=>Number(g?.id)===Number(gameId));
+  if(!match)return null;
+  const date=match.date||match.game_date||'';
+  return `${date?escHtml(date)+' · ':''}${escHtml(match.home_team_name||'?')} - ${escHtml(match.guest_team_name||'?')}`;
+}
+
+function rEinsatzCenterGroup(group){
+  const registryEntry=(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===group?.groupId);
+  const players=(Array.isArray(group?.players)?group.players:[]).map(p=>`${resolveLineupPlayerName(p?.playerId)}${p?.position?` <span style="color:var(--tx3)">(${escHtml(p.position)})</span>`:''}`).join(', ')||'–';
+  const registryNote=(registryEntry&&registryEntry.currentName!==group?.name)?` <span style="color:var(--tx3);font-size:11px">(aktueller Registry-Name: ${escHtml(registryEntry.currentName)})</span>`:'';
+  const registryMissing=!registryEntry?` <span style="color:#fcd34d;font-size:11px">(nicht in groups.json registriert)</span>`:'';
+  return `<div style="padding:8px 0;border-top:1px solid var(--brd)">
+    <strong>${escHtml(group?.name||'')}</strong> <span style="color:var(--tx3);font-size:11px">[${escHtml(group?.type||'')}]</span>${registryNote}${registryMissing}
+    <div style="font-size:12.5px;margin-top:3px">${players}</div>
+    ${group?.notes?`<div style="font-size:11px;color:var(--tx3);margin-top:3px">${escHtml(group.notes)}</div>`:''}
+  </div>`;
+}
+
+function rEinsatzCenterCombo(game,combo){
+  const players=(Array.isArray(combo?.players)?combo.players:[]).map(resolveLineupPlayerName).join(', ')||'–';
+  const linkedGroup=(Array.isArray(game?.groups)?game.groups:[]).find(g=>g?.groupId===combo?.groupId);
+  return `<div style="padding:8px 0;border-top:1px solid var(--brd);font-size:12.5px">
+    ${players}${linkedGroup?` <span style="color:var(--tx3);font-size:11px">(${escHtml(linkedGroup.name)})</span>`:''}
+    ${combo?.note?`<div style="font-size:11px;color:var(--tx3);margin-top:3px">${escHtml(combo.note)}</div>`:''}
+  </div>`;
+}
+
+function rEinsatzCenterGameCard(seasonKey,game){
+  const context=findLineupGameContext(seasonKey,game?.gameId);
+  const title=context||`Spiel-ID ${escHtml(String(game?.gameId))}`;
+  const fieldNames=(Array.isArray(game?.roster?.field)?game.roster.field:[]).map(resolveLineupPlayerName).join(', ')||'–';
+  const goalieNames=(Array.isArray(game?.roster?.goalies)?game.roster.goalies:[]).map(resolveLineupPlayerName).join(', ')||'–';
+  const groups=Array.isArray(game?.groups)?game.groups:[];
+  const combos=Array.isArray(game?.confirmedCombinations)?game.confirmedCombinations:[];
+  return `<div class="mc-card">
+    <div class="mc-card-title">${title}</div>
+    <div style="font-size:12.5px;margin-top:6px"><strong>Kader:</strong> ${fieldNames}</div>
+    <div style="font-size:12.5px;margin-top:2px"><strong>Torhüter:</strong> ${goalieNames}</div>
+    <div style="margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Gruppen</div>
+    ${groups.length?groups.map(rEinsatzCenterGroup).join(''):'<div class="mc-empty">Keine Gruppen erfasst.</div>'}
+    <div style="margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Bestätigte Kombinationen</div>
+    ${combos.length?combos.map(c=>rEinsatzCenterCombo(game,c)).join(''):'<div class="mc-empty">Keine bestätigten Kombinationen erfasst.</div>'}
+    ${game?.note?`<div style="margin-top:10px;font-size:11px;color:var(--tx3)">Notiz: ${escHtml(game.note)}</div>`:''}
+  </div>`;
+}
+
+function rEinsatzCenterPage(){
+  const seasonKey=S.einsatzCenterSeasonKey||CURRENT_SEASON_KEY;
+  const seasonOptions=Object.keys(SEASON_CONFIG||{}).map(key=>`<option value="${escAttr(key)}" ${key===seasonKey?'selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
+  const seasonData=LINEUP_DATA[seasonKey];
+  const games=Array.isArray(seasonData?.games)?seasonData.games:[];
+  return `<section class="matchcenter-page">
+    <div class="view-back-row"><button class="btn-back" onclick="backToHome()">&larr; Zurück</button></div>
+    <div>
+      <div class="mc-eyebrow">Einsatz-Center</div>
+      <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Einsätze &amp; Reihen</div>
+      <div class="wrn-box">⚠ Diese Ansicht zeigt ausschließlich die manuell gepflegte lineup-data-Datenbasis. Aktuell sind dort nur synthetische Platzhalter-/Testdaten aus der Konzeptphase hinterlegt — keine echten VfB-Ulm-Einsätze.</div>
+      <label class="mc-field" style="max-width:280px"><span class="mc-label">Saison</span><select class="mc-select" onchange="setEinsatzCenterSeason(this.value)">${seasonOptions}</select></label>
+    </div>
+    <div style="display:grid;gap:14px">
+      ${games.length?games.map(g=>rEinsatzCenterGameCard(seasonKey,g)).join(''):`<div class="mc-empty">Für ${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)} sind noch keine Einsatzdaten erfasst.</div>`}
+    </div>
+  </section>`;
+}
+
+window.setEinsatzCenterSeason=async(value)=>{
+  const seasonKey=value||CURRENT_SEASON_KEY;
+  await ensureLineupDataLoaded(seasonKey);
+  setState({einsatzCenterSeasonKey:seasonKey});
+};
+window.openEinsatzCenter=async()=>{
+  const seasonKey=S.einsatzCenterSeasonKey||getActiveSeasonKey()||CURRENT_SEASON_KEY;
+  try{await ensureGlobalDataLoaded();}catch(e){}
+  await Promise.all([ensureLineupDataLoaded(seasonKey),ensureLineupGroupsRegistryLoaded()]);
+  showMainShell();
+  setState({screen:'main',page:'einsatzCenter',einsatzCenterSeasonKey:seasonKey});
+};
 window.buildStaticSeasonDataBlock=buildStaticSeasonDataBlock;
 
 async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
@@ -20458,6 +20555,7 @@ function _render(root){
       <button class="nav-btn${S.page==='team'?' active':''}" onclick="setPage('team')">🏒 Team</button>
       <button class="nav-btn${S.page==='matchcenter'?' active':''}" onclick="setPage('matchcenter')">Matchcenter</button>
       <button class="nav-btn${S.page==='lineupBuilder'?' active':''}" onclick="setPage('lineupBuilder')">Lineup Builder</button>
+      <button class="nav-btn${S.page==='einsatzCenter'?' active':''}" onclick="setPage('einsatzCenter')">Einsatz-Center</button>
       <button class="nav-btn${S.page==='comparisonCenter'?' active':''}" onclick="setPage('comparisonCenter')">Vergleichszentrum</button>
       <button class="btn-back" onclick="backToHome()">&larr; Cover</button>
       <button class="btn-exp" onclick="exportExcel()">📥 Excel</button>
@@ -20485,6 +20583,10 @@ function _render(root){
   }
   if(S.page==='lineupBuilder'){
     root.innerHTML=hdrHtml+errHtml+`<div>${rLineupBuilderPage()}</div>`;
+    return;
+  }
+  if(S.page==='einsatzCenter'){
+    root.innerHTML=hdrHtml+errHtml+`<div>${rEinsatzCenterPage()}</div>`;
     return;
   }
   if(S.page==='matchcenter'){
