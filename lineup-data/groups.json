@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "groups": [
+    {
+      "groupId": "a1b2c3d4-5678-4abc-9def-0123456789ab",
+      "currentName": "Testgruppe Alpha",
+      "createdInSeason": "25/26",
+      "createdInGame": 99999001,
+      "nameHistory": [
+        {
+          "name": "Testgruppe Alpha",
+          "since": { "season": "25/26", "gameId": 99999001 }
+        }
+      ]
+    }
+  ]
+}

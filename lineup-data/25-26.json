@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "season": "25/26",
+  "games": [
+    {
+      "gameId": 99999001,
+      "roster": {
+        "field": ["api:900001", "api:900002", "api:900003", "api:900004"],
+        "goalies": ["api:900010"]
+      },
+      "groups": [
+        {
+          "groupId": "a1b2c3d4-5678-4abc-9def-0123456789ab",
+          "name": "Testgruppe Alpha",
+          "type": "trio",
+          "players": [
+            { "playerId": "api:900001", "position": "Verteidiger" },
+            { "playerId": "api:900002", "position": "Verteidiger" },
+            { "playerId": "api:900003", "position": "Flügel" }
+          ],
+          "notes": ""
+        }
+      ],
+      "confirmedCombinations": [
+        {
+          "players": ["api:900001", "api:900002", "api:900003"],
+          "groupId": "a1b2c3d4-5678-4abc-9def-0123456789ab",
+          "note": ""
+        }
+      ],
+      "note": "Synthetische Platzhalterdaten für Phase 1 (Schema-Demonstration) — keine echten VfB-Ulm-Einsatzdaten. gameId, Spieler-IDs und Gruppenname sind frei erfunden. Spieler api:900004 ist bewusst im Kader, aber in keiner Gruppe, um zu zeigen, dass das erlaubt ist."
+    }
+  ]
+}
