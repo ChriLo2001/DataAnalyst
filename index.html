@@ -5551,6 +5551,81 @@ function buildStaticSeasonDataBlock(seasonKey=getActiveSeasonKey()){
     games,
   },null,2)};`;
 }
+
+// ═══ Lineup-Data Loader (Phase 4 — Einsatz-Center-Vorstufe) ═════════════
+// Rein lesender Loader für lineup-data/<season>.json + lineup-data/groups.json
+// (siehe docs/lineup-data-import.md). Bewusst vollständig isoliert von
+// SEASONS/PLAYER_REGISTRY/STATIC_SEASON_DATA/S — lineup-data ist eine eigene,
+// manuell gepflegte Datenbasis, getrennt von den objektiven
+// Saisonmanager-Daten (siehe Phase-1-Konzept). Noch KEINE UI, KEINE
+// Statistik-Anbindung. Diese Funktionen werden von NIRGENDS im bestehenden
+// Code automatisch aufgerufen (weder beim Start noch beim Rendern) — das
+// bleibt einer späteren Phase vorbehalten.
+const LINEUP_DATA={};// { [seasonKey]: {schemaVersion, season, games} }
+let LINEUP_GROUPS_REGISTRY=null;// {schemaVersion, groups} | null
+
+function fileNameForLineupSeasonKey(key){
+  return `${key.replace('/','-')}.json`;
+}
+
+const _lineupDataLoadPromises={};
+/**
+ * Lädt lineup-data/<seasonKey>.json. Erfolg -> LINEUP_DATA[seasonKey] gesetzt,
+ * true. Jeder Fehlschlag (HTTP-Fehler, kaputtes JSON, file://-CORS-Block,
+ * unpassende Form) -> LINEUP_DATA[seasonKey] bleibt unangetastet, false —
+ * niemals ein S.errors-Eintrag, keine UI-Auswirkung. Validiert bewusst nur
+ * minimal (games ist Array, season passt) — vollständige Validierung ist
+ * Aufgabe von scripts/lineup-data-validators.mjs vor dem Schreiben, nicht des
+ * Browser-Loaders. Promise-Caching analog zu ensureExternalSeasonData(): ein
+ * Fehlschlag wird nicht dauerhaft gecacht, ein späterer erneuter Aufruf darf
+ * es erneut versuchen.
+ * @param {string} seasonKey z.B. "25/26"
+ * @returns {Promise<boolean>}
+ */
+async function ensureLineupDataLoaded(seasonKey){
+  if(LINEUP_DATA[seasonKey])return true;
+  if(_lineupDataLoadPromises[seasonKey])return _lineupDataLoadPromises[seasonKey];
+  _lineupDataLoadPromises[seasonKey]=(async()=>{
+    try{
+      const res=await fetch(`lineup-data/${fileNameForLineupSeasonKey(seasonKey)}`,{headers:{'Accept':'application/json'}});
+      if(!res.ok)throw new Error(`HTTP ${res.status}`);
+      const json=await res.json();
+      if(!json||typeof json!=='object'||!Array.isArray(json.games)||json.season!==seasonKey)return false;
+      LINEUP_DATA[seasonKey]=json;
+      return true;
+    }catch(e){
+      return false;
+    }
+  })().finally(()=>{delete _lineupDataLoadPromises[seasonKey];});
+  return _lineupDataLoadPromises[seasonKey];
+}
+
+let _lineupGroupsRegistryPromise=null;
+/**
+ * Lädt lineup-data/groups.json. Erfolg -> LINEUP_GROUPS_REGISTRY gesetzt,
+ * true. Jeder Fehlschlag -> LINEUP_GROUPS_REGISTRY bleibt unangetastet
+ * (null), false — kein S.errors-Eintrag, keine UI-Auswirkung.
+ * @returns {Promise<boolean>}
+ */
+async function ensureLineupGroupsRegistryLoaded(){
+  if(LINEUP_GROUPS_REGISTRY)return true;
+  if(_lineupGroupsRegistryPromise)return _lineupGroupsRegistryPromise;
+  _lineupGroupsRegistryPromise=(async()=>{
+    try{
+      const res=await fetch('lineup-data/groups.json',{headers:{'Accept':'application/json'}});
+      if(!res.ok)throw new Error(`HTTP ${res.status}`);
+      const json=await res.json();
+      if(!json||typeof json!=='object'||!Array.isArray(json.groups))return false;
+      LINEUP_GROUPS_REGISTRY=json;
+      return true;
+    }catch(e){
+      return false;
+    }
+  })().finally(()=>{_lineupGroupsRegistryPromise=null;});
+  return _lineupGroupsRegistryPromise;
+}
+window.ensureLineupDataLoaded=ensureLineupDataLoaded;
+window.ensureLineupGroupsRegistryLoaded=ensureLineupGroupsRegistryLoaded;
 window.buildStaticSeasonDataBlock=buildStaticSeasonDataBlock;
 
 async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
