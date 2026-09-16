@@ -1908,6 +1908,7 @@ let S={
   antiSynergyView:'overall',antiSynergyShowAll:false,antiSynergyHideSgOnly:true,duoProSelections:{},duoProPickerOpen:{},duoProPickerMessages:{},
   einsatzCenterSeasonKey:CURRENT_SEASON_KEY,
   einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],einsatzCenterRenamingGroupId:null,
+  einsatzCenterRosterSuggestionDeselected:{},einsatzCenterRosterSuggestionDismissed:{},einsatzCenterRosterSuggestionAccepted:{},
   errors:[],dbg:[],
 };
 const analysisCache=new Map();
@@ -5910,6 +5911,40 @@ function deriveLineupUlmPlayerIds(seasonKey){
   }
   return ids;
 }
+/**
+ * Rein lesende Ableitung des vom Saisonmanager gemeldeten Kaders der
+ * VfB-Ulm-Seite eines konkreten Spiels — für den Kader-Vorschlag im
+ * Einsatz-Center-Draft-Editor. Liest ausschließlich bereits vorhandene
+ * Rohdaten (SEASONS[seasonKey].data.rawGames), nutzt die bestehende
+ * Vereinszuordnung (detectUlmSide) und die bestehende Identitätslogik
+ * (getPlayerSourceId/buildPlayerIdentity) — keine neue Team- oder
+ * Namenserkennung. Feld/Torwart ausschließlich über position==='Feld'/'Tor'
+ * (das optionale, unvollständige goalkeeper-Feld wird bewusst nicht genutzt).
+ * Keine Mutation, kein Zugriff auf LINEUP_DATA/Draft — reine Anzeige-Quelle.
+ * Liefert null, wenn das Spiel unbekannt ist, keine Ulm-Seite hat, oder der
+ * gemeldete Kader leer ist (z.B. Postponed-Spiele wie 44383).
+ */
+function getSeasonmanagerRosterSuggestion(seasonKey,gameId){
+  const bucket=SEASONS[seasonKey];
+  const rawGames=bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[]);
+  const game=(rawGames||[]).find(g=>Number(g?.id)===Number(gameId));
+  if(!game)return null;
+  const side=detectUlmSide(game);
+  if(!side)return null;
+  const list=Array.isArray(game?.players?.[side])?game.players[side]:[];
+  const teamName=side==='home'?game.home_team_name:game.guest_team_name;
+  const field=[],goalies=[];
+  for(const p of list){
+    const sourceId=getPlayerSourceId(p);
+    if(sourceId===undefined||sourceId===null||sourceId==='')continue;
+    const identity=buildPlayerIdentity(p,{seasonKey,teamName});
+    const entry={playerId:identity.playerId,name:identity.name,jerseyNumber:identity.jerseyNumber};
+    if(p?.position==='Tor')goalies.push(entry);
+    else if(p?.position==='Feld')field.push(entry);
+  }
+  if(!field.length&&!goalies.length)return null;
+  return{gameId:Number(gameId),side,field,goalies};
+}
 
 // ─── BaseHash: portierte, minimale Canonical-JSON- + SHA-256-Logik ───────
 // MUSS byte-identisch zu canonicalJson()/computeBaseHash() in
@@ -6001,6 +6036,46 @@ function rEinsatzCenterComboEditor(gameId,combo,idx){
     <button class="lineup-builder-x" onclick="removeEinsatzCenterCombo(${gameId},${idx})">x</button>
   </div>`;
 }
+/**
+ * Kompakte Vorschlagskarte für den vom Saisonmanager gemeldeten Kader
+ * (getSeasonmanagerRosterSuggestion) — rein UI-seitig. Die Auswahl (Checkbox
+ * an/aus) sowie Verworfen/Übernommen-Status leben ausschließlich in S
+ * (S.einsatzCenterRosterSuggestion*), NIEMALS im Draft-Spiel-Objekt selbst
+ * (das würde den Importer-Validator brechen, siehe checkUnknownFields in
+ * scripts/lineup-data-validators.mjs). Die tatsächliche Übernahme erfolgt
+ * ausschließlich über die bestehende addEinsatzCenterRosterPlayer().
+ */
+function rEinsatzCenterRosterSuggestionCard(seasonKey,gameId,existingField,existingGoalies){
+  const key=String(gameId);
+  if((S.einsatzCenterRosterSuggestionDismissed||{})[key])return'';
+  const suggestion=getSeasonmanagerRosterSuggestion(seasonKey,gameId);
+  if(!suggestion)return'';
+  if((S.einsatzCenterRosterSuggestionAccepted||{})[key]){
+    return `<div class="wrn-box" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3)">✓ Saisonmanager-Kader übernommen.</div>`;
+  }
+  const deselected=(S.einsatzCenterRosterSuggestionDeselected||{})[key]||{};
+  const existingIds=new Set([...(existingField||[]),...(existingGoalies||[])]);
+  const rowHtml=p=>{
+    const alreadyPresent=existingIds.has(p.playerId);
+    const checked=alreadyPresent||!deselected[p.playerId];
+    return `<label style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12.5px;${alreadyPresent?'opacity:.6':''}">
+      <input type="checkbox" ${checked?'checked':''} ${alreadyPresent?'disabled':`onchange="toggleEinsatzCenterRosterSuggestionPlayer(${gameId},'${escAttr(p.playerId)}')"`}>
+      <span>${escHtml(p.name)}${p.jerseyNumber?` <span style="color:var(--tx3)">#${escHtml(String(p.jerseyNumber))}</span>`:''}${alreadyPresent?' <span style="color:var(--tx3);font-size:11px">(bereits im Kader)</span>':''}</span>
+    </label>`;
+  };
+  const fieldRows=suggestion.field.map(rowHtml).join('');
+  const goalieRows=suggestion.goalies.map(rowHtml).join('');
+  return `<div class="mc-card">
+    <div class="mc-card-title">📋 Saisonmanager-Kader erkannt</div>
+    <div class="mc-section-note">${suggestion.field.length} Feldspieler · ${suggestion.goalies.length} Torwart</div>
+    <div style="margin-top:8px">${fieldRows}</div>
+    ${suggestion.goalies.length?`<div style="margin-top:8px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Torwart</div><div style="margin-top:4px">${goalieRows}</div>`:''}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="lineup-builder-btn gold" onclick="acceptEinsatzCenterRosterSuggestion(${gameId})">Kader übernehmen</button>
+      <button class="lineup-builder-btn ghost" onclick="dismissEinsatzCenterRosterSuggestion(${gameId})">Verwerfen</button>
+    </div>
+  </div>`;
+}
 function rEinsatzCenterGameEditor(seasonKey,gameId){
   const gameDraft=getEinsatzCenterGameDraft(gameId);
   const validPlayerIds=[...deriveLineupUlmPlayerIds(seasonKey)].sort();
@@ -6027,6 +6102,7 @@ function rEinsatzCenterGameEditor(seasonKey,gameId){
   return `<div class="mc-card">
     <div class="mc-card-title">Spiel ${gameId} bearbeiten</div>
     ${issues.length?`<div class="wrn-box">⚠ ${issues.map(escHtml).join('<br>⚠ ')}</div>`:''}
+    ${rEinsatzCenterRosterSuggestionCard(seasonKey,gameId,field,goalies)}
     <div style="margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Kader (Feldspieler)</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">${fieldChips}</div>
     ${fieldPicker}
@@ -6109,7 +6185,7 @@ window.startEinsatzCenterDraftMode=async()=>{
 };
 window.cancelEinsatzCenterEdit=()=>{
   EINSATZ_CENTER_DRAFT=null;
-  setState({einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[]});
+  setState({einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],einsatzCenterRosterSuggestionDeselected:{},einsatzCenterRosterSuggestionDismissed:{},einsatzCenterRosterSuggestionAccepted:{}});
 };
 window.selectEinsatzCenterEditGame=(gameId)=>{
   getEinsatzCenterGameDraft(gameId);
@@ -6128,6 +6204,41 @@ window.removeEinsatzCenterRosterPlayer=(gameId,role,playerId)=>{
   const key=role==='goalies'?'goalies':'field';
   entry.roster[key]=entry.roster[key].filter(id=>id!==playerId);
   setState({});
+};
+window.toggleEinsatzCenterRosterSuggestionPlayer=(gameId,playerId)=>{
+  const key=String(gameId);
+  const current=S.einsatzCenterRosterSuggestionDeselected||{};
+  const forGame={...(current[key]||{})};
+  if(forGame[playerId])delete forGame[playerId];else forGame[playerId]=true;
+  setState({einsatzCenterRosterSuggestionDeselected:{...current,[key]:forGame}});
+};
+window.dismissEinsatzCenterRosterSuggestion=(gameId)=>{
+  const key=String(gameId);
+  setState({einsatzCenterRosterSuggestionDismissed:{...(S.einsatzCenterRosterSuggestionDismissed||{}),[key]:true}});
+};
+/**
+ * Übernimmt den Saisonmanager-Kader-Vorschlag in den bestehenden Draft.
+ * Ruft dafür AUSSCHLIESSLICH die bereits vorhandene addEinsatzCenterRosterPlayer()
+ * auf (keine zweite Add-/Persistenzlogik) — diese ist bereits idempotent
+ * (fügt eine bereits vorhandene playerId nicht doppelt hinzu), daher entstehen
+ * auch bei bereits im Draft vorhandenen Spielern keine Duplikate.
+ */
+window.acceptEinsatzCenterRosterSuggestion=(gameId)=>{
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft)return;
+  const suggestion=getSeasonmanagerRosterSuggestion(draft.seasonKey,gameId);
+  if(!suggestion)return;
+  const key=String(gameId);
+  const deselected=(S.einsatzCenterRosterSuggestionDeselected||{})[key]||{};
+  for(const p of suggestion.field){
+    if(deselected[p.playerId])continue;
+    window.addEinsatzCenterRosterPlayer(gameId,'field',p.playerId);
+  }
+  for(const p of suggestion.goalies){
+    if(deselected[p.playerId])continue;
+    window.addEinsatzCenterRosterPlayer(gameId,'goalies',p.playerId);
+  }
+  setState({einsatzCenterRosterSuggestionAccepted:{...(S.einsatzCenterRosterSuggestionAccepted||{}),[key]:true}});
 };
 window.addEinsatzCenterExistingGroup=(gameId,groupId)=>{
   const entry=getEinsatzCenterGameDraft(gameId);
@@ -6280,6 +6391,8 @@ window.ensureEinsatzCenterDraft=ensureEinsatzCenterDraft;
 window.getEinsatzCenterGameDraft=getEinsatzCenterGameDraft;
 window.deriveLineupValidPlayerIds=deriveLineupValidPlayerIds;
 window.deriveLineupUlmPlayerIds=deriveLineupUlmPlayerIds;
+window.getSeasonmanagerRosterSuggestion=getSeasonmanagerRosterSuggestion;
+window.rEinsatzCenterRosterSuggestionCard=rEinsatzCenterRosterSuggestionCard;
 window.einsatzCenterCanonicalJson=einsatzCenterCanonicalJson;
 window.einsatzCenterComputeBaseHash=einsatzCenterComputeBaseHash;
 window.einsatzCenterSoftIssues=einsatzCenterSoftIssues;
