@@ -6039,7 +6039,7 @@ function rEinsatzCenterEditPage(){
   }
   const seasonKey=draft.seasonKey;
   const bucket=SEASONS[seasonKey];
-  const sourceGames=bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[]);
+  const sourceGames=(bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[])).filter(g=>!!detectUlmSide(g));
   const recordedIds=new Set((Array.isArray(LINEUP_DATA[seasonKey]?.games)?LINEUP_DATA[seasonKey].games:[]).map(g=>Number(g?.gameId)));
   const gameId=S.einsatzCenterEditingGameId;
 
@@ -7005,8 +7005,7 @@ function startHallOfFameIntro(previous){
   HOF_INTRO_STATE=state;
   document.addEventListener('keydown',state.keyHandler);
   overlay.classList.add('visible');
-  const raf=window.requestAnimationFrame||((fn)=>setTimeout(fn,16));
-  raf(()=>overlay.classList.add('running'));
+  state.runningStarted=new Promise(resolve=>setTimeout(()=>{overlay.classList.add('running');state.startedAt=Date.now();resolve();},16));
   return state;
 }
 function cancelHallOfFameIntro(){
@@ -7042,6 +7041,7 @@ window.openHallOfFame=async()=>{
       setState({screen:'main',playerRegistry:toPublicPlayerRegistry(),allTime:getGlobalAllTimeSnapshot(),page:'hallOfFame',errors:[...(S.errors||[]),`Hall of Fame konnte nicht vollständig vorgeladen werden: ${e.message}`]});
     }
   }
+  await intro.runningStarted;
   await hofIntroDelay(Math.max(0,HOF_INTRO_DURATION_MS-(Date.now()-intro.startedAt)));
   if(!intro.cancelled)finishHallOfFameIntro(intro);
 };
