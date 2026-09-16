@@ -1907,6 +1907,7 @@ let S={
   lineupBuilderSeasonKey:CURRENT_SEASON_KEY,lineupBuilderOpponent:'',lineupBuilderMode:'recommend',lineupAvailablePlayerIds:[],lineupLines:[[],[],[]],lineupActiveLine:0,lineupComplementLine:null,lineupSyntheticPlayers:[],lineupNewPlayerProfile:'offensiv',
   antiSynergyView:'overall',antiSynergyShowAll:false,antiSynergyHideSgOnly:true,duoProSelections:{},duoProPickerOpen:{},duoProPickerMessages:{},
   einsatzCenterSeasonKey:CURRENT_SEASON_KEY,
+  einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],
   errors:[],dbg:[],
 };
 const analysisCache=new Map();
@@ -5704,6 +5705,7 @@ function rEinsatzCenterPage(){
       <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Einsätze &amp; Reihen</div>
       <div class="wrn-box">⚠ Diese Ansicht zeigt ausschließlich die manuell gepflegte lineup-data-Datenbasis. Aktuell sind dort nur synthetische Platzhalter-/Testdaten aus der Konzeptphase hinterlegt — keine echten VfB-Ulm-Einsätze.</div>
       <label class="mc-field" style="max-width:280px"><span class="mc-label">Saison</span><select class="mc-select" onchange="setEinsatzCenterSeason(this.value)">${seasonOptions}</select></label>
+      <button class="btn-back" style="margin-top:10px" onclick="startEinsatzCenterDraftMode()">✎ Entwurf bearbeiten</button>
     </div>
     <div style="display:grid;gap:14px">
       ${games.length?games.map(g=>rEinsatzCenterGameCard(seasonKey,g)).join(''):`<div class="mc-empty">Für ${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)} sind noch keine Einsatzdaten erfasst.</div>`}
@@ -5723,6 +5725,414 @@ window.openEinsatzCenter=async()=>{
   showMainShell();
   setState({screen:'main',page:'einsatzCenter',einsatzCenterSeasonKey:seasonKey});
 };
+
+// ═══ Einsatz-Center — Entwurfsmodus (Phase 6 — read/write Draft-UI) ══════
+// Erzeugt AUSSCHLIESSLICH einen In-Memory-Entwurf und exportiert ihn als
+// JSON-Datei (Download). Schreibt NIEMALS lineup-data/*.json — das bleibt
+// exklusiv Aufgabe von scripts/import-lineup-data.mjs --write, unverändert.
+// Verändert NIEMALS SEASONS/PLAYER_REGISTRY/STATIC_SEASON_DATA oder
+// bestehende Statistik-/Analyse-Strukturen — nur lesende Zugriffe für
+// Picker-/Anzeigezwecke. Kein localStorage/sessionStorage. Vollständig
+// getrennt vom bestehenden, hypothetischen Lineup Builder (S.lineupBuilder*).
+//
+// EINSATZ_CENTER_DRAFT-Struktur (reines In-Memory-Arbeitsobjekt, NICHT das
+// Export-Format):
+//   { seasonKey, games:Map<gameId,gameEntry>, newGroups:Map<groupId,registryEntry> }
+// - games: NUR berührte Spiele, jeweils als VOLLSTÄNDIGE Kopie (siehe
+//   getEinsatzCenterGameDraft) — mergeGames() im Importer ersetzt eine
+//   bekannte gameId komplett, daher darf hier niemals ein Teil-Objekt landen.
+// - newGroups: NUR neu angelegte Registry-Einträge. Bestehende Gruppen werden
+//   ausschließlich über ihre groupId in game.groups[]/confirmedCombinations[]
+//   referenziert, nie hier erneut aufgeführt (siehe Auftrag).
+let EINSATZ_CENTER_DRAFT=null;
+
+/**
+ * Erzeugt (falls nötig) den Draft für eine Saison und nimmt dabei EINMALIG
+ * einen expliziten baseHash-Snapshot des Ausgangszustands auf — nicht erst
+ * beim Export (Architekturkorrektur, siehe Prüfung vor diesem Commit).
+ * Verwendet dieselbe, bereits bestehende einsatzCenterComputeBaseHash()-Logik
+ * unverändert. Bei bereits laufendem Draft derselben Saison wird der
+ * gespeicherte Snapshot NICHT neu berechnet (bleibt während der gesamten
+ * Bearbeitung stabil).
+ */
+async function ensureEinsatzCenterDraft(seasonKey){
+  if(EINSATZ_CENTER_DRAFT&&EINSATZ_CENTER_DRAFT.seasonKey===seasonKey)return EINSATZ_CENTER_DRAFT;
+  await Promise.all([ensureLineupDataLoaded(seasonKey),ensureLineupGroupsRegistryLoaded()]);
+  const baseSeasonData=LINEUP_DATA[seasonKey]||{schemaVersion:1,season:seasonKey,games:[]};
+  const baseRegistry=LINEUP_GROUPS_REGISTRY||{schemaVersion:1,groups:[]};
+  const baseHash=await einsatzCenterComputeBaseHash(baseSeasonData,baseRegistry);
+  EINSATZ_CENTER_DRAFT={seasonKey,baseHash,games:new Map(),newGroups:new Map()};
+  return EINSATZ_CENTER_DRAFT;
+}
+
+/**
+ * Liefert den Arbeitseintrag für ein Spiel — bei erstem Zugriff eine
+ * VOLLSTÄNDIGE Deep-Copy (structuredClone, keine Referenz auf LINEUP_DATA)
+ * des bereits erfassten Eintrags, oder ein leeres Gerüst für ein noch nicht
+ * erfasstes Spiel. Kritische Regel (siehe Auftrag): niemals ein Teil-Objekt,
+ * da der Importer eine bekannte gameId vollständig ersetzt.
+ */
+function getEinsatzCenterGameDraft(gameId){
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft)return null;
+  const id=Number(gameId);
+  if(!draft.games.has(id)){
+    const seasonData=LINEUP_DATA[draft.seasonKey];
+    const existing=(Array.isArray(seasonData?.games)?seasonData.games:[]).find(g=>Number(g?.gameId)===id);
+    const entry=existing?structuredClone(existing):{gameId:id,roster:{field:[],goalies:[]},groups:[],confirmedCombinations:[],note:''};
+    draft.games.set(id,entry);
+  }
+  return draft.games.get(id);
+}
+
+/**
+ * Portierte, minimale Ableitung gültiger saisonweiter Spieler-IDs — exakt
+ * dieselbe Regel wie derivePlayerIdsFromSeasonGames() in
+ * scripts/lineup-data-validators.mjs (players.home/guest[].player_id ->
+ * "api:<id>"), damit der Picker exakt das zulässt, was der Node-Importer
+ * später ebenfalls akzeptiert. Bewusst NICHT PLAYER_REGISTRY verwendet (dort
+ * greift zusätzliche Alias-/Namens-Zusammenführung, die der Importer für
+ * diese Prüfung nicht kennt) — liest stattdessen dieselben bereits geladenen
+ * season-data-Rohspiele wie findLineupGameContext().
+ */
+function deriveLineupValidPlayerIds(seasonKey){
+  const bucket=SEASONS[seasonKey];
+  const rawGames=bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[]);
+  const ids=new Set();
+  for(const g of rawGames||[]){
+    for(const side of['home','guest']){
+      const list=g?.players?.[side];
+      if(!Array.isArray(list))continue;
+      for(const p of list){
+        const raw=p?.player_id;
+        if(raw===undefined||raw===null||raw==='')continue;
+        ids.add(`api:${raw}`);
+      }
+    }
+  }
+  return ids;
+}
+
+// ─── BaseHash: portierte, minimale Canonical-JSON- + SHA-256-Logik ───────
+// MUSS byte-identisch zu canonicalJson()/computeBaseHash() in
+// scripts/lineup-data-hash.mjs bleiben (siehe Konsistenztest) — index.html
+// ist ein klassisches <script> (kein type="module"), ein direkter Import aus
+// dem ES-Modul ist nicht möglich und würde unter file:// ohnehin an CORS
+// scheitern (siehe Phase-4-Entscheidung). scripts/lineup-data-hash.mjs selbst
+// bleibt unverändert.
+function einsatzCenterCanonicalJson(value){
+  if(value===null||typeof value!=='object'){
+    return JSON.stringify(value===undefined?null:value);
+  }
+  if(Array.isArray(value)){
+    return `[${value.map(v=>einsatzCenterCanonicalJson(v)).join(',')}]`;
+  }
+  const keys=Object.keys(value).filter(k=>value[k]!==undefined).sort();
+  return `{${keys.map(k=>`${JSON.stringify(k)}:${einsatzCenterCanonicalJson(value[k])}`).join(',')}}`;
+}
+async function einsatzCenterSha256Hex(text){
+  const bytes=new TextEncoder().encode(text);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function einsatzCenterComputeBaseHash(seasonData,registryData){
+  return einsatzCenterSha256Hex(`${einsatzCenterCanonicalJson(seasonData)}\n${einsatzCenterCanonicalJson(registryData)}`);
+}
+
+/**
+ * Leichtgewichtige, NICHT-autoritative Hinweise für offensichtliche Fehler
+ * (siehe Auftrag: keine zweite vollständige Validator-Implementierung). Die
+ * endgültige Prüfung bleibt ausschließlich scripts/import-lineup-data.mjs.
+ */
+function einsatzCenterSoftIssues(gameDraft){
+  const issues=[];
+  if(!gameDraft)return issues;
+  const field=Array.isArray(gameDraft.roster?.field)?gameDraft.roster.field:[];
+  const goalies=Array.isArray(gameDraft.roster?.goalies)?gameDraft.roster.goalies:[];
+  if(new Set(field).size!==field.length)issues.push('roster.field enthält doppelte Spieler.');
+  if(new Set(goalies).size!==goalies.length)issues.push('roster.goalies enthält doppelte Spieler.');
+  if(field.some(id=>goalies.includes(id)))issues.push('Ein Spieler steht gleichzeitig in roster.field und roster.goalies.');
+  for(const group of gameDraft.groups||[]){
+    if(!Array.isArray(group.players)||group.players.length===0)issues.push(`Gruppe "${group.name||group.groupId}" hat keine Spieler.`);
+  }
+  (gameDraft.confirmedCombinations||[]).forEach((combo,idx)=>{
+    const players=Array.isArray(combo.players)?combo.players:[];
+    if(players.length!==3)issues.push(`Kombination ${idx+1} hat nicht genau 3 Spieler.`);
+    if(new Set(players).size!==players.length)issues.push(`Kombination ${idx+1} enthält einen Spieler mehrfach.`);
+    if(players.some(id=>goalies.includes(id)))issues.push(`Kombination ${idx+1} enthält einen Torwart.`);
+  });
+  return issues;
+}
+
+// ─── Render: Entwurfsmodus ────────────────────────────────────────────────
+function rEinsatzCenterGroupEditor(gameId,group,fieldRoster){
+  const isNew=!!(EINSATZ_CENTER_DRAFT?.newGroups?.has(group.groupId));
+  const memberIds=new Set((group.players||[]).map(p=>p.playerId));
+  const availableToAdd=(fieldRoster||[]).filter(id=>!memberIds.has(id));
+  const memberRows=(group.players||[]).map(p=>`<div style="display:flex;gap:6px;align-items:center;margin-top:3px">
+    <span style="flex:1">${resolveLineupPlayerName(p.playerId)}</span>
+    <input class="mc-select" style="max-width:140px" placeholder="Position" value="${escAttr(p.position||'')}" onchange="setEinsatzCenterGroupPlayerPosition(${gameId},'${escAttr(group.groupId)}','${escAttr(p.playerId)}',this.value)">
+    <button class="lineup-builder-x" onclick="removeEinsatzCenterGroupPlayer(${gameId},'${escAttr(group.groupId)}','${escAttr(p.playerId)}')">x</button>
+  </div>`).join('')||'<div class="mc-empty">Keine Mitglieder.</div>';
+  return `<div style="padding:8px 0;border-top:1px solid var(--brd)">
+    <strong>${escHtml(group.name)}</strong> <span style="color:var(--tx3);font-size:11px">[${escHtml(group.type||'')}]${isNew?' · NEU':' · wiederverwendet'}</span>
+    <button class="lineup-builder-x" style="float:right" onclick="removeEinsatzCenterGroup(${gameId},'${escAttr(group.groupId)}')">Gruppe aus Spiel entfernen</button>
+    ${memberRows}
+    <select class="mc-select" onchange="if(this.value){addEinsatzCenterGroupPlayer(${gameId},'${escAttr(group.groupId)}',this.value);this.value='';}"><option value="">+ Spieler zur Gruppe…</option>${availableToAdd.map(id=>`<option value="${escAttr(id)}">${resolveLineupPlayerName(id)}</option>`).join('')}</select>
+  </div>`;
+}
+function rEinsatzCenterComboEditor(gameId,combo,idx){
+  const players=(combo.players||[]).map(resolveLineupPlayerName).join(', ');
+  return `<div style="padding:6px 0;border-top:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center">
+    <span>${players}${combo.groupId?` <span style="color:var(--tx3);font-size:11px">(verknüpft)</span>`:''}</span>
+    <button class="lineup-builder-x" onclick="removeEinsatzCenterCombo(${gameId},${idx})">x</button>
+  </div>`;
+}
+function rEinsatzCenterGameEditor(seasonKey,gameId){
+  const gameDraft=getEinsatzCenterGameDraft(gameId);
+  const validPlayerIds=[...deriveLineupValidPlayerIds(seasonKey)].sort();
+  const field=Array.isArray(gameDraft.roster.field)?gameDraft.roster.field:[];
+  const goalies=Array.isArray(gameDraft.roster.goalies)?gameDraft.roster.goalies:[];
+  const availableForField=validPlayerIds.filter(id=>!field.includes(id));
+  const availableForGoalie=validPlayerIds.filter(id=>!goalies.includes(id));
+  const issues=einsatzCenterSoftIssues(gameDraft);
+
+  const fieldChips=field.map(id=>`<span class="lineup-builder-chip"><strong>${resolveLineupPlayerName(id)}</strong><button class="lineup-builder-x" onclick="removeEinsatzCenterRosterPlayer(${gameId},'field','${escAttr(id)}')">x</button></span>`).join('')||'<div class="mc-empty">Keine Feldspieler.</div>';
+  const goalieChips=goalies.map(id=>`<span class="lineup-builder-chip"><strong>${resolveLineupPlayerName(id)}</strong><button class="lineup-builder-x" onclick="removeEinsatzCenterRosterPlayer(${gameId},'goalies','${escAttr(id)}')">x</button></span>`).join('')||'<div class="mc-empty">Kein Torwart.</div>';
+  const fieldPicker=`<select class="mc-select" onchange="if(this.value){addEinsatzCenterRosterPlayer(${gameId},'field',this.value);this.value='';}"><option value="">+ Feldspieler hinzufügen…</option>${availableForField.map(id=>`<option value="${escAttr(id)}">${resolveLineupPlayerName(id)}</option>`).join('')}</select>`;
+  const goaliePicker=`<select class="mc-select" onchange="if(this.value){addEinsatzCenterRosterPlayer(${gameId},'goalies',this.value);this.value='';}"><option value="">+ Torwart hinzufügen…</option>${availableForGoalie.map(id=>`<option value="${escAttr(id)}">${resolveLineupPlayerName(id)}</option>`).join('')}</select>`;
+
+  const registryGroups=(LINEUP_GROUPS_REGISTRY?.groups||[]);
+  const usedGroupIds=new Set((gameDraft.groups||[]).map(g=>g.groupId));
+  const reuseOptions=registryGroups.filter(g=>!usedGroupIds.has(g.groupId)).map(g=>`<option value="${escAttr(g.groupId)}">${escHtml(g.currentName)}</option>`).join('');
+  const groupsHtml=(gameDraft.groups||[]).map(g=>rEinsatzCenterGroupEditor(gameId,g,field)).join('')||'<div class="mc-empty">Noch keine Gruppen in diesem Entwurf.</div>';
+
+  const comboSelection=Array.isArray(S.einsatzCenterComboSelection)?S.einsatzCenterComboSelection:[];
+  const comboPickerChips=field.map(id=>`<button class="lineup-builder-btn ${comboSelection.includes(id)?'gold':'ghost'}" onclick="toggleEinsatzCenterComboPlayer('${escAttr(id)}')">${resolveLineupPlayerName(id)}</button>`).join('')||'<div class="mc-empty">Zuerst Feldspieler zum Kader hinzufügen.</div>';
+  const combosHtml=(gameDraft.confirmedCombinations||[]).map((c,idx)=>rEinsatzCenterComboEditor(gameId,c,idx)).join('')||'<div class="mc-empty">Noch keine bestätigten Kombinationen in diesem Entwurf.</div>';
+
+  return `<div class="mc-card">
+    <div class="mc-card-title">Spiel ${gameId} bearbeiten</div>
+    ${issues.length?`<div class="wrn-box">⚠ ${issues.map(escHtml).join('<br>⚠ ')}</div>`:''}
+    <div style="margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Kader (Feldspieler)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${fieldChips}</div>
+    ${fieldPicker}
+    <div style="margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Torhüter</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${goalieChips}</div>
+    ${goaliePicker}
+    <div style="margin-top:14px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Gruppen</div>
+    ${groupsHtml}
+    <select class="mc-select" onchange="if(this.value){addEinsatzCenterExistingGroup(${gameId},this.value);this.value='';}"><option value="">+ bestehende Gruppe wiederverwenden…</option>${reuseOptions}</select>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <input class="mc-select" id="ec-new-group-name-${gameId}" placeholder="Name neue Gruppe" style="flex:1">
+      <input class="mc-select" id="ec-new-group-type-${gameId}" placeholder="Typ (z.B. trio)" style="max-width:140px">
+      <button class="lineup-builder-btn gold" onclick="addEinsatzCenterNewGroup(${gameId})">+ Neue Gruppe</button>
+    </div>
+    <div style="margin-top:14px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Bestätigte Kombinationen</div>
+    ${combosHtml}
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">Genau 3 Feldspieler auswählen (aktuell: ${comboSelection.length}/3):</div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${comboPickerChips}</div>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <select class="mc-select" id="ec-combo-group-${gameId}"><option value="">Keine Gruppe</option>${(gameDraft.groups||[]).map(g=>`<option value="${escAttr(g.groupId)}">${escHtml(g.name)}</option>`).join('')}</select>
+      <button class="lineup-builder-btn gold" ${comboSelection.length===3?'':'disabled'} onclick="confirmEinsatzCenterCombo(${gameId})">Kombination bestätigen</button>
+    </div>
+    <div style="margin-top:14px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Notiz</div>
+    <textarea class="mc-select" style="width:100%;min-height:50px" onchange="setEinsatzCenterGameNote(${gameId},this.value)">${escHtml(gameDraft.note||'')}</textarea>
+  </div>`;
+}
+function rEinsatzCenterEditPage(){
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft){
+    return `<section class="matchcenter-page">
+      <div class="view-back-row"><button class="btn-back" onclick="cancelEinsatzCenterEdit()">&larr; Zurück</button></div>
+      <div class="mc-empty">Kein Entwurf aktiv.</div>
+    </section>`;
+  }
+  const seasonKey=draft.seasonKey;
+  const bucket=SEASONS[seasonKey];
+  const sourceGames=bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[]);
+  const recordedIds=new Set((Array.isArray(LINEUP_DATA[seasonKey]?.games)?LINEUP_DATA[seasonKey].games:[]).map(g=>Number(g?.gameId)));
+  const gameId=S.einsatzCenterEditingGameId;
+
+  const gameListHtml=(sourceGames||[]).map(g=>{
+    const id=Number(g?.id);
+    const isRecorded=recordedIds.has(id);
+    const isDraftTouched=draft.games.has(id);
+    const label=`${g?.date||''} · ${g?.home_team_name||'?'} - ${g?.guest_team_name||'?'}`;
+    return `<button class="nav-btn${id===gameId?' active':''}" style="margin:2px" onclick="selectEinsatzCenterEditGame(${id})">${escHtml(label)}${isDraftTouched?' ✎':isRecorded?' ✓':''}</button>`;
+  }).join('');
+
+  const formHtml=gameId?rEinsatzCenterGameEditor(seasonKey,gameId):'<div class="mc-empty">Spiel oben auswählen, um mit der Bearbeitung zu beginnen.</div>';
+  const touchedCount=draft.games.size;
+  const newGroupsCount=draft.newGroups.size;
+
+  return `<section class="matchcenter-page">
+    <div class="view-back-row"><button class="btn-back" onclick="cancelEinsatzCenterEdit()">&larr; Entwurf verwerfen &amp; zurück</button></div>
+    <div>
+      <div class="mc-eyebrow">Einsatz-Center — Entwurfsmodus</div>
+      <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Entwurf bearbeiten</div>
+      <div class="wrn-box">⚠ UNGESPEICHERTER ENTWURF — nur im Speicher dieser Browser-Sitzung, kein automatisches Speichern, kein Schreiben von Dateien. ${touchedCount} Spiel(e) und ${newGroupsCount} neue Gruppe(n) im aktuellen Entwurf.</div>
+    </div>
+    <div class="mc-card">
+      <div class="mc-card-title">Spiel wählen (${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${gameListHtml||'<div class="mc-empty">Keine Spiele in season-data für diese Saison gefunden.</div>'}</div>
+    </div>
+    ${formHtml}
+    <div class="mc-card">
+      <button class="btn-exp" onclick="exportEinsatzCenterDraft()">📥 Entwurf als Draft-JSON exportieren</button>
+    </div>
+  </section>`;
+}
+
+// ─── Handler (window-exponiert, analog zum bestehenden Muster) ──────────
+window.startEinsatzCenterDraftMode=async()=>{
+  const seasonKey=S.einsatzCenterSeasonKey||CURRENT_SEASON_KEY;
+  await ensureEinsatzCenterDraft(seasonKey);
+  setState({einsatzCenterMode:'edit',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[]});
+};
+window.cancelEinsatzCenterEdit=()=>{
+  EINSATZ_CENTER_DRAFT=null;
+  setState({einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[]});
+};
+window.selectEinsatzCenterEditGame=(gameId)=>{
+  getEinsatzCenterGameDraft(gameId);
+  setState({einsatzCenterEditingGameId:Number(gameId),einsatzCenterComboSelection:[]});
+};
+window.addEinsatzCenterRosterPlayer=(gameId,role,playerId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  if(!entry||!playerId)return;
+  const key=role==='goalies'?'goalies':'field';
+  if(!entry.roster[key].includes(playerId))entry.roster[key].push(playerId);
+  setState({});
+};
+window.removeEinsatzCenterRosterPlayer=(gameId,role,playerId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  if(!entry)return;
+  const key=role==='goalies'?'goalies':'field';
+  entry.roster[key]=entry.roster[key].filter(id=>id!==playerId);
+  setState({});
+};
+window.addEinsatzCenterExistingGroup=(gameId,groupId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  const registryEntry=(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===groupId);
+  if(!entry||!registryEntry)return;
+  if(entry.groups.some(g=>g.groupId===groupId))return;
+  entry.groups.push({groupId,name:registryEntry.currentName,type:'custom',players:[],notes:''});
+  setState({});
+};
+window.addEinsatzCenterNewGroup=(gameId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!entry||!draft)return;
+  const nameInput=document.getElementById(`ec-new-group-name-${gameId}`);
+  const typeInput=document.getElementById(`ec-new-group-type-${gameId}`);
+  const name=(nameInput?.value||'').trim();
+  const type=(typeInput?.value||'').trim();
+  if(!name||!type){alert('Bitte Name und Typ der neuen Gruppe angeben.');return;}
+  const groupId=crypto.randomUUID();
+  draft.newGroups.set(groupId,{groupId,currentName:name,createdInSeason:draft.seasonKey,createdInGame:Number(gameId),nameHistory:[{name,since:{season:draft.seasonKey,gameId:Number(gameId)}}]});
+  entry.groups.push({groupId,name,type,players:[],notes:''});
+  if(nameInput)nameInput.value='';
+  if(typeInput)typeInput.value='';
+  setState({});
+};
+window.removeEinsatzCenterGroup=(gameId,groupId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  if(!entry)return;
+  entry.groups=(entry.groups||[]).filter(g=>g.groupId!==groupId);
+  entry.confirmedCombinations=(entry.confirmedCombinations||[]).map(c=>c.groupId===groupId?{...c,groupId:null}:c);
+  setState({});
+};
+window.addEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  const group=(entry?.groups||[]).find(g=>g.groupId===groupId);
+  if(!group||!playerId)return;
+  if(!group.players.some(p=>p.playerId===playerId))group.players.push({playerId,position:null});
+  setState({});
+};
+window.removeEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  const group=(entry?.groups||[]).find(g=>g.groupId===groupId);
+  if(!group)return;
+  group.players=group.players.filter(p=>p.playerId!==playerId);
+  setState({});
+};
+window.setEinsatzCenterGroupPlayerPosition=(gameId,groupId,playerId,position)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  const group=(entry?.groups||[]).find(g=>g.groupId===groupId);
+  const member=group?.players.find(p=>p.playerId===playerId);
+  if(!member)return;
+  member.position=position&&position.trim()?position.trim():null;
+  setState({});
+};
+window.toggleEinsatzCenterComboPlayer=(playerId)=>{
+  const current=Array.isArray(S.einsatzCenterComboSelection)?S.einsatzCenterComboSelection:[];
+  if(current.includes(playerId)){
+    setState({einsatzCenterComboSelection:current.filter(id=>id!==playerId)});
+  }else if(current.length<3){
+    setState({einsatzCenterComboSelection:[...current,playerId]});
+  }
+};
+window.confirmEinsatzCenterCombo=(gameId)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  const selection=Array.isArray(S.einsatzCenterComboSelection)?S.einsatzCenterComboSelection:[];
+  if(!entry||selection.length!==3)return;
+  const groupSelect=document.getElementById(`ec-combo-group-${gameId}`);
+  const groupId=groupSelect?.value||null;
+  entry.confirmedCombinations=entry.confirmedCombinations||[];
+  entry.confirmedCombinations.push({players:[...selection],groupId:groupId||null,note:''});
+  setState({einsatzCenterComboSelection:[]});
+};
+window.removeEinsatzCenterCombo=(gameId,idx)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  if(!entry)return;
+  entry.confirmedCombinations=(entry.confirmedCombinations||[]).filter((_,i)=>i!==idx);
+  setState({});
+};
+window.setEinsatzCenterGameNote=(gameId,value)=>{
+  const entry=getEinsatzCenterGameDraft(gameId);
+  if(!entry)return;
+  entry.note=value;
+  setState({});
+};
+
+/** Reine Export-Bau-Funktion (kein DOM/Download) — direkt testbar, auch für
+ * einen Draft->Importer-Roundtrip-Test ohne echten Browser-Download. */
+async function buildEinsatzCenterDraftExport(){
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft)return null;
+  // baseHash ist NIEMALS eine Live-Neuberechnung — ausschließlich der beim
+  // Draft-Start in ensureEinsatzCenterDraft() gespeicherte Snapshot wird
+  // übernommen (Architekturkorrektur, siehe Prüfung vor diesem Commit).
+  return{
+    schemaVersion:1,
+    season:draft.seasonKey,
+    baseHash:draft.baseHash,
+    games:[...draft.games.values()],
+    groups:[...draft.newGroups.values()],
+  };
+}
+window.exportEinsatzCenterDraft=async()=>{
+  const exportObj=await buildEinsatzCenterDraftExport();
+  if(!exportObj||exportObj.games.length===0){alert('Entwurf ist leer — zuerst mindestens ein Spiel bearbeiten.');return;}
+  const blob=new Blob([JSON.stringify(exportObj,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`lineup-draft-${exportObj.season.replace('/','-')}-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+window.buildEinsatzCenterDraftExport=buildEinsatzCenterDraftExport;
+window.ensureEinsatzCenterDraft=ensureEinsatzCenterDraft;
+window.getEinsatzCenterGameDraft=getEinsatzCenterGameDraft;
+window.deriveLineupValidPlayerIds=deriveLineupValidPlayerIds;
+window.einsatzCenterCanonicalJson=einsatzCenterCanonicalJson;
+window.einsatzCenterComputeBaseHash=einsatzCenterComputeBaseHash;
+window.einsatzCenterSoftIssues=einsatzCenterSoftIssues;
+
 window.buildStaticSeasonDataBlock=buildStaticSeasonDataBlock;
 
 async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
@@ -20583,6 +20993,10 @@ function _render(root){
   }
   if(S.page==='lineupBuilder'){
     root.innerHTML=hdrHtml+errHtml+`<div>${rLineupBuilderPage()}</div>`;
+    return;
+  }
+  if(S.page==='einsatzCenter'&&S.einsatzCenterMode==='edit'){
+    root.innerHTML=hdrHtml+errHtml+`<div>${rEinsatzCenterEditPage()}</div>`;
     return;
   }
   if(S.page==='einsatzCenter'){
