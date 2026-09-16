@@ -5886,6 +5886,30 @@ function deriveLineupValidPlayerIds(seasonKey){
   }
   return ids;
 }
+/**
+ * Wie deriveLineupValidPlayerIds, aber ausschließlich die VfB-Ulm-Seite jedes
+ * Spiels (per bestehender Vereinszuordnung detectUlmSide, inkl. SG Sparks
+ * Ulm-Tübingen) — Grundlage für die Spieler-Auswahlfelder im Einsatz-Center.
+ * deriveLineupValidPlayerIds selbst bleibt unverändert (spiegelt weiterhin
+ * die saisonweite Node-Validator-Regel für gültige Player-IDs).
+ */
+function deriveLineupUlmPlayerIds(seasonKey){
+  const bucket=SEASONS[seasonKey];
+  const rawGames=bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[]);
+  const ids=new Set();
+  for(const g of rawGames||[]){
+    const side=detectUlmSide(g);
+    if(!side)continue;
+    const list=g?.players?.[side];
+    if(!Array.isArray(list))continue;
+    for(const p of list){
+      const raw=p?.player_id;
+      if(raw===undefined||raw===null||raw==='')continue;
+      ids.add(`api:${raw}`);
+    }
+  }
+  return ids;
+}
 
 // ─── BaseHash: portierte, minimale Canonical-JSON- + SHA-256-Logik ───────
 // MUSS byte-identisch zu canonicalJson()/computeBaseHash() in
@@ -5979,7 +6003,7 @@ function rEinsatzCenterComboEditor(gameId,combo,idx){
 }
 function rEinsatzCenterGameEditor(seasonKey,gameId){
   const gameDraft=getEinsatzCenterGameDraft(gameId);
-  const validPlayerIds=[...deriveLineupValidPlayerIds(seasonKey)].sort();
+  const validPlayerIds=[...deriveLineupUlmPlayerIds(seasonKey)].sort();
   const field=Array.isArray(gameDraft.roster.field)?gameDraft.roster.field:[];
   const goalies=Array.isArray(gameDraft.roster.goalies)?gameDraft.roster.goalies:[];
   const availableForField=validPlayerIds.filter(id=>!field.includes(id));
@@ -6255,6 +6279,7 @@ window.buildEinsatzCenterDraftExport=buildEinsatzCenterDraftExport;
 window.ensureEinsatzCenterDraft=ensureEinsatzCenterDraft;
 window.getEinsatzCenterGameDraft=getEinsatzCenterGameDraft;
 window.deriveLineupValidPlayerIds=deriveLineupValidPlayerIds;
+window.deriveLineupUlmPlayerIds=deriveLineupUlmPlayerIds;
 window.einsatzCenterCanonicalJson=einsatzCenterCanonicalJson;
 window.einsatzCenterComputeBaseHash=einsatzCenterComputeBaseHash;
 window.einsatzCenterSoftIssues=einsatzCenterSoftIssues;
