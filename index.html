@@ -5707,6 +5707,7 @@ function rEinsatzCenterPage(){
       <label class="mc-field" style="max-width:280px"><span class="mc-label">Saison</span><select class="mc-select" onchange="setEinsatzCenterSeason(this.value)">${seasonOptions}</select></label>
       <button class="btn-back" style="margin-top:10px" onclick="startEinsatzCenterDraftMode()">✎ Entwurf bearbeiten</button>
     </div>
+    ${rEinsatzCenterStats(seasonKey)}
     <div style="display:grid;gap:14px">
       ${games.length?games.map(g=>rEinsatzCenterGameCard(seasonKey,g)).join(''):`<div class="mc-empty">Für ${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)} sind noch keine Einsatzdaten erfasst.</div>`}
     </div>
@@ -5725,6 +5726,73 @@ window.openEinsatzCenter=async()=>{
   showMainShell();
   setState({screen:'main',page:'einsatzCenter',einsatzCenterSeasonKey:seasonKey});
 };
+
+// ═══ Einsatz-Center — Kennzahlen (Phase 7A — read-only Aggregation) ══════
+// Rein lesende Aggregation ausschließlich über bereits geladenes
+// LINEUP_DATA[seasonKey] und LINEUP_GROUPS_REGISTRY (siehe Phase-4-Loader) —
+// kein neuer Netzwerk-Request, keine season-data-Verknüpfung, keine
+// Tor-/Punkte-/Ergebnisableitung. Gezählt werden ausschließlich strukturelle
+// Auftritte: roster.field/roster.goalies (Spieleinsätze) und
+// confirmedCombinations[].groupId (bestätigte Gruppen-Auftritte). Nicht
+// bestätigte groups[] zählen bewusst NICHT als Auftritt.
+const EINSATZ_CENTER_STATS_CACHE={};
+function computeEinsatzCenterStats(seasonKey){
+  const seasonData=LINEUP_DATA[seasonKey];
+  const games=Array.isArray(seasonData?.games)?seasonData.games:[];
+  const cached=EINSATZ_CENTER_STATS_CACHE[seasonKey];
+  if(cached&&cached.gamesRef===games)return cached.stats;
+  const fieldCounts=new Map();
+  const goalieCounts=new Map();
+  const totalCounts=new Map();
+  const groupCounts=new Map();
+  for(const game of games){
+    const fieldIds=new Set(Array.isArray(game?.roster?.field)?game.roster.field:[]);
+    const goalieIds=new Set(Array.isArray(game?.roster?.goalies)?game.roster.goalies:[]);
+    for(const id of fieldIds)fieldCounts.set(id,(fieldCounts.get(id)||0)+1);
+    for(const id of goalieIds)goalieCounts.set(id,(goalieCounts.get(id)||0)+1);
+    // Ein Spieler, der (fehlerhaft) in beiden Rostern desselben Spiels steht, zählt bei "Gesamt" für dieses Spiel trotzdem nur einmal.
+    const totalIds=new Set([...fieldIds,...goalieIds]);
+    for(const id of totalIds)totalCounts.set(id,(totalCounts.get(id)||0)+1);
+    const combos=Array.isArray(game?.confirmedCombinations)?game.confirmedCombinations:[];
+    const confirmedGroupIds=new Set(combos.map(c=>c?.groupId).filter(Boolean));
+    for(const groupId of confirmedGroupIds)groupCounts.set(groupId,(groupCounts.get(groupId)||0)+1);
+  }
+  const players=[...new Set([...fieldCounts.keys(),...goalieCounts.keys()])]
+    .map(playerId=>({playerId,fieldGames:fieldCounts.get(playerId)||0,goalieGames:goalieCounts.get(playerId)||0,totalGames:totalCounts.get(playerId)||0}))
+    .sort((a,b)=>b.totalGames-a.totalGames||String(a.playerId).localeCompare(String(b.playerId)));
+  const groups=[...groupCounts.entries()]
+    .map(([groupId,confirmedGames])=>({groupId,confirmedGames}))
+    .sort((a,b)=>b.confirmedGames-a.confirmedGames||String(a.groupId).localeCompare(String(b.groupId)));
+  const stats={players,groups,gamesCounted:games.length};
+  EINSATZ_CENTER_STATS_CACHE[seasonKey]={gamesRef:games,stats};
+  return stats;
+}
+function lineupGroupDisplayName(groupId){
+  const entry=(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===groupId);
+  return entry?.currentName?escHtml(entry.currentName):`Unbekannte Gruppe (${escHtml(String(groupId))})`;
+}
+function rEinsatzCenterStats(seasonKey){
+  const stats=computeEinsatzCenterStats(seasonKey);
+  if(!stats.gamesCounted){
+    return `<div class="mc-card">
+      <div class="mc-card-title">Kennzahlen aus den gespeicherten Einsatzdaten</div>
+      <div class="mc-empty">Für ${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)} sind noch keine Einsatzdaten erfasst.</div>
+    </div>`;
+  }
+  const playerRows=stats.players.map(p=>`<tr><td>${resolveLineupPlayerName(p.playerId)}</td><td style="text-align:right">${p.fieldGames}</td><td style="text-align:right">${p.goalieGames}</td><td style="text-align:right">${p.totalGames}</td></tr>`).join('');
+  const groupRows=stats.groups.length?stats.groups.map(g=>`<tr><td>${lineupGroupDisplayName(g.groupId)}</td><td style="text-align:right">${g.confirmedGames}</td></tr>`).join(''):`<tr><td colspan="2" class="mc-empty">Keine bestätigten Kombinationen erfasst.</td></tr>`;
+  return `<div class="mc-card">
+    <div class="mc-card-title">Kennzahlen aus den gespeicherten Einsatzdaten</div>
+    <div style="font-size:11px;color:var(--tx3);margin:2px 0 10px">Ausschließlich gezählt aus ${stats.gamesCounted} erfasste${stats.gamesCounted===1?'m':'n'} Spiel${stats.gamesCounted===1?'':'en'} dieser Saison — keine Ableitung von Toren, Punkten oder sonstigen Ergebnissen.</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:6px">Spieleinsätze</div>
+    <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:4px"><thead><tr><th style="text-align:left">Spieler</th><th style="text-align:right">Feld</th><th style="text-align:right">Torwart</th><th style="text-align:right">Gesamt</th></tr></thead><tbody>${playerRows}</tbody></table>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:14px">Gruppen-Auftritte (bestätigt)</div>
+    <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:4px"><thead><tr><th style="text-align:left">Gruppe</th><th style="text-align:right">Spiele</th></tr></thead><tbody>${groupRows}</tbody></table>
+  </div>`;
+}
+window.computeEinsatzCenterStats=computeEinsatzCenterStats;
+window.rEinsatzCenterStats=rEinsatzCenterStats;
+window.lineupGroupDisplayName=lineupGroupDisplayName;
 
 // ═══ Einsatz-Center — Entwurfsmodus (Phase 6 — read/write Draft-UI) ══════
 // Erzeugt AUSSCHLIESSLICH einen In-Memory-Entwurf und exportiert ihn als
