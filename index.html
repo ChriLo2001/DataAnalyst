@@ -1930,9 +1930,28 @@ function analysisCacheContext(context={}){
     games,
   };
 }
-function analysisCacheKey(type,parts={}){
-  try{return`${type}:${JSON.stringify(parts)}`;}
-  catch(e){return`${type}:${String(Date.now())}`;}
+/**
+ * P0a.6 — reiner, deterministischer Cache-Key-Baustein für die in P0a.4
+ * eingeführte asOf-Form {date:"YYYY-MM-DD", startTime?:"HH:MM"}. Bewusst
+ * KEINE JSON.stringify(asOf)-Nutzung: Objekt-Property-Reihenfolge ist bei
+ * unterschiedlich konstruierten asOf-Objekten nicht garantiert stabil,
+ * JSON.stringify({date,startTime}) und JSON.stringify({startTime,date})
+ * ergäben unterschiedliche Strings für denselben fachlichen Inhalt. Hier
+ * werden date/startTime stattdessen in fester Reihenfolge einzeln gelesen.
+ * asOf ohne date verhält sich wie kein asOf (identisch zur Filter-Semantik
+ * aus isGameAtOrBeforeAsOf() in P0a.4) — ergibt denselben leeren Suffix wie
+ * asOf===null, damit fachlich gleicher Input auch denselben Cache-Key
+ * erzeugt. Mutiert asOf nicht (nur lesender Zugriff).
+ */
+function asOfCacheKeyPart(asOf){
+  const date=asOf?.date!=null?String(asOf.date):'';
+  if(!date)return'';
+  const hasStartTime=asOf?.startTime!==undefined&&asOf?.startTime!==null&&asOf?.startTime!=='';
+  return hasStartTime?`|asOf:${date}T${String(asOf.startTime)}`:`|asOf:${date}`;
+}
+function analysisCacheKey(type,parts={},asOf=null){
+  try{return`${type}:${JSON.stringify(parts)}${asOfCacheKeyPart(asOf)}`;}
+  catch(e){return`${type}:${String(Date.now())}${asOfCacheKeyPart(asOf)}`;}
 }
 function cachedAnalysis(key,builder){
   if(analysisCache.has(key))return analysisCache.get(key);
