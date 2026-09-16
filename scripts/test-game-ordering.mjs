@@ -8,7 +8,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { compareGamesChronologically } from './game-ordering.mjs';
+import { compareGamesChronologically, isGameAtOrBeforeAsOf } from './game-ordering.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 const SEASON_FILES = ['21-22.json', '22-23.json', '23-24.json', '24-25.json', '25-26.json'];
@@ -131,6 +131,84 @@ for (const file of SEASON_FILES) {
   assertTrue(originalIdsUntouched === games.map((g) => g.id).join(','), `${file}: Original-games[]-Array aus der Datei bleibt durch alle obigen Sortiervorgänge unverändert`);
 }
 console.log(`  (insgesamt ${totalRealGames} reale Spiele aus 5 Saisons geprüft)`);
+
+console.log('== P0a.4 · isGameAtOrBeforeAsOf: 1 kein asOf -> immer true (unverändertes Verhalten) ==');
+{
+  assertTrue(isGameAtOrBeforeAsOf(game(), null) === true, 'asOf === null -> true');
+  assertTrue(isGameAtOrBeforeAsOf(game(), undefined) === true, 'asOf === undefined -> true');
+  assertTrue(isGameAtOrBeforeAsOf(game(), {}) === true, 'asOf ohne date-Feld -> true (keine Einschränkung)');
+}
+
+console.log('== P0a.4 · 2+3: asOf vor/nach dem betrachteten Spiel ==');
+{
+  const g = game({ date: '2025-10-05', start_time: '11:00' });
+  assertTrue(isGameAtOrBeforeAsOf(g, { date: '2025-10-04' }) === false, 'asOf-date vor dem Spieldatum -> ausgeschlossen');
+  assertTrue(isGameAtOrBeforeAsOf(g, { date: '2025-10-06' }) === true, 'asOf-date nach dem Spieldatum -> eingeschlossen');
+}
+
+console.log('== P0a.4 · 5+6: asOf exakt auf bzw. unmittelbar vor einem Spielzeitpunkt ==');
+{
+  const g = game({ date: '2025-10-05', start_time: '11:00' });
+  assertTrue(isGameAtOrBeforeAsOf(g, { date: '2025-10-05', startTime: '11:00' }) === true, 'asOf exakt auf dem Spielzeitpunkt -> eingeschlossen (inklusiv)');
+  assertTrue(isGameAtOrBeforeAsOf(g, { date: '2025-10-05', startTime: '10:59' }) === false, 'asOf unmittelbar vor dem Spielzeitpunkt -> ausgeschlossen');
+  assertTrue(isGameAtOrBeforeAsOf(g, { date: '2025-10-05', startTime: '11:01' }) === true, 'asOf unmittelbar nach dem Spielzeitpunkt -> eingeschlossen');
+  assertTrue(isGameAtOrBeforeAsOf(g, { date: '2025-10-05' }) === true, 'asOf nur mit date (keine Uhrzeit) am selben Tag -> ganzer Tag zählt, eingeschlossen');
+}
+
+console.log('== P0a.4 · 9: identisches Datum, unterschiedliche Uhrzeit (Grenzfälle) ==');
+{
+  const morning = game({ date: '2025-10-05', start_time: '09:00' });
+  const evening = game({ date: '2025-10-05', start_time: '20:00' });
+  const asOfNoon = { date: '2025-10-05', startTime: '12:00' };
+  assertTrue(isGameAtOrBeforeAsOf(morning, asOfNoon) === true, 'Vormittagsspiel liegt vor asOf 12:00 am selben Tag -> eingeschlossen');
+  assertTrue(isGameAtOrBeforeAsOf(evening, asOfNoon) === false, 'Abendspiel liegt nach asOf 12:00 am selben Tag -> ausgeschlossen');
+}
+
+console.log('== P0a.4 · 10: wiederholte Ausführung mit identischem Input ist deterministisch ==');
+{
+  const g = game({ date: '2025-10-05', start_time: '11:00' });
+  const asOf = { date: '2025-10-05', startTime: '11:00' };
+  const results = Array.from({ length: 5 }, () => isGameAtOrBeforeAsOf(g, asOf));
+  assertTrue(results.every((r) => r === true), 'fünf identische Aufrufe liefern fünfmal exakt dasselbe Ergebnis');
+}
+
+console.log('== P0a.4 · 4+8: reale Spiele aus allen 5 Saisons — asOf zwischen zwei Spielen berücksichtigt nur die früheren ==');
+for (const file of SEASON_FILES) {
+  const raw = await readFile(path.join(REPO_ROOT, 'season-data', file), 'utf8');
+  const games = JSON.parse(raw).games;
+  const sorted = [...games].sort(compareGamesChronologically);
+  if (sorted.length < 2) continue;
+  const mid = Math.floor(sorted.length / 2);
+  const cutoffGame = sorted[mid];
+  const asOf = { date: cutoffGame.date, startTime: cutoffGame.start_time };
+
+  const included = sorted.filter((g) => isGameAtOrBeforeAsOf(g, asOf));
+  // Erwartung bewusst NICHT als Positions-Slice von compareGamesChronologically
+  // gebildet: isGameAtOrBeforeAsOf schließt ALLE Spiele mit identischem
+  // date+start_time wie asOf ein (inklusiv, siehe Doku), unabhängig von
+  // game_number/id — compareGamesChronologically würde bei einem Gleichstand
+  // im date+start_time zusätzlich nach game_number/id trennen. Beide Spiele
+  // desselben Zeitpunkts gehören daher korrekt in die erwartete Menge (real
+  // beobachtet z.B. in 25-26.json: zwei verschiedene Spiele exakt am
+  // 2026-01-25 14:50 Uhr).
+  const expectedIncluded = games.filter((g) => {
+    if (g.date !== cutoffGame.date) return g.date < cutoffGame.date;
+    return g.start_time <= cutoffGame.start_time;
+  });
+  assertEqual(
+    included.map((g) => g.id).sort((x, y) => x - y),
+    expectedIncluded.map((g) => g.id).sort((x, y) => x - y),
+    `${file}: asOf auf dem mittleren Spiel (Datum ${cutoffGame.date} ${cutoffGame.start_time}) schließt genau die ${expectedIncluded.length} früheren/gleichzeitigen Spiele ein (date+start_time-Ebene, inkl. echter Gleichzeitigkeits-Duplikate), keine späteren`,
+  );
+
+  const beforeFirst = { date: sorted[0].date, startTime: '00:00' };
+  const strictlyBefore = sorted.filter((g) => g.date === sorted[0].date && g.start_time < '00:00');
+  assertEqual(
+    sorted.filter((g) => isGameAtOrBeforeAsOf(g, beforeFirst)).length,
+    strictlyBefore.length,
+    `${file}: asOf vor dem allerersten Spielzeitpunkt (00:00 am ersten Spieltag) ergibt 0 relevante Spiele`,
+  );
+}
 
 console.log('');
 if (failures > 0) {

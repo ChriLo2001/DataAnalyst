@@ -42,3 +42,40 @@ export function compareGamesChronologically(a, b) {
   const idB = Number(b?.id) || 0;
   return idA - idB;
 }
+
+// P0a.4 — Reine Zeitpunkt-Filterfunktion: "liegt dieses Spiel bei/vor asOf?"
+//
+// WICHTIG, Unterschied zu compareGamesChronologically(): asOf ist ein reiner
+// Zeitpunkt-Cutoff (kein vollständiges Spiel mit game_number/id), deshalb
+// KEIN einfacher compareGamesChronologically(game, asOf)-Aufruf — das würde
+// bei identischem date+start_time fälschlich ausschließen, weil asOf keine
+// game_number/id besitzt und dadurch als "früher" gälte (siehe P0a.4-Test 5:
+// asOf exakt auf einem Spielzeitpunkt MUSS dieses Spiel einschließen).
+//
+// asOf-Form (bewusst minimal, nur die zwei Felder, die diese Funktion
+// tatsächlich braucht — NICHT die {seasonKey,date}-Hülle aus Abschnitt 3.6.2
+// der Spezifikation, die ist Sache der P0a.7-Verdrahtung):
+//   { date: "YYYY-MM-DD", startTime?: "HH:MM" }
+// - date (Pflicht, falls asOf überhaupt gesetzt ist): Tagesgrenze, INKLUSIVE.
+// - startTime (optional): zusätzliche Uhrzeitgrenze INNERHALB von date,
+//   INKLUSIVE. Fehlt startTime, zählt der gesamte Tag von date.
+// asOf === null/undefined bzw. asOf.date leer => keine Einschränkung (exakt
+// bisheriges Verhalten, siehe P0a.4-Test 1).
+//
+// Fehlende game.date/game.start_time werden — konsistent mit
+// compareGamesChronologically() — als leerer String behandelt (sortiert vor
+// jedem echten Datum, wird also eingeschlossen). Keine erfundene Zusatzsemantik.
+export function isGameAtOrBeforeAsOf(game, asOf) {
+  const asOfDate = String(asOf?.date ?? '');
+  if (!asOfDate) return true;
+
+  const gameDate = String(game?.date ?? '');
+  if (gameDate !== asOfDate) return gameDate < asOfDate;
+
+  const hasAsOfTime = asOf?.startTime !== undefined && asOf?.startTime !== null && asOf?.startTime !== '';
+  if (!hasAsOfTime) return true;
+
+  const gameTime = String(game?.start_time ?? '');
+  const asOfTime = String(asOf.startTime);
+  return gameTime <= asOfTime;
+}

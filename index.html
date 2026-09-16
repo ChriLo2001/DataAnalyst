@@ -2882,7 +2882,30 @@ function gameScore(game){
     hasScore:Number.isFinite(home)&&Number.isFinite(guest),
   };
 }
-function classifyGameForStats(game,season=null){
+/**
+ * P0a.4 — reine Zeitpunkt-Filterfunktion, minimaler Port von
+ * isGameAtOrBeforeAsOf() aus scripts/game-ordering.mjs (index.html ist ein
+ * klassisches <script>, kein type="module" — ein echter Import aus dem
+ * separaten .mjs ist hier nicht möglich, siehe bestehende
+ * canonicalJson/einsatzCenterCanonicalJson-Präzedenz für dasselbe Muster).
+ * asOf-Form bewusst minimal: {date:"YYYY-MM-DD", startTime?:"HH:MM"}. Ohne
+ * asOf bzw. ohne asOf.date: keine Einschränkung (unverändertes Verhalten).
+ */
+function isGameAtOrBeforeAsOf(game,asOf){
+  const asOfDate=String(asOf?.date??'');
+  if(!asOfDate)return true;
+  const gameDate=String(game?.date??'');
+  if(gameDate!==asOfDate)return gameDate<asOfDate;
+  const hasAsOfTime=asOf?.startTime!==undefined&&asOf?.startTime!==null&&asOf?.startTime!=='';
+  if(!hasAsOfTime)return true;
+  const gameTime=String(game?.start_time??'');
+  const asOfTime=String(asOf.startTime);
+  return gameTime<=asOfTime;
+}
+function classifyGameForStats(game,season=null,asOf=null){
+  if(asOf&&!isGameAtOrBeforeAsOf(game,asOf)){
+    return{isRelevantLeagueGame:false,status:'future',reason:'Spielzeitpunkt liegt nach dem gewählten asOf-Zeitpunkt',countsForStats:false};
+  }
   const statusText=gameStatusText(game);
   const score=gameScore(game);
   const events=Array.isArray(game?.events)?game.events:[];
@@ -2921,7 +2944,7 @@ function classifyGameForStats(game,season=null){
   }
   return{isRelevantLeagueGame:false,status:'suspicious',reason:'Status/Endstand/Eventdaten sind nicht eindeutig genug für Statistikzählung',countsForStats:false};
 }
-function getRelevantSeasonGames(season){
+function getRelevantSeasonGames(season,asOf=null){
   let games=[],seasonInfo=null;
   if(Array.isArray(season)){
     games=season;
@@ -2939,7 +2962,7 @@ function getRelevantSeasonGames(season){
       data.games||[];
     seasonInfo=season;
   }
-  return (games||[]).filter(g=>classifyGameForStats(g,seasonInfo).countsForStats);
+  return (games||[]).filter(g=>classifyGameForStats(g,seasonInfo,asOf).countsForStats);
 }
 
 function gameResult(game,side){
