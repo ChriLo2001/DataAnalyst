@@ -1910,6 +1910,7 @@ let S={
   einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],einsatzCenterRenamingGroupId:null,
   einsatzCenterRosterSuggestionDeselected:{},einsatzCenterRosterSuggestionDismissed:{},einsatzCenterRosterSuggestionAccepted:{},
   errors:[],dbg:[],
+  asOf:null,
 };
 const analysisCache=new Map();
 function clearAnalysisCache(){
@@ -2982,6 +2983,68 @@ function getRelevantSeasonGames(season,asOf=null){
     seasonInfo=season;
   }
   return (games||[]).filter(g=>classifyGameForStats(g,seasonInfo,asOf).countsForStats);
+}
+/**
+ * P0a.7 — übersetzt den globalen asOf-Zustand {seasonKey,date,startTime?}
+ * (siehe Spezifikation Abschnitt 3.6.2) in die minimale, bereits in P0a.4
+ * getestete Form {date,startTime?}, die classifyGameForStats/
+ * getRelevantSeasonGames erwarten. Reine Funktion, keine Mutation.
+ *
+ * KRITISCH für "asOf für Saison A darf nicht versehentlich Saison B
+ * beeinflussen": liefert null (= keine Einschränkung), sobald
+ * globalAsOf.seasonKey NICHT der angefragten seasonKey entspricht — dadurch
+ * bleibt jede andere Saison exakt beim bisherigen Vollstand, unabhängig
+ * davon, für welche Saison gerade ein asOf gesetzt ist.
+ */
+function deriveAsOfForSeason(seasonKey,globalAsOf){
+  if(!globalAsOf||globalAsOf.seasonKey!==seasonKey)return null;
+  return{date:globalAsOf.date,startTime:globalAsOf.startTime};
+}
+/**
+ * P0a.7 — zentraler Integrationspunkt: leitet für eine BEREITS geladene
+ * Saison (SEASONS[seasonKey].data, unverändert von loadSeasonData()
+ * geschrieben) die relevanten Liga-Spiele, die Tabelle und die relevanten
+ * Ulm/SG-Spiele für ein optionales asOf neu ab — OHNE loadSeasonData()
+ * erneut auszuführen, OHNE SEASONS[seasonKey].data zu verändern und OHNE
+ * die Roh-Spieldaten zu mutieren. Nutzt ausschließlich bereits bestehende,
+ * unveränderte Funktionen (getRelevantSeasonGames, buildStandings,
+ * classifyGameForStats, detectSide) auf den beim ursprünglichen Laden
+ * bereits gespeicherten, vollständigen Rohdaten (bucket.data.rawLeagueGames/
+ * .rawGames) — spiegelt exakt dieselbe Logik wie in loadSeasonData() beim
+ * erstmaligen Aufbau von relevantLeagueGames/standings/gamesData.
+ *
+ * Ergebnis wird über den bereits asOf-fähigen Cache aus P0a.6 gehalten
+ * (cachedAnalysis/analysisCacheKey) — wiederholte Aufrufe mit identischem
+ * seasonKey+asOf sind ein Cache-Hit, ein geändertes asOf erzwingt eine neue
+ * Berechnung, andere Saisons bleiben unberührt.
+ *
+ * Ohne explizites asOf wird automatisch der aktuelle globale S.asOf
+ * herangezogen (über deriveAsOfForSeason auf diese Saison beschränkt) —
+ * das ist die "Verdrahtung in den globalen Datenfluss". Es wird an dieser
+ * Stelle bewusst NICHT von irgendeiner UI/Render-Funktion aufgerufen —
+ * das bleibt P0a.8+ vorbehalten.
+ *
+ * Bewusst NICHT über getSeasonStatsAsOf laufen: All-Time-Snapshot, Hall of
+ * Fame, Matchcenter, Vergleichszentrum, PLAYER_REGISTRY/goalieStatsBySeason,
+ * LINEUP_DATA/Einsatz-Center — das sind entweder saisonübergreifende
+ * Aggregate (asOf ist laut Spezifikation pro Saison skaliert, ein einzelnes
+ * asOf einer Saison auf All-Time anzuwenden wäre erfunden) oder eine
+ * bewusst getrennte Datenbasis (LINEUP_DATA), oder bereits beim einmaligen
+ * Laden fixierte Registrierungsdaten (PLAYER_REGISTRY) — deren nachträgliche
+ * asOf-Filterung würde eine erneute vollständige Neuregistrierung
+ * voraussetzen, die hier ausdrücklich nicht vorgenommen wird.
+ */
+function getSeasonStatsAsOf(seasonKey,asOf=deriveAsOfForSeason(seasonKey,S.asOf)){
+  const bucket=SEASONS[seasonKey];
+  if(!bucket?.data)return null;
+  const seasonConfig=SEASON_CONFIG[seasonKey]||SEASON_CONFIG[CURRENT_SEASON_KEY];
+  return cachedAnalysis(analysisCacheKey('season-stats-asof',{seasonKey},asOf),()=>{
+    const relevantLeagueGames=getRelevantSeasonGames(bucket.data.rawLeagueGames||[],asOf);
+    const standings=buildStandings(relevantLeagueGames,seasonConfig);
+    const relevantLeagueGameKeys=new Set(relevantLeagueGames.map(g=>String(g.id||gameStableId(g))));
+    const statGamesData=(bucket.data.rawGames||[]).filter(g=>detectSide(g)&&classifyGameForStats(g,null,asOf).countsForStats&&relevantLeagueGameKeys.has(String(g.id||gameStableId(g))));
+    return{seasonKey,asOf,relevantLeagueGames,standings,statGamesData};
+  });
 }
 
 function gameResult(game,side){
