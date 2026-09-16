@@ -1907,7 +1907,7 @@ let S={
   lineupBuilderSeasonKey:CURRENT_SEASON_KEY,lineupBuilderOpponent:'',lineupBuilderMode:'recommend',lineupAvailablePlayerIds:[],lineupLines:[[],[],[]],lineupActiveLine:0,lineupComplementLine:null,lineupSyntheticPlayers:[],lineupNewPlayerProfile:'offensiv',
   antiSynergyView:'overall',antiSynergyShowAll:false,antiSynergyHideSgOnly:true,duoProSelections:{},duoProPickerOpen:{},duoProPickerMessages:{},
   einsatzCenterSeasonKey:CURRENT_SEASON_KEY,
-  einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],
+  einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],einsatzCenterRenamingGroupId:null,
   errors:[],dbg:[],
 };
 const analysisCache=new Map();
@@ -5812,6 +5812,12 @@ window.lineupGroupDisplayName=lineupGroupDisplayName;
 // - newGroups: NUR neu angelegte Registry-Einträge. Bestehende Gruppen werden
 //   ausschließlich über ihre groupId in game.groups[]/confirmedCombinations[]
 //   referenziert, nie hier erneut aufgeführt (siehe Auftrag).
+// - renamedGroups (Phase 7B): Map<groupId,registryEntry> für Umbenennungen
+//   BESTEHENDER Registry-Gruppen — bewusst getrennt von newGroups, damit die
+//   bestehende isNew-Prüfung (newGroups.has(groupId)) für Renames nicht
+//   missbraucht wird. Pro groupId hält der Draft ausschließlich den zuletzt
+//   gültigen Rename-Stand (kein Zwischenstand in nameHistory), siehe
+//   renameEinsatzCenterGroup().
 let EINSATZ_CENTER_DRAFT=null;
 
 /**
@@ -5829,7 +5835,7 @@ async function ensureEinsatzCenterDraft(seasonKey){
   const baseSeasonData=LINEUP_DATA[seasonKey]||{schemaVersion:1,season:seasonKey,games:[]};
   const baseRegistry=LINEUP_GROUPS_REGISTRY||{schemaVersion:1,groups:[]};
   const baseHash=await einsatzCenterComputeBaseHash(baseSeasonData,baseRegistry);
-  EINSATZ_CENTER_DRAFT={seasonKey,baseHash,games:new Map(),newGroups:new Map()};
+  EINSATZ_CENTER_DRAFT={seasonKey,baseHash,games:new Map(),newGroups:new Map(),renamedGroups:new Map()};
   return EINSATZ_CENTER_DRAFT;
 }
 
@@ -5942,11 +5948,26 @@ function rEinsatzCenterGroupEditor(gameId,group,fieldRoster){
     <input class="mc-select" style="max-width:140px" placeholder="Position" value="${escAttr(p.position||'')}" onchange="setEinsatzCenterGroupPlayerPosition(${gameId},'${escAttr(group.groupId)}','${escAttr(p.playerId)}',this.value)">
     <button class="lineup-builder-x" onclick="removeEinsatzCenterGroupPlayer(${gameId},'${escAttr(group.groupId)}','${escAttr(p.playerId)}')">x</button>
   </div>`).join('')||'<div class="mc-empty">Keine Mitglieder.</div>';
+  // Phase 7B: Rename-Affordance ausschließlich für bereits bestehende/wiederverwendete
+  // Registry-Gruppen (nicht für im selben Draft neu angelegte, siehe newGroups oben).
+  const registryEntryForRename=(!isNew)?(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===group.groupId):null;
+  const pendingRename=(!isNew)?EINSATZ_CENTER_DRAFT?.renamedGroups?.get(group.groupId):null;
+  const renameCurrentName=pendingRename?.currentName||registryEntryForRename?.currentName||group.name;
+  const isRenamingThis=S.einsatzCenterRenamingGroupId===group.groupId;
+  const renameInputId=`ec-rename-group-name-${gameId}-${group.groupId}`;
+  const renameHtml=registryEntryForRename?`<div style="margin-top:6px">
+      ${isRenamingThis?`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input class="mc-select" id="${escAttr(renameInputId)}" style="max-width:220px" value="${escAttr(renameCurrentName)}">
+          <button class="lineup-builder-btn gold" onclick="renameEinsatzCenterGroup(${gameId},'${escAttr(group.groupId)}',document.getElementById('${escAttr(renameInputId)}').value)">Speichern</button>
+          <button class="lineup-builder-btn ghost" onclick="toggleEinsatzCenterGroupRename('${escAttr(group.groupId)}')">Abbrechen</button>
+        </div>`:`<button class="lineup-builder-btn ghost" onclick="toggleEinsatzCenterGroupRename('${escAttr(group.groupId)}')">✎ Gruppe umbenennen</button>${pendingRename?` <span style="color:var(--tx3);font-size:11px">(umbenannt im Entwurf zu „${escHtml(pendingRename.currentName)}“)</span>`:''}`}
+    </div>`:'';
   return `<div style="padding:8px 0;border-top:1px solid var(--brd)">
     <strong>${escHtml(group.name)}</strong> <span style="color:var(--tx3);font-size:11px">[${escHtml(group.type||'')}]${isNew?' · NEU':' · wiederverwendet'}</span>
     <button class="lineup-builder-x" style="float:right" onclick="removeEinsatzCenterGroup(${gameId},'${escAttr(group.groupId)}')">Gruppe aus Spiel entfernen</button>
     ${memberRows}
     <select class="mc-select" onchange="if(this.value){addEinsatzCenterGroupPlayer(${gameId},'${escAttr(group.groupId)}',this.value);this.value='';}"><option value="">+ Spieler zur Gruppe…</option>${availableToAdd.map(id=>`<option value="${escAttr(id)}">${resolveLineupPlayerName(id)}</option>`).join('')}</select>
+    ${renameHtml}
   </div>`;
 }
 function rEinsatzCenterComboEditor(gameId,combo,idx){
@@ -6033,13 +6054,17 @@ function rEinsatzCenterEditPage(){
   const formHtml=gameId?rEinsatzCenterGameEditor(seasonKey,gameId):'<div class="mc-empty">Spiel oben auswählen, um mit der Bearbeitung zu beginnen.</div>';
   const touchedCount=draft.games.size;
   const newGroupsCount=draft.newGroups.size;
+  const renamedGroupsCount=draft.renamedGroups.size;
+  const draftSummaryText=renamedGroupsCount>0
+    ?`${touchedCount} Spiel(e), ${newGroupsCount} neue Gruppe(n) und ${renamedGroupsCount} umbenannte Gruppe(n) im aktuellen Entwurf.`
+    :`${touchedCount} Spiel(e) und ${newGroupsCount} neue Gruppe(n) im aktuellen Entwurf.`;
 
   return `<section class="matchcenter-page">
     <div class="view-back-row"><button class="btn-back" onclick="cancelEinsatzCenterEdit()">&larr; Entwurf verwerfen &amp; zurück</button></div>
     <div>
       <div class="mc-eyebrow">Einsatz-Center — Entwurfsmodus</div>
       <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Entwurf bearbeiten</div>
-      <div class="wrn-box">⚠ UNGESPEICHERTER ENTWURF — nur im Speicher dieser Browser-Sitzung, kein automatisches Speichern, kein Schreiben von Dateien. ${touchedCount} Spiel(e) und ${newGroupsCount} neue Gruppe(n) im aktuellen Entwurf.</div>
+      <div class="wrn-box">⚠ UNGESPEICHERTER ENTWURF — nur im Speicher dieser Browser-Sitzung, kein automatisches Speichern, kein Schreiben von Dateien. ${draftSummaryText}</div>
     </div>
     <div class="mc-card">
       <div class="mc-card-title">Spiel wählen (${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)})</div>
@@ -6111,6 +6136,39 @@ window.removeEinsatzCenterGroup=(gameId,groupId)=>{
   entry.confirmedCombinations=(entry.confirmedCombinations||[]).map(c=>c.groupId===groupId?{...c,groupId:null}:c);
   setState({});
 };
+window.toggleEinsatzCenterGroupRename=(groupId)=>{
+  setState({einsatzCenterRenamingGroupId:S.einsatzCenterRenamingGroupId===groupId?null:groupId});
+};
+/**
+ * Benennt eine BESTEHENDE Registry-Gruppe im Draft um (Phase 7B). Gilt
+ * niemals für im selben Draft neu angelegte Gruppen (newGroups) — dafür
+ * gibt es addEinsatzCenterNewGroup. createdInSeason/createdInGame werden
+ * unverändert aus dem Original-Registry-Eintrag übernommen (siehe
+ * mergeRegistryGroups() im Importer, der genau das voraussetzt). Pro
+ * groupId hält renamedGroups ausschließlich den zuletzt gültigen Stand —
+ * ein wiederholter Rename in derselben Draft-Session überschreibt den
+ * vorherigen Eintrag vollständig, es werden keine Zwischenstände in
+ * nameHistory aufgebaut.
+ */
+window.renameEinsatzCenterGroup=(gameId,groupId,newName)=>{
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft||draft.newGroups.has(groupId))return;
+  const original=(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===groupId);
+  if(!original)return;
+  const trimmed=(newName||'').trim();
+  if(!trimmed){alert('Bitte einen gültigen Namen angeben.');return;}
+  const pending=draft.renamedGroups.get(groupId);
+  const currentName=pending?.currentName||original.currentName;
+  if(trimmed===currentName){alert('Der neue Name entspricht bereits dem aktuellen Namen.');return;}
+  draft.renamedGroups.set(groupId,{
+    groupId,
+    currentName:trimmed,
+    createdInSeason:original.createdInSeason,
+    createdInGame:original.createdInGame,
+    nameHistory:[{name:trimmed,since:{season:draft.seasonKey,gameId:Number(gameId)}}],
+  });
+  setState({einsatzCenterRenamingGroupId:null});
+};
 window.addEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
   const entry=getEinsatzCenterGameDraft(gameId);
   const group=(entry?.groups||[]).find(g=>g.groupId===groupId);
@@ -6177,7 +6235,7 @@ async function buildEinsatzCenterDraftExport(){
     season:draft.seasonKey,
     baseHash:draft.baseHash,
     games:[...draft.games.values()],
-    groups:[...draft.newGroups.values()],
+    groups:[...draft.newGroups.values(),...draft.renamedGroups.values()],
   };
 }
 window.exportEinsatzCenterDraft=async()=>{
