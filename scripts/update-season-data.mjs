@@ -84,7 +84,7 @@ async function loadSeasonFile(file) {
 }
 
 /** Schreibt zuerst in eine Temp-Datei und ersetzt danach atomar (rename). */
-async function writeJsonAtomic(filePath, data) {
+export async function writeJsonAtomic(filePath, data) {
   await mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp-${process.pid}`;
   await writeFile(tmpPath, JSON.stringify(data), 'utf8');
