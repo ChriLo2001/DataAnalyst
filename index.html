@@ -1440,9 +1440,26 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 .ia-overview-link{display:inline-flex;align-items:center;min-height:44px;color:var(--info);text-decoration:none;font-size:12px;font-weight:600}
 .ia-overview-link:hover{text-decoration:underline}
 
+/* ═══ P0b.8 — Spieltagsseite (6.3/3.6.4) ═══════════════════════════════
+   .ia-matchday-* eigener Namensraum, kollisionsfrei. Zeitleisten-Zeilen
+   sind echte <button>-Elemente (≥44px), Status per Klasse eingefärbt
+   (nur die 3 bestehenden Status-Werte aus P0a.5/P0b.6 — kein "verlegt"). */
+.ia-matchday-timeline{display:grid;gap:6px}
+.ia-matchday-row{display:grid;grid-template-columns:minmax(90px,auto) minmax(90px,1fr) auto;align-items:center;gap:10px;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-soft);background:var(--card-bg);color:var(--text-main);font-family:'Inter',sans-serif;font-size:12px;text-align:left;cursor:pointer;width:100%}
+.ia-matchday-row:hover{border-color:var(--text-faint)}
+.ia-matchday-row-number{font-weight:700}
+.ia-matchday-row-date{color:var(--text-muted);font-family:'DM Mono',monospace;font-size:11px}
+.ia-matchday-row-status{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:999px;justify-self:end}
+.ia-matchday-status-abgeschlossen .ia-matchday-row-status{background:rgba(16,185,129,.14);color:var(--success)}
+.ia-matchday-status-geplant .ia-matchday-row-status{background:rgba(59,130,246,.14);color:var(--info)}
+.ia-matchday-status-unvollstaendig .ia-matchday-row-status{background:rgba(245,158,11,.14);color:var(--warning)}
+.ia-back-row{display:flex}
+
 @media(max-width:600px){
   .ia-context-bar{flex-wrap:wrap}
   .ia-overview-cards{grid-template-columns:1fr}
+  .ia-matchday-row{grid-template-columns:1fr;justify-items:start;gap:4px}
+  .ia-matchday-row-status{justify-self:start}
 }
 </style>
 </head>
@@ -2031,6 +2048,7 @@ let S={
   standings:[],           // computed standings
   page:'player',          // 'player' | 'team'
   activeP:null,activeTab:'matrix',
+  activeMatchday:null, // P0b.8: ausgewählter Spieltag auf der Spieltagsseite (Number), null = Zeitleisten-Ansicht
   activePlayerRoleView:'field',activeGoalieTab:'overview',
   activeSeasonKey:CURRENT_SEASON_KEY,
   selectedSeasonKey:CURRENT_SEASON_KEY,
@@ -3397,7 +3415,15 @@ function asOfEquals(a,b){
  *      der sieben Seitenschlüssel dieses Muster erfüllt).
  */
 const HASH_GLOBAL_PAGES=['matchcenter','lineupBuilder','einsatzCenter','comparisonCenter','hallOfFame','alltimePlayers','lexicon','overview','ligaGegner'];
-const HASH_SEASON_PAGE_SEGMENTS=['player'];
+/**
+ * P0b.8 — 'matchday' (Spieltagsseite) ergänzt, mit Objektparameter (die
+ * Spieltag-Nummer) — genau der von 6.8 gezeigte Fall "ein Objekt unter
+ * einer Seite" (dort: #/25-26/spieltage/7). 'matchday' bleibt bewusst der
+ * bestehende, interne S.page-Wortschatz (wie 'player'), keine Übersetzung
+ * ins Deutsche im Hash — konsistent mit der bereits in P0b.5 gewählten
+ * Konvention (dort z.B. 'ligaGegner' statt "liga-gegner").
+ */
+const HASH_SEASON_PAGE_SEGMENTS=['player','matchday'];
 
 function decodeHashSegmentSafe(segment){
   try{return decodeURIComponent(segment);}catch(e){return null;}
@@ -3535,8 +3561,8 @@ function computeCurrentAppHash(){
   }
   const seasonKey=getActiveSeasonKey();
   if(!seasonKey||!SEASON_CONFIG[seasonKey])return'';
-  const pageSegment=S.page==='player'?'player':null;
-  const objectId=pageSegment==='player'?(S.activeP||null):null;
+  const pageSegment=S.page==='player'?'player':S.page==='matchday'?'matchday':null;
+  const objectId=pageSegment==='player'?(S.activeP||null):pageSegment==='matchday'?(S.activeMatchday!=null?String(S.activeMatchday):null):null;
   return buildAppHash(seasonKey,deriveAsOfForSeason(seasonKey,S.asOf),pageSegment,objectId);
 }
 /**
@@ -3615,6 +3641,12 @@ async function applyAppHash(parsed){
   if(parsed.page==='player'){
     const validPlayer=parsed.objectId&&(S.players||[]).some(p=>p.key===parsed.objectId);
     setState(validPlayer?{page:'player',activeP:parsed.objectId}:{page:'player'});
+  }
+  if(parsed.page==='matchday'){
+    const requestedNumber=parsed.objectId!=null?Number(parsed.objectId):null;
+    const matchdays=getSeasonMatchdays(parsed.seasonKey).filter(m=>m.number!==null);
+    const validMatchday=requestedNumber!=null&&matchdays.some(m=>m.number===requestedNumber);
+    setState({page:'matchday',activeMatchday:validMatchday?requestedNumber:null});
   }
 }
 /**
@@ -21964,6 +21996,10 @@ function _render(root){
     root.innerHTML=hdrHtml+errHtml+`<div>${rOverviewPage(getActiveSeasonKey())}</div>`;
     return;
   }
+  if(S.page==='matchday'){
+    root.innerHTML=hdrHtml+errHtml+`<div>${rMatchdayPage(getActiveSeasonKey())}</div>`;
+    return;
+  }
   if(S.page==='ligaGegner'){
     root.innerHTML=hdrHtml+errHtml+`<div>${rLigaGegnerPlaceholderPage()}</div>`;
     return;
@@ -22480,7 +22516,7 @@ const MAIN_NAV_POINTS=[
 ];
 const MAIN_NAV_ACTIVE_PAGES={
   uebersicht:['overview'],
-  spieltage:['matchcenter','lineupBuilder','einsatzCenter'],
+  spieltage:['matchday','matchcenter','lineupBuilder','einsatzCenter'],
   team:['player','team','hallOfFame','alltimePlayers'],
   ligaGegner:['ligaGegner'],
   labor:['comparisonCenter'],
@@ -22495,7 +22531,7 @@ function mainNavActiveKeyForPage(page){
 window.goToMainNavPoint=function(key){
   if(key==='uebersicht')return window.openOverview();
   if(key==='ligaGegner')return window.openLigaGegner();
-  if(key==='spieltage')return setPage('matchcenter');
+  if(key==='spieltage')return window.openMatchdayTimeline();
   if(key==='team')return setPage('team');
   if(key==='labor')return setPage('comparisonCenter');
 };
@@ -22531,6 +22567,129 @@ window.switchOverviewSeason=async function(value){
   await window.openSeason(value);
   setState({page:'overview'});
 };
+// ═══════════════════════════════════════════════════════
+//  P0b.8 — SPIELTAGSSEITE (Spezifikation 6.3 Punkt 2, 3.6.4)
+// ═══════════════════════════════════════════════════════
+// Zwei Ansichten unter demselben S.page==='matchday':
+//  a) Zeitleiste (S.activeMatchday===null): "Zeitleiste aller Spieltage"
+//     (6.3) — Liste aller Spieltage der aktiven Saison, chronologisch,
+//     mit Status, anklickbar; darüber Links zu den bestehenden
+//     "Vorbereitung"-Werkzeugen (Matchcenter/Lineup Builder/Einsatz-Center,
+//     6.3: "kommender → Vorbereitung").
+//  b) Detailseite (S.activeMatchday=<Nummer>): "Spieltagsseite" (3.6.4) für
+//     genau diesen Spieltag — über die bestehende uiObjektseite()
+//     (6.4 listet "Spieltag" explizit als Objekttyp).
+// Beide nutzen AUSSCHLIESSLICH getSeasonMatchdays() (P0b.6-Port von
+// buildMatchdays) als Datenquelle — keine zweite Matchday-Ableitung.
+//
+// 3.6.4 nennt 7 Bereiche; mehrere davon setzen M1/M4/M6/M8 oder ein noch
+// nicht existierendes Spielnoten-Modell (Game Score, Anhang A.3) voraus —
+// diese werden ehrlich über uiNotiz() als noch nicht implementiert
+// ausgewiesen, NICHT vorgezogen:
+//  1. Kopf (Datum/Ergebnisse/Status)      → uiObjektseite-Kopf/-Kontext
+//  2. Kernaussage                          → uiObjektseite-Kernaussage (echte Punkte/Tordifferenz, KEIN M1-"Erwartungswert")
+//  3. Bilanz ggü. Erwartung (M1)/Spiel1 vs 2 (M4) → NICHT implementiert (M1/M4)
+//  4. Spielberichte beider Spiele (ohne M6 Siegwahrscheinlichkeit) → echte Kompaktkarten
+//  5. Spieler des Tages (Game Score)       → Platzhalter
+//  6. Aufstellung direkt eintragen         → bewusst NUR Link zum bestehenden Einsatz-Center (kein eingebetteter Editor, siehe Auftrag: bestehende Anwendungen nicht neu programmieren)
+//  7. "Durch diesen Spieltag verändert"    → Tabellenplatz-Kachel (wiederverwendet overviewRankChangeTile() aus P0b.7 1:1, keine Duplizierung); Power Ranking/Formkurve/Meilensteine/Auffälligkeiten (M8) → Platzhalter
+const MATCHDAY_STATUS_LABELS={abgeschlossen:'Abgeschlossen',geplant:'Geplant',unvollstaendig:'Unvollständig'};
+window.openMatchdayTimeline=async function(seasonKey){
+  const key=seasonKey||getActiveSeasonKey();
+  await loadSeason(key);
+  showMainShell();
+  setState({screen:'main',page:'matchday',activeMatchday:null});
+};
+window.openMatchday=async function(seasonKey,number){
+  const key=seasonKey||getActiveSeasonKey();
+  await loadSeason(key);
+  showMainShell();
+  const num=Number(number);
+  const valid=getSeasonMatchdays(key).some(m=>m.number===num);
+  setState({screen:'main',page:'matchday',activeMatchday:valid?num:null});
+};
+/** Wie switchOverviewSeason(): verhindert, dass ein Saisonwechsel die Spieltagsseite unbeabsichtigt verlässt. activeMatchday wird zurückgesetzt, da Spieltag-Nummern saisonspezifisch sind (keine Zuordnung über Saisongrenzen hinweg erfunden). */
+window.switchMatchdaySeason=async function(value){
+  await window.openSeason(value);
+  setState({page:'matchday',activeMatchday:null});
+};
+/** Ulm/SG-Spiele innerhalb eines Matchdays (buildMatchdays() liefert ALLE Liga-Spiele der Gruppe, siehe P0b.6-Kommentar) — reine Filterung mit der bestehenden detectSide()/detectUlmSide(), keine neue Ulm-Erkennung. */
+function matchdayUlmGames(matchday){
+  return(matchday?.games||[]).filter(g=>detectSide(g));
+}
+function matchdayGameCardHtml(g){
+  const side=detectSide(g);
+  if(!side)return null;
+  const homeLabel=side==='home'?'Heimspiel':'Auswärtsspiel';
+  if(!isGamePlayed(g))return uiNotiz(`${homeLabel} am ${formatDateDE(g.date||'')}${g.start_time?` (${g.start_time} Uhr)`:''}: noch nicht ausgetragen.`);
+  const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
+  if(isNaN(hg)||isNaN(gg))return uiNotiz('Für dieses Spiel liegt noch kein Endstand vor.');
+  const us=side==='home'?hg:gg,os=side==='home'?gg:hg;
+  const opp=side==='home'?g.guest_team_name:g.home_team_name;
+  return uiHinweisKarte({observation:`${homeLabel} gegen ${opp}: ${us}:${os}${g.arena_name?` in ${g.arena_name}`:''}.`});
+}
+/** Zeitleisten-Zeile pro Spieltag — Klick öffnet die Detailseite (b). */
+function rMatchdayTimelineRow(seasonKey,matchday){
+  const statusLabel=MATCHDAY_STATUS_LABELS[matchday.status]||matchday.status;
+  return`<button type="button" class="ia-matchday-row ia-matchday-status-${escAttr(matchday.status)}" onclick="openMatchday('${escAttr(seasonKey)}',${matchday.number})">
+    <span class="ia-matchday-row-number">Spieltag ${matchday.number}</span>
+    <span class="ia-matchday-row-date">${escHtml(formatDateDE(matchday.date))}</span>
+    <span class="ia-matchday-row-status">${escHtml(statusLabel)}</span>
+  </button>`;
+}
+function rMatchdayTimelinePage(seasonKey){
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  const shell=uiObjektseite({
+    title:'Spieltage',
+    contextLine:`${SEASON_CONFIG[seasonKey]?.label||seasonKey}`,
+    headline:matchdays.length?`${matchdays.length} Spieltage in dieser Saison.`:'Für diese Saison sind noch keine Spieltage bekannt.',
+  });
+  const prepHtml=`<div class="ia-overview-card">${uiNotiz('Vorbereitung auf den nächsten Spieltag:')}<a class="ia-overview-link" href="#/matchcenter">Zum Matchcenter</a><a class="ia-overview-link" href="#/lineupBuilder">Zum Lineup Builder</a><a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`;
+  const timelineHtml=matchdays.length?`<div class="ia-matchday-timeline">${matchdays.map(m=>rMatchdayTimelineRow(seasonKey,m)).join('')}</div>`:'';
+  return`<div class="ia-overview">${shell}<div class="ia-overview-cards">${prepHtml}</div>${timelineHtml}</div>`;
+}
+function rMatchdayDetailPage(seasonKey,number){
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  const matchday=matchdays.find(m=>m.number===number);
+  const backRow=`<div class="ia-back-row"><button type="button" class="ia-overview-link" onclick="openMatchdayTimeline('${escAttr(seasonKey)}')">&larr; Zurück zur Spieltagsübersicht</button></div>`;
+  if(!matchday)return`<div class="ia-overview">${uiNotiz(`Spieltag ${number} wurde für diese Saison nicht gefunden.`)}${backRow}</div>`;
+  const ulmGames=matchdayUlmGames(matchday).slice().sort(compareGamesChronologically);
+  const playedGames=ulmGames.filter(isGamePlayed);
+  let points=0,gf=0,ga=0;
+  for(const g of playedGames){
+    const side=detectSide(g);
+    const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
+    if(isNaN(hg)||isNaN(gg))continue;
+    const us=side==='home'?hg:gg,os=side==='home'?gg:hg;
+    gf+=us;ga+=os;
+    points+=us>os?3:us<os?0:1;
+  }
+  const statusLabel=MATCHDAY_STATUS_LABELS[matchday.status]||matchday.status;
+  const kernaussage=playedGames.length
+    ?`Spieltag ${number}: ${points} Punkte, Tordifferenz ${gf-ga>=0?'+':''}${gf-ga}.`
+    :`Spieltag ${number} steht noch aus (${statusLabel}).`;
+  const rankTile=matchday.status==='abgeschlossen'?overviewRankChangeTile(seasonKey,matchday):null;
+  const shell=uiObjektseite({
+    title:`Spieltag ${number}`,
+    contextLine:`${SEASON_CONFIG[seasonKey]?.label||seasonKey} · ${statusLabel}`,
+    headline:kernaussage,
+    tiles:rankTile?[rankTile]:[],
+  });
+  const themenkarten=[
+    ...ulmGames.map(matchdayGameCardHtml),
+    uiNotiz('Spieler des Tages (Game Score) ist noch nicht implementiert.'),
+    uiNotiz('Weitere Veränderungen durch diesen Spieltag (Power Ranking, Formkurve, Auffälligkeiten) folgen mit den Liga-Analytics-Modulen (M1–M10).'),
+    `<div class="ia-overview-card">${uiNotiz('Aufstellung eintragen oder planen:')}<a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`,
+  ].filter(Boolean).slice(0,6);
+  return`<div class="ia-overview">${shell}${backRow}${themenkarten.length?`<div class="ia-overview-cards">${themenkarten.join('')}</div>`:''}</div>`;
+}
+function rMatchdayPage(seasonKey){
+  if(S.activeMatchday!=null){
+    const exists=getSeasonMatchdays(seasonKey).some(m=>m.number===S.activeMatchday);
+    if(exists)return rMatchdayDetailPage(seasonKey,S.activeMatchday);
+  }
+  return rMatchdayTimelinePage(seasonKey);
+}
 /**
  * Reine Phasenerkennung (6.3.1: "Die Übersicht erkennt automatisch, wo man
  * sich im Spieltag-Zyklus befindet"). `now` ist bewusst als Parameter
@@ -22669,14 +22828,30 @@ function overviewMatchcenterLinkHtml(){
 function overviewLineupLinkHtml(){
   return`<div class="ia-overview-card">${uiNotiz('Aufstellung eintragen oder planen:')}<a class="ia-overview-link" href="#/lineupBuilder">Zum Lineup Builder</a> · <a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`;
 }
-/** "Veränderungen durch den Spieltag": Tabellenplatz-Kachel mit Veränderung seit dem Vor-Spieltag, über getSeasonStatsAsOf() vorher/nachher — keine neue Statistikformel, reine Differenzbildung zweier bereits bestehender Ergebnisse. */
-function overviewRankChangeTile(seasonKey,lastMatchday){
-  if(!lastMatchday)return null;
-  const currentStats=getSeasonStatsAsOf(seasonKey);
+/**
+ * "Veränderungen durch den Spieltag": liefert das Tabellenplatz-Tile-Objekt
+ * (Eingabeform von uiKennzahlKachel(), NICHT bereits gerenderte HTML — die
+ * Kachel selbst rendert uiObjektseite() intern aus dem tiles-Array, siehe
+ * dort) mit Veränderung seit dem Vor-Spieltag, über getSeasonStatsAsOf()
+ * vorher/nachher — keine neue Statistikformel, reine Differenzbildung
+ * zweier bereits bestehender Ergebnisse. WICHTIG: `matchday` ist der
+ * Spieltag, für den die Kachel gilt (nicht notwendigerweise der aktuell
+ * letzte) — "aktuell" wird daher bewusst über matchdayAsOfCutoff(matchday)
+ * fest angegeben statt über das ambiente S.asOf/Default von
+ * getSeasonStatsAsOf() zu laufen. Für den P0b.7-Übersichtsfall (dort ist
+ * `matchday` tatsächlich der letzte abgeschlossene) ist das Ergebnis
+ * identisch zum bisherigen Verhalten (kein Spiel liegt chronologisch
+ * danach); für eine beliebige Spieltagsseite (P0b.8, ein beliebiger
+ * vergangener Spieltag) ist es hier erst korrekt.
+ */
+function overviewRankChangeTile(seasonKey,matchday){
+  if(!matchday)return null;
+  const cutoff=matchdayAsOfCutoff(matchday);
+  const currentStats=getSeasonStatsAsOf(seasonKey,cutoff);
   const currentRow=(currentStats?.standings||[]).find(t=>isUlmTeamName(t.name));
   if(!currentRow)return null;
   const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
-  const idx=matchdays.findIndex(m=>m.key===lastMatchday.key);
+  const idx=matchdays.findIndex(m=>m.key===matchday.key);
   const previousMatchday=idx>0?matchdays[idx-1]:null;
   let delta=null;
   if(previousMatchday){
@@ -22685,7 +22860,7 @@ function overviewRankChangeTile(seasonKey,lastMatchday){
     const prevRow=(prevStats?.standings||[]).find(t=>isUlmTeamName(t.name));
     if(prevRow)delta=prevRow.rank-currentRow.rank;
   }
-  return uiKennzahlKachel({label:'Tabellenplatz',value:currentRow.rank,delta,deltaSignificant:delta!=null&&delta!==0,n:currentRow.sp});
+  return{label:'Tabellenplatz',value:currentRow.rank,delta,deltaSignificant:delta!=null&&delta!==0,n:currentRow.sp};
 }
 /**
  * Baut die phasenabhängigen Karten (6.3.1-Tabelle, je Phase in exakt der
@@ -22825,14 +23000,14 @@ window.setContextAsOf=function(value){
  * kompakt, Saisonbilanz, Formkurve) — reagiert also auf diese Auswahl.
  */
 function rContextBar(){
-  const seasonRelevant=S.page==='team'||S.page==='player'||S.page==='overview';
+  const seasonRelevant=S.page==='team'||S.page==='player'||S.page==='overview'||S.page==='matchday';
   let seasonHtml='';
   let asOfHtml='';
   if(seasonRelevant){
     const seasonKey=getActiveSeasonKey();
     if(seasonKey&&SEASON_CONFIG[seasonKey]){
       const seasonOptions=Object.keys(SEASON_CONFIG).map(key=>`<option value="${escAttr(key)}"${key===seasonKey?' selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
-      const seasonOnChange=S.page==='overview'?'switchOverviewSeason(this.value)':'openSeason(this.value)';
+      const seasonOnChange=S.page==='overview'?'switchOverviewSeason(this.value)':S.page==='matchday'?'switchMatchdaySeason(this.value)':'openSeason(this.value)';
       seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="${seasonOnChange}">${seasonOptions}</select></label>`;
       asOfHtml=rAsOfSelector(seasonKey);
     }
