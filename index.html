@@ -1385,6 +1385,31 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
   .ui-rangliste-row{grid-template-columns:minmax(0,1fr) minmax(48px,90px) minmax(30px,auto);gap:6px}
   .ui-kpi-value{font-size:19px}
 }
+
+/* ═══ P0b.3 — Seitenvorlage als ungenutztes Gerüst (Spezifikation 6.4) ═══
+   Additive, aktuell UNGENUTZTE Vorlage (uiObjektseite(), siehe Script-Teil).
+   Keine bestehende Seite verwendet diese Klassen. Kacheln-Grid kollabiert
+   auf 2 Spalten unter 600px und auf 1 Spalte unter 360px (6.11: kein
+   horizontales Page-Scrollen bei 360px); die Tab-Leiste darf intern
+   horizontal scrollen (gleiches, bereits bestehendes Muster wie
+   .season-profile .tabs weiter oben), das erzeugt kein Page-Scrolling. */
+.ui-objektseite{display:grid;gap:14px}
+.ui-objektseite-head{display:grid;gap:4px}
+.ui-objektseite-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-main);line-height:1.2;overflow-wrap:anywhere}
+.ui-objektseite-context{font-size:11px;color:var(--text-faint);font-family:'DM Mono',monospace}
+.ui-objektseite-kacheln{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.ui-objektseite-tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border-soft)}
+.ui-objektseite-tab{padding:10px 14px;min-height:44px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-faint);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.ui-objektseite-tab.active{color:var(--text-main);border-bottom-color:var(--info)}
+.ui-objektseite-tab-content{min-width:0}
+
+@media(max-width:600px){
+  .ui-objektseite-kacheln{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ui-objektseite-tabs{overflow-x:auto;flex-wrap:nowrap}
+}
+@media(max-width:360px){
+  .ui-objektseite-kacheln{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -21969,6 +21994,102 @@ function uiPlatzhalter({lines=3,label=''}={}){
   const rowCount=Math.max(1,Math.min(8,Number.isFinite(parsedLines)?parsedLines:3));
   const rows=Array.from({length:rowCount},(_,i)=>`<span class="ui-platzhalter-line" style="width:${i===rowCount-1?'62%':'100%'}"></span>`).join('');
   return`<div class="ui-platzhalter" role="status" aria-label="${escAttr(label||'Wird berechnet')}">${rows}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  P0b.3 — SEITENVORLAGE ALS UNGENUTZTES GERÜST (Spezifikation 6.4)
+// ═══════════════════════════════════════════════════════
+// uiObjektseite() bildet die in 6.4 beschriebene, für Spieler, Goalie, Team,
+// Gegner, Spiel und Spieltag gemeinsam vorgesehene Struktur ab. WICHTIG:
+// Diese Funktion wird von KEINER bestehenden Seite aufgerufen — P0b.3 legt
+// nur das Fundament, die Migration bestehender Seiten (Player-/Team-/
+// Goalie-Profile etc.) ist ausdrücklich NICHT Teil dieser Phase.
+//
+// Struktur gemäß 6.4:
+//  1. Kopf: "Name/Bezeichnung, Kontext (Team, Saison, Rolle), Zeitpunkt aus
+//     der Kontextleiste" — hier ausschließlich als reine Anzeige-Parameter
+//     (title/contextLine/timeContext). Es existiert noch keine Kontextleiste
+//     (P0b.5) und keine asOf-UI (bewusst nicht Teil von P0b.3) — die
+//     Funktion liest S/S.asOf an keiner Stelle selbst, der spätere Aufrufer
+//     liefert bereits fertig aufbereitete Texte.
+//  2. Kernaussage: über die bestehende uiKernaussage()-Komponente (P0b.2) —
+//     keine eigene Kernaussage-Logik in dieser Vorlage.
+//  3. Kacheln: höchstens 4 (UI_OBJEKTSEITE_MAX_TILES), über die bestehende
+//     uiKennzahlKachel()-Komponente (P0b.2) — die Vorlage dupliziert deren
+//     Markup nicht, sondern reicht jedes Tile-Objekt direkt durch.
+//  4. Tabs (höchstens 5, Standardreihenfolge Überblick·Entwicklung·Details·
+//     Vergleich·Methodik): rein darstellend. Tab-Inhalte sind bereits
+//     fertiges HTML des Aufrufers — die Vorlage berechnet, lädt und
+//     formatiert nichts selbst.
+//  5. 6.4 sieht vor: "Tab-Zustand und Zeitpunkt stehen in der URL" — das ist
+//     AUSDRÜCKLICH NICHT Teil dieser Phase (kein neues Seitenrouting laut
+//     Auftrag). `activeTabKey` ist rein ein Anzeige-Parameter ohne jede
+//     Hash-/History-Kopplung. Die Tab-Buttons tragen nur `data-tab-key`,
+//     bewusst KEIN onclick — welche Funktion beim Wechsel aufgerufen wird
+//     (State-Update, Hash-Schreiben o.ä.), entscheidet erst die Seite, die
+//     diese Vorlage später tatsächlich verwendet.
+const UI_OBJEKTSEITE_TAB_ORDER=['ueberblick','entwicklung','details','vergleich','methodik'];
+const UI_OBJEKTSEITE_TAB_LABELS={ueberblick:'Überblick',entwicklung:'Entwicklung',details:'Details',vergleich:'Vergleich',methodik:'Methodik'};
+const UI_OBJEKTSEITE_MAX_TILES=4;
+const UI_OBJEKTSEITE_MAX_TABS=5;
+
+/**
+ * Sortiert Tabs nach der in 6.4 vorgegebenen Standardreihenfolge. Unbekannte
+ * Tab-Schlüssel (nicht Teil der 5 Standard-Tabs) behalten ihre ursprüngliche
+ * Reihenfolge und werden ans Ende gestellt (Array.prototype.sort ist stabil).
+ * Mutiert das übergebene Array nicht (arbeitet auf einer Kopie).
+ */
+function uiObjektseiteSortTabs(tabs){
+  return[...tabs].sort((a,b)=>{
+    const ia=UI_OBJEKTSEITE_TAB_ORDER.indexOf(a.key);
+    const ib=UI_OBJEKTSEITE_TAB_ORDER.indexOf(b.key);
+    const ra=ia===-1?UI_OBJEKTSEITE_TAB_ORDER.length:ia;
+    const rb=ib===-1?UI_OBJEKTSEITE_TAB_ORDER.length:ib;
+    return ra-rb;
+  });
+}
+
+/**
+ * Einheitliche Seitenvorlage für Objekte (6.4). Alle Parameter optional
+ * außer `title`; jeder Abschnitt (Kernaussage/Kacheln/Tabs) wird nur
+ * gerendert, wenn der Aufrufer dafür Daten liefert — keine erfundenen
+ * Platzhalterinhalte. `tiles` sind Objekte im uiKennzahlKachel()-Format,
+ * `tabs` sind {key, label?, content} mit bereits fertig gerendertem HTML in
+ * `content`. Mutiert keinen der übergebenen Parameter.
+ */
+function uiObjektseite({
+  title='',
+  contextLine=null,
+  timeContext=null,
+  headline=null,
+  headlineHref=null,
+  tiles=[],
+  tabs=[],
+  activeTabKey=null,
+}={}){
+  const contextParts=[contextLine,timeContext].filter(v=>v!=null&&v!=='');
+  const headHtml=`<div class="ui-objektseite-head">
+    <div class="ui-objektseite-title">${escHtml(title||'')}</div>
+    ${contextParts.length?`<div class="ui-objektseite-context">${contextParts.map(t=>escHtml(String(t))).join(' · ')}</div>`:''}
+  </div>`;
+
+  const headlineHtml=headline?uiKernaussage(headline,headlineHref):'';
+
+  const visibleTiles=(tiles||[]).slice(0,UI_OBJEKTSEITE_MAX_TILES);
+  const kachelnHtml=visibleTiles.length?`<div class="ui-objektseite-kacheln">${visibleTiles.map(t=>uiKennzahlKachel(t)).join('')}</div>`:'';
+
+  const validTabs=(tabs||[]).filter(t=>t&&t.key);
+  const sortedTabs=uiObjektseiteSortTabs(validTabs).slice(0,UI_OBJEKTSEITE_MAX_TABS);
+  let tabsHtml='';
+  if(sortedTabs.length){
+    const activeKey=sortedTabs.some(t=>t.key===activeTabKey)?activeTabKey:sortedTabs[0].key;
+    const activeTab=sortedTabs.find(t=>t.key===activeKey);
+    const tabButtons=sortedTabs.map(t=>`<button type="button" class="ui-objektseite-tab${t.key===activeKey?' active':''}" data-tab-key="${escAttr(t.key)}">${escHtml(t.label||UI_OBJEKTSEITE_TAB_LABELS[t.key]||t.key)}</button>`).join('');
+    tabsHtml=`<div class="ui-objektseite-tabs">${tabButtons}</div>
+    <div class="ui-objektseite-tab-content">${activeTab?.content||''}</div>`;
+  }
+
+  return`<div class="ui-objektseite">${headHtml}${headlineHtml}${kachelnHtml}${tabsHtml}</div>`;
 }
 
 // Init
