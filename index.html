@@ -1419,7 +1419,7 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
    kein Seiten-Overflow entsteht (gleiches, bereits bestehendes Muster wie
    .season-profile .tabs weiter oben). */
 .ia-context-bar{display:flex;align-items:center;gap:12px;min-height:38px;padding:4px 2px}
-.ia-context-season{display:flex;align-items:center;gap:6px}
+.ia-context-season,.ia-context-asof{display:flex;align-items:center;gap:6px}
 .ia-context-label{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-family:'DM Mono',monospace}
 .ia-context-select{background:var(--surf);border:1px solid var(--border-soft);color:var(--tx);border-radius:8px;padding:6px 9px;font-size:11px;font-family:'Inter',sans-serif;min-height:44px}
 .ia-mainnav{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:8px}
@@ -3169,6 +3169,118 @@ function getSeasonStatsAsOf(seasonKey,asOf=deriveAsOfForSeason(seasonKey,S.asOf)
     const statGamesData=(bucket.data.rawGames||[]).filter(g=>detectSide(g)&&classifyGameForStats(g,null,asOf).countsForStats&&relevantLeagueGameKeys.has(String(g.id||gameStableId(g))));
     return{seasonKey,asOf,relevantLeagueGames,standings,statGamesData};
   });
+}
+
+/**
+ * P0b.6 — Browser-Port von scripts/game-ordering.mjs::compareGamesChronologically
+ * und scripts/matchday-derivation.mjs::buildMatchdays (P0a.3/P0a.5). Beide
+ * .mjs-Dateien sind klassische Node-ESM-Module und können in dieses
+ * klassische <script> (kein type="module") nicht importiert werden — daher
+ * derselbe, bereits mehrfach etablierte Port-Ansatz wie bei
+ * canonicalJson/einsatzCenterCanonicalJson: identischer Algorithmus, exakt
+ * gleicher Funktionsname (keine Kollision vorhanden), separat gegen die
+ * echten .mjs-Referenzfunktionen auf allen 5 echten Saisons verifiziert
+ * (siehe Testprotokoll P0b.6). KEINE eigene, abweichende Matchday-Logik.
+ *
+ * compareGamesChronologically ist bytegleich zu game-ordering.mjs:28.
+ */
+function compareGamesChronologically(a,b){
+  const dateA=String(a?.date??'');
+  const dateB=String(b?.date??'');
+  if(dateA!==dateB)return dateA<dateB?-1:1;
+  const startA=String(a?.start_time??'');
+  const startB=String(b?.start_time??'');
+  if(startA!==startB)return startA<startB?-1:1;
+  const numA=Number(a?.game_number)||0;
+  const numB=Number(b?.game_number)||0;
+  if(numA!==numB)return numA-numB;
+  const idA=Number(a?.id)||0;
+  const idB=Number(b?.id)||0;
+  return idA-idB;
+}
+/**
+ * buildMatchdays ist bytegleich zu matchday-derivation.mjs:87 (Gruppierung
+ * nach game.game_day.game_day_number, Fallback auf date, siehe dortige
+ * ausführliche Dokumentation der anhand echter Daten geprüften Semantik —
+ * hier nicht wiederholt, um Doppelpflege zu vermeiden; bei Änderungsbedarf
+ * IMMER zuerst dort, dann hier).
+ */
+function buildMatchdays(seasonData){
+  const seasonKey=seasonData?.season??'';
+  const games=Array.isArray(seasonData?.games)?seasonData.games:[];
+  const groups=new Map();
+  for(const game of games){
+    const gameDayNumber=game?.game_day?.game_day_number;
+    const hasNumber=gameDayNumber!==undefined&&gameDayNumber!==null&&gameDayNumber!=='';
+    const groupKey=hasNumber?`num:${gameDayNumber}`:`date:${String(game?.date??'')}`;
+    if(!groups.has(groupKey))groups.set(groupKey,[]);
+    groups.get(groupKey).push(game);
+  }
+  const matchdays=[];
+  for(const groupGames of groups.values()){
+    const sortedGames=[...groupGames].sort(compareGamesChronologically);
+    const rawNumber=sortedGames[0]?.game_day?.game_day_number;
+    const number=rawNumber!==undefined&&rawNumber!==null&&rawNumber!==''?Number(rawNumber):null;
+    const date=String(sortedGames[0]?.date??'');
+    const teamGames={};
+    for(const g of sortedGames){
+      for(const rawName of[g?.home_team_name,g?.guest_team_name]){
+        if(!rawName)continue;
+        const teamKey=String(rawName).trim();
+        if(!teamKey)continue;
+        if(!teamGames[teamKey])teamGames[teamKey]=[];
+        teamGames[teamKey].push(g.id);
+      }
+    }
+    const endedFlags=sortedGames.map(g=>g?.ended===true);
+    const allEnded=endedFlags.length>0&&endedFlags.every(Boolean);
+    const noneEnded=endedFlags.every(f=>!f);
+    const status=allEnded?'abgeschlossen':noneEnded?'geplant':'unvollstaendig';
+    matchdays.push({
+      key:`${seasonKey}#${number!==null?number:`date:${date}`}`,
+      seasonKey,number,date,games:sortedGames,teamGames,status,
+    });
+  }
+  matchdays.sort((a,b)=>{
+    if(a.number!==null&&b.number!==null&&a.number!==b.number)return a.number-b.number;
+    return a.date<b.date?-1:a.date>b.date?1:0;
+  });
+  return matchdays;
+}
+/**
+ * Liefert die Matchdays einer Saison über den bereits bestehenden
+ * asOf-fähigen Cache (P0a.6/cachedAnalysis) — Matchdays hängen selbst nicht
+ * von asOf ab, daher kein asOf-Cache-Suffix nötig (rein saisonabhängig).
+ * Eingabe ist bewusst bucket.data.rawLeagueGames (ALLE Liga-Spiele, nicht
+ * gefiltert) — genau die Eingabeform, mit der buildMatchdays() in P0a.5
+ * gegen die echten season-data/*.json geprüft wurde.
+ */
+function getSeasonMatchdays(seasonKey){
+  const bucket=SEASONS[seasonKey];
+  if(!bucket?.data)return[];
+  return cachedAnalysis(analysisCacheKey('matchdays',{seasonKey}),()=>buildMatchdays({season:seasonKey,games:bucket.data.rawLeagueGames||[]}));
+}
+/**
+ * Übersetzt einen Matchday in den asOf-Cutoff "unmittelbar nach diesem
+ * Spieltag" — das chronologisch letzte Spiel DIESES Matchdays (über alle
+ * Liga-Spiele, nicht nur Ulm/SG), inklusive (siehe isGameAtOrBeforeAsOf:
+ * ein asOf exakt auf einem Spielzeitpunkt schließt dieses Spiel ein). Keine
+ * neue Zeitlogik: nutzt ausschließlich die bereits vorhandene {date,
+ * startTime?}-Form aus P0a.4/P0a.7.
+ */
+function matchdayAsOfCutoff(matchday){
+  const games=matchday?.games||[];
+  const last=games[games.length-1];
+  if(!last)return null;
+  const date=String(last.date||'');
+  if(!date)return null;
+  const startTime=String(last.start_time||'');
+  return startTime?{date,startTime}:{date};
+}
+/** Reine Formatierung "YYYY-MM-DD" -> "DD.MM.YYYY" für die Spieltag-Beschriftung. Keine Date()-Objekte/Zeitzonen-Logik nötig. */
+function formatDateDE(isoDate){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate||''));
+  return m?`${m[3]}.${m[2]}.${m[1]}`:String(isoDate||'');
 }
 
 /**
@@ -22379,37 +22491,74 @@ function rLigaGegnerPlaceholderPage(){
   </div>`;
 }
 /**
- * Globale Kontextleiste (6.3: "fest oben, auf allen Seiten"). In dieser
- * Phase bewusst NUR mit der Saison-Anzeige/-Auswahl befüllt — das ist die
- * einzige der in 6.3 gelisteten Kontextleisten-Informationen, die aktuell
- * zuverlässig und ohne neue Fachlogik aus dem bestehenden State ableitbar
- * ist. Bewusst NICHT enthalten (strukturell vorgesehen, aber erst später
- * befüllt, siehe Auftrag):
- * - Zeitpunkt-Auswahl (asOf): P0b.6.
- * - Datenstand/"veraltete Modelldaten": bräuchte Spieltag-/Matchday-Logik
- *   (diese Phase darf keine einführen) und ein inputHash/manifest.json,
+ * Zeitpunkt-Auswahl (6.3: "Zeitpunkt-Auswahl (asOf): 'Aktuell' oder 'nach
+ * Spieltag X'") — P0b.6. Nutzt AUSSCHLIESSLICH die bestehende asOf-/
+ * Matchday-Infrastruktur: S.asOf (P0a.7) als einzige State-Quelle,
+ * deriveAsOfForSeason() für die Saison-Isolation, getSeasonMatchdays()
+ * (P0b.6-Port von buildMatchdays) für die Auswahlwerte, matchdayAsOfCutoff()
+ * für die Übersetzung Spieltag → {date,startTime?}. Keine eigene
+ * Zeit-/Filterlogik. Liefert '', wenn für die Saison keine Spieltage
+ * ableitbar sind (z.B. eine Saison ganz ohne Spiele) — kein leeres/
+ * bedeutungsloses Auswahlfeld.
+ */
+function rAsOfSelector(seasonKey){
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  if(!matchdays.length)return'';
+  const currentAsOf=deriveAsOfForSeason(seasonKey,S.asOf);
+  let selectedValue='';
+  if(currentAsOf?.date){
+    const match=matchdays.find(m=>asOfEquals(matchdayAsOfCutoff(m),currentAsOf));
+    if(match)selectedValue=String(match.number);
+  }
+  const options=[`<option value=""${selectedValue===''?' selected':''}>Aktuell</option>`]
+    .concat(matchdays.map(m=>`<option value="${escAttr(String(m.number))}"${String(m.number)===selectedValue?' selected':''}>nach Spieltag ${escHtml(String(m.number))} (${escHtml(formatDateDE(m.date))})</option>`));
+  return`<label class="ia-context-asof"><span class="ia-context-label">Zeitpunkt</span><select class="ia-context-select" onchange="setContextAsOf(this.value)">${options.join('')}</select></label>`;
+}
+window.setContextAsOf=function(value){
+  const seasonKey=getActiveSeasonKey();
+  if(!value){
+    setState({asOf:null});
+    return;
+  }
+  const matchday=getSeasonMatchdays(seasonKey).find(m=>String(m.number)===value);
+  if(!matchday)return;
+  const cutoff=matchdayAsOfCutoff(matchday);
+  if(!cutoff)return;
+  setState({asOf:{seasonKey,...cutoff}});
+};
+/**
+ * Globale Kontextleiste (6.3: "fest oben, auf allen Seiten"). Bewusst NICHT
+ * enthalten (strukturell vorgesehen, aber erst später befüllt, siehe
+ * Auftrag):
+ * - Datenstand/"veraltete Modelldaten": bräuchte ein inputHash/manifest.json,
  *   das es im Code nicht gibt (siehe UI-Inventar).
  * - Entwurfs-Hinweis: P0c (Vorschau-Modus).
  * - Globale Suche: eigenständige neue Fachlogik, nicht Teil der reinen
  *   IA-Shell.
- * Die Saison wird NUR gezeigt, wenn die aktuelle Seite tatsächlich aus
- * S.activeSeasonKey-Daten rendert (team/player, siehe applySeasonContext())
- * — die übrigen Seiten verwalten ihre Saison unabhängig (matchcenter/
- * lineupBuilder/einsatzCenter, siehe P0b.4-Kommentar) oder sind
- * saisonunabhängig; dort für sie eine "aktive Saison" zu behaupten wäre
- * eine erfundene, irreführende Information.
+ * Saison- UND Zeitpunkt-Auswahl werden NUR gezeigt, wenn die aktuelle Seite
+ * tatsächlich aus S.activeSeasonKey-Daten rendert (team/player, siehe
+ * applySeasonContext()) — die übrigen Seiten verwalten ihre Saison
+ * unabhängig (matchcenter/lineupBuilder/einsatzCenter, siehe
+ * P0b.4-Kommentar) oder sind saisonunabhängig; dort für sie eine "aktive
+ * Saison"/einen Zeitpunkt zu behaupten wäre eine erfundene, irreführende
+ * Information. WICHTIG: diese Auswahl setzt ausschließlich S.asOf — sie
+ * verdrahtet KEINE bestehende Renderfunktion (rTeamPage/Player-Profil) neu
+ * auf getSeasonStatsAsOf(); das bleibt bewusst einer späteren, separat zu
+ * beauftragenden Phase vorbehalten (siehe Abschlussbericht).
  */
 function rContextBar(){
   const seasonRelevant=S.page==='team'||S.page==='player';
   let seasonHtml='';
+  let asOfHtml='';
   if(seasonRelevant){
     const seasonKey=getActiveSeasonKey();
     if(seasonKey&&SEASON_CONFIG[seasonKey]){
       const seasonOptions=Object.keys(SEASON_CONFIG).map(key=>`<option value="${escAttr(key)}"${key===seasonKey?' selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
       seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="openSeason(this.value)">${seasonOptions}</select></label>`;
+      asOfHtml=rAsOfSelector(seasonKey);
     }
   }
-  return`<div class="ia-context-bar">${seasonHtml}</div>`;
+  return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}</div>`;
 }
 /** Bündelt Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
 function rIaShell(){
