@@ -1410,6 +1410,28 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 @media(max-width:360px){
   .ui-objektseite-kacheln{grid-template-columns:1fr}
 }
+
+/* ═══ P0b.5 — 5-Punkte-Hauptnavigation + Kontextleisten-Shell (6.3) ═══════
+   Eigener Namensraum ia-… (Informationsarchitektur), kollisionsfrei zu den
+   bestehenden .hdr-…/.nav-btn-Klassen (die unverändert bestehen bleiben,
+   siehe Script-Kommentar bei rIaShell()). Tippflächen ≥44px (6.7); die
+   Hauptnav scrollt bei schmalen Screens horizontal statt umzubrechen, damit
+   kein Seiten-Overflow entsteht (gleiches, bereits bestehendes Muster wie
+   .season-profile .tabs weiter oben). */
+.ia-context-bar{display:flex;align-items:center;gap:12px;min-height:38px;padding:4px 2px}
+.ia-context-season{display:flex;align-items:center;gap:6px}
+.ia-context-label{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-family:'DM Mono',monospace}
+.ia-context-select{background:var(--surf);border:1px solid var(--border-soft);color:var(--tx);border-radius:8px;padding:6px 9px;font-size:11px;font-family:'Inter',sans-serif;min-height:44px}
+.ia-mainnav{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:8px}
+.ia-mainnav-btn{flex:0 0 auto;min-height:44px;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border-soft);background:var(--surf);color:var(--text-muted);font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;transition:.15s}
+.ia-mainnav-btn:hover{color:var(--text-main);border-color:var(--text-faint)}
+.ia-mainnav-btn.active{color:#000;background:var(--red2);border-color:var(--red2)}
+.ia-placeholder-page{display:grid;gap:14px}
+.ia-placeholder-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-main)}
+
+@media(max-width:600px){
+  .ia-context-bar{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
@@ -3250,7 +3272,7 @@ function asOfEquals(a,b){
  *      a), da `hashSegmentToSeasonKey()` nur "NN-NN" akzeptiert und keiner
  *      der sieben Seitenschlüssel dieses Muster erfüllt).
  */
-const HASH_GLOBAL_PAGES=['matchcenter','lineupBuilder','einsatzCenter','comparisonCenter','hallOfFame','alltimePlayers','lexicon'];
+const HASH_GLOBAL_PAGES=['matchcenter','lineupBuilder','einsatzCenter','comparisonCenter','hallOfFame','alltimePlayers','lexicon','overview','ligaGegner'];
 const HASH_SEASON_PAGE_SEGMENTS=['player'];
 
 function decodeHashSegmentSafe(segment){
@@ -3413,6 +3435,8 @@ async function applyGlobalPageFromHash(page,objectId){
   if(page==='lineupBuilder')return window.openLineupBuilder();
   if(page==='einsatzCenter')return window.openEinsatzCenter();
   if(page==='lexicon')return window.openLexicon();
+  if(page==='overview')return window.openOverview();
+  if(page==='ligaGegner')return window.openLigaGegner();
 }
 /**
  * Wendet einen geparsten Hash auf den State an — aber nur, wenn er sich
@@ -21755,7 +21779,12 @@ function _render(root){
   const pd=S.players.find(p=>p.key===S.activeP);
 
   // ── HEADER ──
-  const hdrHtml=`<div class="hdr">
+  // P0b.5: rIaShell() wird VOR dem bestehenden, unveränderten hdr-Block
+  // eingefügt (rein additiv an dieser Stelle) — siehe rIaShell()/rMainNav()/
+  // rContextBar() weiter unten. Der bestehende hdr-Block inkl. aller
+  // bisherigen Buttons bleibt exakt erhalten, damit kein bestehender
+  // Einstiegspunkt verloren geht (siehe P0b.5-Kommentar dort).
+  const hdrHtml=`${rIaShell()}<div class="hdr">
     <div class="hdr-l">
       <img class="hdr-logo" src="data:image/png;base64,${LOGO_B64}" alt="VfB Ulm">
       <div>
@@ -21778,6 +21807,14 @@ function _render(root){
   const errHtml=S.errors.length?`<details style="margin-bottom:9px"><summary style="font-size:10px;color:#f87171;cursor:pointer">⚠ ${S.errors.length} Datenwarnung${S.errors.length!==1?'en':''}</summary><div style="font-family:'DM Mono',monospace;font-size:9.5px;color:var(--tx3);padding:6px 0 0 6px;line-height:1.7">${S.errors.map(e=>`<div style="color:#f87171">⚠ ${e}</div>`).join('')}</div></details>`:'';
 
   // ── ADDITIVE NAVIGATION PAGES ──
+  if(S.page==='overview'){
+    root.innerHTML=hdrHtml+errHtml+`<div>${rOverviewPlaceholderPage()}</div>`;
+    return;
+  }
+  if(S.page==='ligaGegner'){
+    root.innerHTML=hdrHtml+errHtml+`<div>${rLigaGegnerPlaceholderPage()}</div>`;
+    return;
+  }
   if(S.page==='seasonLanding'){
     root.innerHTML=hdrHtml+errHtml+`<div>${rSeasonLandingPage()}</div>`;
     return;
@@ -22239,6 +22276,144 @@ function uiObjektseite({
   }
 
   return`<div class="ui-objektseite">${headHtml}${headlineHtml}${kachelnHtml}${tabsHtml}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  P0b.5 — 5-PUNKTE-HAUPTNAVIGATION + KONTEXTLEISTEN-SHELL (Spezifikation 6.3)
+// ═══════════════════════════════════════════════════════
+// Strukturelle IA-Schicht. WICHTIG zur Abgrenzung:
+// - Die 5 Hauptpunkte sind exakt aus 6.3 übernommen (Übersicht, Spieltage,
+//   Team, Liga & Gegner, Labor) — keine eigenen Namen, keine sechste
+//   Navigation.
+// - Rein additiv in _render(): der bestehende hdr-Block (Logo, Titel,
+//   Stats-Zeile, bisherige 6 Nav-Buttons, "← Cover", "📥 Excel") bleibt
+//   UNVERÄNDERT bestehen (siehe hdrHtml oben) — rIaShell() wird davor
+//   eingefügt, nichts Bestehendes wird entfernt oder ersetzt. Das ist
+//   bewusst so gewählt: mehrere der 5 Hauptpunkte (Spieltage, Team, Labor)
+//   fassen mehrere bestehende Seiten zusammen, für die es noch keine
+//   eigene, in sich geschlossene neue Zielseite gibt — bis diese in
+//   späteren Phasen gebaut werden, bleiben die bisherigen Einstiege
+//   parallel nutzbar ("Wenn eine Seite noch keinen passenden neuen
+//   Zielzustand besitzt, bleibt ihr bestehender Einstieg erhalten").
+// - Zuordnung bestehender Seiten zu den 5 Punkten (aus 6.3-Tabelle
+//   abgeleitet, siehe MAIN_NAV_ACTIVE_PAGES): "Spieltage" vereint
+//   Matchcenter/Lineup Builder/Einsatz-Center (6.3: "wandern hierher"),
+//   "Team" vereint Spieler/Team/Hall of Fame/Alltime Spieler (6.3: "Kader,
+//   ..., Vereinsgeschichte"), "Labor" vereint das Vergleichszentrum (6.3:
+//   "Vergleichszentrum; neu"). Für "Übersicht" und "Liga & Gegner" gibt es
+//   laut 6.3-Tabelle ("neu") noch KEINE bestehende Seite — sie erhalten
+//   deshalb bewusst nur einen ehrlichen Platzhalter (rOverviewPlaceholderPage/
+//   rLigaGegnerPlaceholderPage, über die bestehende uiNotiz()-Komponente aus
+//   P0b.2, keine erfundenen Inhalte) statt eines vorgezogenen Umbaus (der
+//   erst P0b.7/spätere Phasen ist).
+// - Aktiver Navigationspunkt wird IMMER aus S.page abgeleitet
+//   (mainNavActiveKeyForPage) — keine zweite, konkurrierende Zustandsquelle.
+// - Klicks auf die 5 Punkte rufen ausschließlich bestehende Funktionen auf
+//   (setPage()/openOverview()/openLigaGegner()) bzw. für "Übersicht"/
+//   "Liga & Gegner" zwei neue, aber trivialen Opener nach exakt demselben
+//   Muster wie die bestehenden open…()-Funktionen.
+// - Hash-Adressierbarkeit nutzt ausschließlich die bestehende P0b.4-
+//   Routing-Infrastruktur: 'overview'/'ligaGegner' werden lediglich zu
+//   HASH_GLOBAL_PAGES hinzugefügt (siehe dort) — computeCurrentAppHash()
+//   selbst musste dafür NICHT verändert werden, da es HASH_GLOBAL_PAGES
+//   bereits generisch abfragt.
+
+const MAIN_NAV_POINTS=[
+  {key:'uebersicht',label:'Übersicht'},
+  {key:'spieltage',label:'Spieltage'},
+  {key:'team',label:'Team'},
+  {key:'ligaGegner',label:'Liga & Gegner'},
+  {key:'labor',label:'Labor'},
+];
+const MAIN_NAV_ACTIVE_PAGES={
+  uebersicht:['overview'],
+  spieltage:['matchcenter','lineupBuilder','einsatzCenter'],
+  team:['player','team','hallOfFame','alltimePlayers'],
+  ligaGegner:['ligaGegner'],
+  labor:['comparisonCenter'],
+};
+/** Reine Ableitung: welcher der 5 Hauptpunkte ist für den gegebenen S.page-Wert aktiv? null, wenn keiner zutrifft (z.B. 'lexicon', 'seasonLanding'). */
+function mainNavActiveKeyForPage(page){
+  for(const key of Object.keys(MAIN_NAV_ACTIVE_PAGES)){
+    if(MAIN_NAV_ACTIVE_PAGES[key].includes(page))return key;
+  }
+  return null;
+}
+window.goToMainNavPoint=function(key){
+  if(key==='uebersicht')return window.openOverview();
+  if(key==='ligaGegner')return window.openLigaGegner();
+  if(key==='spieltage')return setPage('matchcenter');
+  if(key==='team')return setPage('team');
+  if(key==='labor')return setPage('comparisonCenter');
+};
+function rMainNav(){
+  const activeKey=mainNavActiveKeyForPage(S.page);
+  const buttons=MAIN_NAV_POINTS.map(p=>`<button type="button" class="ia-mainnav-btn${p.key===activeKey?' active':''}" onclick="goToMainNavPoint('${p.key}')">${escHtml(p.label)}</button>`).join('');
+  return`<nav class="ia-mainnav" aria-label="Hauptnavigation">${buttons}</nav>`;
+}
+/**
+ * Neue, triviale Platzhalter-Seiten für die beiden laut 6.3 komplett neuen
+ * Hauptpunkte ("Übersicht" ersetzt bisher Cover/leere Saison-Landingpage,
+ * "Liga & Gegner" existiert bisher gar nicht). Kein ensureGlobalDataLoaded()
+ * nötig, da keine Daten dargestellt werden — nur eine ehrliche
+ * Status-Notiz über die bestehende uiNotiz()-Komponente.
+ */
+window.openOverview=async()=>{
+  showMainShell();
+  setState({screen:'main',page:'overview'});
+};
+window.openLigaGegner=async()=>{
+  showMainShell();
+  setState({screen:'main',page:'ligaGegner'});
+};
+function rOverviewPlaceholderPage(){
+  return`<div class="ia-placeholder-page">
+    <div class="ia-placeholder-title">Übersicht</div>
+    ${uiNotiz('Die phasenabhängige Übersicht (Abschnitt 6.3.1) wird in einer späteren Phase (P0b.7) mit echten Inhalten befüllt. Bis dahin bleiben die bestehenden Ansichten über die Navigation erreichbar.')}
+  </div>`;
+}
+function rLigaGegnerPlaceholderPage(){
+  return`<div class="ia-placeholder-page">
+    <div class="ia-placeholder-title">Liga & Gegner</div>
+    ${uiNotiz('Dieser Bereich (Tabelle, Power Ranking, Gegnerprofile, Liga-Ranglisten) ist laut Spezifikation neu und wird in einer späteren Phase befüllt. Bestehende Inhalte, z.B. Gegnerprofile im Matchcenter, bleiben bis dahin unverändert erreichbar.')}
+  </div>`;
+}
+/**
+ * Globale Kontextleiste (6.3: "fest oben, auf allen Seiten"). In dieser
+ * Phase bewusst NUR mit der Saison-Anzeige/-Auswahl befüllt — das ist die
+ * einzige der in 6.3 gelisteten Kontextleisten-Informationen, die aktuell
+ * zuverlässig und ohne neue Fachlogik aus dem bestehenden State ableitbar
+ * ist. Bewusst NICHT enthalten (strukturell vorgesehen, aber erst später
+ * befüllt, siehe Auftrag):
+ * - Zeitpunkt-Auswahl (asOf): P0b.6.
+ * - Datenstand/"veraltete Modelldaten": bräuchte Spieltag-/Matchday-Logik
+ *   (diese Phase darf keine einführen) und ein inputHash/manifest.json,
+ *   das es im Code nicht gibt (siehe UI-Inventar).
+ * - Entwurfs-Hinweis: P0c (Vorschau-Modus).
+ * - Globale Suche: eigenständige neue Fachlogik, nicht Teil der reinen
+ *   IA-Shell.
+ * Die Saison wird NUR gezeigt, wenn die aktuelle Seite tatsächlich aus
+ * S.activeSeasonKey-Daten rendert (team/player, siehe applySeasonContext())
+ * — die übrigen Seiten verwalten ihre Saison unabhängig (matchcenter/
+ * lineupBuilder/einsatzCenter, siehe P0b.4-Kommentar) oder sind
+ * saisonunabhängig; dort für sie eine "aktive Saison" zu behaupten wäre
+ * eine erfundene, irreführende Information.
+ */
+function rContextBar(){
+  const seasonRelevant=S.page==='team'||S.page==='player';
+  let seasonHtml='';
+  if(seasonRelevant){
+    const seasonKey=getActiveSeasonKey();
+    if(seasonKey&&SEASON_CONFIG[seasonKey]){
+      const seasonOptions=Object.keys(SEASON_CONFIG).map(key=>`<option value="${escAttr(key)}"${key===seasonKey?' selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
+      seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="openSeason(this.value)">${seasonOptions}</select></label>`;
+    }
+  }
+  return`<div class="ia-context-bar">${seasonHtml}</div>`;
+}
+/** Bündelt Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
+function rIaShell(){
+  return`${rContextBar()}${rMainNav()}`;
 }
 
 // Init
