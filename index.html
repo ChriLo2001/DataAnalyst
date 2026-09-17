@@ -3199,15 +3199,79 @@ function asOfEquals(a,b){
   return timeA===timeB;
 }
 /**
+ * P0b.4 — Erweiterung des P0a.8-Hash-Routings um Seiten-/Objektzustand
+ * (Spezifikation 6.8: "Die bestehenden setPage()-Aufrufe werden auf das
+ * Routing umgestellt; S.page wird aus der Adresse abgeleitet, nicht
+ * umgekehrt."). Baut auf dem bestehenden Season/asOf-Format auf, ERSETZT es
+ * nicht: ein Hash ohne Seiten-/Objektsegment (reines P0a.8-Format) bleibt
+ * unverändert gültig (siehe parseAppHash/buildAppHash unten).
+ *
+ * WICHTIG — bewusst NICHT die neue 6.3/6.8-Seitenstruktur (Übersicht/
+ * Spieltage/Team/Liga & Gegner/Labor, z.B. #/25-26/spieltage/7 oder
+ * #/25-26/team/spieler/2424): diese Hauptnavigation, die Spieltagsseite und
+ * die Kontextleiste existieren im Code noch nicht (P0b.5+). Stattdessen
+ * werden die BEREITS BESTEHENDEN S.page-Werte (siehe UI-Inventar, Abschnitt
+ * 1.1) 1:1 in die Adresse aufgenommen — kein neuer Namensraum, keine
+ * Umbenennung.
+ *
+ * Zwei Formen, abgeleitet aus der TATSÄCHLICHEN Code-Struktur (nicht
+ * angenommen): die Prüfung von openMatchcenter()/openLineupBuilder()/
+ * openEinsatzCenter()/openComparisonCenter()/openHallOfFame()/
+ * openAllTimePlayers()/openLexicon() zeigt, dass diese sieben Seiten je eine
+ * EIGENE, von S.activeSeasonKey unabhängige Season-/Datenbasis verwalten
+ * (z.B. S.matchcenterSeasonKey) oder saisonübergreifend sind — die
+ * P0a.8-Saison im Hash steuert sie nicht. Nur 'team' und 'player' lesen
+ * tatsächlich aus S.activeSeasonKey-Daten (S.gamesData/S.players/
+ * S.standings, siehe applySeasonContext()).
+ *
+ *   a) Saisongebundene Form (unverändert kompatibel zu P0a.8):
+ *      #/<seasonKey mit "-">[/player[/<activeP>]][?asOf=...]
+ *      - Kein zweites Segment ODER ein unbekanntes zweites Segment
+ *        => Seite bleibt der bestehende Default (team bzw. seasonLanding,
+ *        von applySeasonContext() ohnehin schon so gesetzt) — deshalb wird
+ *        für 'team'/'seasonLanding' bewusst KEIN Segment geschrieben, das
+ *        wäre reine, informationslose Redundanz.
+ *      - 'player' ist der einzige saisongebundene Seitenwert mit einem
+ *        eindeutigen Einzel-Objekt (S.activeP, das bereits von
+ *        applySeasonContext() gegen S.players validiert wird) — genau der
+ *        6.8-Beispielfall "ein Objekt unter einer Seite" (dort: .../spieler/
+ *        2424), hier mit dem bestehenden S.page/S.activeP-Vokabular.
+ *   b) Globale, saisonunabhängige Form (neu, kein P0a.8-Äquivalent):
+ *      #/<page>[/<objectId>]
+ *      page ∈ {matchcenter, lineupBuilder, einsatzCenter, comparisonCenter,
+ *      hallOfFame, alltimePlayers, lexicon}. <objectId> wird nur für
+ *      'alltimePlayers' (S.globalPlayerId) geschrieben/gelesen — die übrigen
+ *      sechs Seiten haben keinen einzelnen, eindeutigen Objektparameter,
+ *      der laut 6.8 dorthin gehören würde (Matchcenter z.B. hat Gegner+
+ *      Kontext+Tab als mehrere, voneinander abhängige Filter — das wird
+ *      bewusst NICHT in dieser Phase in den Hash aufgenommen, um keine neue
+ *      fachliche Zustandslogik im Routing zu erfinden).
+ *      Diese Form beginnt NICHT mit einem Saison-Segment (kollisionsfrei zu
+ *      a), da `hashSegmentToSeasonKey()` nur "NN-NN" akzeptiert und keiner
+ *      der sieben Seitenschlüssel dieses Muster erfüllt).
+ */
+const HASH_GLOBAL_PAGES=['matchcenter','lineupBuilder','einsatzCenter','comparisonCenter','hallOfFame','alltimePlayers','lexicon'];
+const HASH_SEASON_PAGE_SEGMENTS=['player'];
+
+function decodeHashSegmentSafe(segment){
+  try{return decodeURIComponent(segment);}catch(e){return null;}
+}
+
+/**
  * Reine Parse-Funktion: liest einen rohen location.hash-String und liefert
- * entweder {seasonKey, asOf} (asOf ggf. null) oder null bei fehlendem,
- * ungültigem oder unbekanntem Hash. Wirft nie. Zusätzliche Pfadsegmente nach
- * der Saison (z.B. eine künftige /spieltage/7-Route aus 6.8) und unbekannte
- * Query-Parameter werden ignoriert statt einen Fehler auszulösen oder die
- * Saison falsch zuzuordnen — sie gehören zu noch nicht implementierten
- * späteren Phasen. Eine unbekannte/ungültige Saison macht dagegen den
- * gesamten Hash ungültig (null), damit nie eine falsche Saison aktiviert
- * wird.
+ * entweder ein Zustandsobjekt oder null bei fehlendem, ungültigem oder
+ * unbekanntem Hash. Wirft nie.
+ *
+ * Rückgabeform a) Saison: {kind:'season', seasonKey, asOf, page, objectId}
+ * Rückgabeform b) Global:  {kind:'global', page, objectId}
+ * `page`/`objectId` sind null, wenn nicht im Hash vorhanden bzw. nicht zum
+ * bekannten Vokabular gehörend.
+ *
+ * Zusätzliche, nicht erkannte Pfadsegmente (z.B. eine künftige /spieltage/7-
+ * Route aus 6.8) und unbekannte Query-Parameter werden ignoriert statt einen
+ * Fehler auszulösen oder die Saison falsch zuzuordnen. Eine unbekannte/
+ * ungültige Saison UND kein bekannter globaler Seitenname macht den gesamten
+ * Hash ungültig (null), damit nie ein falscher Zustand aktiviert wird.
  */
 function parseAppHash(rawHash){
   let hash=String(rawHash||'');
@@ -3217,9 +3281,25 @@ function parseAppHash(rawHash){
   const queryIndex=hash.indexOf('?');
   const pathPart=queryIndex===-1?hash:hash.slice(0,queryIndex);
   const queryPart=queryIndex===-1?'':hash.slice(queryIndex+1);
-  const segment=pathPart.split('/')[0];
-  const seasonKey=hashSegmentToSeasonKey(segment);
+  const segments=pathPart.split('/').filter(s=>s!=='');
+  if(!segments.length)return null;
+  const first=segments[0];
+
+  if(HASH_GLOBAL_PAGES.includes(first)){
+    const objectId=segments[1]!==undefined?decodeHashSegmentSafe(segments[1]):null;
+    return{kind:'global',page:first,objectId};
+  }
+
+  const seasonKey=hashSegmentToSeasonKey(first);
   if(!seasonKey||!SEASON_CONFIG[seasonKey])return null;
+
+  let page=null,objectId=null;
+  const pageSegment=segments[1];
+  if(pageSegment&&HASH_SEASON_PAGE_SEGMENTS.includes(pageSegment)){
+    page=pageSegment;
+    if(segments[2]!==undefined)objectId=decodeHashSegmentSafe(segments[2]);
+  }
+
   let asOf=null;
   if(queryPart){
     let raw=null;
@@ -3233,16 +3313,20 @@ function parseAppHash(rawHash){
       }
     }
   }
-  return{seasonKey,asOf};
+  return{kind:'season',seasonKey,asOf,page,objectId};
 }
 /**
- * Reine Gegenfunktion zu parseAppHash(): seasonKey/asOf (asOf bereits über
- * deriveAsOfForSeason auf seasonKey beschränkt) → Hash-String. Liefert ''
- * ohne seasonKey.
+ * Reine Gegenfunktion zu parseAppHash() für Form a) (Saison). seasonKey/asOf
+ * wie bisher (P0a.8); `page`/`objectId` optional, nur 'player' wird als
+ * Segment schreibend unterstützt (siehe Erklärung oben).
  */
-function buildAppHash(seasonKey,asOf){
+function buildAppHash(seasonKey,asOf,page=null,objectId=null){
   if(!seasonKey)return'';
   let hash=`#/${seasonKeyToHashSegment(seasonKey)}`;
+  if(page&&HASH_SEASON_PAGE_SEGMENTS.includes(page)){
+    hash+=`/${encodeURIComponent(page)}`;
+    if(objectId)hash+=`/${encodeURIComponent(objectId)}`;
+  }
   if(asOf?.date){
     const value=asOf.startTime?`${asOf.date}T${asOf.startTime}`:asOf.date;
     hash+=`?asOf=${encodeURIComponent(value)}`;
@@ -3250,16 +3334,45 @@ function buildAppHash(seasonKey,asOf){
   return hash;
 }
 /**
+ * Gegenfunktion zu parseAppHash() für Form b) (globale Seiten). Liefert ''
+ * ohne bekannten Seitenschlüssel.
+ */
+function buildGlobalPageHash(page,objectId=null){
+  if(!page||!HASH_GLOBAL_PAGES.includes(page))return'';
+  let hash=`#/${encodeURIComponent(page)}`;
+  if(objectId)hash+=`/${encodeURIComponent(objectId)}`;
+  return hash;
+}
+/**
+ * Baut aus einem von parseAppHash() gelieferten Zustandsobjekt exakt den
+ * Hash-String, den dieser Zustand ergäbe — genutzt von applyAppHash() für
+ * den Idempotenz-/Endlosloop-Schutz (siehe dort).
+ */
+function buildHashStringFromParsed(parsed){
+  if(!parsed)return'';
+  if(parsed.kind==='global')return buildGlobalPageHash(parsed.page,parsed.objectId);
+  return buildAppHash(parsed.seasonKey,parsed.asOf,parsed.page,parsed.objectId);
+}
+/**
  * Leitet den für den aktuellen State korrekten Hash ab. Liefert '' solange
  * kein Screen "main" aktiv ist (Cover bleibt ohne Hash — bisheriges
- * Default-Verhalten, siehe Test A) und hängt bewusst NICHT von S.page ab
- * (kein Seiten-Routing in dieser Phase).
+ * Default-Verhalten, siehe Test A). Ab P0b.4 zusätzlich seiten-/
+ * objektabhängig (siehe Erklärung oben): globale Seiten (HASH_GLOBAL_PAGES)
+ * ignorieren die Saison vollständig; bei saisongebundenen Seiten wird nur
+ * für 'player' ein Segment erzeugt, alle anderen (insbesondere der Default
+ * 'team'/'seasonLanding') bleiben wie bisher segmentlos.
  */
 function computeCurrentAppHash(){
   if(S.screen!=='main')return'';
+  if(HASH_GLOBAL_PAGES.includes(S.page)){
+    const objectId=S.page==='alltimePlayers'?(S.globalPlayerId||null):null;
+    return buildGlobalPageHash(S.page,objectId);
+  }
   const seasonKey=getActiveSeasonKey();
   if(!seasonKey||!SEASON_CONFIG[seasonKey])return'';
-  return buildAppHash(seasonKey,deriveAsOfForSeason(seasonKey,S.asOf));
+  const pageSegment=S.page==='player'?'player':null;
+  const objectId=pageSegment==='player'?(S.activeP||null):null;
+  return buildAppHash(seasonKey,deriveAsOfForSeason(seasonKey,S.asOf),pageSegment,objectId);
 }
 /**
  * Schreibt den aus dem aktuellen State abgeleiteten Hash in die Adresse —
@@ -3268,7 +3381,7 @@ function computeCurrentAppHash(){
  * hashchange-Listener (siehe applyAppHash: ein von hier geschriebener Hash
  * beschreibt exakt den bereits aktiven Zustand und führt dort zu einem
  * No-Op). Wird vom bestehenden, zentralen Mutationspunkt setState() nach
- * jeder Zustandsänderung aufgerufen.
+ * jeder Zustandsänderung aufgerufen. Unverändert seit P0a.8.
  */
 function syncHashFromState(){
   try{
@@ -3278,22 +3391,58 @@ function syncHashFromState(){
   }catch(e){/* Adressleiste darf nie den restlichen State zum Absturz bringen */}
 }
 /**
+ * Wendet einen von einer 'alltimePlayers'/anderen globalen Seite ausgelösten
+ * Hash an. Reihenfolge bewusst "erst Seite, dann Objekt-Verfeinerung": die
+ * bestehenden open…()-Funktionen setzen bereits sinnvolle Defaults (z.B.
+ * openAllTimePlayers() behält ein schon gesetztes S.globalPlayerId oder
+ * wählt sonst den ersten Eintrag) — erst danach wird, falls nötig, mit dem
+ * aus dem Hash gelieferten Objekt überschrieben. Eine ungültige
+ * 'alltimePlayers'-objectId führt zu keinem Fehler: rAllTimePlayersPage()
+ * hat bereits einen bestehenden Fallback (active=rows.find(...)||
+ * mainRows[0]||sgRows[0]), der hier nicht dupliziert wird.
+ */
+async function applyGlobalPageFromHash(page,objectId){
+  if(page==='alltimePlayers'){
+    await window.openAllTimePlayers();
+    if(objectId&&objectId!==S.globalPlayerId)setState({globalPlayerId:objectId});
+    return;
+  }
+  if(page==='hallOfFame')return window.openHallOfFame();
+  if(page==='comparisonCenter')return window.openComparisonCenter();
+  if(page==='matchcenter')return window.openMatchcenter();
+  if(page==='lineupBuilder')return window.openLineupBuilder();
+  if(page==='einsatzCenter')return window.openEinsatzCenter();
+  if(page==='lexicon')return window.openLexicon();
+}
+/**
  * Wendet einen geparsten Hash auf den State an — aber nur, wenn er sich
- * tatsächlich vom aktuell aktiven Zustand unterscheidet. Diese Idempotenz
- * ist zugleich der Schutz gegen einen Endlosloop zwischen hashchange und
- * syncHashFromState(): ein Hash, der bereits den aktiven Zustand beschreibt
- * (egal ob von aussen oder von syncHashFromState() selbst gesetzt), führt
- * hier zu einem No-Op statt zu einem erneuten setState()/openSeason()-Aufruf.
+ * tatsächlich vom aktuell aktiven Zustand unterscheidet. Der Vergleich läuft
+ * jetzt über computeCurrentAppHash() selbst (statt manuell nachgebauter
+ * Einzelvergleiche): stimmt der aus `parsed` gebaute Ziel-Hash bereits mit
+ * dem Hash überein, den der aktuelle State ohnehin ergäbe, ist der Zustand
+ * per Definition schon erreicht — No-Op. Das ist zugleich der Schutz gegen
+ * einen Endlosloop zwischen hashchange und syncHashFromState(): ein Hash,
+ * der bereits den aktiven Zustand beschreibt (egal ob von aussen oder von
+ * syncHashFromState() selbst gesetzt), führt hier zu einem No-Op statt zu
+ * einem erneuten setState()/openSeason()-Aufruf.
  */
 async function applyAppHash(parsed){
   if(!parsed)return;
-  const onMain=S.screen==='main';
-  const currentSeasonKey=getActiveSeasonKey();
-  const currentAsOf=onMain?deriveAsOfForSeason(currentSeasonKey,S.asOf):null;
-  const sameSeason=onMain&&parsed.seasonKey===currentSeasonKey;
-  if(sameSeason&&asOfEquals(parsed.asOf,currentAsOf))return;
-  if(!sameSeason)await window.openSeason(parsed.seasonKey);
+  const targetHash=buildHashStringFromParsed(parsed);
+  if(targetHash&&targetHash===computeCurrentAppHash())return;
+
+  if(parsed.kind==='global'){
+    await applyGlobalPageFromHash(parsed.page,parsed.objectId);
+    return;
+  }
+
+  const currentSeasonKey=S.screen==='main'?getActiveSeasonKey():null;
+  if(parsed.seasonKey!==currentSeasonKey)await window.openSeason(parsed.seasonKey);
   if(!asOfEquals(parsed.asOf,deriveAsOfForSeason(parsed.seasonKey,S.asOf)))setState({asOf:parsed.asOf});
+  if(parsed.page==='player'){
+    const validPlayer=parsed.objectId&&(S.players||[]).some(p=>p.key===parsed.objectId);
+    setState(validPlayer?{page:'player',activeP:parsed.objectId}:{page:'player'});
+  }
 }
 /**
  * Einmaliger Einstiegspunkt beim Laden: wendet einen ggf. bereits in der
