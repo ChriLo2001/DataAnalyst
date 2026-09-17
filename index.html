@@ -1309,6 +1309,82 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
   .season-profile .tabs{overflow-x:auto}
   .season-profile .season-duo-visual svg{min-width:620px}
 }
+
+/* ═══ P0b.2 — Komponentenbibliothek-Fundament (Spezifikation 6.5) ═══════
+   Additive, aktuell UNGENUTZTE Bausteine (ui-…-Präfix, siehe die zugehörigen
+   uiKennzahlKachel()/…-Funktionen im Script-Teil). Keine bestehende Seite
+   nutzt diese Klassen — bewusst kein Umbau in P0b.2. Wiederverwendet
+   ausschließlich bereits vorhandene, kaum genutzte Root-Variablen
+   (--card-bg, --radius-card, --radius-soft, --shadow-soft, --border-soft,
+   --text-main, --text-muted, --text-faint, --success, --warning, --danger,
+   --info) statt neuer, konkurrierender Farbtokens (6.6: bestehendes dunkles
+   Farbschema weiterverwenden). Tap-Flächen für interaktive Elemente werden
+   über unsichtbare, absolut positionierte ::before-Flächen auf 44×44px
+   vergrößert, ohne die sichtbare Größe zu verändern (6.7). */
+.ui-kpi-tile,.ui-hinweis-karte,.ui-methodenbox,.ui-notiz,.ui-platzhalter{background:var(--card-bg);border:1px solid var(--border-soft);border-radius:var(--radius-soft);box-shadow:var(--shadow-soft);padding:12px 14px;min-width:0;overflow-wrap:anywhere}
+.ui-kpi-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.ui-kpi-label{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;font-family:'DM Mono',monospace}
+.ui-kpi-value{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text-main);margin-top:4px;line-height:1.1}
+.ui-kpi-unit{font-size:11px;font-weight:600;color:var(--text-muted);margin-left:4px}
+.ui-kpi-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;flex-wrap:wrap}
+.ui-kpi-meta{font-size:10px;color:var(--text-faint);font-family:'DM Mono',monospace}
+.ui-kpi-n{margin-right:4px}
+.ui-info-icon{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--border-soft);color:var(--text-faint);font-size:10px;cursor:help;flex-shrink:0}
+.ui-info-icon::before{content:'';position:absolute;inset:-14px}
+.ui-info-icon-link{text-decoration:none;position:relative}
+.ui-delta{font-size:11px;font-weight:700;font-family:'DM Mono',monospace}
+.ui-delta-up{color:var(--success)}
+.ui-delta-down{color:var(--danger)}
+.ui-delta-neutral{color:var(--text-faint)}
+.ui-reliability{font-size:11px;letter-spacing:1px;cursor:help}
+.ui-reliability-high{color:var(--success)}
+.ui-reliability-medium{color:var(--warning)}
+.ui-reliability-low{color:var(--text-faint)}
+
+.ui-kernaussage{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;line-height:1.4;color:var(--text-main)}
+.ui-kernaussage a{color:inherit;text-decoration:underline;text-decoration-color:var(--border-strong)}
+
+.ui-hinweis-karte{border-left:3px solid var(--info)}
+.ui-hinweis-text{font-size:12.5px;line-height:1.5;color:var(--text-main)}
+.ui-hinweis-beleg{font-size:10.5px;color:var(--text-muted);margin-top:5px;font-family:'DM Mono',monospace}
+.ui-hinweis-foot{margin-top:5px}
+
+.ui-rangliste{display:grid;gap:6px}
+.ui-rangliste-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(60px,120px) minmax(36px,auto);align-items:center;gap:8px}
+.ui-rangliste-label{font-size:12px;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ui-rangliste-label a{color:inherit;text-decoration:none;border-bottom:1px dotted var(--border-soft)}
+.ui-rangliste-bar-track{position:relative;height:8px;border-radius:999px;background:rgba(148,163,184,.14);overflow:hidden}
+.ui-rangliste-bar{position:absolute;left:0;top:0;bottom:0;background:var(--info);border-radius:999px}
+.ui-rangliste-value{font-size:11px;font-weight:700;color:var(--text-muted);text-align:right;font-family:'DM Mono',monospace}
+.ui-rangliste-all{position:relative;justify-self:start;display:inline-flex;align-items:center;min-height:44px;font-size:11px;color:var(--info);text-decoration:none;margin-top:2px}
+
+.ui-verlauf{display:block;width:100%;height:auto}
+.ui-verlauf-marker{stroke:var(--warning);stroke-width:1.4;stroke-dasharray:3 2}
+
+.ui-intervall-balken{display:grid;gap:5px}
+.ui-intervall-track{position:relative;height:6px;border-radius:999px;background:rgba(148,163,184,.14)}
+.ui-intervall-band{position:absolute;top:0;bottom:0;background:rgba(59,130,246,.35);border-radius:999px}
+.ui-intervall-point{position:absolute;top:-3px;width:2px;height:12px;background:var(--info);transform:translateX(-1px)}
+.ui-intervall-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+
+.ui-methodenbox{font-size:11.5px;color:var(--text-muted)}
+.ui-methodenbox summary{cursor:pointer;font-weight:700;color:var(--text-main);font-family:'Syne',sans-serif;font-size:12px;min-height:44px;display:flex;align-items:center;gap:6px}
+.ui-methodenbox-section{margin-top:6px}
+.ui-methodenbox-heading{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);font-family:'DM Mono',monospace}
+.ui-methodenbox ul{margin:4px 0 0 16px;padding:0}
+.ui-methodenbox li{margin-bottom:2px}
+
+.ui-notiz{font-size:11.5px;color:var(--text-faint);font-style:italic}
+
+.ui-platzhalter{display:grid;gap:8px}
+.ui-platzhalter-line{display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgba(148,163,184,.08),rgba(148,163,184,.18),rgba(148,163,184,.08));background-size:200% 100%;animation:ui-platzhalter-shimmer 1.6s ease-in-out infinite}
+@keyframes ui-platzhalter-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.ui-platzhalter-line{animation:none}}
+
+@media(max-width:600px){
+  .ui-rangliste-row{grid-template-columns:minmax(0,1fr) minmax(48px,90px) minmax(30px,auto);gap:6px}
+  .ui-kpi-value{font-size:19px}
+}
 </style>
 </head>
 <body>
@@ -21638,6 +21714,261 @@ function _render(root){
     <div class="season-tab-content">${tabContent}</div>
     ${ev.length===0?`<div class="wrn-box">⚠ Keine Scorer-Ereignisse für ${escHtml(pd.label)}.</div>`:''}
   </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  P0b.2 — KOMPONENTENBIBLIOTHEK-FUNDAMENT (Spezifikation 6.5)
+// ═══════════════════════════════════════════════════════
+// Additive, eigenständige Render-Bausteine mit festem Präfix `ui…` (6.5:
+// "eigene Render-Funktionen mit festem Präfix, z. B. ui…, und CSS-Klassen
+// statt Inline-Styles"). WICHTIG: Diese Funktionen werden von KEINER
+// bestehenden Seite aufgerufen — P0b.2 legt ausschließlich das Fundament,
+// keine bestehende Seite wird umgestellt (das bleibt P0b.3+ vorbehalten).
+//
+// Jede Komponente ist eine reine Funktion: liest ausschließlich ihre
+// Argumente, mutiert weder sie noch globalen Zustand, greift nicht auf
+// S/SEASONS/PLAYER_REGISTRY/S.asOf zu und enthält keine fachliche Berechnung
+// — insbesondere KEINE Ermittlung von Verlässlichkeit, Signifikanz oder
+// Konfidenzintervallen (6.9: "Keine erfundenen Werte oder
+// Konfidenzintervalle"). All das liefert der spätere Aufrufer bereits fertig
+// berechnet; diese Bausteine stellen es nur einheitlich dar.
+//
+// Farb-/Zahlkonventionen (6.6/6.9): deutsches Zahlenformat (Komma), Einheiten
+// werden angezeigt sofern übergeben, Veränderungen (▲/▼) sind nur dann
+// farbig, wenn der Aufrufer sie explizit als signifikant markiert (sonst
+// neutral), Verlässlichkeit wird immer als 3-Stufen-Punktanzeige mit
+// Tooltip-Text dargestellt und nie ausgeblendet, nur abgeschwächt — und nur
+// dann gerendert, wenn der Aufrufer überhaupt einen Wert übergibt (keine
+// erfundene Verlässlichkeitsstufe als Default).
+//
+// Wiederverwendet werden bewusst der bestehende globale Tooltip-Mechanismus
+// (.th-tip/data-tip, siehe DOMContentLoaded weiter unten) und die bereits in
+// :root vorhandenen, bisher kaum genutzten Farb-/Radius-/Schatten-Variablen
+// (siehe CSS-Kommentar bei .ui-kpi-tile) statt neuer, konkurrierender
+// Mechanismen — damit fügt sich das Fundament optisch nahtlos in das
+// bestehende dunkle Farbschema ein (6.6).
+
+function uiFormatNumber(value,digits=1){
+  const n=Number(value);
+  if(!Number.isFinite(n))return'–';
+  return n.toFixed(digits).replace('.',',');
+}
+
+/**
+ * Verlässlichkeits-Punktanzeige (6.6: "drei Stufen als Punktanzeige (●●● hoch,
+ * ●●○ mittel, ●○○ gering) plus Text im Tooltip"). `level` muss explizit
+ * 'high'|'medium'|'low' sein — bei jedem anderen Wert (insbesondere null,
+ * wenn der Aufrufer keine Verlässlichkeit ermittelt hat) wird bewusst NICHTS
+ * gerendert, statt eine Stufe zu erfinden.
+ */
+function uiReliabilityDots(level,tooltip=''){
+  if(level!=='high'&&level!=='medium'&&level!=='low')return'';
+  const filled=level==='high'?3:level==='medium'?2:1;
+  const dots='●●●'.slice(0,filled)+'○○○'.slice(0,3-filled);
+  const labels={high:'Verlässlichkeit hoch',medium:'Verlässlichkeit mittel',low:'Verlässlichkeit gering'};
+  const tip=tooltip||labels[level];
+  return`<span class="ui-reliability ui-reliability-${level} th-tip" data-tip="${escAttr(tip)}">${dots}</span>`;
+}
+
+/**
+ * Veränderungs-Indikator ▲/▼ (6.6: "farbig nur, wenn die Veränderung über der
+ * Verlässlichkeitsschwelle liegt, sonst neutral"). Ob eine Veränderung
+ * signifikant ist, entscheidet ausschließlich der Aufrufer (`significant`) —
+ * diese Funktion färbt nur ein, sie bewertet nicht selbst.
+ */
+function uiDeltaIndicator(delta,{unit='',digits=1,significant=false}={}){
+  const n=Number(delta);
+  if(!Number.isFinite(n)||n===0)return'';
+  const arrow=n>0?'▲':'▼';
+  const cls=significant?(n>0?'ui-delta-up':'ui-delta-down'):'ui-delta-neutral';
+  return`<span class="ui-delta ${cls}">${arrow} ${uiFormatNumber(Math.abs(n),digits)}${unit?escHtml(unit):''}</span>`;
+}
+
+/**
+ * Info-Symbol (6.5-Regel der Kennzahl-Kachel: "Info-Symbol öffnet
+ * Lexikon-Kurzerklärung"; 6.9: "Jede Kennzahl hat ein Info-Symbol mit
+ * Kurzerklärung und Link zum vollständigen Lexikoneintrag"). Nutzt für die
+ * Kurzerklärung den bereits bestehenden globalen Tooltip (.th-tip/data-tip)
+ * statt eines neuen Mechanismus. `href` ist optional: ein Lexikon-Routing zu
+ * einzelnen Begriffen existiert an dieser Stelle noch nicht (siehe
+ * UI-Inventar, Lexikon nur als Cover-Seite ohne Deep-Links) — ohne `href`
+ * wird nur die Kurzerklärung als Tooltip gezeigt, keine erfundene Navigation.
+ */
+function uiInfoIcon(tip,href=null){
+  if(!tip)return'';
+  const inner=`<span class="ui-info-icon th-tip" data-tip="${escAttr(tip)}" aria-label="${escAttr(tip)}">ⓘ</span>`;
+  return href?`<a class="ui-info-icon-link" href="${escAttr(href)}">${inner}</a>`:inner;
+}
+
+/**
+ * Kennzahl-Kachel (6.5): "Wert, Bezeichnung, Veränderung seit letztem
+ * Spieltag, n, Verlässlichkeit". Pflicht: label, value. Alles andere ist
+ * optional und wird nur dargestellt, wenn übergeben — die Komponente
+ * erfindet weder n noch Verlässlichkeit noch eine Veränderung.
+ */
+function uiKennzahlKachel({label,value,unit='',delta=null,deltaSignificant=false,n=null,reliability=null,infoTip=null,infoHref=null}={}){
+  const meta=[];
+  if(n!=null&&Number.isFinite(Number(n)))meta.push(`<span class="ui-kpi-n">n=${escHtml(String(n))}</span>`);
+  const dots=uiReliabilityDots(reliability);
+  if(dots)meta.push(dots);
+  const deltaHtml=delta!=null?uiDeltaIndicator(delta,{unit,significant:deltaSignificant}):'';
+  return`<div class="ui-kpi-tile">
+    <div class="ui-kpi-head"><span class="ui-kpi-label">${escHtml(label||'')}</span>${uiInfoIcon(infoTip,infoHref)}</div>
+    <div class="ui-kpi-value">${value==null?'–':escHtml(String(value))}${unit?`<span class="ui-kpi-unit">${escHtml(unit)}</span>`:''}</div>
+    ${deltaHtml||meta.length?`<div class="ui-kpi-foot">${deltaHtml}${meta.length?`<span class="ui-kpi-meta">${meta.join(' · ')}</span>`:''}</div>`:''}
+  </div>`;
+}
+
+/**
+ * Kernaussage (6.5): "ein Satz, optional mit Link", "höchstens 140 Zeichen".
+ * Überschreitet `text` das Limit, wird defensiv (mit "…") gekürzt, damit ein
+ * versehentlich zu langer Text nicht das Layout sprengt — das ersetzt keine
+ * inhaltliche Prüfung durch den späteren Aufrufer.
+ */
+const UI_KERNAUSSAGE_MAX_LENGTH=140;
+function uiKernaussage(text,href=null){
+  const raw=String(text||'').trim();
+  if(!raw)return'';
+  const truncated=raw.length>UI_KERNAUSSAGE_MAX_LENGTH?`${raw.slice(0,UI_KERNAUSSAGE_MAX_LENGTH-1)}…`:raw;
+  const content=escHtml(truncated);
+  return`<div class="ui-kernaussage">${href?`<a href="${escAttr(href)}">${content}</a>`:content}</div>`;
+}
+
+/**
+ * Hinweis-Karte (6.5): "Beobachtung, Beleg (n, Effekt), Verlässlichkeit",
+ * "beschreibend formuliert (M10.8)". Die beschreibende Formulierung ist
+ * Aufgabe des späteren Aufrufers (M10 existiert im Code noch nicht) — diese
+ * Komponente rendert ausschließlich, was übergeben wird.
+ */
+function uiHinweisKarte({observation,n=null,effect=null,reliability=null}={}){
+  if(!observation)return'';
+  const belegParts=[];
+  if(n!=null&&Number.isFinite(Number(n)))belegParts.push(`n=${escHtml(String(n))}`);
+  if(effect!=null&&effect!=='')belegParts.push(escHtml(String(effect)));
+  const beleg=belegParts.length?`<div class="ui-hinweis-beleg">${belegParts.join(' · ')}</div>`:'';
+  const dots=uiReliabilityDots(reliability);
+  return`<div class="ui-hinweis-karte">
+    <div class="ui-hinweis-text">${escHtml(observation)}</div>
+    ${beleg}
+    ${dots?`<div class="ui-hinweis-foot">${dots}</div>`:''}
+  </div>`;
+}
+
+/**
+ * Rangliste (6.5): "Top 5, Balken, Link zum Objekt", "'Alle anzeigen' öffnet
+ * Tabelle". `items` wird NICHT sortiert oder gefiltert — Reihenfolge und
+ * Mindeststichprobe (6.9: "Keine Ranglisten ohne Mindeststichprobe") sind
+ * Verantwortung des Aufrufers, keine erfundene Filterlogik hier.
+ * `showAllHref` ist optional: ohne Ziel-Adresse wird kein "Alle anzeigen"
+ * gerendert, statt eine nicht funktionierende Navigation vorzutäuschen.
+ */
+function uiRangliste({items=[],maxVisible=5,showAllHref=null,showAllLabel='Alle anzeigen'}={}){
+  const visible=items.slice(0,maxVisible);
+  if(!visible.length)return'';
+  const max=Math.max(...visible.map(it=>Math.abs(Number(it.value))||0),1);
+  const rows=visible.map(it=>{
+    const pct=Math.max(0,Math.min(100,(Math.abs(Number(it.value))||0)/max*100));
+    const label=escHtml(it.label||'');
+    const valueLabel=it.value==null?'–':escHtml(String(it.value));
+    const labelHtml=it.href?`<a href="${escAttr(it.href)}">${label}</a>`:label;
+    return`<div class="ui-rangliste-row">
+      <span class="ui-rangliste-label">${labelHtml}</span>
+      <span class="ui-rangliste-bar-track"><span class="ui-rangliste-bar" style="width:${pct.toFixed(1)}%"></span></span>
+      <span class="ui-rangliste-value">${valueLabel}</span>
+    </div>`;
+  }).join('');
+  const footer=showAllHref?`<a class="ui-rangliste-all" href="${escAttr(showAllHref)}">${escHtml(showAllLabel)}</a>`:'';
+  return`<div class="ui-rangliste">${rows}${footer}</div>`;
+}
+
+/**
+ * Verlauf (6.5): "Sparkline bzw. Liniendiagramm über Spieltage", "markiert
+ * den aktuellen asOf-Zeitpunkt". Liest S.asOf bewusst NICHT selbst (keine
+ * versteckte Abhängigkeit zu einer bestimmten Saison/Seite, siehe Auftrag) —
+ * der spätere Aufrufer übergibt bereits den zu markierenden Index.
+ * Eigenständig neben dem bestehenden, an eine feste Datenform gebundenen
+ * rSparkline() (siehe UI-Inventar): uiVerlauf() akzeptiert beliebige
+ * {label,value}-Punkte statt fest verdrahteter `points`-Felder.
+ */
+function uiVerlauf({points=[],markedIndex=null,width=280,height=56,unit=''}={}){
+  const values=points.map(p=>Number(p?.value)).filter(Number.isFinite);
+  if(values.length<2)return'';
+  const pad=6;
+  const max=Math.max(...values),min=Math.min(...values);
+  const range=(max-min)||1;
+  const coords=points.map((p,i)=>{
+    const x=pad+(i/Math.max(points.length-1,1))*(width-pad*2);
+    const v=Number(p?.value);
+    const y=Number.isFinite(v)?height-pad-((v-min)/range)*(height-pad*2):height/2;
+    return{x,y};
+  });
+  const polyline=coords.map(c=>`${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const marked=markedIndex!=null&&coords[markedIndex]?coords[markedIndex]:null;
+  return`<svg class="ui-verlauf" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Verlauf${unit?` (${escAttr(unit)})`:''}">
+    <polyline points="${polyline}" fill="none" stroke="var(--info)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    ${marked?`<line x1="${marked.x.toFixed(1)}" y1="0" x2="${marked.x.toFixed(1)}" y2="${height}" class="ui-verlauf-marker"/>`:''}
+    ${coords.map(c=>`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6" fill="var(--bg)" stroke="var(--info)" stroke-width="1.6"/>`).join('')}
+  </svg>`;
+}
+
+/**
+ * Intervall-Balken (6.5): "Punktschätzer mit Intervall", "einheitlich für
+ * alle Modelle". `estimate`/`low`/`high` werden ausschließlich vom Aufrufer
+ * geliefert — keine Berechnung, keine erfundenen Konfidenzintervalle (6.9).
+ */
+function uiIntervallBalken({estimate,low,high,min,max,unit=''}={}){
+  const e=Number(estimate),l=Number(low),h=Number(high),mn=Number(min),mx=Number(max);
+  if(![e,l,h,mn,mx].every(Number.isFinite)||mx<=mn)return'';
+  const pct=v=>Math.max(0,Math.min(100,((v-mn)/(mx-mn))*100));
+  const lowPct=pct(l),highPct=pct(h),estPct=pct(e);
+  return`<div class="ui-intervall-balken">
+    <div class="ui-intervall-track">
+      <span class="ui-intervall-band" style="left:${lowPct.toFixed(1)}%;width:${Math.max(0,highPct-lowPct).toFixed(1)}%"></span>
+      <span class="ui-intervall-point" style="left:${estPct.toFixed(1)}%"></span>
+    </div>
+    <div class="ui-intervall-labels"><span>${uiFormatNumber(e)}${unit?escHtml(unit):''}</span><span class="ui-intervall-range">± ${uiFormatNumber((h-l)/2)}${unit?escHtml(unit):''}</span></div>
+  </div>`;
+}
+
+/**
+ * Methodenbox (6.5): "Methode, Kontrollen, Stichprobe, Grenzen",
+ * "standardmäßig eingeklappt". Nutzt dasselbe native <details>-Muster wie
+ * das bestehende rScoreBreakdown() (kein "open"-Attribut, also eingeklappt).
+ */
+function uiMethodenbox({method,controls=[],sampleSize=null,limitations=[]}={}){
+  if(!method&&!controls.length&&sampleSize==null&&!limitations.length)return'';
+  return`<details class="ui-methodenbox">
+    <summary>Methodik</summary>
+    ${method?`<div class="ui-methodenbox-method">${escHtml(method)}</div>`:''}
+    ${controls.length?`<div class="ui-methodenbox-section"><span class="ui-methodenbox-heading">Kontrollen</span><ul>${controls.map(c=>`<li>${escHtml(c)}</li>`).join('')}</ul></div>`:''}
+    ${sampleSize!=null?`<div class="ui-methodenbox-section"><span class="ui-methodenbox-heading">Stichprobe</span> n=${escHtml(String(sampleSize))}</div>`:''}
+    ${limitations.length?`<div class="ui-methodenbox-section"><span class="ui-methodenbox-heading">Grenzen</span><ul>${limitations.map(l=>`<li>${escHtml(l)}</li>`).join('')}</ul></div>`:''}
+  </details>`;
+}
+
+/**
+ * Notiz (6.5): "einzeiliger Hinweis bei fehlenden Daten, ersetzt leere
+ * Karten". Bewusst eigenständig neben dem bestehenden, typisierten
+ * rEmptyState() (siehe UI-Inventar) — diese Komponente nimmt Freitext ohne
+ * Typ-Registry, für Fälle außerhalb der dort hinterlegten festen Typen.
+ */
+function uiNotiz(text){
+  const t=String(text||'').trim();
+  if(!t)return'';
+  return`<div class="ui-notiz">${escHtml(t)}</div>`;
+}
+
+/**
+ * Platzhalter (6.5): "Skelett während der Berechnung, keine blockierenden
+ * Ladebildschirme nach dem Start". Rein dekoratives Markup ohne Timer oder
+ * Sichtbarkeitslogik — der spätere Aufrufer entscheidet, wann er diesen
+ * Platzhalter statt echten Inhalts rendert.
+ */
+function uiPlatzhalter({lines=3,label=''}={}){
+  const parsedLines=Number(lines);
+  const rowCount=Math.max(1,Math.min(8,Number.isFinite(parsedLines)?parsedLines:3));
+  const rows=Array.from({length:rowCount},(_,i)=>`<span class="ui-platzhalter-line" style="width:${i===rowCount-1?'62%':'100%'}"></span>`).join('');
+  return`<div class="ui-platzhalter" role="status" aria-label="${escAttr(label||'Wird berechnet')}">${rows}</div>`;
 }
 
 // Init
