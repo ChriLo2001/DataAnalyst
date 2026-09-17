@@ -1966,6 +1966,7 @@ const setState=p=>{
   S={...S,...p};
   if(shouldClear)clearAnalysisCache();
   render();
+  syncHashFromState();
 };
 function invalidateGlobalIdentityCache(){
   if(S&&S._globalIdentityProfilesCache)delete S._globalIdentityProfilesCache;
@@ -3046,6 +3047,189 @@ function getSeasonStatsAsOf(seasonKey,asOf=deriveAsOfForSeason(seasonKey,S.asOf)
     return{seasonKey,asOf,relevantLeagueGames,standings,statGamesData};
   });
 }
+
+/**
+ * P0a.8 — Hash-Routing für den bestehenden Season-/asOf-Zustand
+ * (Spezifikation Abschnitt 6.8, siehe auch 3.6.1 letzte Zeile: "Keine
+ * URL-Navigation" als dokumentierter Mangel). Abschnitt 6.8 zeigt das volle
+ * künftige Adressschema für die neue Seiten-/Modulstruktur aus 6.3
+ * (#/25-26/spieltage/7, #/25-26/team/spieler/2424?tab=entwicklung&asOf=5,
+ * #/labor/psychologie) — das setzt S.page-aus-der-Adresse, die neue
+ * 5-Punkte-Hauptnavigation und die Spieltagsseite voraus, die es in diesem
+ * Stand des Codes noch nicht gibt (Umsetzung erst P0b/P0c, siehe
+ * Roadmap-Tabelle). Diese Phase verdrahtet deshalb bewusst NUR den bereits
+ * in P0a.1–P0a.7 gebauten Season-/asOf-Zustand mit der Adresse. S.page bleibt
+ * vom Hash unberührt (kein Seiten-Routing, keine Matchday-UI, keine
+ * asOf-UI — das bleibt spätere Phasen vorbehalten).
+ *
+ * Format: #/<seasonKey mit "-" statt "/">[?asOf=YYYY-MM-DD[THH:MM]]
+ * Beispiele: #/25-26 · #/25-26?asOf=2026-01-25 · #/25-26?asOf=2026-01-25T14:50
+ * Die "-"-Schreibweise für seasonKey übernimmt exakt das in 6.8 gezeigte
+ * Beispiel (#/25-26/...) — keine neu erfundene Kodierung. asOf wird als
+ * einzelner ISO-artiger Wert kodiert (nicht als zwei Parameter), weiter
+ * gültig gegenüber der in P0a.4/P0a.7 bereits getesteten {date,startTime?}-
+ * Form, ohne deren Semantik zu verändern.
+ */
+function seasonKeyToHashSegment(seasonKey){
+  return String(seasonKey||'').replace('/','-');
+}
+function hashSegmentToSeasonKey(segment){
+  const m=/^(\d{2})-(\d{2})$/.exec(String(segment||''));
+  return m?`${m[1]}/${m[2]}`:null;
+}
+function isValidAsOfDate(date){
+  return typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+function isValidAsOfStartTime(startTime){
+  return typeof startTime==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime);
+}
+/**
+ * Reiner Vergleich zweier asOf-Werte (bzw. null), konsistent mit der in
+ * isGameAtOrBeforeAsOf()/asOfCacheKeyPart() etablierten Konvention: fehlendes
+ * date bzw. fehlendes/leeres startTime zählt als leerer String, nicht als
+ * eigener Sonderfall.
+ */
+function asOfEquals(a,b){
+  const dateA=a?.date?String(a.date):'';
+  const dateB=b?.date?String(b.date):'';
+  if(dateA!==dateB)return false;
+  const timeA=a?.startTime?String(a.startTime):'';
+  const timeB=b?.startTime?String(b.startTime):'';
+  return timeA===timeB;
+}
+/**
+ * Reine Parse-Funktion: liest einen rohen location.hash-String und liefert
+ * entweder {seasonKey, asOf} (asOf ggf. null) oder null bei fehlendem,
+ * ungültigem oder unbekanntem Hash. Wirft nie. Zusätzliche Pfadsegmente nach
+ * der Saison (z.B. eine künftige /spieltage/7-Route aus 6.8) und unbekannte
+ * Query-Parameter werden ignoriert statt einen Fehler auszulösen oder die
+ * Saison falsch zuzuordnen — sie gehören zu noch nicht implementierten
+ * späteren Phasen. Eine unbekannte/ungültige Saison macht dagegen den
+ * gesamten Hash ungültig (null), damit nie eine falsche Saison aktiviert
+ * wird.
+ */
+function parseAppHash(rawHash){
+  let hash=String(rawHash||'');
+  if(hash.startsWith('#'))hash=hash.slice(1);
+  if(hash.startsWith('/'))hash=hash.slice(1);
+  if(!hash)return null;
+  const queryIndex=hash.indexOf('?');
+  const pathPart=queryIndex===-1?hash:hash.slice(0,queryIndex);
+  const queryPart=queryIndex===-1?'':hash.slice(queryIndex+1);
+  const segment=pathPart.split('/')[0];
+  const seasonKey=hashSegmentToSeasonKey(segment);
+  if(!seasonKey||!SEASON_CONFIG[seasonKey])return null;
+  let asOf=null;
+  if(queryPart){
+    let raw=null;
+    try{raw=new URLSearchParams(queryPart).get('asOf');}catch(e){raw=null;}
+    if(raw){
+      const sepIndex=raw.indexOf('T');
+      const date=sepIndex===-1?raw:raw.slice(0,sepIndex);
+      const startTime=sepIndex===-1?undefined:raw.slice(sepIndex+1);
+      if(isValidAsOfDate(date)&&(startTime===undefined||isValidAsOfStartTime(startTime))){
+        asOf={seasonKey,date,...(startTime?{startTime}:{})};
+      }
+    }
+  }
+  return{seasonKey,asOf};
+}
+/**
+ * Reine Gegenfunktion zu parseAppHash(): seasonKey/asOf (asOf bereits über
+ * deriveAsOfForSeason auf seasonKey beschränkt) → Hash-String. Liefert ''
+ * ohne seasonKey.
+ */
+function buildAppHash(seasonKey,asOf){
+  if(!seasonKey)return'';
+  let hash=`#/${seasonKeyToHashSegment(seasonKey)}`;
+  if(asOf?.date){
+    const value=asOf.startTime?`${asOf.date}T${asOf.startTime}`:asOf.date;
+    hash+=`?asOf=${encodeURIComponent(value)}`;
+  }
+  return hash;
+}
+/**
+ * Leitet den für den aktuellen State korrekten Hash ab. Liefert '' solange
+ * kein Screen "main" aktiv ist (Cover bleibt ohne Hash — bisheriges
+ * Default-Verhalten, siehe Test A) und hängt bewusst NICHT von S.page ab
+ * (kein Seiten-Routing in dieser Phase).
+ */
+function computeCurrentAppHash(){
+  if(S.screen!=='main')return'';
+  const seasonKey=getActiveSeasonKey();
+  if(!seasonKey||!SEASON_CONFIG[seasonKey])return'';
+  return buildAppHash(seasonKey,deriveAsOfForSeason(seasonKey,S.asOf));
+}
+/**
+ * Schreibt den aus dem aktuellen State abgeleiteten Hash in die Adresse —
+ * aber NUR wenn er vom bereits gesetzten Hash abweicht. Das verhindert
+ * sowohl unnötigen History-Spam als auch die Rückkopplung über den
+ * hashchange-Listener (siehe applyAppHash: ein von hier geschriebener Hash
+ * beschreibt exakt den bereits aktiven Zustand und führt dort zu einem
+ * No-Op). Wird vom bestehenden, zentralen Mutationspunkt setState() nach
+ * jeder Zustandsänderung aufgerufen.
+ */
+function syncHashFromState(){
+  try{
+    const desired=computeCurrentAppHash();
+    const current=location.hash||'';
+    if(desired&&desired!==current)location.hash=desired;
+  }catch(e){/* Adressleiste darf nie den restlichen State zum Absturz bringen */}
+}
+/**
+ * Wendet einen geparsten Hash auf den State an — aber nur, wenn er sich
+ * tatsächlich vom aktuell aktiven Zustand unterscheidet. Diese Idempotenz
+ * ist zugleich der Schutz gegen einen Endlosloop zwischen hashchange und
+ * syncHashFromState(): ein Hash, der bereits den aktiven Zustand beschreibt
+ * (egal ob von aussen oder von syncHashFromState() selbst gesetzt), führt
+ * hier zu einem No-Op statt zu einem erneuten setState()/openSeason()-Aufruf.
+ */
+async function applyAppHash(parsed){
+  if(!parsed)return;
+  const onMain=S.screen==='main';
+  const currentSeasonKey=getActiveSeasonKey();
+  const currentAsOf=onMain?deriveAsOfForSeason(currentSeasonKey,S.asOf):null;
+  const sameSeason=onMain&&parsed.seasonKey===currentSeasonKey;
+  if(sameSeason&&asOfEquals(parsed.asOf,currentAsOf))return;
+  if(!sameSeason)await window.openSeason(parsed.seasonKey);
+  if(!asOfEquals(parsed.asOf,deriveAsOfForSeason(parsed.seasonKey,S.asOf)))setState({asOf:parsed.asOf});
+}
+/**
+ * Einmaliger Einstiegspunkt beim Laden: wendet einen ggf. bereits in der
+ * Adresse vorhandenen Hash an und registriert den Listener für spätere
+ * Änderungen (manuelle Adress-Eingabe, Vor/Zurück, oder ein von
+ * syncHashFromState() selbst geschriebener Hash).
+ *
+ * WICHTIG (in echten Tests gefunden, kein theoretisches Risiko): DOMContentLoaded
+ * stößt bereits heute — unabhängig von P0a.8 — ensureGlobalDataLoaded() an
+ * (lädt alle 5 Saisons global und baut danach die saisonübergreifende
+ * Spieler-Identität auf). Ein sofortiger, synchroner openSeason()-Aufruf
+ * direkt beim initialen Hash-Parsing würde dessen loadSeasonData() im
+ * selben Tick VOR diesem globalen Preload starten — dadurch würde diese
+ * eine Saison (nur bei per Hash initial geladenem Zustand, nicht beim
+ * bestehenden Klick auf einen Cover-Button, der immer erst deutlich später
+ * im echten Nutzungsfall erfolgt) mit einer noch unvollständigen globalen
+ * Spieler-Registry aufgebaut und lieferte nachweislich eine ANDERE
+ * Spielerliste als dieselbe Saison reguär geladen. Um genau diesen
+ * Unterschied zu vermeiden (bestehende Ansichten müssen unverändert
+ * bleiben, unabhängig vom Ladeweg), wartet der initiale Hash-Aufruf hier
+ * explizit auf denselben, bereits laufenden ensureGlobalDataLoaded()
+ * (Promise wird wiederverwendet, kein doppeltes Laden) — NUR wenn überhaupt
+ * ein gültiger Hash vorliegt; ohne Hash entsteht dadurch kein zusätzlicher
+ * Wartezustand (Default-Verhalten bleibt exakt wie vorher). hashchange zur
+ * Laufzeit braucht diese Wartezeit nicht: dort ist der globale Preload in
+ * jedem realistischen Fall längst abgeschlossen, genau wie beim bestehenden
+ * Klick auf einen Cover-Button.
+ */
+function initHashRouting(){
+  const parsed=parseAppHash(location.hash);
+  const ready=parsed?ensureGlobalDataLoaded().catch(()=>{}):Promise.resolve();
+  ready.then(()=>applyAppHash(parsed)).catch(e=>console.warn('Hash-Routing (initial) fehlgeschlagen:',e.message));
+  window.addEventListener('hashchange',()=>{
+    applyAppHash(parseAppHash(location.hash)).catch(e=>console.warn('Hash-Routing (hashchange) fehlgeschlagen:',e.message));
+  });
+}
+window.initHashRouting=initHashRouting;
 
 function gameResult(game,side){
   const hg=parseInt(game.home_goals),gg=parseInt(game.guest_goals);
@@ -21461,6 +21645,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const coverLogo=document.getElementById('cv-logo');
   if(coverLogo&&!coverLogo.getAttribute('src'))coverLogo.src=`data:image/png;base64,${LOGO_B64}`;
   repairRenderedMojibake(document.body);
+  initHashRouting();
   ensureGlobalDataLoaded().catch(e=>{
     console.warn('Alltime preload fehlgeschlagen:',e.message);
     updateCoverAllTimeStats(false);
