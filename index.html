@@ -1429,8 +1429,20 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 .ia-placeholder-page{display:grid;gap:14px}
 .ia-placeholder-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-main)}
 
+/* ═══ P0b.7 — Übersicht (6.3.1) ═══════════════════════════════════════
+   .ia-overview* eigener Namensraum, kollisionsfrei. Kartenraster für die
+   "Themenkarten" unter Kopf/Kernaussage/Kacheln (uiObjektseite) — bricht
+   auf schmalen Screens auf eine Spalte um (kein horizontaler Overflow bei
+   360px), Links erhalten ≥44px Tippfläche. */
+.ia-overview{display:grid;gap:16px}
+.ia-overview-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.ia-overview-card{display:grid;gap:8px;align-content:start}
+.ia-overview-link{display:inline-flex;align-items:center;min-height:44px;color:var(--info);text-decoration:none;font-size:12px;font-weight:600}
+.ia-overview-link:hover{text-decoration:underline}
+
 @media(max-width:600px){
   .ia-context-bar{flex-wrap:wrap}
+  .ia-overview-cards{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -3421,7 +3433,8 @@ function parseAppHash(rawHash){
 
   if(HASH_GLOBAL_PAGES.includes(first)){
     const objectId=segments[1]!==undefined?decodeHashSegmentSafe(segments[1]):null;
-    return{kind:'global',page:first,objectId};
+    const asOf=parseAsOfQueryValue(queryPart);
+    return{kind:'global',page:first,objectId,asOf};
   }
 
   const seasonKey=hashSegmentToSeasonKey(first);
@@ -3434,20 +3447,27 @@ function parseAppHash(rawHash){
     if(segments[2]!==undefined)objectId=decodeHashSegmentSafe(segments[2]);
   }
 
-  let asOf=null;
-  if(queryPart){
-    let raw=null;
-    try{raw=new URLSearchParams(queryPart).get('asOf');}catch(e){raw=null;}
-    if(raw){
-      const sepIndex=raw.indexOf('T');
-      const date=sepIndex===-1?raw:raw.slice(0,sepIndex);
-      const startTime=sepIndex===-1?undefined:raw.slice(sepIndex+1);
-      if(isValidAsOfDate(date)&&(startTime===undefined||isValidAsOfStartTime(startTime))){
-        asOf={seasonKey,date,...(startTime?{startTime}:{})};
-      }
-    }
-  }
+  const parsedAsOf=parseAsOfQueryValue(queryPart);
+  const asOf=parsedAsOf?{seasonKey,...parsedAsOf}:null;
   return{kind:'season',seasonKey,asOf,page,objectId};
+}
+/**
+ * Gemeinsamer asOf-Query-Parser für beide Hash-Formen (Saison- und
+ * P0b.7-globale Form) — keine Duplizierung der Datums-/Uhrzeit-Validierung.
+ * Liefert {date,startTime?} OHNE seasonKey (der wird je Aufrufer ergänzt,
+ * da bei der globalen Form die Saison nicht aus dem Hash selbst stammt)
+ * oder null bei fehlendem/ungültigem Wert.
+ */
+function parseAsOfQueryValue(queryPart){
+  if(!queryPart)return null;
+  let raw=null;
+  try{raw=new URLSearchParams(queryPart).get('asOf');}catch(e){raw=null;}
+  if(!raw)return null;
+  const sepIndex=raw.indexOf('T');
+  const date=sepIndex===-1?raw:raw.slice(0,sepIndex);
+  const startTime=sepIndex===-1?undefined:raw.slice(sepIndex+1);
+  if(!isValidAsOfDate(date)||(startTime!==undefined&&!isValidAsOfStartTime(startTime)))return null;
+  return startTime?{date,startTime}:{date};
 }
 /**
  * Reine Gegenfunktion zu parseAppHash() für Form a) (Saison). seasonKey/asOf
@@ -3471,10 +3491,14 @@ function buildAppHash(seasonKey,asOf,page=null,objectId=null){
  * Gegenfunktion zu parseAppHash() für Form b) (globale Seiten). Liefert ''
  * ohne bekannten Seitenschlüssel.
  */
-function buildGlobalPageHash(page,objectId=null){
+function buildGlobalPageHash(page,objectId=null,asOf=null){
   if(!page||!HASH_GLOBAL_PAGES.includes(page))return'';
   let hash=`#/${encodeURIComponent(page)}`;
   if(objectId)hash+=`/${encodeURIComponent(objectId)}`;
+  if(asOf?.date){
+    const value=asOf.startTime?`${asOf.date}T${asOf.startTime}`:asOf.date;
+    hash+=`?asOf=${encodeURIComponent(value)}`;
+  }
   return hash;
 }
 /**
@@ -3484,23 +3508,30 @@ function buildGlobalPageHash(page,objectId=null){
  */
 function buildHashStringFromParsed(parsed){
   if(!parsed)return'';
-  if(parsed.kind==='global')return buildGlobalPageHash(parsed.page,parsed.objectId);
+  if(parsed.kind==='global')return buildGlobalPageHash(parsed.page,parsed.objectId,parsed.asOf);
   return buildAppHash(parsed.seasonKey,parsed.asOf,parsed.page,parsed.objectId);
 }
 /**
  * Leitet den für den aktuellen State korrekten Hash ab. Liefert '' solange
  * kein Screen "main" aktiv ist (Cover bleibt ohne Hash — bisheriges
  * Default-Verhalten, siehe Test A). Ab P0b.4 zusätzlich seiten-/
- * objektabhängig (siehe Erklärung oben): globale Seiten (HASH_GLOBAL_PAGES)
- * ignorieren die Saison vollständig; bei saisongebundenen Seiten wird nur
- * für 'player' ein Segment erzeugt, alle anderen (insbesondere der Default
- * 'team'/'seasonLanding') bleiben wie bisher segmentlos.
+ * objektabhängig: globale Seiten (HASH_GLOBAL_PAGES) ignorieren die Saison
+ * grundsätzlich; bei saisongebundenen Seiten wird nur für 'player' ein
+ * Segment erzeugt, alle anderen (insbesondere der Default 'team'/
+ * 'seasonLanding') bleiben wie bisher segmentlos. AUSNAHME seit P0b.7:
+ * 'overview' ist zwar weiterhin als globale Adressform (#/overview, ohne
+ * Saison-Segment — das bleibt der einzige, stabile Default-Einstiegspunkt)
+ * geführt, ist aber inhaltlich saisongebunden (siehe rContextBar()) — daher
+ * wird für 'overview' zusätzlich der über deriveAsOfForSeason() auf die
+ * AKTIVE Saison beschränkte asOf-Wert angehängt, exakt wie bei der
+ * saisongebundenen Form, nur ohne Saison-Pfadsegment.
  */
 function computeCurrentAppHash(){
   if(S.screen!=='main')return'';
   if(HASH_GLOBAL_PAGES.includes(S.page)){
     const objectId=S.page==='alltimePlayers'?(S.globalPlayerId||null):null;
-    return buildGlobalPageHash(S.page,objectId);
+    const asOf=S.page==='overview'?deriveAsOfForSeason(getActiveSeasonKey(),S.asOf):null;
+    return buildGlobalPageHash(S.page,objectId,asOf);
   }
   const seasonKey=getActiveSeasonKey();
   if(!seasonKey||!SEASON_CONFIG[seasonKey])return'';
@@ -3535,7 +3566,7 @@ function syncHashFromState(){
  * hat bereits einen bestehenden Fallback (active=rows.find(...)||
  * mainRows[0]||sgRows[0]), der hier nicht dupliziert wird.
  */
-async function applyGlobalPageFromHash(page,objectId){
+async function applyGlobalPageFromHash(page,objectId,asOf){
   if(page==='alltimePlayers'){
     await window.openAllTimePlayers();
     if(objectId&&objectId!==S.globalPlayerId)setState({globalPlayerId:objectId});
@@ -3547,7 +3578,13 @@ async function applyGlobalPageFromHash(page,objectId){
   if(page==='lineupBuilder')return window.openLineupBuilder();
   if(page==='einsatzCenter')return window.openEinsatzCenter();
   if(page==='lexicon')return window.openLexicon();
-  if(page==='overview')return window.openOverview();
+  if(page==='overview'){
+    await window.openOverview();
+    const seasonKey=getActiveSeasonKey();
+    const targetAsOf=asOf?{seasonKey,...asOf}:null;
+    if(!asOfEquals(targetAsOf,deriveAsOfForSeason(seasonKey,S.asOf)))setState({asOf:targetAsOf});
+    return;
+  }
   if(page==='ligaGegner')return window.openLigaGegner();
 }
 /**
@@ -3568,7 +3605,7 @@ async function applyAppHash(parsed){
   if(targetHash&&targetHash===computeCurrentAppHash())return;
 
   if(parsed.kind==='global'){
-    await applyGlobalPageFromHash(parsed.page,parsed.objectId);
+    await applyGlobalPageFromHash(parsed.page,parsed.objectId,parsed.asOf);
     return;
   }
 
@@ -3592,25 +3629,29 @@ async function applyAppHash(parsed){
  * Spieler-Identität auf). Ein sofortiger, synchroner openSeason()-Aufruf
  * direkt beim initialen Hash-Parsing würde dessen loadSeasonData() im
  * selben Tick VOR diesem globalen Preload starten — dadurch würde diese
- * eine Saison (nur bei per Hash initial geladenem Zustand, nicht beim
- * bestehenden Klick auf einen Cover-Button, der immer erst deutlich später
- * im echten Nutzungsfall erfolgt) mit einer noch unvollständigen globalen
- * Spieler-Registry aufgebaut und lieferte nachweislich eine ANDERE
- * Spielerliste als dieselbe Saison reguär geladen. Um genau diesen
- * Unterschied zu vermeiden (bestehende Ansichten müssen unverändert
- * bleiben, unabhängig vom Ladeweg), wartet der initiale Hash-Aufruf hier
- * explizit auf denselben, bereits laufenden ensureGlobalDataLoaded()
- * (Promise wird wiederverwendet, kein doppeltes Laden) — NUR wenn überhaupt
- * ein gültiger Hash vorliegt; ohne Hash entsteht dadurch kein zusätzlicher
- * Wartezustand (Default-Verhalten bleibt exakt wie vorher). hashchange zur
- * Laufzeit braucht diese Wartezeit nicht: dort ist der globale Preload in
- * jedem realistischen Fall längst abgeschlossen, genau wie beim bestehenden
- * Klick auf einen Cover-Button.
+ * eine Saison mit einer noch unvollständigen globalen Spieler-Registry
+ * aufgebaut und lieferte nachweislich eine ANDERE Spielerliste als dieselbe
+ * Saison regulär geladen. Um das zu vermeiden, wartet der initiale
+ * Hash-Aufruf hier explizit auf denselben, bereits laufenden
+ * ensureGlobalDataLoaded() (Promise wird wiederverwendet, kein doppeltes
+ * Laden). hashchange zur Laufzeit braucht diese Wartezeit nicht: dort ist
+ * der globale Preload in jedem realistischen Fall längst abgeschlossen.
+ *
+ * P0b.7 — EINZIGE Stelle, an der der neue Default definiert ist: liegt kein
+ * (gültiger) Hash vor, wird jetzt openOverview() statt eines No-Op
+ * aufgerufen (bisher: Cover blieb einfach stehen). Da openOverview() jetzt
+ * ebenfalls Saisondaten lädt (siehe dort), muss GENAU DIESELBE
+ * Preload-Race-Absicherung wie oben beschrieben jetzt auch für den
+ * hashlosen Fall gelten — deshalb wird ensureGlobalDataLoaded() hier
+ * unabhängig von `parsed` immer zuerst abgewartet (das ist die einzige
+ * Änderung an dieser Funktion; parseAppHash/buildAppHash/applyAppHash/
+ * syncHashFromState() selbst bleiben unverändert).
  */
 function initHashRouting(){
   const parsed=parseAppHash(location.hash);
-  const ready=parsed?ensureGlobalDataLoaded().catch(()=>{}):Promise.resolve();
-  ready.then(()=>applyAppHash(parsed)).catch(e=>console.warn('Hash-Routing (initial) fehlgeschlagen:',e.message));
+  ensureGlobalDataLoaded().catch(()=>{})
+    .then(()=>parsed?applyAppHash(parsed):window.openOverview())
+    .catch(e=>console.warn('Hash-Routing (initial) fehlgeschlagen:',e.message));
   window.addEventListener('hashchange',()=>{
     applyAppHash(parseAppHash(location.hash)).catch(e=>console.warn('Hash-Routing (hashchange) fehlgeschlagen:',e.message));
   });
@@ -21920,7 +21961,7 @@ function _render(root){
 
   // ── ADDITIVE NAVIGATION PAGES ──
   if(S.page==='overview'){
-    root.innerHTML=hdrHtml+errHtml+`<div>${rOverviewPlaceholderPage()}</div>`;
+    root.innerHTML=hdrHtml+errHtml+`<div>${rOverviewPage(getActiveSeasonKey())}</div>`;
     return;
   }
   if(S.page==='ligaGegner'){
@@ -22464,26 +22505,260 @@ function rMainNav(){
   return`<nav class="ia-mainnav" aria-label="Hauptnavigation">${buttons}</nav>`;
 }
 /**
- * Neue, triviale Platzhalter-Seiten für die beiden laut 6.3 komplett neuen
- * Hauptpunkte ("Übersicht" ersetzt bisher Cover/leere Saison-Landingpage,
- * "Liga & Gegner" existiert bisher gar nicht). Kein ensureGlobalDataLoaded()
- * nötig, da keine Daten dargestellt werden — nur eine ehrliche
- * Status-Notiz über die bestehende uiNotiz()-Komponente.
+ * P0b.7 — Übersicht als neue Startseite (Spezifikation 6.3.1). Übersicht ist
+ * gemäß 6.3-Tabelle saisongebunden ("ersetzt ... die leere
+ * Saison-Landingpage") — sie lädt daher wie team/player die aktive Saison
+ * über die bestehende loadSeason()/applySeasonContext()-Pipeline (keine
+ * eigene Ladelogik), setzt danach nur explizit page:'overview' (dieselbe
+ * "erst Daten laden, dann Seite überschreiben"-Reihenfolge wie bei allen
+ * anderen open…()-Funktionen).
  */
 window.openOverview=async()=>{
+  const seasonKey=getActiveSeasonKey();
+  await loadSeason(seasonKey);
   showMainShell();
   setState({screen:'main',page:'overview'});
 };
+/**
+ * Saison-Auswahl in der Kontextleiste, wenn S.page==='overview': openSeason()
+ * setzt intern über applySeasonContext() dessen EIGENEN Default (team/
+ * seasonLanding) — das würde die Übersicht ohne diesen Wrapper beim
+ * Saisonwechsel unbeabsichtigt verlassen. Reine Reihenfolge-Korrektur
+ * ("erst Saison laden, danach Seite wieder auf overview setzen"), keine
+ * neue Lade-/Routing-Logik.
+ */
+window.switchOverviewSeason=async function(value){
+  await window.openSeason(value);
+  setState({page:'overview'});
+};
+/**
+ * Reine Phasenerkennung (6.3.1: "Die Übersicht erkennt automatisch, wo man
+ * sich im Spieltag-Zyklus befindet"). `now` ist bewusst als Parameter
+ * testbar (Default: echte Systemzeit, Produktionsverhalten unverändert) —
+ * ohne Parameter also `new Date()`, keine erfundene "aktuell"-Logik.
+ * Nutzt AUSSCHLIESSLICH die bestehende, in P0b.6 portierte Matchday-
+ * Ableitung (getSeasonMatchdays) — keine eigene Spieltag-Ermittlung. "Ulmer
+ * Spieltag" = jeder Matchday: laut Turnierformat (Spezifikation Zeile 67:
+ * "Jedes Team spielt an jedem Spieltag genau 2 Spiele") nimmt Ulm an jedem
+ * Spieltag der eigenen Liga teil — keine zusätzliche Ulm-Filterung nötig.
+ *
+ * "jünger als 3 Tage"/"höchstens 5 Tage" werden gegen die ECHTE Uhrzeit
+ * geprüft (nicht gegen S.asOf) — das ist eine Aussage über die reale
+ * Kalendernähe zum jetzigen Zeitpunkt, unabhängig von einem historisch
+ * gewählten Betrachtungszeitpunkt. Die INHALTE der einzelnen Karten
+ * (Tabelle, Bilanz, …) respektieren dagegen S.asOf ganz normal über die
+ * bestehende getSeasonStatsAsOf()/deriveAsOfForSeason()-Kette, siehe dort.
+ */
+function overviewMatchdayStartMs(matchday){
+  const g=matchday?.games?.[0];
+  if(!g?.date)return null;
+  const t=new Date(`${g.date}T${g.start_time||'00:00'}:00`).getTime();
+  return Number.isFinite(t)?t:null;
+}
+function overviewMatchdayEndMs(matchday){
+  const cutoff=matchdayAsOfCutoff(matchday);
+  if(!cutoff)return null;
+  const t=new Date(`${cutoff.date}T${cutoff.startTime||'23:59'}:00`).getTime();
+  return Number.isFinite(t)?t:null;
+}
+function detectOverviewPhase(seasonKey,now=new Date()){
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  const nowMs=now.getTime();
+  const endedMatchdays=matchdays.filter(m=>m.status==='abgeschlossen');
+  const lastMatchday=endedMatchdays.length?endedMatchdays[endedMatchdays.length-1]:null;
+  const upcoming=matchdays.filter(m=>{const s=overviewMatchdayStartMs(m);return s!==null&&s>nowMs;});
+  const nextMatchday=upcoming.length?upcoming[0]:null;
+  if(lastMatchday){
+    const e=overviewMatchdayEndMs(lastMatchday);
+    if(e!==null){
+      const daysSince=(nowMs-e)/86400000;
+      if(daysSince>=0&&daysSince<3)return{phase:'nachDemSpieltag',lastMatchday,nextMatchday};
+    }
+  }
+  if(nextMatchday){
+    const s=overviewMatchdayStartMs(nextMatchday);
+    if(s!==null){
+      const daysUntil=(s-nowMs)/86400000;
+      if(daysUntil>=0&&daysUntil<=5)return{phase:'vorDemSpieltag',lastMatchday,nextMatchday};
+    }
+  }
+  if(!nextMatchday)return{phase:'saisonpause',lastMatchday,nextMatchday:null};
+  return{phase:'unterDerWoche',lastMatchday,nextMatchday};
+}
+function overviewOpponentLabel(matchday){
+  if(!matchday)return null;
+  const names=Object.keys(matchday.teamGames||{}).filter(name=>!isUlmTeamName(name));
+  return names.length?names.join(' / '):null;
+}
+function overviewLastMatchdayText(lastMatchday){
+  if(!lastMatchday)return'Für diese Saison liegt noch kein abgeschlossener Spieltag vor.';
+  return`Spieltag ${lastMatchday.number} wurde am ${formatDateDE(lastMatchday.date)} ausgetragen.`;
+}
+function overviewNextMatchdayHtml(nextMatchday){
+  if(!nextMatchday)return uiNotiz('Für diese Saison ist kein weiterer Spieltag terminiert.');
+  const opp=overviewOpponentLabel(nextMatchday);
+  return uiHinweisKarte({observation:`Nächster Spieltag: Spieltag ${nextMatchday.number} am ${formatDateDE(nextMatchday.date)}${opp?` gegen ${opp}`:''}.`});
+}
+/** "Tabelle kompakt": Top 5 nach Punkten, über die bestehende Rangliste-Komponente (P0b.2) — respektiert S.asOf über getSeasonStatsAsOf(). */
+function overviewCompactTableHtml(seasonKey){
+  const stats=getSeasonStatsAsOf(seasonKey);
+  const standings=stats?.standings||[];
+  if(!standings.length)return uiNotiz('Für diese Saison liegt noch keine Tabelle vor.');
+  const items=standings.slice(0,5).map(t=>({label:`${t.rank}. ${t.name}`,value:t.pts}));
+  return uiRangliste({items,maxVisible:5});
+}
+/** "Formkurve": Punkte (Sieg=3/Unentschieden=1/Niederlage=0) der letzten bis zu 8 Ulm/SG-Spiele, über die bestehende Verlauf-Komponente (P0b.2) — Standard-Punktevergabe, keine neue Kennzahl. */
+function overviewFormHtml(seasonKey){
+  const stats=getSeasonStatsAsOf(seasonKey);
+  const games=(stats?.statGamesData||[]).slice().sort(compareGamesChronologically);
+  const recent=games.slice(-8);
+  const points=recent.map(g=>{
+    const side=detectSide(g);
+    if(!side||!isGamePlayed(g))return null;
+    const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
+    if(isNaN(hg)||isNaN(gg))return null;
+    const us=side==='home'?hg:gg,os=side==='home'?gg:hg;
+    return us>os?3:us<os?0:1;
+  }).filter(v=>v!==null);
+  if(points.length<2)return uiNotiz('Für die Formkurve liegen noch nicht genügend ausgetragene Spiele vor.');
+  return uiVerlauf({points:points.map((v,i)=>({label:String(i+1),value:v})),unit:' Punkte/Spiel'});
+}
+function overviewSeasonBilanzHtml(seasonKey){
+  const stats=getSeasonStatsAsOf(seasonKey);
+  const standings=stats?.standings||[];
+  const ulmRow=standings.find(t=>isUlmTeamName(t.name));
+  if(!ulmRow)return uiNotiz('Für diese Saison liegt noch keine Saisonbilanz vor.');
+  return uiHinweisKarte({observation:`Saisonbilanz: ${ulmRow.w} Siege, ${ulmRow.d} Unentschieden, ${ulmRow.l} Niederlagen, ${ulmRow.gf}:${ulmRow.ga} Tore, Tabellenplatz ${ulmRow.rank}.`,n:ulmRow.sp});
+}
+/** "Saison-Awards": bester Scorer der Saison, identifiziert über das bereits bestehende p.seasonScorerRank (keine eigene Sortierung/Filterung neu erfunden), Tore/Vorlagen wie auf der Team-Seite über die bereits vorhandenen S.events-Zähler ermittelt. */
+function overviewSeasonAwardHtml(seasonKey){
+  const bucket=SEASONS[seasonKey];
+  const players=bucket?.data?.players||[];
+  const top=players.find(p=>p.seasonScorerRank===1);
+  if(!top)return uiNotiz('Für diese Saison liegt noch kein Top-Scorer vor.');
+  const ev=bucket.data.events?.[top.key]||[];
+  const goals=ev.filter(e=>e.type==='Tor').length;
+  const assists=ev.filter(e=>e.type==='Vorlage').length;
+  return uiHinweisKarte({observation:`Bester Scorer der Saison: ${top.label} mit ${goals+assists} Punkten (${goals} Tore, ${assists} Vorlagen).`});
+}
+/** "Rekorde": ein bestehender Alltime-Vereinsrekord (höchster Sieg, getTeamAllTimeRecords()) mit Link zur bestehenden Hall-of-Fame-Seite. */
+function overviewRecordHtml(){
+  const records=getTeamAllTimeRecords();
+  const best=records?.bestWin;
+  if(!best)return uiNotiz('Für die Vereinsrekorde liegen noch nicht genügend Daten vor.');
+  return`<div class="ia-overview-card">${uiHinweisKarte({observation:`Höchster Sieg (alle Saisons): ${best.us}:${best.os} gegen ${best.opp} (Saison ${SEASON_CONFIG[best.seasonKey]?.label||best.seasonKey}).`})}<a class="ia-overview-link" href="#/hallOfFame">Zur Hall of Fame</a></div>`;
+}
+/** "Entwicklung über die Saisons": Ulm-Tabellenplatz je bereits geladener Saison, über die bestehende Verlauf-Komponente. */
+function overviewCrossSeasonTrendHtml(){
+  const seasonKeys=Object.keys(SEASON_CONFIG).filter(k=>SEASONS[k]?.data?.standings?.length);
+  const points=seasonKeys.map(k=>{
+    const row=SEASONS[k].data.standings.find(t=>isUlmTeamName(t.name));
+    return row?{label:SEASON_CONFIG[k]?.label||k,value:row.rank}:null;
+  }).filter(Boolean);
+  if(points.length<2)return uiNotiz('Für eine saisonübergreifende Entwicklung liegen noch nicht genügend Saisons vor.');
+  return uiVerlauf({points,unit:'. Platz'});
+}
+function overviewOpponentPreviewHtml(nextMatchday){
+  if(!nextMatchday)return uiNotiz('Kein bevorstehender Spieltag bekannt.');
+  const opp=overviewOpponentLabel(nextMatchday);
+  return uiHinweisKarte({observation:`Nächster Gegner: ${opp||'noch offen'} am ${formatDateDE(nextMatchday.date)}. Prognosemodelle (M1/M7) sind noch nicht implementiert.`});
+}
+function overviewMatchcenterLinkHtml(){
+  return`<div class="ia-overview-card">${uiNotiz('Detaillierte Hinweise ("Darauf achten") erfordern die Matchcenter-Analyse für den jeweiligen Gegner.')}<a class="ia-overview-link" href="#/matchcenter">Zum Matchcenter</a></div>`;
+}
+function overviewLineupLinkHtml(){
+  return`<div class="ia-overview-card">${uiNotiz('Aufstellung eintragen oder planen:')}<a class="ia-overview-link" href="#/lineupBuilder">Zum Lineup Builder</a> · <a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`;
+}
+/** "Veränderungen durch den Spieltag": Tabellenplatz-Kachel mit Veränderung seit dem Vor-Spieltag, über getSeasonStatsAsOf() vorher/nachher — keine neue Statistikformel, reine Differenzbildung zweier bereits bestehender Ergebnisse. */
+function overviewRankChangeTile(seasonKey,lastMatchday){
+  if(!lastMatchday)return null;
+  const currentStats=getSeasonStatsAsOf(seasonKey);
+  const currentRow=(currentStats?.standings||[]).find(t=>isUlmTeamName(t.name));
+  if(!currentRow)return null;
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  const idx=matchdays.findIndex(m=>m.key===lastMatchday.key);
+  const previousMatchday=idx>0?matchdays[idx-1]:null;
+  let delta=null;
+  if(previousMatchday){
+    const prevCutoff=matchdayAsOfCutoff(previousMatchday);
+    const prevStats=prevCutoff?getSeasonStatsAsOf(seasonKey,prevCutoff):null;
+    const prevRow=(prevStats?.standings||[]).find(t=>isUlmTeamName(t.name));
+    if(prevRow)delta=prevRow.rank-currentRow.rank;
+  }
+  return uiKennzahlKachel({label:'Tabellenplatz',value:currentRow.rank,delta,deltaSignificant:delta!=null&&delta!==0,n:currentRow.sp});
+}
+/**
+ * Baut die phasenabhängigen Karten (6.3.1-Tabelle, je Phase in exakt der
+ * dort genannten Reihenfolge, höchstens 6 Karten insgesamt inkl. Kacheln).
+ * Bereiche ohne bestehende fachliche Datenbasis (M1/M7-Prognosen, M8-
+ * Auffälligkeiten, Game-Score "Spieler des Tages") werden ehrlich über
+ * uiNotiz() als noch nicht implementiert ausgewiesen statt erfundener
+ * Werte.
+ */
+function buildOverviewCards(seasonKey,now=new Date()){
+  const{phase,lastMatchday,nextMatchday}=detectOverviewPhase(seasonKey,now);
+  const kernaussage=overviewLastMatchdayText(lastMatchday);
+  let tiles=[],themenkarten=[];
+  if(phase==='nachDemSpieltag'){
+    const rankTile=overviewRankChangeTile(seasonKey,lastMatchday);
+    tiles=rankTile?[rankTile]:[];
+    themenkarten=[
+      uiNotiz('Spieler des Tages (Game Score) ist noch nicht implementiert.'),
+      uiNotiz('Auffälligkeiten (M8) sind noch nicht implementiert.'),
+      overviewCompactTableHtml(seasonKey),
+      overviewNextMatchdayHtml(nextMatchday),
+    ];
+  }else if(phase==='unterDerWoche'){
+    themenkarten=[
+      overviewFormHtml(seasonKey),
+      uiNotiz('Power Ranking und Tabellen-Wahrscheinlichkeiten (M1) sind noch nicht implementiert.'),
+      uiNotiz('Entwicklung ausgewählter Kennzahlen folgt mit den Liga-Analytics-Modulen (M1–M10).'),
+      uiNotiz('Auffälligkeiten (M8) sind noch nicht implementiert.'),
+      uiHinweisKarte({observation:overviewLastMatchdayText(lastMatchday)}),
+      overviewNextMatchdayHtml(nextMatchday),
+    ];
+  }else if(phase==='vorDemSpieltag'){
+    themenkarten=[
+      overviewOpponentPreviewHtml(nextMatchday),
+      overviewMatchcenterLinkHtml(),
+      overviewLineupLinkHtml(),
+      overviewFormHtml(seasonKey),
+      overviewCompactTableHtml(seasonKey),
+      uiHinweisKarte({observation:overviewLastMatchdayText(lastMatchday)}),
+    ];
+  }else{
+    themenkarten=[
+      overviewSeasonBilanzHtml(seasonKey),
+      overviewSeasonAwardHtml(seasonKey),
+      overviewRecordHtml(),
+      overviewCrossSeasonTrendHtml(),
+    ];
+  }
+  return{phase,lastMatchday,nextMatchday,kernaussage,tiles:tiles.filter(Boolean).slice(0,UI_OBJEKTSEITE_MAX_TILES),themenkarten:themenkarten.filter(Boolean).slice(0,6)};
+}
+const OVERVIEW_PHASE_LABELS={nachDemSpieltag:'Nach dem Spieltag',unterDerWoche:'Unter der Woche',vorDemSpieltag:'Vor dem Spieltag',saisonpause:'Saisonpause'};
+/**
+ * Übersichtsseite: nutzt uiObjektseite() (P0b.3) für Kopf/Kernaussage/
+ * Kacheln (6.2 Punkt 6: "Alle Seiten nutzen dieselbe Seitenvorlage (6.4)")
+ * — bewusst OHNE Tabs (die Übersicht ist laut 6.3.1 eine flache Kartenliste,
+ * keine Tab-Seite). Die restlichen "Themenkarten" (6.2: Kernaussage →
+ * Kacheln → Themenkarten → Details) werden als eigener Abschnitt direkt
+ * darunter gerendert, nicht in uiObjektseite()-Tabs gezwängt.
+ */
+function rOverviewPage(seasonKey){
+  const{phase,tiles,themenkarten,kernaussage}=buildOverviewCards(seasonKey);
+  const shell=uiObjektseite({
+    title:'Übersicht',
+    contextLine:`${SEASON_CONFIG[seasonKey]?.label||seasonKey} · ${OVERVIEW_PHASE_LABELS[phase]||phase}`,
+    headline:kernaussage,
+    tiles,
+  });
+  return`<div class="ia-overview">${shell}${themenkarten.length?`<div class="ia-overview-cards">${themenkarten.join('')}</div>`:''}</div>`;
+}
 window.openLigaGegner=async()=>{
   showMainShell();
   setState({screen:'main',page:'ligaGegner'});
 };
-function rOverviewPlaceholderPage(){
-  return`<div class="ia-placeholder-page">
-    <div class="ia-placeholder-title">Übersicht</div>
-    ${uiNotiz('Die phasenabhängige Übersicht (Abschnitt 6.3.1) wird in einer späteren Phase (P0b.7) mit echten Inhalten befüllt. Bis dahin bleiben die bestehenden Ansichten über die Navigation erreichbar.')}
-  </div>`;
-}
 function rLigaGegnerPlaceholderPage(){
   return`<div class="ia-placeholder-page">
     <div class="ia-placeholder-title">Liga & Gegner</div>
@@ -22536,25 +22811,29 @@ window.setContextAsOf=function(value){
  * - Globale Suche: eigenständige neue Fachlogik, nicht Teil der reinen
  *   IA-Shell.
  * Saison- UND Zeitpunkt-Auswahl werden NUR gezeigt, wenn die aktuelle Seite
- * tatsächlich aus S.activeSeasonKey-Daten rendert (team/player, siehe
- * applySeasonContext()) — die übrigen Seiten verwalten ihre Saison
- * unabhängig (matchcenter/lineupBuilder/einsatzCenter, siehe
- * P0b.4-Kommentar) oder sind saisonunabhängig; dort für sie eine "aktive
- * Saison"/einen Zeitpunkt zu behaupten wäre eine erfundene, irreführende
- * Information. WICHTIG: diese Auswahl setzt ausschließlich S.asOf — sie
- * verdrahtet KEINE bestehende Renderfunktion (rTeamPage/Player-Profil) neu
- * auf getSeasonStatsAsOf(); das bleibt bewusst einer späteren, separat zu
- * beauftragenden Phase vorbehalten (siehe Abschlussbericht).
+ * tatsächlich aus S.activeSeasonKey-Daten rendert (team/player, seit P0b.7
+ * zusätzlich overview — siehe applySeasonContext()/openOverview()) — die
+ * übrigen Seiten verwalten ihre Saison unabhängig (matchcenter/
+ * lineupBuilder/einsatzCenter, siehe P0b.4-Kommentar) oder sind
+ * saisonunabhängig; dort für sie eine "aktive Saison"/einen Zeitpunkt zu
+ * behaupten wäre eine erfundene, irreführende Information. WICHTIG: diese
+ * Auswahl setzt ausschließlich S.asOf — sie verdrahtet KEINE bestehende
+ * Renderfunktion (rTeamPage/Player-Profil) neu auf getSeasonStatsAsOf();
+ * das bleibt bewusst einer späteren, separat zu beauftragenden Phase
+ * vorbehalten. Die Übersicht selbst (rOverviewPage(), P0b.7) verwendet
+ * getSeasonStatsAsOf() dagegen bereits aktiv für ihre Karten (Tabelle
+ * kompakt, Saisonbilanz, Formkurve) — reagiert also auf diese Auswahl.
  */
 function rContextBar(){
-  const seasonRelevant=S.page==='team'||S.page==='player';
+  const seasonRelevant=S.page==='team'||S.page==='player'||S.page==='overview';
   let seasonHtml='';
   let asOfHtml='';
   if(seasonRelevant){
     const seasonKey=getActiveSeasonKey();
     if(seasonKey&&SEASON_CONFIG[seasonKey]){
       const seasonOptions=Object.keys(SEASON_CONFIG).map(key=>`<option value="${escAttr(key)}"${key===seasonKey?' selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
-      seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="openSeason(this.value)">${seasonOptions}</select></label>`;
+      const seasonOnChange=S.page==='overview'?'switchOverviewSeason(this.value)':'openSeason(this.value)';
+      seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="${seasonOnChange}">${seasonOptions}</select></label>`;
       asOfHtml=rAsOfSelector(seasonKey);
     }
   }
