@@ -243,7 +243,8 @@ export async function main(argv = process.argv.slice(2)) {
   process.exitCode = 0;
 }
 
-if (process.argv[1]?.replace(/\\/g, '/').endsWith('spieltag.mjs')) {
+// Exakter Dateiname (nicht endsWith): sonst würde auch test-spieltag.mjs den CLI-Start auslösen.
+if (/(^|\/)spieltag\.mjs$/.test(process.argv[1]?.replace(/\\/g, '/') ?? '')) {
   main().catch((e) => {
     console.error('Unerwarteter Fehler:', e.message);
     process.exitCode = 1;
