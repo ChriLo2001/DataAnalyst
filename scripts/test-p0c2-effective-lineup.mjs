@@ -196,7 +196,8 @@ for (const name of ['rEinsatzCenterPage', 'computeEinsatzCenterStats', 'rEinsatz
   assertTrue(src && !src.includes('LINEUP_DATA'), `${name} liest LINEUP_DATA nicht mehr direkt`);
 }
 {
-  const allowed = new Set(['ensureLineupDataLoaded', 'getEffectiveLineupData', 'ensureEinsatzCenterDraft', 'getEinsatzCenterGameDraft']);
+  // einsatzCenterCurrentRawBaseHash (P0c.3): baseHash-Vergleich des Autosave-Eintrags braucht den Raw-Stand.
+  const allowed = new Set(['ensureLineupDataLoaded', 'getEffectiveLineupData', 'ensureEinsatzCenterDraft', 'getEinsatzCenterGameDraft', 'einsatzCenterCurrentRawBaseHash']);
   const fnRegex = /(^|\n)(?:async )?function (\w+)\(/g;
   const offenders = [];
   const readers = [];
@@ -212,7 +213,7 @@ for (const name of ['rEinsatzCenterPage', 'computeEinsatzCenterStats', 'rEinsatz
     }
   }
   assertEqual(offenders, [], 'kein weiterer Code außerhalb der erlaubten Raw-Leser greift direkt auf LINEUP_DATA[...] zu');
-  assertEqual([...readers].sort(), [...allowed].sort(), 'die erlaubten Raw-Leser sind genau Loader, Accessor, Draft-Start (baseHash) und Draft-Seed');
+  assertEqual([...readers].sort(), [...allowed].sort(), 'die erlaubten Raw-Leser sind genau Loader, Accessor, Draft-Start (baseHash), Draft-Seed und Raw-baseHash-Vergleich (P0c.3)');
 }
 
 // ── G ──────────────────────────────────────────────────────────────────

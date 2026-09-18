@@ -6456,7 +6456,7 @@ function rEinsatzCenterPage(){
       <label class="mc-field" style="max-width:280px"><span class="mc-label">Saison</span><select class="mc-select" onchange="setEinsatzCenterSeason(this.value)">${seasonOptions}</select></label>
       <button class="btn-back" style="margin-top:10px" onclick="startEinsatzCenterDraftMode()">✎ Entwurf bearbeiten</button>
     </div>
-    ${rEinsatzCenterStats(seasonKey)}
+    ${rEinsatzCenterAutosaveBanner(seasonKey)}${rEinsatzCenterStats(seasonKey)}
     <div style="display:grid;gap:14px">
       ${games.length?games.map(g=>rEinsatzCenterGameCard(seasonKey,g)).join(''):`<div class="mc-empty">Für ${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)} sind noch keine Einsatzdaten erfasst.</div>`}
     </div>
@@ -6466,12 +6466,14 @@ function rEinsatzCenterPage(){
 window.setEinsatzCenterSeason=async(value)=>{
   const seasonKey=value||CURRENT_SEASON_KEY;
   await ensureLineupDataLoaded(seasonKey);
+  await einsatzCenterInspectAutosave(seasonKey);
   setState({einsatzCenterSeasonKey:seasonKey});
 };
 window.openEinsatzCenter=async()=>{
   const seasonKey=S.einsatzCenterSeasonKey||getActiveSeasonKey()||CURRENT_SEASON_KEY;
   try{await ensureGlobalDataLoaded();}catch(e){}
   await Promise.all([ensureLineupDataLoaded(seasonKey),ensureLineupGroupsRegistryLoaded()]);
+  await einsatzCenterInspectAutosave(seasonKey);
   showMainShell();
   setState({screen:'main',page:'einsatzCenter',einsatzCenterSeasonKey:seasonKey});
 };
@@ -6549,7 +6551,8 @@ window.lineupGroupDisplayName=lineupGroupDisplayName;
 // exklusiv Aufgabe von scripts/import-lineup-data.mjs --write, unverändert.
 // Verändert NIEMALS SEASONS/PLAYER_REGISTRY/STATIC_SEASON_DATA oder
 // bestehende Statistik-/Analyse-Strukturen — nur lesende Zugriffe für
-// Picker-/Anzeigezwecke. Kein localStorage/sessionStorage. Vollständig
+// Picker-/Anzeigezwecke. Browser-Speicher NUR als Autosave-Komfortkopie des
+// Entwurfs (P0c.3, siehe Block "Draft-Autosave" unten). Vollständig
 // getrennt vom bestehenden, hypothetischen Lineup Builder (S.lineupBuilder*).
 //
 // EINSATZ_CENTER_DRAFT-Struktur (reines In-Memory-Arbeitsobjekt, NICHT das
@@ -6609,6 +6612,10 @@ async function ensureEinsatzCenterDraft(seasonKey){
   const baseRegistry=LINEUP_GROUPS_REGISTRY||{schemaVersion:1,groups:[]};
   const baseHash=await einsatzCenterComputeBaseHash(baseSeasonData,baseRegistry);
   EINSATZ_CENTER_DRAFT={seasonKey,baseHash,games:new Map(),newGroups:new Map(),renamedGroups:new Map()};
+  // Ein neuer Runtime-Draft besitzt keinen bestehenden Autosave-Eintrag (auch nicht den eines
+  // zuvor verdrängten Drafts) — ein solcher Eintrag bleibt bis zur Entscheidung des Nutzers erhalten.
+  EINSATZ_CENTER_AUTOSAVE_OWNER=null;
+  EINSATZ_CENTER_AUTOSAVE_INFO={state:'empty',savedAt:null};
   return EINSATZ_CENTER_DRAFT;
 }
 
@@ -6631,6 +6638,240 @@ function getEinsatzCenterGameDraft(gameId){
   }
   return draft.games.get(id);
 }
+
+// ═══ Einsatz-Center — Draft-Autosave (P0c.3, Entscheidung 10 / Spez. 3.6.5) ═
+// Reine Komfort-/Wiederherstellungskopie des Entwurfs im Browser-Speicher
+// (localStorage). NIE Quelle der Wahrheit: LINEUP_DATA bleibt der importierte
+// Raw-Stand, EINSATZ_CENTER_DRAFT die Runtime-Struktur (Maps unverändert) —
+// der Speicher hält nur eine serialisierte Kopie. Jeder Zugriff ist gekapselt
+// und darf fehlschlagen (nicht verfügbar, wirft, leer, ungültig): die App und
+// alle Draft-Funktionen laufen dann unverändert weiter.
+// Ein Schlüssel pro Saison, damit ein offener Entwurf einer Saison nie den
+// einer anderen überschreibt. Eintrag: {version,seasonKey,baseHash,savedAt,draft}.
+// Wiederherstellung passiert NIE automatisch: beim Einstieg wird der Eintrag
+// nur geprüft (Version, Saison, Struktur, baseHash gegen den Raw-Stand) und
+// als Hinweis in der Einsatz-Center-Ansicht angeboten (Wiederherstellen/Verwerfen).
+// Ein Eintrag mit abweichendem baseHash wird weder wiederhergestellt noch
+// gemerged noch gelöscht — nur der Nutzer kann ihn verwerfen.
+const EINSATZ_CENTER_AUTOSAVE_PREFIX='vfbulm.einsatzCenter.draftAutosave.';
+const EINSATZ_CENTER_AUTOSAVE_VERSION=1;
+// Saison, deren Speicher-Eintrag vom laufenden Runtime-Draft geschrieben/
+// wiederhergestellt wurde (nur dann darf er überschrieben bzw. beim Verwerfen
+// gelöscht werden — ein fremder, noch unentschiedener Eintrag nie).
+let EINSATZ_CENTER_AUTOSAVE_OWNER=null;
+// Ergebnis der letzten Prüfung beim Einstieg: kind 'none'|'restorable'|'mismatch'
+let EINSATZ_CENTER_AUTOSAVE_STATUS={seasonKey:null,kind:'none'};
+// Ergebnis des letzten Sicherungsversuchs: 'empty'|'saved'|'paused'|'failed'
+let EINSATZ_CENTER_AUTOSAVE_INFO={state:'empty',savedAt:null};
+
+function einsatzCenterAutosaveKey(seasonKey){return EINSATZ_CENTER_AUTOSAVE_PREFIX+seasonKey;}
+function einsatzCenterStorageRead(key){
+  try{const s=window.localStorage;return s?s.getItem(key):null;}catch(e){return null;}
+}
+function einsatzCenterStorageWrite(key,text){
+  try{const s=window.localStorage;if(!s)return false;s.setItem(key,text);return true;}catch(e){return false;}
+}
+function einsatzCenterStorageRemove(key){
+  try{const s=window.localStorage;if(!s)return false;s.removeItem(key);return true;}catch(e){return false;}
+}
+
+/** Leer == der Export würde "Entwurf ist leer" melden und es gibt keine Gruppenänderung. */
+function einsatzCenterDraftIsEmpty(draft){
+  return !draft||(draft.games.size===0&&draft.newGroups.size===0&&draft.renamedGroups.size===0);
+}
+/** Maps -> explizite Paarlisten (nie JSON.stringify auf einer Map). */
+function einsatzCenterSerializeDraft(draft){
+  return{
+    version:EINSATZ_CENTER_AUTOSAVE_VERSION,
+    seasonKey:draft.seasonKey,
+    baseHash:draft.baseHash,
+    savedAt:new Date().toISOString(),
+    draft:{
+      games:[...draft.games.entries()],
+      newGroups:[...draft.newGroups.entries()],
+      renamedGroups:[...draft.renamedGroups.entries()],
+    },
+  };
+}
+function einsatzCenterIsPlainObject(v){return v!==null&&typeof v==='object'&&!Array.isArray(v);}
+/**
+ * Prüft einen gelesenen Eintrag streng (Version, Saison, Struktur, alles, was
+ * die Draft-UI später ungeprüft anfasst) und baut daraus eine Runtime-Draft-
+ * Struktur. Liefert null bei jeder Abweichung — nie ein Teilergebnis.
+ */
+function einsatzCenterDeserializeAutosave(text,seasonKey){
+  try{
+    const rec=JSON.parse(text);
+    if(!einsatzCenterIsPlainObject(rec)||rec.version!==EINSATZ_CENTER_AUTOSAVE_VERSION)return null;
+    if(rec.seasonKey!==seasonKey||typeof rec.baseHash!=='string'||!rec.baseHash||typeof rec.savedAt!=='string')return null;
+    const body=rec.draft;
+    if(!einsatzCenterIsPlainObject(body)||!Array.isArray(body.games)||!Array.isArray(body.newGroups)||!Array.isArray(body.renamedGroups))return null;
+    const games=new Map();
+    for(const pair of body.games){
+      if(!Array.isArray(pair)||pair.length!==2)return null;
+      const [id,e]=pair;
+      if(!Number.isInteger(id)||games.has(id)||!einsatzCenterIsPlainObject(e)||e.gameId!==id)return null;
+      if(!einsatzCenterIsPlainObject(e.roster)||!Array.isArray(e.roster.field)||!Array.isArray(e.roster.goalies))return null;
+      if(!Array.isArray(e.groups)||!e.groups.every(g=>einsatzCenterIsPlainObject(g)&&typeof g.groupId==='string'&&Array.isArray(g.players)))return null;
+      if(!Array.isArray(e.confirmedCombinations)||!e.confirmedCombinations.every(c=>einsatzCenterIsPlainObject(c)&&Array.isArray(c.players)))return null;
+      if(e.note!==undefined&&typeof e.note!=='string')return null;
+      games.set(id,e);
+    }
+    const readGroups=list=>{
+      const m=new Map();
+      for(const pair of list){
+        if(!Array.isArray(pair)||pair.length!==2)return null;
+        const [id,e]=pair;
+        if(typeof id!=='string'||m.has(id)||!einsatzCenterIsPlainObject(e)||e.groupId!==id||typeof e.currentName!=='string')return null;
+        m.set(id,e);
+      }
+      return m;
+    };
+    const newGroups=readGroups(body.newGroups);
+    const renamedGroups=readGroups(body.renamedGroups);
+    if(!newGroups||!renamedGroups)return null;
+    return{savedAt:rec.savedAt,draft:{seasonKey,baseHash:rec.baseHash,games,newGroups,renamedGroups}};
+  }catch(e){return null;}
+}
+
+/**
+ * Aktueller baseHash des importierten Raw-Zustands einer Saison — dieselbe
+ * Berechnung wie der Snapshot in ensureEinsatzCenterDraft() (Raw-Saison +
+ * Registry, jeweils mit demselben Leer-Fallback), nie der Effective-State.
+ */
+async function einsatzCenterCurrentRawBaseHash(seasonKey){
+  await Promise.all([ensureLineupDataLoaded(seasonKey),ensureLineupGroupsRegistryLoaded()]);
+  const baseSeasonData=LINEUP_DATA[seasonKey]||{schemaVersion:1,season:seasonKey,games:[]};
+  const baseRegistry=LINEUP_GROUPS_REGISTRY||{schemaVersion:1,groups:[]};
+  return einsatzCenterComputeBaseHash(baseSeasonData,baseRegistry);
+}
+
+/**
+ * Sichert den Runtime-Draft (nach jeder Draft-Mutation aufgerufen, NACHDEM der
+ * Runtime-Draft aktualisiert wurde). Wirft nie; ein Fehlschlag betrifft nur
+ * EINSATZ_CENTER_AUTOSAVE_INFO. Leerer Draft -> kein Eintrag (ein eigener
+ * Eintrag wird entfernt). Ein fremder, noch unentschiedener Eintrag derselben
+ * Saison wird nie überschrieben (Autosave pausiert).
+ */
+function einsatzCenterAutosaveDraft(){
+  try{
+    const draft=EINSATZ_CENTER_DRAFT;
+    if(!draft)return;
+    const key=einsatzCenterAutosaveKey(draft.seasonKey);
+    if(einsatzCenterDraftIsEmpty(draft)){
+      if(EINSATZ_CENTER_AUTOSAVE_OWNER===draft.seasonKey){
+        einsatzCenterStorageRemove(key);
+        EINSATZ_CENTER_AUTOSAVE_OWNER=null;
+      }
+      EINSATZ_CENTER_AUTOSAVE_INFO={state:'empty',savedAt:null};
+      return;
+    }
+    if(EINSATZ_CENTER_AUTOSAVE_OWNER!==draft.seasonKey&&einsatzCenterStorageRead(key)!==null){
+      EINSATZ_CENTER_AUTOSAVE_INFO={state:'paused',savedAt:null};
+      return;
+    }
+    const record=einsatzCenterSerializeDraft(draft);
+    if(einsatzCenterStorageWrite(key,JSON.stringify(record))){
+      EINSATZ_CENTER_AUTOSAVE_OWNER=draft.seasonKey;
+      EINSATZ_CENTER_AUTOSAVE_INFO={state:'saved',savedAt:record.savedAt};
+    }else{
+      EINSATZ_CENTER_AUTOSAVE_INFO={state:'failed',savedAt:null};
+    }
+  }catch(e){
+    EINSATZ_CENTER_AUTOSAVE_INFO={state:'failed',savedAt:null};
+  }
+}
+
+/**
+ * Prüft beim Einsatz-Center-Einstieg, ob für die Saison ein Autosave-Eintrag
+ * existiert, und setzt EINSATZ_CENTER_AUTOSAVE_STATUS. Verändert weder
+ * LINEUP_DATA noch den Runtime-Draft. Ungültige/unbekannte Einträge werden
+ * ignoriert und entfernt; ein gültiger Eintrag bleibt in jedem Fall erhalten.
+ */
+async function einsatzCenterInspectAutosave(seasonKey){
+  let status={seasonKey,kind:'none'};
+  try{
+    if(!(EINSATZ_CENTER_AUTOSAVE_OWNER===seasonKey&&EINSATZ_CENTER_DRAFT?.seasonKey===seasonKey)){
+      const key=einsatzCenterAutosaveKey(seasonKey);
+      const text=einsatzCenterStorageRead(key);
+      if(text!==null){
+        const parsed=einsatzCenterDeserializeAutosave(text,seasonKey);
+        if(!parsed){
+          einsatzCenterStorageRemove(key);
+        }else{
+          const currentHash=await einsatzCenterCurrentRawBaseHash(seasonKey);
+          status={
+            seasonKey,
+            kind:parsed.draft.baseHash===currentHash?'restorable':'mismatch',
+            savedAt:parsed.savedAt,
+            games:parsed.draft.games.size,
+            newGroups:parsed.draft.newGroups.size,
+            renamedGroups:parsed.draft.renamedGroups.size,
+          };
+        }
+      }
+    }
+  }catch(e){
+    status={seasonKey,kind:'none'};
+  }
+  EINSATZ_CENTER_AUTOSAVE_STATUS=status;
+  return status;
+}
+
+/** Bewusste Wiederherstellung (Nutzeraktion): nur bei erneut bestätigtem, passendem baseHash. */
+async function restoreEinsatzCenterAutosave(){
+  const seasonKey=EINSATZ_CENTER_AUTOSAVE_STATUS.seasonKey;
+  if(!seasonKey||EINSATZ_CENTER_AUTOSAVE_STATUS.kind!=='restorable')return false;
+  const status=await einsatzCenterInspectAutosave(seasonKey);
+  if(status.kind!=='restorable'){setState({});return false;}
+  if(EINSATZ_CENTER_DRAFT&&!einsatzCenterDraftIsEmpty(EINSATZ_CENTER_DRAFT)){
+    if(!window.confirm('Der aktuelle, noch nicht exportierte Entwurf wird durch den gespeicherten Entwurf ersetzt. Fortfahren?'))return false;
+  }
+  const parsed=einsatzCenterDeserializeAutosave(einsatzCenterStorageRead(einsatzCenterAutosaveKey(seasonKey)),seasonKey);
+  if(!parsed){setState({});return false;}
+  EINSATZ_CENTER_DRAFT=parsed.draft;
+  EINSATZ_CENTER_AUTOSAVE_OWNER=seasonKey;
+  EINSATZ_CENTER_AUTOSAVE_STATUS={seasonKey,kind:'none'};
+  EINSATZ_CENTER_AUTOSAVE_INFO={state:'saved',savedAt:parsed.savedAt};
+  setState({einsatzCenterSeasonKey:seasonKey,einsatzCenterMode:'edit',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[]});
+  return true;
+}
+/** Verwirft den (noch unentschiedenen) gespeicherten Eintrag der angezeigten Saison. */
+function discardEinsatzCenterAutosave(){
+  const seasonKey=EINSATZ_CENTER_AUTOSAVE_STATUS.seasonKey;
+  if(seasonKey)einsatzCenterStorageRemove(einsatzCenterAutosaveKey(seasonKey));
+  EINSATZ_CENTER_AUTOSAVE_STATUS={seasonKey,kind:'none'};
+  setState({});
+}
+
+/** Kurzer Hinweis für die Einsatz-Center-Ansicht (nur wenn ein Eintrag zur Entscheidung ansteht). */
+function rEinsatzCenterAutosaveBanner(seasonKey){
+  const st=EINSATZ_CENTER_AUTOSAVE_STATUS;
+  if(st.seasonKey!==seasonKey||(st.kind!=='restorable'&&st.kind!=='mismatch'))return '';
+  let when='';
+  try{when=new Date(st.savedAt).toLocaleString('de-DE');}catch(e){}
+  const summary=`${st.games} Spiel(e), ${st.newGroups} neue und ${st.renamedGroups} umbenannte Gruppe(n)`;
+  if(st.kind==='restorable'){
+    return `<div class="wrn-box" data-ec-autosave="restorable">💾 Gespeicherter Entwurf vom ${escHtml(when)} gefunden (${summary}). Er passt zum aktuellen importierten Stand.
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn-back" onclick="restoreEinsatzCenterAutosave()">Wiederherstellen</button><button class="btn-back" onclick="discardEinsatzCenterAutosave()">Verwerfen</button></div></div>`;
+  }
+  return `<div class="wrn-box" data-ec-autosave="mismatch">⚠ Gespeicherter Entwurf vom ${escHtml(when)} (${summary}) passt NICHT mehr zum aktuellen importierten Stand — die importierten Daten wurden seit dem Speichern geändert. Er wurde nicht wiederhergestellt und verändert die importierten Daten nicht; solange er nicht verworfen ist, sichert ein neuer Entwurf nicht automatisch.
+    <div style="margin-top:8px"><button class="btn-back" onclick="discardEinsatzCenterAutosave()">Gespeicherten Entwurf verwerfen</button></div></div>`;
+}
+/** Autosave-Zustand als Satz für den Warnhinweis der Entwurfs-Seite. */
+function einsatzCenterAutosaveInfoText(){
+  const info=EINSATZ_CENTER_AUTOSAVE_INFO;
+  if(info.state==='saved'){
+    let t='';
+    try{t=new Date(info.savedAt).toLocaleTimeString('de-DE');}catch(e){}
+    return `Wird automatisch im Browser-Speicher gesichert (Komfortkopie, zuletzt ${t}).`;
+  }
+  if(info.state==='paused')return 'Autosave pausiert: für diese Saison liegt ein gespeicherter Entwurf, über den noch nicht entschieden wurde (siehe Einsatz-Center-Ansicht).';
+  if(info.state==='failed')return 'Browser-Speicher nicht verfügbar — der Entwurf liegt nur in dieser Sitzung.';
+  return 'Noch keine Änderungen — es wird erst bei der ersten Änderung automatisch gesichert.';
+}
+window.restoreEinsatzCenterAutosave=restoreEinsatzCenterAutosave;
+window.discardEinsatzCenterAutosave=discardEinsatzCenterAutosave;
 
 /**
  * Portierte, minimale Ableitung gültiger saisonweiter Spieler-IDs — exakt
@@ -6937,7 +7178,7 @@ function rEinsatzCenterEditPage(){
     <div>
       <div class="mc-eyebrow">Einsatz-Center — Entwurfsmodus</div>
       <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Entwurf bearbeiten</div>
-      <div class="wrn-box">⚠ UNGESPEICHERTER ENTWURF — nur im Speicher dieser Browser-Sitzung, kein automatisches Speichern, kein Schreiben von Dateien. ${draftSummaryText}</div>
+      <div class="wrn-box">⚠ ENTWURF — nicht exportiert, kein Schreiben von Dateien. ${einsatzCenterAutosaveInfoText()} ${draftSummaryText}</div>
     </div>
     <div class="mc-card">
       <div class="mc-card-title">Spiel wählen (${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)})</div>
@@ -6957,6 +7198,13 @@ window.startEinsatzCenterDraftMode=async()=>{
   setState({einsatzCenterMode:'edit',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[]});
 };
 window.cancelEinsatzCenterEdit=()=>{
+  // Verwerfen entfernt auch die eigene Autosave-Kopie; ein fremder, noch unentschiedener Eintrag bleibt.
+  const discardedSeason=EINSATZ_CENTER_DRAFT?.seasonKey;
+  if(discardedSeason&&EINSATZ_CENTER_AUTOSAVE_OWNER===discardedSeason){
+    einsatzCenterStorageRemove(einsatzCenterAutosaveKey(discardedSeason));
+    EINSATZ_CENTER_AUTOSAVE_OWNER=null;
+  }
+  EINSATZ_CENTER_AUTOSAVE_INFO={state:'empty',savedAt:null};
   EINSATZ_CENTER_DRAFT=null;
   setState({einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],einsatzCenterRosterSuggestionDeselected:{},einsatzCenterRosterSuggestionDismissed:{},einsatzCenterRosterSuggestionAccepted:{}});
 };
@@ -6969,6 +7217,7 @@ window.addEinsatzCenterRosterPlayer=(gameId,role,playerId)=>{
   if(!entry||!playerId)return;
   const key=role==='goalies'?'goalies':'field';
   if(!entry.roster[key].includes(playerId))entry.roster[key].push(playerId);
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.removeEinsatzCenterRosterPlayer=(gameId,role,playerId)=>{
@@ -6976,6 +7225,7 @@ window.removeEinsatzCenterRosterPlayer=(gameId,role,playerId)=>{
   if(!entry)return;
   const key=role==='goalies'?'goalies':'field';
   entry.roster[key]=entry.roster[key].filter(id=>id!==playerId);
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.toggleEinsatzCenterRosterSuggestionPlayer=(gameId,playerId)=>{
@@ -7019,6 +7269,7 @@ window.addEinsatzCenterExistingGroup=(gameId,groupId)=>{
   if(!entry||!registryEntry)return;
   if(entry.groups.some(g=>g.groupId===groupId))return;
   entry.groups.push({groupId,name:registryEntry.currentName,type:'custom',players:[],notes:''});
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.addEinsatzCenterNewGroup=(gameId)=>{
@@ -7035,6 +7286,7 @@ window.addEinsatzCenterNewGroup=(gameId)=>{
   entry.groups.push({groupId,name,type,players:[],notes:''});
   if(nameInput)nameInput.value='';
   if(typeInput)typeInput.value='';
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.removeEinsatzCenterGroup=(gameId,groupId)=>{
@@ -7042,6 +7294,7 @@ window.removeEinsatzCenterGroup=(gameId,groupId)=>{
   if(!entry)return;
   entry.groups=(entry.groups||[]).filter(g=>g.groupId!==groupId);
   entry.confirmedCombinations=(entry.confirmedCombinations||[]).map(c=>c.groupId===groupId?{...c,groupId:null}:c);
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.toggleEinsatzCenterGroupRename=(groupId)=>{
@@ -7075,6 +7328,7 @@ window.renameEinsatzCenterGroup=(gameId,groupId,newName)=>{
     createdInGame:original.createdInGame,
     nameHistory:[{name:trimmed,since:{season:draft.seasonKey,gameId:Number(gameId)}}],
   });
+  einsatzCenterAutosaveDraft();
   setState({einsatzCenterRenamingGroupId:null});
 };
 window.addEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
@@ -7082,6 +7336,7 @@ window.addEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
   const group=(entry?.groups||[]).find(g=>g.groupId===groupId);
   if(!group||!playerId)return;
   if(!group.players.some(p=>p.playerId===playerId))group.players.push({playerId,position:null});
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.removeEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
@@ -7089,6 +7344,7 @@ window.removeEinsatzCenterGroupPlayer=(gameId,groupId,playerId)=>{
   const group=(entry?.groups||[]).find(g=>g.groupId===groupId);
   if(!group)return;
   group.players=group.players.filter(p=>p.playerId!==playerId);
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.setEinsatzCenterGroupPlayerPosition=(gameId,groupId,playerId,position)=>{
@@ -7097,6 +7353,7 @@ window.setEinsatzCenterGroupPlayerPosition=(gameId,groupId,playerId,position)=>{
   const member=group?.players.find(p=>p.playerId===playerId);
   if(!member)return;
   member.position=position&&position.trim()?position.trim():null;
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.toggleEinsatzCenterComboPlayer=(playerId)=>{
@@ -7115,18 +7372,21 @@ window.confirmEinsatzCenterCombo=(gameId)=>{
   const groupId=groupSelect?.value||null;
   entry.confirmedCombinations=entry.confirmedCombinations||[];
   entry.confirmedCombinations.push({players:[...selection],groupId:groupId||null,note:''});
+  einsatzCenterAutosaveDraft();
   setState({einsatzCenterComboSelection:[]});
 };
 window.removeEinsatzCenterCombo=(gameId,idx)=>{
   const entry=getEinsatzCenterGameDraft(gameId);
   if(!entry)return;
   entry.confirmedCombinations=(entry.confirmedCombinations||[]).filter((_,i)=>i!==idx);
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 window.setEinsatzCenterGameNote=(gameId,value)=>{
   const entry=getEinsatzCenterGameDraft(gameId);
   if(!entry)return;
   entry.note=value;
+  einsatzCenterAutosaveDraft();
   setState({});
 };
 
