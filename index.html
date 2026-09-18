@@ -6445,7 +6445,7 @@ function rEinsatzCenterGameCard(seasonKey,game){
 function rEinsatzCenterPage(){
   const seasonKey=S.einsatzCenterSeasonKey||CURRENT_SEASON_KEY;
   const seasonOptions=Object.keys(SEASON_CONFIG||{}).map(key=>`<option value="${escAttr(key)}" ${key===seasonKey?'selected':''}>${escHtml(SEASON_CONFIG[key]?.label||key)}</option>`).join('');
-  const seasonData=LINEUP_DATA[seasonKey];
+  const seasonData=getEffectiveLineupData(seasonKey);
   const games=Array.isArray(seasonData?.games)?seasonData.games:[];
   return `<section class="matchcenter-page">
     <div class="view-back-row"><button class="btn-back" onclick="backToHome()">&larr; Zurück</button></div>
@@ -6478,7 +6478,7 @@ window.openEinsatzCenter=async()=>{
 
 // ═══ Einsatz-Center — Kennzahlen (Phase 7A — read-only Aggregation) ══════
 // Rein lesende Aggregation ausschließlich über bereits geladenes
-// LINEUP_DATA[seasonKey] und LINEUP_GROUPS_REGISTRY (siehe Phase-4-Loader) —
+// getEffectiveLineupData(seasonKey) und LINEUP_GROUPS_REGISTRY (siehe Phase-4-Loader) —
 // kein neuer Netzwerk-Request, keine season-data-Verknüpfung, keine
 // Tor-/Punkte-/Ergebnisableitung. Gezählt werden ausschließlich strukturelle
 // Auftritte: roster.field/roster.goalies (Spieleinsätze) und
@@ -6486,7 +6486,7 @@ window.openEinsatzCenter=async()=>{
 // bestätigte groups[] zählen bewusst NICHT als Auftritt.
 const EINSATZ_CENTER_STATS_CACHE={};
 function computeEinsatzCenterStats(seasonKey){
-  const seasonData=LINEUP_DATA[seasonKey];
+  const seasonData=getEffectiveLineupData(seasonKey);
   const games=Array.isArray(seasonData?.games)?seasonData.games:[];
   const cached=EINSATZ_CENTER_STATS_CACHE[seasonKey];
   if(cached&&cached.gamesRef===games)return cached.stats;
@@ -6568,6 +6568,30 @@ window.lineupGroupDisplayName=lineupGroupDisplayName;
 //   gültigen Rename-Stand (kein Zwischenstand in nameHistory), siehe
 //   renameEinsatzCenterGroup().
 let EINSATZ_CENTER_DRAFT=null;
+
+/**
+ * Einzige analyse-/anzeigefähige Zugriffsstelle auf Lineup-Daten einer Saison
+ * (Spezifikation 3.6.5): importierter Stand (LINEUP_DATA, bleibt unverändert
+ * die Basis) überlagert mit den Spielen des laufenden Entwurfs
+ * (EINSATZ_CENTER_DRAFT.games). Die Überlagerung folgt exakt der
+ * Update-Semantik von mergeGames() in scripts/import-lineup-data.mjs: eine
+ * bekannte gameId wird vollständig ersetzt (Position bleibt), unbekannte
+ * gameIds werden angehängt.
+ * Ohne Entwurf für diese Saison oder mit leerem Entwurf (games.size===0) wird
+ * das rohe LINEUP_DATA[seasonKey]-Objekt selbst zurückgegeben (auch undefined,
+ * wenn nicht geladen) — inhaltlich und referenzgleich der bisherige Stand.
+ * Nur lesend verwenden: das Ergebnis darf nicht mutiert werden. Raw-Zugriffe
+ * auf LINEUP_DATA sind ausschließlich Loader, ensureEinsatzCenterDraft()
+ * (baseHash-Snapshot) und getEinsatzCenterGameDraft() (Draft-Seed) vorbehalten.
+ */
+function getEffectiveLineupData(seasonKey){
+  const raw=LINEUP_DATA[seasonKey];
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft||draft.seasonKey!==seasonKey||draft.games.size===0)return raw;
+  const merged=new Map((Array.isArray(raw?.games)?raw.games:[]).map(g=>[g?.gameId,g]));
+  for(const entry of draft.games.values())merged.set(entry?.gameId,entry);
+  return{...(raw||{schemaVersion:1,season:seasonKey}),games:[...merged.values()]};
+}
 
 /**
  * Erzeugt (falls nötig) den Draft für eine Saison und nimmt dabei EINMALIG
@@ -6888,7 +6912,8 @@ function rEinsatzCenterEditPage(){
   const seasonKey=draft.seasonKey;
   const bucket=SEASONS[seasonKey];
   const sourceGames=(bucket?.data?.rawGames?.length?bucket.data.rawGames:(bucket?.data?.gamesData||bucket?.data?.games||[])).filter(g=>!!detectUlmSide(g));
-  const recordedIds=new Set((Array.isArray(LINEUP_DATA[seasonKey]?.games)?LINEUP_DATA[seasonKey].games:[]).map(g=>Number(g?.gameId)));
+  const effectiveSeasonData=getEffectiveLineupData(seasonKey);
+  const recordedIds=new Set((Array.isArray(effectiveSeasonData?.games)?effectiveSeasonData.games:[]).map(g=>Number(g?.gameId)));
   const gameId=S.einsatzCenterEditingGameId;
 
   const gameListHtml=(sourceGames||[]).map(g=>{
@@ -7137,6 +7162,7 @@ window.exportEinsatzCenterDraft=async()=>{
 window.buildEinsatzCenterDraftExport=buildEinsatzCenterDraftExport;
 window.ensureEinsatzCenterDraft=ensureEinsatzCenterDraft;
 window.getEinsatzCenterGameDraft=getEinsatzCenterGameDraft;
+window.getEffectiveLineupData=getEffectiveLineupData;
 window.deriveLineupValidPlayerIds=deriveLineupValidPlayerIds;
 window.deriveLineupUlmPlayerIds=deriveLineupUlmPlayerIds;
 window.getSeasonmanagerRosterSuggestion=getSeasonmanagerRosterSuggestion;
