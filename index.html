@@ -6853,7 +6853,8 @@ function rEinsatzCenterGroup(group){
   const registryEntry=(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===group?.groupId);
   const players=(Array.isArray(group?.players)?group.players:[]).map(p=>`${resolveLineupPlayerName(p?.playerId)}${p?.position?` <span style="color:var(--tx3)">(${escHtml(p.position)})</span>`:''}`).join(', ')||'–';
   const registryNote=(registryEntry&&registryEntry.currentName!==group?.name)?` <span style="color:var(--tx3);font-size:11px">(aktueller Registry-Name: ${escHtml(registryEntry.currentName)})</span>`:'';
-  const registryMissing=!registryEntry?` <span style="color:#fcd34d;font-size:11px">(nicht in groups.json registriert)</span>`:'';
+  const draftGroup=!registryEntry&&!!EINSATZ_CENTER_DRAFT&&EINSATZ_CENTER_DRAFT!==EINSATZ_CENTER_DRAFT_EXCLUDED&&EINSATZ_CENTER_DRAFT.newGroups.has(group?.groupId);
+  const registryMissing=!registryEntry?` <span style="color:#fcd34d;font-size:11px">(${draftGroup?'neue Gruppe im Entwurf':'nicht in groups.json registriert'})</span>`:'';
   return `<div style="padding:8px 0;border-top:1px solid var(--brd)">
     <strong>${escHtml(group?.name||'')}</strong> <span style="color:var(--tx3);font-size:11px">[${escHtml(group?.type||'')}]</span>${registryNote}${registryMissing}
     <div style="font-size:12.5px;margin-top:3px">${players}</div>
@@ -6878,7 +6879,7 @@ function rEinsatzCenterGameCard(seasonKey,game){
   const groups=Array.isArray(game?.groups)?game.groups:[];
   const combos=Array.isArray(game?.confirmedCombinations)?game.confirmedCombinations:[];
   return `<div class="mc-card">
-    <div class="mc-card-title">${title}</div>
+    <div class="mc-card-title">${title}${rEinsatzCenterDraftMark(seasonKey,game?.gameId)}</div>
     <div style="font-size:12.5px;margin-top:6px"><strong>Kader:</strong> ${fieldNames}</div>
     <div style="font-size:12.5px;margin-top:2px"><strong>Torhüter:</strong> ${goalieNames}</div>
     <div style="margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">Gruppen</div>
@@ -6903,7 +6904,7 @@ function rEinsatzCenterPage(){
       <label class="mc-field" style="max-width:280px"><span class="mc-label">Saison</span><select class="mc-select" onchange="setEinsatzCenterSeason(this.value)">${seasonOptions}</select></label>
       <button class="btn-back" style="margin-top:10px" onclick="startEinsatzCenterDraftMode()">✎ Entwurf bearbeiten</button>
     </div>
-    ${rEinsatzCenterAutosaveBanner(seasonKey)}${rEinsatzCenterStats(seasonKey)}
+    ${rEinsatzCenterAutosaveBanner(seasonKey)}${rEinsatzCenterDraftBanner(seasonKey)}${rEinsatzCenterStats(seasonKey)}
     <div style="display:grid;gap:14px">
       ${games.length?games.map(g=>rEinsatzCenterGameCard(seasonKey,g)).join(''):`<div class="mc-empty">Für ${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)} sind noch keine Einsatzdaten erfasst.</div>`}
     </div>
@@ -6967,7 +6968,9 @@ function computeEinsatzCenterStats(seasonKey){
 }
 function lineupGroupDisplayName(groupId){
   const entry=(LINEUP_GROUPS_REGISTRY?.groups||[]).find(g=>g?.groupId===groupId);
-  return entry?.currentName?escHtml(entry.currentName):`Unbekannte Gruppe (${escHtml(String(groupId))})`;
+  if(entry?.currentName)return escHtml(entry.currentName);
+  const draftGroup=!!EINSATZ_CENTER_DRAFT&&EINSATZ_CENTER_DRAFT!==EINSATZ_CENTER_DRAFT_EXCLUDED&&EINSATZ_CENTER_DRAFT.newGroups.has(groupId);
+  return draftGroup?'neue Gruppe im Entwurf':`Unbekannte Gruppe (${escHtml(String(groupId))})`;
 }
 function rEinsatzCenterStats(seasonKey){
   const stats=computeEinsatzCenterStats(seasonKey);
@@ -6981,7 +6984,7 @@ function rEinsatzCenterStats(seasonKey){
   const groupRows=stats.groups.length?stats.groups.map(g=>`<tr><td>${lineupGroupDisplayName(g.groupId)}</td><td style="text-align:right">${g.confirmedGames}</td></tr>`).join(''):`<tr><td colspan="2" class="mc-empty">Keine bestätigten Kombinationen erfasst.</td></tr>`;
   return `<div class="mc-card">
     <div class="mc-card-title">Kennzahlen aus den gespeicherten Einsatzdaten</div>
-    <div style="font-size:11px;color:var(--tx3);margin:2px 0 10px">Ausschließlich gezählt aus ${stats.gamesCounted} erfasste${stats.gamesCounted===1?'m':'n'} Spiel${stats.gamesCounted===1?'':'en'} dieser Saison — keine Ableitung von Toren, Punkten oder sonstigen Ergebnissen.</div>
+    <div style="font-size:11px;color:var(--tx3);margin:2px 0 10px">Ausschließlich gezählt aus ${stats.gamesCounted} erfasste${stats.gamesCounted===1?'m':'n'} Spiel${stats.gamesCounted===1?'':'en'} dieser Saison — keine Ableitung von Toren, Punkten oder sonstigen Ergebnissen.</div>${rEinsatzCenterDraftStatsHint(seasonKey)}
     <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:6px">Spieleinsätze</div>
     <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:4px"><thead><tr><th style="text-align:left">Spieler</th><th style="text-align:right">Feld</th><th style="text-align:right">Torwart</th><th style="text-align:right">Gesamt</th></tr></thead><tbody>${playerRows}</tbody></table>
     <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:14px">Gruppen-Auftritte (bestätigt)</div>
@@ -7018,6 +7021,10 @@ window.lineupGroupDisplayName=lineupGroupDisplayName;
 //   gültigen Rename-Stand (kein Zwischenstand in nameHistory), siehe
 //   renameEinsatzCenterGroup().
 let EINSATZ_CENTER_DRAFT=null;
+// P0c.6 — globaler Schalter der zusammengeführten Sicht (nicht persistent, außerhalb von S): hält den
+// Draft, der gerade AUSGEBLENDET ist. null = Standard = Entwurf einbeziehen; ein neuer oder
+// wiederhergestellter Draft ist eine andere Instanz und ist deshalb automatisch wieder einbezogen.
+let EINSATZ_CENTER_DRAFT_EXCLUDED=null;
 
 /**
  * Einzige analyse-/anzeigefähige Zugriffsstelle auf Lineup-Daten einer Saison
@@ -7037,10 +7044,38 @@ let EINSATZ_CENTER_DRAFT=null;
 function getEffectiveLineupData(seasonKey){
   const raw=LINEUP_DATA[seasonKey];
   const draft=EINSATZ_CENTER_DRAFT;
-  if(!draft||draft.seasonKey!==seasonKey||draft.games.size===0)return raw;
+  if(!draft||draft.seasonKey!==seasonKey||draft===EINSATZ_CENTER_DRAFT_EXCLUDED||draft.games.size===0)return raw;
   const merged=new Map((Array.isArray(raw?.games)?raw.games:[]).map(g=>[g?.gameId,g]));
   for(const entry of draft.games.values())merged.set(entry?.gameId,entry);
   return{...(raw||{schemaVersion:1,season:seasonKey}),games:[...merged.values()]};
+}
+/** P0c.6 — Herkunft eines Spiels: liest ausschließlich den Draft, nie LINEUP_DATA. */
+function isEinsatzCenterGameFromDraft(seasonKey,gameId){
+  const draft=EINSATZ_CENTER_DRAFT;
+  return !!draft&&draft.seasonKey===seasonKey&&draft.games.has(Number(gameId));
+}
+/** P0c.6 — der Draft, der in der Sicht dieser Saison gerade einbezogen ist (sonst null: kein Draft, andere Saison oder Schalter AUS). */
+function einsatzCenterDraftInView(seasonKey){
+  const draft=EINSATZ_CENTER_DRAFT;
+  return draft&&draft.seasonKey===seasonKey&&draft!==EINSATZ_CENTER_DRAFT_EXCLUDED?draft:null;
+}
+function rEinsatzCenterDraftMark(seasonKey,gameId){
+  return einsatzCenterDraftInView(seasonKey)&&isEinsatzCenterGameFromDraft(seasonKey,gameId)
+    ?' <span data-ec-draft-mark style="color:#fcd34d;font-size:11px;font-weight:800;text-transform:none">Entwurf – noch nicht importiert</span>':'';
+}
+function rEinsatzCenterDraftStatsHint(seasonKey){
+  const draft=einsatzCenterDraftInView(seasonKey);
+  if(!draft||draft.games.size===0)return'';
+  return `<div data-ec-draft-stats style="font-size:11px;color:#fcd34d;margin:0 0 10px">enthält ${draft.games.size} Spiel(e) aus dem Entwurf</div>`;
+}
+/** P0c.6 — Banner der schreibgeschützten Sicht, solange für die Saison ein Draft mit Inhalt existiert: Schalter und Rückweg. */
+function rEinsatzCenterDraftBanner(seasonKey){
+  const draft=EINSATZ_CENTER_DRAFT;
+  if(!draft||draft.seasonKey!==seasonKey||einsatzCenterDraftIsEmpty(draft))return'';
+  const included=draft!==EINSATZ_CENTER_DRAFT_EXCLUDED;
+  const label=escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey);
+  return `<div class="wrn-box" data-ec-draft-banner>ENTWURF AKTIV · Saison ${label} · ${draft.games.size} Spiel(e) im Entwurf, noch nicht importiert. ${included?'Die Ansicht zeigt importierte Daten und Entwurf zusammen.':'Der Entwurf ist ausgeblendet — die Ansicht zeigt nur den importierten Stand.'}
+    <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${included?'checked':''} onchange="setEinsatzCenterIncludeDraft(this.checked)"> Entwurf einbeziehen</label><button class="btn-back" onclick="returnToEinsatzCenterEdit()">Zurück zur Bearbeitung</button></div></div>`;
 }
 
 /**
@@ -7621,7 +7656,7 @@ function rEinsatzCenterEditPage(){
     :`${touchedCount} Spiel(e) und ${newGroupsCount} neue Gruppe(n) im aktuellen Entwurf.`;
 
   return `<section class="matchcenter-page">
-    <div class="view-back-row"><button class="btn-back" onclick="cancelEinsatzCenterEdit()">&larr; Entwurf verwerfen &amp; zurück</button></div>
+    <div class="view-back-row" style="gap:8px;flex-wrap:wrap"><button class="btn-back" onclick="cancelEinsatzCenterEdit()">&larr; Entwurf verwerfen &amp; zurück</button><button class="btn-back" onclick="viewEinsatzCenterMergedView()">Zusammengeführte Sicht ansehen</button></div>
     <div>
       <div class="mc-eyebrow">Einsatz-Center — Entwurfsmodus</div>
       <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Entwurf bearbeiten</div>
@@ -7655,6 +7690,10 @@ window.cancelEinsatzCenterEdit=()=>{
   EINSATZ_CENTER_DRAFT=null;
   setState({einsatzCenterMode:'view',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[],einsatzCenterRosterSuggestionDeselected:{},einsatzCenterRosterSuggestionDismissed:{},einsatzCenterRosterSuggestionAccepted:{}});
 };
+// P0c.6 — Edit <-> schreibgeschützte Sicht ohne den Draft anzutasten; Schalter nur per Re-Render.
+window.viewEinsatzCenterMergedView=()=>{setState({einsatzCenterMode:'view'});};
+window.returnToEinsatzCenterEdit=()=>{setState({einsatzCenterMode:'edit'});};
+window.setEinsatzCenterIncludeDraft=(include)=>{EINSATZ_CENTER_DRAFT_EXCLUDED=include?null:EINSATZ_CENTER_DRAFT;setState({});};
 window.selectEinsatzCenterEditGame=(gameId)=>{
   getEinsatzCenterGameDraft(gameId);
   setState({einsatzCenterEditingGameId:Number(gameId),einsatzCenterComboSelection:[]});
