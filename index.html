@@ -6304,6 +6304,453 @@ function buildStaticSeasonDataBlock(seasonKey=getActiveSeasonKey()){
   },null,2)};`;
 }
 
+// ═══ Season-Daten-Vorschau (P0c.4 — Staging + Validierungs-/Diff-Bericht) ═══
+// Browserseitige "Spieldaten-Vorschau" (Spezifikation 3.6.5, dritter Punkt):
+// neue/aktualisierte Season-Rohdaten (gleiches Format wie für
+// scripts/import-season-data.mjs: vollständiger Wrapper {season,label,games[]})
+// per Datei oder Einfügen laden, mit denselben Regeln wie der CLI-Importer
+// prüfen und als Bericht (neu / geändert / unverändert) anzeigen.
+//
+// Grenzen (bewusst): Die Vorschau lebt AUSSCHLIESSLICH im Arbeitsspeicher, ein
+// Neuladen der Seite verwirft sie. Sie schreibt keine Datei, wird nirgends
+// persistiert und verändert weder STATIC_SEASON_DATA noch SEASONS,
+// PLAYER_REGISTRY, LINEUP_DATA, S oder den Analyse-Cache. Sie fließt NICHT in
+// Tabellen/Statistiken ein (kein Eingriff in loadSeasonData) — eine spätere
+// Analyse-Integration ist eine eigene Phase. Die Importer-Schutzmechanismen
+// (Dry-Run, keine Löschungen, kein Auto-Commit) bleiben die einzige Quelle der
+// Wahrheit. Getrennt vom Einsatz-Center-Entwurf und dessen Autosave.
+//
+// ─── Port der Import-Validierung ─────────────────────────────────────────
+// MUSS inhaltlich identisch bleiben zu den gleichnamigen Funktionen in
+// scripts/season-data-validators.mjs (getGameId, findDuplicateGameIds,
+// validateGameStructure, validateSeasonGames, diffGameIds),
+// scripts/import-season-data.mjs (validateSeasonKey, validateWrapperFormat,
+// buildDryRunReport) und scripts/update-season-data.mjs (validateMergedSeason)
+// — index.html ist ein klassisches <script> (kein type="module"), ein Import
+// aus den Node-Modulen ist nicht möglich. Die Quelldateien bleiben unverändert;
+// scripts/test-p0c4-season-preview.mjs vergleicht Funktionstexte UND Ergebnisse.
+function getGameId(game) {
+  const raw = game?.id ?? game?.game_id;
+  if (raw === undefined || raw === null || raw === '') return null;
+  return String(raw);
+}
+
+function findDuplicateGameIds(games) {
+  const counts = new Map();
+  for (const g of games ?? []) {
+    const id = getGameId(g);
+    if (id === null) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([id, count]) => ({ id, count }));
+}
+
+const PRIMITIVE_REQUIRED_FIELDS = {
+  date: 'string',
+  league_id: 'number',
+  league_name: 'string',
+  home_team_name: 'string',
+  guest_team_name: 'string',
+  started: 'boolean',
+  ended: 'boolean',
+};
+
+const OBJECT_REQUIRED_FIELDS = ['game_day', 'players', 'starting_players', 'awards'];
+
+const ARRAY_REQUIRED_FIELDS = ['events', 'period_titles'];
+
+const NULLABLE_PRESENT_FIELDS = ['result', 'result_string', 'notice_type'];
+
+function validateGameStructure(game) {
+  const problems = [];
+
+  if (!game || typeof game !== 'object' || Array.isArray(game)) {
+    return { ok: false, id: null, problems: ['ist kein gültiges Objekt'] };
+  }
+
+  const id = getGameId(game);
+  if (id === null) problems.push('weder "id" noch "game_id" vorhanden');
+
+  for (const [field, expectedType] of Object.entries(PRIMITIVE_REQUIRED_FIELDS)) {
+    const value = game[field];
+    if (value === undefined || value === null) {
+      problems.push(`Feld "${field}" fehlt oder ist null`);
+    } else if (typeof value !== expectedType) {
+      problems.push(`Feld "${field}" hat falschen Typ (erwartet ${expectedType}, war ${typeof value})`);
+    }
+  }
+
+  for (const field of OBJECT_REQUIRED_FIELDS) {
+    const value = game[field];
+    if (value === undefined || value === null || typeof value !== 'object' || Array.isArray(value)) {
+      problems.push(`Feld "${field}" fehlt oder ist kein Objekt`);
+    }
+  }
+
+  for (const field of ARRAY_REQUIRED_FIELDS) {
+    if (!Array.isArray(game[field])) {
+      problems.push(`Feld "${field}" fehlt oder ist kein Array`);
+    }
+  }
+
+  for (const field of NULLABLE_PRESENT_FIELDS) {
+    if (!(field in game)) {
+      problems.push(`Feld "${field}" fehlt komplett (Wert darf null sein, der Schlüssel muss aber existieren)`);
+    }
+  }
+
+  return { ok: problems.length === 0, id, problems };
+}
+
+function validateSeasonGames(games) {
+  if (!Array.isArray(games)) {
+    return { ok: false, invalidGames: [{ index: -1, id: null, problems: ['games ist kein Array'] }] };
+  }
+  const invalidGames = [];
+  games.forEach((game, index) => {
+    const result = validateGameStructure(game);
+    if (!result.ok) invalidGames.push({ index, id: result.id, problems: result.problems });
+  });
+  return { ok: invalidGames.length === 0, invalidGames };
+}
+
+function diffGameIds(oldGames, newGames) {
+  const oldIds = new Set((oldGames ?? []).map(getGameId).filter((id) => id !== null));
+  const newIds = new Set((newGames ?? []).map(getGameId).filter((id) => id !== null));
+
+  const added = [...newIds].filter((id) => !oldIds.has(id)).sort();
+  const removed = [...oldIds].filter((id) => !newIds.has(id)).sort();
+  const unchanged = [...oldIds].filter((id) => newIds.has(id)).sort();
+
+  return { added, removed, unchanged };
+}
+
+function validateSeasonKey(key) {
+  if (typeof key !== 'string') return { ok: false, reason: 'kein String' };
+  const m = /^(\d{2})\/(\d{2})$/.exec(key);
+  if (!m) return { ok: false, reason: 'erwartetes Format ist "YY/YY", z.B. "25/26"' };
+  const start = Number(m[1]);
+  const end = Number(m[2]);
+  if (end !== (start + 1) % 100) {
+    return { ok: false, reason: `"${key}" ist kein aufeinanderfolgendes Saisonpaar (erwartet würde "${String(start).padStart(2, '0')}/${String((start + 1) % 100).padStart(2, '0')}")` };
+  }
+  return { ok: true };
+}
+
+function validateWrapperFormat(data) {
+  const problems = [];
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { ok: false, problems: ['Eingabe ist kein Objekt (erwartet {season, label, games:[...]})'] };
+  }
+  if (typeof data.season !== 'string' || !data.season) problems.push('Feld "season" fehlt oder ist kein String');
+  if (typeof data.label !== 'string' || !data.label) problems.push('Feld "label" fehlt oder ist kein String');
+  if (!Array.isArray(data.games)) problems.push('Feld "games" fehlt oder ist kein Array');
+  return { ok: problems.length === 0, problems };
+}
+
+function validateMergedSeason(existingGames, mergedGames) {
+  if (!Array.isArray(mergedGames)) return { ok: false, reason: 'games ist kein Array' };
+  if (mergedGames.some((g) => !g || g.id === undefined || g.id === null)) {
+    return { ok: false, reason: 'mindestens ein Spiel ohne id' };
+  }
+  const before = existingGames.length;
+  const after = mergedGames.length;
+  if (before > 0 && after === 0) {
+    return { ok: false, reason: `Ergebnis wäre leer, vorher ${before} Spiele — verweigert` };
+  }
+  // Grober Schutz vor einem drastischen, unerklärten Einbruch (z.B. API liefert
+  // nur einen Teil-Spielplan zurück). Ein legitimer Rückgang (abgesagtes Spiel)
+  // betrifft immer nur einzelne Spiele, keinen zweistelligen Anteil auf einmal.
+  if (before >= 6 && after < before * 0.5) {
+    return { ok: false, reason: `Rückgang von ${before} auf ${after} Spiele wirkt unplausibel — verweigert` };
+  }
+  return { ok: true };
+}
+
+function buildDryRunReport(seasonKey, newData, existingData) {
+  const errors = [];
+  const warnings = [];
+
+  const wrapperCheck = validateWrapperFormat(newData);
+  if (!wrapperCheck.ok) errors.push(...wrapperCheck.problems);
+
+  if (wrapperCheck.ok && newData.season !== seasonKey) {
+    errors.push(`Feld "season" ("${newData.season}") passt nicht zum angegebenen Season-Key ("${seasonKey}")`);
+  }
+
+  const newGames = wrapperCheck.ok ? newData.games : [];
+  const existedBefore = existingData !== null && existingData !== undefined;
+  const existingGames = Array.isArray(existingData?.games) ? existingData.games : [];
+  if (existedBefore && !Array.isArray(existingData?.games)) {
+    warnings.push('bestehende season-data/<key>.json ist vorhanden, aber strukturell ungültig — wird wie "keine Datei" behandelt');
+  }
+
+  const duplicates = findDuplicateGameIds(newGames);
+  if (duplicates.length > 0) {
+    errors.push(`Doppelte Game-ID(s) in der neuen Datei: ${duplicates.map((d) => `${d.id} (${d.count}×)`).join(', ')}`);
+  }
+
+  const structure = validateSeasonGames(newGames);
+  const invalidGames = structure.invalidGames ?? [];
+  for (const bad of invalidGames) {
+    errors.push(`Spiel an Index ${bad.index}${bad.id !== null ? ` (id=${bad.id})` : ''}: ${bad.problems.join('; ')}`);
+  }
+
+  const diff = diffGameIds(existingGames, newGames);
+  if (diff.removed.length > 0) {
+    errors.push(`Bekannte Game-ID(s) fehlen in der neuen Datei: ${diff.removed.join(', ')}`);
+  }
+
+  // Bestehende, unveränderte Sicherheitslogik aus update-season-data.mjs:
+  // zusätzliches, unabhängiges Netz gegen einen "relevanten Datenrückgang"
+  // (z.B. drastischer, unerklärter Einbruch der Spielanzahl), ergänzend zum
+  // exakten ID-Diff oben (der bereits JEDE verschwundene bekannte ID meldet,
+  // auch wenn die Gesamtanzahl gleich bliebe — siehe Beispiel im Auftrag).
+  const mergedCheck = validateMergedSeason(existingGames, newGames);
+  if (!mergedCheck.ok) errors.push(`validateMergedSeason: ${mergedCheck.reason}`);
+
+  const ok = errors.length === 0;
+
+  return {
+    ok,
+    season: seasonKey,
+    label: wrapperCheck.ok ? newData.label : null,
+    existedBefore,
+    previousGameCount: existingGames.length,
+    newGameCount: newGames.length,
+    unchangedCount: diff.unchanged.length,
+    newCount: diff.added.length,
+    removedCount: diff.removed.length,
+    addedIds: diff.added,
+    removedIds: diff.removed,
+    duplicates,
+    invalidGames,
+    errors,
+    warnings,
+    writeWouldBeSafe: ok,
+  };
+}
+
+// ─── Vorschau-Zustand (genau ein Slot, nur Arbeitsspeicher) ──────────────
+// SEASON_DATA_PREVIEW: null | {seasonKey,sourceName,loadedAt,data,report,notes,
+//   changes:{added,changed},firstImport,productionFingerprint,productionRef}
+// - firstImport: registrierte Saison ohne Produktionsdaten (z. B. 26/27) — dann gibt es keine
+//   künstliche Vergleichsbasis: productionFingerprint und productionRef sind null, der Bericht
+//   entspricht dem CLI-Fall "keine season-data-Datei"
+// - data: die geprüften Eingabedaten (frisch aus JSON.parse, ohne Bezug zu Produktionsobjekten)
+// - report: unveränderter Ergebnisbericht von buildDryRunReport (Parität zum CLI)
+// - productionFingerprint: SHA-256 der Produktions-Rohspiele dieser Saison zum Ladezeitpunkt
+//   (bewusst NICHT der Lineup-baseHash des Einsatz-Centers)
+// - productionRef: Referenz auf STATIC_SEASON_DATA[seasonKey] zum Ladezeitpunkt (nur zum
+//   Erkennen eines späteren Austauschs, wird nie beschrieben)
+// SEASON_DATA_PREVIEW_LAST_ERROR: nur die letzte Fehlermeldung eines fehlgeschlagenen
+// Ladeversuchs; ein bereits gültiger Slot bleibt dabei unangetastet.
+let SEASON_DATA_PREVIEW=null;
+let SEASON_DATA_PREVIEW_LAST_ERROR=null;
+const SEASON_DATA_PREVIEW_UI={open:false,pasteText:''};
+let _seasonDataPreviewBusy=false;
+
+function seasonDataPreviewRerender(){
+  try{setState({});}catch(e){}
+}
+/** Kompakte, reine Anzeigezeile eines Rohspiels. */
+function seasonDataPreviewRow(g){
+  return{
+    id:getGameId(g),
+    date:typeof g?.date==='string'?g.date:'',
+    gameDay:g?.game_day?.game_day_number??null,
+    home:g?.home_team_name??'',
+    guest:g?.guest_team_name??'',
+    ended:g?.ended===true,
+    result:g?.result_string??null,
+    notice:g?.notice_type??null,
+  };
+}
+/**
+ * Reine Anzeige-Ableitung (keine Validierung): "neu" = report.addedIds,
+ * "geändert" = bekannte ID, deren kanonisches JSON vom Produktionsspiel abweicht
+ * (buildDryRunReport vergleicht nur IDs — ein neues Ergebnis eines bereits
+ * geplanten Spiels wäre dort "unverändert").
+ */
+function buildSeasonDataPreviewChanges(existingGames,incomingGames,addedIds){
+  const before=new Map();
+  for(const g of existingGames){const id=getGameId(g);if(id!==null&&!before.has(id))before.set(id,g);}
+  const added=new Set(addedIds.map(String));
+  const addedRows=[];
+  const changedRows=[];
+  for(const g of incomingGames){
+    const id=getGameId(g);
+    if(id===null)continue;
+    if(added.has(id)){addedRows.push(seasonDataPreviewRow(g));continue;}
+    const old=before.get(id);
+    if(old&&einsatzCenterCanonicalJson(old)!==einsatzCenterCanonicalJson(g)){
+      changedRows.push({...seasonDataPreviewRow(g),before:{ended:old?.ended===true,result:old?.result_string??null,notice:old?.notice_type??null}});
+    }
+  }
+  const byDateThenId=(a,b)=>a.date<b.date?-1:a.date>b.date?1:String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0;
+  return{added:addedRows.sort(byDateThenId),changed:changedRows.sort(byDateThenId)};
+}
+
+/**
+ * Einziger Einstieg für Datei UND Einfügen: prüft und aktiviert die Vorschau
+ * atomar (kompletter gültiger Zustand oder gar keiner). Bei jedem Fehler bleibt
+ * ein bereits aktiver Slot vollständig erhalten. Die Produktionsvergleichsbasis
+ * wird erst NACH ensureExternalSeasonData() ermittelt (wie der CLI-Importer
+ * gegen season-data/<key>.json vergleicht). Unbekannte Season-Keys werden
+ * abgelehnt — es wird nie eine Saison angelegt.
+ * @returns {Promise<{ok:boolean, errors:string[], cancelled?:boolean, busy?:boolean}>}
+ */
+async function stageSeasonDataPreview(text,{seasonKey,sourceName='Einfügen'}={}){
+  if(_seasonDataPreviewBusy)return{ok:false,busy:true,errors:['Eine Vorschau wird gerade geladen — bitte kurz warten.']};
+  _seasonDataPreviewBusy=true;
+  const failWith=errors=>{
+    SEASON_DATA_PREVIEW_LAST_ERROR={seasonKey:seasonKey??null,sourceName,errors,at:new Date().toISOString()};
+    seasonDataPreviewRerender();
+    return{ok:false,errors};
+  };
+  try{
+    const keyCheck=validateSeasonKey(seasonKey);
+    if(!keyCheck.ok)return failWith([`Ungültiger Season-Key "${seasonKey}": ${keyCheck.reason}`]);
+    if(!SEASON_CONFIG[seasonKey])return failWith([`Season-Key "${seasonKey}" ist in dieser App nicht registriert — die Vorschau legt keine neue Saison an.`]);
+    if(typeof text!=='string'||!text.trim())return failWith(['Keine Daten eingegeben.']);
+    let parsed;
+    try{parsed=JSON.parse(text);}
+    catch(e){return failWith([`Eingabe ist kein gültiges JSON: ${e.message}`]);}
+
+    const externalOk=await ensureExternalSeasonData(seasonKey);
+    const productionRef=STATIC_SEASON_DATA[seasonKey]??null;
+    const existingGames=getStaticSeasonGames(seasonKey);
+    // Erstimport: registrierte Saison ohne jede Produktionsdaten (z. B. 26/27) — es wird KEINE
+    // künstliche Vergleichsbasis erzeugt, der Bericht entspricht dem CLI-Fall "keine season-data-Datei".
+    const firstImport=existingGames.length===0;
+    const notes=[];
+    if(firstImport){
+      if(!externalOk)notes.push('season-data/… ist nicht geladen — ob bereits Produktionsdaten existieren, lässt sich deshalb nicht sicher feststellen.');
+    }else if(!externalOk){
+      notes.push('Vergleichsbasis sind die eingebetteten Produktionsdaten: season-data/… konnte nicht geladen werden (z. B. bei file://).');
+    }
+
+    const report=buildDryRunReport(seasonKey,parsed,firstImport?null:productionRef);
+    if(!report.ok)return failWith(report.errors);
+
+    const changes=buildSeasonDataPreviewChanges(existingGames,parsed.games,report.addedIds);
+    const productionFingerprint=firstImport?null:await einsatzCenterSha256Hex(einsatzCenterCanonicalJson(existingGames));
+
+    if(SEASON_DATA_PREVIEW){
+      const replace=window.confirm(`Es ist bereits eine Vorschau (Saison ${SEASON_DATA_PREVIEW.seasonKey}, „${SEASON_DATA_PREVIEW.sourceName}“) aktiv. Durch die neue Vorschau ersetzen?`);
+      if(!replace)return{ok:false,cancelled:true,errors:[]};
+    }
+    SEASON_DATA_PREVIEW={seasonKey,sourceName,loadedAt:new Date().toISOString(),data:parsed,report,notes,changes,firstImport,productionFingerprint,productionRef:firstImport?null:productionRef};
+    SEASON_DATA_PREVIEW_LAST_ERROR=null;
+    SEASON_DATA_PREVIEW_UI.pasteText='';
+    SEASON_DATA_PREVIEW_UI.open=true;
+    seasonDataPreviewRerender();
+    return{ok:true,errors:[]};
+  }catch(e){
+    return failWith([`Unerwarteter Fehler beim Prüfen der Vorschau: ${e?.message||e}`]);
+  }finally{
+    _seasonDataPreviewBusy=false;
+  }
+}
+async function stageSeasonDataPreviewFromFile(input,seasonKey){
+  const file=input?.files?.[0];
+  if(!file)return{ok:false,errors:['Keine Datei gewählt.']};
+  let text;
+  try{text=await file.text();}
+  catch(e){
+    SEASON_DATA_PREVIEW_LAST_ERROR={seasonKey,sourceName:file.name,errors:[`Datei konnte nicht gelesen werden: ${e?.message||e}`],at:new Date().toISOString()};
+    seasonDataPreviewRerender();
+    return{ok:false,errors:SEASON_DATA_PREVIEW_LAST_ERROR.errors};
+  }
+  const result=await stageSeasonDataPreview(text,{seasonKey,sourceName:file.name});
+  try{input.value='';}catch(e){}
+  return result;
+}
+function stageSeasonDataPreviewFromPaste(seasonKey){
+  const el=document.getElementById('sd-preview-paste');
+  if(el)SEASON_DATA_PREVIEW_UI.pasteText=el.value;
+  return stageSeasonDataPreview(SEASON_DATA_PREVIEW_UI.pasteText,{seasonKey,sourceName:'Einfügen'});
+}
+function discardSeasonDataPreview(){
+  SEASON_DATA_PREVIEW=null;
+  SEASON_DATA_PREVIEW_LAST_ERROR=null;
+  seasonDataPreviewRerender();
+}
+/** Schmaler Accessor: null ohne Vorschau für diese Saison (dann gilt ausschließlich der Produktionsstand). */
+function getSeasonDataPreview(seasonKey){
+  return SEASON_DATA_PREVIEW&&SEASON_DATA_PREVIEW.seasonKey===seasonKey?SEASON_DATA_PREVIEW:null;
+}
+/**
+ * true, wenn die Produktionsbasis seit dem Laden der Vorschau ausgetauscht wurde (z. B. spätes
+ * season-data-Laden). Ohne Produktionsbasis (Erstimport) gibt es nichts, was veralten könnte —
+ * nur wenn nachträglich Produktionsdaten auftauchen, ist der Erstimport-Bericht überholt.
+ */
+function isSeasonDataPreviewStale(preview){
+  if(!preview)return false;
+  if(preview.firstImport)return getStaticSeasonGames(preview.seasonKey).length>0;
+  return (STATIC_SEASON_DATA[preview.seasonKey]??null)!==preview.productionRef;
+}
+
+function rSeasonDataPreviewStatus(ended,result,notice){
+  return ended?(result?`beendet ${escHtml(result)}`:'beendet'):(notice?escHtml(notice):'geplant');
+}
+function rSeasonDataPreviewRows(rows,asOf,gamesById,withBefore){
+  if(!rows.length)return '<div class="mc-empty">–</div>';
+  return `<div style="display:grid;gap:3px;font-size:12px">${rows.map(r=>{
+    const game=gamesById.get(String(r.id));
+    const afterAsOf=!!asOf&&!!game&&!isGameAtOrBeforeAsOf(game,asOf);
+    const before=withBefore?` <span style="color:var(--tx3)">(vorher: ${rSeasonDataPreviewStatus(r.before.ended,r.before.result,r.before.notice)})</span>`:'';
+    return `<div>${escHtml(r.date)}${r.gameDay!==null?` · ${escHtml(String(r.gameDay))}. Spieltag`:''} · ${escHtml(r.home)} – ${escHtml(r.guest)} · ${rSeasonDataPreviewStatus(r.ended,r.result,r.notice)}${before}${afterAsOf?' <span style="color:var(--tx3)">· nach dem gewählten Stichtag</span>':''}</div>`;
+  }).join('')}</div>`;
+}
+/** Vorschau-Karte der Spieltage-Timeline: saisonbezogen, standardmäßig eingeklappt. */
+function rSeasonDataPreviewCard(seasonKey){
+  const preview=SEASON_DATA_PREVIEW;
+  const own=getSeasonDataPreview(seasonKey);
+  const lastError=SEASON_DATA_PREVIEW_LAST_ERROR&&SEASON_DATA_PREVIEW_LAST_ERROR.seasonKey===seasonKey?SEASON_DATA_PREVIEW_LAST_ERROR:null;
+  const seasonLabel=key=>escHtml(SEASON_CONFIG[key]?.label||key);
+  const sectionTitle=t=>`<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">${t}</div>`;
+  let body='';
+  if(own){
+    const rep=own.report;
+    const asOf=deriveAsOfForSeason(seasonKey,S.asOf);
+    const gamesById=new Map(own.data.games.map(g=>[String(getGameId(g)),g]));
+    const warnings=[...own.notes,...rep.warnings];
+    body+=`<div class="wrn-box" data-sd-preview="active">VORSCHAU — noch nicht importiert. „${escHtml(own.sourceName)}“, geladen ${escHtml(new Date(own.loadedAt).toLocaleString('de-DE'))}. Fließt nicht in Tabellen und Statistiken ein.</div>`;
+    if(own.firstImport)body+='<div class="wrn-box" data-sd-preview="first-import">ERSTIMPORT — keine Produktionsdaten vorhanden. Es gibt nichts zu vergleichen: alle Spiele der Vorschau gelten als neu.</div>';
+    if(isSeasonDataPreviewStale(own))body+=`<div class="wrn-box" data-sd-preview="stale">⚠ ${own.firstImport?'Für diese Saison sind inzwischen Produktionsdaten vorhanden':'Die Produktionsdaten dieser Saison wurden seit dem Laden der Vorschau neu geladen'} — der Bericht kann veraltet sein. Bitte die Datei erneut laden.</div>`;
+    if(warnings.length)body+=`<div class="wrn-box" data-sd-preview="warnings">${warnings.map(w=>escHtml(w)).join('<br>')}</div>`;
+    body+=own.firstImport
+      ?`<div style="font-size:12.5px">Erstimport · Vorschau ${rep.newGameCount} Spiele · ${own.changes.added.length} neu</div>`
+      :`<div style="font-size:12.5px">Bisher ${rep.previousGameCount} Spiele · Vorschau ${rep.newGameCount} Spiele · ${own.changes.added.length} neu · ${own.changes.changed.length} geändert · ${rep.unchangedCount-own.changes.changed.length} unverändert</div>`;
+    body+=`${sectionTitle('Neue Spiele (Vorschau)')}${rSeasonDataPreviewRows(own.changes.added,asOf,gamesById,false)}`;
+    body+=`${sectionTitle('Geänderte Spiele (Vorschau)')}${rSeasonDataPreviewRows(own.changes.changed,asOf,gamesById,true)}`;
+    body+='<div><button class="btn-back" onclick="discardSeasonDataPreview()">Vorschau verwerfen</button></div>';
+  }else if(preview){
+    body+=`<div class="wrn-box" data-sd-preview="other-season">Eine Vorschau für Saison ${seasonLabel(preview.seasonKey)} ist aktiv („${escHtml(preview.sourceName)}“). Es gibt nur einen Vorschau-Platz.</div><div><button class="btn-back" onclick="discardSeasonDataPreview()">Vorschau verwerfen</button></div>`;
+  }
+  if(lastError){
+    const shown=lastError.errors.slice(0,20);
+    body+=`<div class="wrn-box" data-sd-preview="error">✗ „${escHtml(lastError.sourceName)}“ wurde nicht als Vorschau übernommen${preview?' — die bisherige Vorschau bleibt unverändert':''}:<br>${shown.map(e=>escHtml(e)).join('<br>')}${lastError.errors.length>shown.length?`<br>… und ${lastError.errors.length-shown.length} weitere`:''}</div>`;
+  }
+  body+=`<div style="display:grid;gap:6px">
+    <label class="mc-field"><span class="mc-label">JSON-Datei laden (Format wie import-season-data.mjs)</span><input type="file" accept=".json,application/json" onchange="stageSeasonDataPreviewFromFile(this,'${escAttr(seasonKey)}')"></label>
+    <label class="mc-field"><span class="mc-label">…oder JSON einfügen</span><textarea id="sd-preview-paste" class="mc-select" style="width:100%;min-height:70px" oninput="setSeasonDataPreviewPasteText(this.value)">${escHtml(SEASON_DATA_PREVIEW_UI.pasteText)}</textarea></label>
+    <div><button class="btn-back" onclick="stageSeasonDataPreviewFromPaste('${escAttr(seasonKey)}')">Eingefügte Daten prüfen</button></div>
+  </div>`;
+  return `<div class="ia-overview-card" data-sd-preview-card><details ${SEASON_DATA_PREVIEW_UI.open?'open':''} ontoggle="setSeasonDataPreviewOpen(this.open)"><summary style="cursor:pointer;font-weight:800">Spieldaten-Vorschau${own?' — aktiv':''}</summary><div style="display:grid;gap:8px;margin-top:8px">${uiNotiz('Prüft neue Spieldaten mit den Regeln des Importers und zeigt, was sich ändern würde. Nur im Arbeitsspeicher — schreibt keine Dateien und geht beim Neuladen verloren.')}${body}</div></details></div>`;
+}
+window.setSeasonDataPreviewOpen=open=>{SEASON_DATA_PREVIEW_UI.open=!!open;};
+window.setSeasonDataPreviewPasteText=value=>{SEASON_DATA_PREVIEW_UI.pasteText=String(value??'');};
+window.stageSeasonDataPreview=stageSeasonDataPreview;
+window.stageSeasonDataPreviewFromFile=stageSeasonDataPreviewFromFile;
+window.stageSeasonDataPreviewFromPaste=stageSeasonDataPreviewFromPaste;
+window.discardSeasonDataPreview=discardSeasonDataPreview;
+window.getSeasonDataPreview=getSeasonDataPreview;
+// ═══ Ende Season-Daten-Vorschau (P0c.4) ══════════════════════════════════
+
 // ═══ Lineup-Data Loader (Phase 4 — Einsatz-Center-Vorstufe) ═════════════
 // Rein lesender Loader für lineup-data/<season>.json + lineup-data/groups.json
 // (siehe docs/lineup-data-import.md). Bewusst vollständig isoliert von
@@ -22932,7 +23379,7 @@ function rMatchdayTimelinePage(seasonKey){
   });
   const prepHtml=`<div class="ia-overview-card">${uiNotiz('Vorbereitung auf den nächsten Spieltag:')}<a class="ia-overview-link" href="#/matchcenter">Zum Matchcenter</a><a class="ia-overview-link" href="#/lineupBuilder">Zum Lineup Builder</a><a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`;
   const timelineHtml=matchdays.length?`<div class="ia-matchday-timeline">${matchdays.map(m=>rMatchdayTimelineRow(seasonKey,m)).join('')}</div>`:'';
-  return`<div class="ia-overview">${shell}<div class="ia-overview-cards">${prepHtml}</div>${timelineHtml}</div>`;
+  return`<div class="ia-overview">${shell}<div class="ia-overview-cards">${prepHtml}${rSeasonDataPreviewCard(seasonKey)}</div>${timelineHtml}</div>`;
 }
 function rMatchdayDetailPage(seasonKey,number){
   const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
