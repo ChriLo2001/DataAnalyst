@@ -23710,12 +23710,32 @@ window.setContextAsOf=function(value){
   setState({asOf:{seasonKey,...cutoff}});
 };
 /**
+ * P0c.5 — Hinweis in der Kontextleiste, solange für die angezeigte Saison eine
+ * Season-Daten-Vorschau (P0c.4) aktiv ist. Liest den Vorschau-Zustand
+ * AUSSCHLIESSLICH über getSeasonDataPreview(seasonKey) (saisonbezogen: für jede
+ * andere Saison null -> kein Hinweis); eigener Zustand, Bedienelemente,
+ * Fehler-/Diff-Darstellung und Stale-Sonderfall gibt es hier bewusst nicht —
+ * die Kontextleiste ist kein zweites Vorschau-UI. Wiederverwendet die
+ * bestehende Warnkomponente (wrn-box); die Inline-Werte lassen sie ohne neues
+ * CSS als eigene Zeile der Leiste laufen.
+ */
+function rSeasonDataPreviewContextHint(seasonKey){
+  const preview=getSeasonDataPreview(seasonKey);
+  if(!preview)return'';
+  const label=escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey);
+  const lead=preview.firstImport
+    ?`ERSTIMPORT-VORSCHAU · Saison ${label} · keine Produktionsdaten vorhanden`
+    :`VORSCHAU AKTIV · Saison ${label}`;
+  return`<div class="wrn-box" data-ia-context-preview style="margin:0;flex:1 1 100%">${lead} · noch nicht importiert. Tabellen und Statistiken zeigen weiterhin die Produktionsdaten.</div>`;
+}
+/**
  * Globale Kontextleiste (6.3: "fest oben, auf allen Seiten"). Bewusst NICHT
  * enthalten (strukturell vorgesehen, aber erst später befüllt, siehe
  * Auftrag):
  * - Datenstand/"veraltete Modelldaten": bräuchte ein inputHash/manifest.json,
  *   das es im Code nicht gibt (siehe UI-Inventar).
- * - Entwurfs-Hinweis: P0c (Vorschau-Modus).
+ * - Entwurfs-Hinweis des Einsatz-Center-Entwurfs (der Hinweis auf eine aktive
+ *   Season-Daten-Vorschau ist seit P0c.5 vorhanden: rSeasonDataPreviewContextHint()).
  * - Globale Suche: eigenständige neue Fachlogik, nicht Teil der reinen
  *   IA-Shell.
  * Saison- UND Zeitpunkt-Auswahl werden NUR gezeigt, wenn die aktuelle Seite
@@ -23736,6 +23756,7 @@ function rContextBar(){
   const seasonRelevant=S.page==='team'||S.page==='player'||S.page==='overview'||S.page==='matchday';
   let seasonHtml='';
   let asOfHtml='';
+  let previewHtml='';
   if(seasonRelevant){
     const seasonKey=getActiveSeasonKey();
     if(seasonKey&&SEASON_CONFIG[seasonKey]){
@@ -23743,9 +23764,10 @@ function rContextBar(){
       const seasonOnChange=S.page==='overview'?'switchOverviewSeason(this.value)':S.page==='matchday'?'switchMatchdaySeason(this.value)':'openSeason(this.value)';
       seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="${seasonOnChange}">${seasonOptions}</select></label>`;
       asOfHtml=rAsOfSelector(seasonKey);
+      previewHtml=rSeasonDataPreviewContextHint(seasonKey);
     }
   }
-  return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}</div>`;
+  return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}${previewHtml}</div>`;
 }
 /** Bündelt Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
 function rIaShell(){
