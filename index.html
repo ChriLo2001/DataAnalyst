@@ -23324,6 +23324,7 @@ function rMainNav(){
 window.openOverview=async()=>{
   const seasonKey=getActiveSeasonKey();
   await loadSeason(seasonKey);
+  recordOverviewVisit(seasonKey);
   showMainShell();
   setState({screen:'main',page:'overview'});
 };
@@ -23337,6 +23338,7 @@ window.openOverview=async()=>{
  */
 window.switchOverviewSeason=async function(value){
   await window.openSeason(value);
+  recordOverviewVisit(getActiveSeasonKey());
   setState({page:'overview'});
 };
 // ═══════════════════════════════════════════════════════
@@ -23492,7 +23494,7 @@ function overviewMatchdayEndMs(matchday){
   const t=new Date(`${cutoff.date}T${cutoff.startTime||'23:59'}:00`).getTime();
   return Number.isFinite(t)?t:null;
 }
-function detectOverviewPhase(seasonKey,now=new Date()){
+function detectOverviewPhase(seasonKey,now=new Date(),options={}){
   const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
   const nowMs=now.getTime();
   const endedMatchdays=matchdays.filter(m=>m.status==='abgeschlossen');
@@ -23505,6 +23507,8 @@ function detectOverviewPhase(seasonKey,now=new Date()){
       const daysSince=(nowMs-e)/86400000;
       if(daysSince>=0&&daysSince<3)return{phase:'nachDemSpieltag',lastMatchday,nextMatchday};
     }
+    // 6.3.1: "... oder neuer Datenstand seit dem letzten Besuch" (P0c.7) — nur mit abgeschlossenem Spieltag
+    if(options?.newDataSinceLastVisit)return{phase:'nachDemSpieltag',lastMatchday,nextMatchday};
   }
   if(nextMatchday){
     const s=overviewMatchdayStartMs(nextMatchday);
@@ -23515,6 +23519,52 @@ function detectOverviewPhase(seasonKey,now=new Date()){
   }
   if(!nextMatchday)return{phase:'saisonpause',lastMatchday,nextMatchday:null};
   return{phase:'unterDerWoche',lastMatchday,nextMatchday};
+}
+// ─── P0c.7 — zuletzt gesehener Datenstand (6.3.1 / Entscheidung 10b) ───────────
+// Datenstand = letztes beendetes PRODUKTIONSspiel (Spezifikation Z. 147): reine Ableitung aus
+// getSeasonMatchdays() (Preview fließt nie ein), keine Hash-Berechnung. Persistiert wird nur eine
+// kleine Komfortkopie über die vorhandenen Speicher-Kapseln, nie als Quelle der Wahrheit.
+const SEASON_DATA_STATE_KEY_PREFIX='vfbulm.comfort.lastSeenDataState.';
+const OVERVIEW_SESSION_DATA_STATE={};// seasonKey -> {previous,current,isNew}; nur Arbeitsspeicher, pro Sitzung
+function getSeasonDataState(seasonKey){
+  let endedGames=0,last=null;
+  for(const m of getSeasonMatchdays(seasonKey)){
+    for(const g of m.games||[]){
+      if(g?.ended!==true)continue;
+      endedGames++;
+      if(!last||compareGamesChronologically(last.game,g)<0)last={game:g,matchday:m.number};
+    }
+  }
+  return last?{endedGames,lastGameId:String(last.game.id??''),lastDate:String(last.game.date||''),lastMatchday:last.matchday}:null;
+}
+function parseSeasonDataState(text){
+  try{
+    const s=JSON.parse(text);
+    if(!s||typeof s!=='object'||s.v!==1||!Number.isInteger(s.endedGames)||s.endedGames<0)return null;
+    if(typeof s.lastGameId!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(String(s.lastDate)))return null;
+    if(s.lastMatchday!==null&&!Number.isFinite(s.lastMatchday))return null;
+    return{endedGames:s.endedGames,lastGameId:s.lastGameId,lastDate:s.lastDate,lastMatchday:s.lastMatchday};
+  }catch(e){return null;}
+}
+/** "Neu" = mehr beendete Spiele oder späteres letztes Spiel; Korrekturen an gleichem Stand zählen nicht, ohne Vorstand nie. */
+function isNewSeasonDataState(previous,current){
+  return !!previous&&!!current&&(current.endedGames>previous.endedGames||current.lastDate>previous.lastDate);
+}
+/**
+ * Beim ersten Öffnen der Übersicht einer Saison je Sitzung: vorherigen Stand lesen, aktuellen
+ * bestimmen, vergleichen, das Ergebnis für die Sitzung halten und den aktuellen Stand speichern.
+ * Danach liefert der Aufruf nur noch das gehaltene Ergebnis (Renders lesen/überschreiben nichts).
+ * Ohne ableitbaren Stand wird nichts gehalten, ein späterer Aufruf versucht es erneut.
+ */
+function recordOverviewVisit(seasonKey){
+  if(Object.prototype.hasOwnProperty.call(OVERVIEW_SESSION_DATA_STATE,seasonKey))return OVERVIEW_SESSION_DATA_STATE[seasonKey];
+  const key=SEASON_DATA_STATE_KEY_PREFIX+seasonKey;
+  const raw=einsatzCenterStorageRead(key);
+  const previous=raw===null?null:parseSeasonDataState(raw);
+  const current=getSeasonDataState(seasonKey);
+  if(!current)return{previous,current:null,isNew:false};
+  einsatzCenterStorageWrite(key,JSON.stringify({v:1,...current}));
+  return OVERVIEW_SESSION_DATA_STATE[seasonKey]={previous,current,isNew:isNewSeasonDataState(previous,current)};
 }
 function overviewOpponentLabel(matchday){
   if(!matchday)return null;
@@ -23642,8 +23692,8 @@ function overviewRankChangeTile(seasonKey,matchday){
  * uiNotiz() als noch nicht implementiert ausgewiesen statt erfundener
  * Werte.
  */
-function buildOverviewCards(seasonKey,now=new Date()){
-  const{phase,lastMatchday,nextMatchday}=detectOverviewPhase(seasonKey,now);
+function buildOverviewCards(seasonKey,now=new Date(),options={}){
+  const{phase,lastMatchday,nextMatchday}=detectOverviewPhase(seasonKey,now,options);
   const kernaussage=overviewLastMatchdayText(lastMatchday);
   let tiles=[],themenkarten=[];
   if(phase==='nachDemSpieltag'){
@@ -23693,14 +23743,16 @@ const OVERVIEW_PHASE_LABELS={nachDemSpieltag:'Nach dem Spieltag',unterDerWoche:'
  * darunter gerendert, nicht in uiObjektseite()-Tabs gezwängt.
  */
 function rOverviewPage(seasonKey){
-  const{phase,tiles,themenkarten,kernaussage}=buildOverviewCards(seasonKey);
+  const visit=OVERVIEW_SESSION_DATA_STATE[seasonKey];
+  const{phase,tiles,themenkarten,kernaussage}=buildOverviewCards(seasonKey,new Date(),{newDataSinceLastVisit:!!visit?.isNew});
   const shell=uiObjektseite({
     title:'Übersicht',
     contextLine:`${SEASON_CONFIG[seasonKey]?.label||seasonKey} · ${OVERVIEW_PHASE_LABELS[phase]||phase}`,
     headline:kernaussage,
     tiles,
   });
-  return`<div class="ia-overview">${shell}${themenkarten.length?`<div class="ia-overview-cards">${themenkarten.join('')}</div>`:''}</div>`;
+  const newNote=visit?.isNew?uiNotiz(visit.current.lastMatchday!=null?`Neu seit deinem letzten Besuch: Spieltag ${visit.current.lastMatchday} (${formatDateDE(visit.current.lastDate)})`:`Neu seit deinem letzten Besuch: Daten bis ${formatDateDE(visit.current.lastDate)}`):'';
+  return`<div class="ia-overview">${shell}${newNote}${themenkarten.length?`<div class="ia-overview-cards">${themenkarten.join('')}</div>`:''}</div>`;
 }
 window.openLigaGegner=async()=>{
   showMainShell();
