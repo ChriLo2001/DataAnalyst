@@ -1456,6 +1456,29 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 .ia-matchday-status-unvollstaendig .ia-matchday-row-status{background:rgba(245,158,11,.14);color:var(--warning)}
 .ia-back-row{display:flex}
 
+/* ═══ P0b-Fix 4 — Globale Suche v1 (6.3) ═══════════════════════════════
+   .ia-search-* eigener Namensraum. Schaltfläche in rIaShell; Dialog als eigenes
+   Overlay-Element außerhalb des Render-Bereichs. Tippflächen >=44px, keine
+   festen Breiten über den Viewport hinaus (kein horizontaler Überlauf bei 360px). */
+.ia-search-row{display:flex;justify-content:flex-end;padding:2px 2px 0}
+.ia-search-toggle{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--border-soft);background:var(--surf);color:var(--text-muted);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer}
+.ia-search-toggle:hover{color:var(--tx);border-color:var(--text-faint)}
+.ia-search-kbd{font-family:'DM Mono',monospace;font-size:10px;padding:1px 6px;border-radius:6px;border:1px solid var(--border-soft);color:var(--text-faint)}
+.ia-search-overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:12vh 12px 12px;background:rgba(2,6,14,.72)}
+.ia-search-overlay[hidden]{display:none}
+.ia-search-panel{box-sizing:border-box;width:100%;max-width:520px;max-height:76vh;overflow-y:auto;display:grid;gap:10px;padding:12px;border-radius:14px;border:1px solid var(--border-soft);background:var(--surf);box-shadow:0 18px 48px rgba(0,0,0,.45)}
+.ia-search-input{box-sizing:border-box;width:100%;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-soft);background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-size:14px}
+.ia-search-input:focus{outline:2px solid var(--red2);outline-offset:1px}
+.ia-search-results{display:grid;gap:4px;min-width:0}
+.ia-search-group{margin-top:4px;font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-family:'DM Mono',monospace}
+.ia-search-item{box-sizing:border-box;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:2px 10px;width:100%;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--tx);font-family:'Inter',sans-serif;font-size:13px;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.ia-search-item:hover,.ia-search-item.active{background:var(--surf2);border-color:var(--red2)}
+.ia-search-item-meta{font-size:11px;color:var(--text-faint)}
+.ia-search-hint{font-size:10px;color:var(--text-faint)}
+@media(max-width:600px){
+  .ia-search-overlay{padding-top:8vh}
+}
+
 @media(max-width:600px){
   .ia-context-bar{flex-wrap:wrap}
   .ia-overview-cards{grid-template-columns:1fr}
@@ -23101,10 +23124,209 @@ function rContextBar(){
   }
   return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}${dataStateHtml}${previewHtml}</div>`;
 }
-/** Bündelt Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
+/** Bündelt Suche + Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
 function rIaShell(){
-  return`${rContextBar()}${rMainNav()}`;
+  return`<div class="ia-search-row">${rGlobalSearchToggle()}</div>${rContextBar()}${rMainNav()}`;
 }
+
+// ═══════════════════════════════════════════════════════
+//  P0b-Fix 4 — GLOBALE SUCHE v1 (Spezifikation 6.3)
+// ═══════════════════════════════════════════════════════
+// Umfang v1 (Entscheidung D2/D3): NUR Spieler und Spieltage — keine Teams/Spiele/Kennzahlen,
+// kein Lexikon, keine Aliasse. Quellen ausschließlich bestehende Datenzugriffe:
+// getAllTimePlayerRows() (Namen) und getSeasonMatchdays(aktive Saison). Navigation ausschließlich
+// über die bestehenden Öffner setGlobalPlayer(playerId) / openMatchday(seasonKey, number).
+// Die Schaltfläche steht in rIaShell (NICHT in rContextBar); Suchfeld und Trefferliste liegen in
+// einem eigenen, vom render() unabhängigen Overlay-Element, damit Fokus und Eingabe einen
+// Neuaufbau des Hauptbereichs überstehen. Suchzustand nur im Arbeitsspeicher (GLOBAL_SEARCH):
+// kein S, kein Storage, kein Netzwerk, keine Speicherung der Anfrage.
+const GLOBAL_SEARCH_LIMITS={player:6,matchday:5};
+const GLOBAL_SEARCH_MAX_QUERY=60;
+let GLOBAL_SEARCH={open:false,query:'',active:0,entries:[],results:[],returnFocus:null};
+let GLOBAL_SEARCH_INITIALIZED=false;
+function globalSearchTokens(query){
+  const n=normalizePlayerName(String(query||'').slice(0,GLOBAL_SEARCH_MAX_QUERY));
+  return n?n.split(' '):[];
+}
+/** Sucheinträge aus den bestehenden Quellen (Spieler: Alltime-Registry, Spieltage: aktive Saison). Reine Ableitung, keine Mutation. */
+function globalSearchEntries(){
+  const players=getAllTimePlayerRows().map(r=>({kind:'player',playerId:String(r.playerId),label:String(r.name||''),norm:normalizePlayerName(r.name)})).filter(e=>e.playerId&&e.norm);
+  const seasonKey=getActiveSeasonKey();
+  const seasonLabel=SEASON_CONFIG[seasonKey]?.label||seasonKey;
+  const matchdays=(seasonKey?getSeasonMatchdays(seasonKey):[]).filter(m=>m.number!==null&&m.number!==undefined).map(m=>{
+    const opponent=overviewOpponentLabel(m);
+    const status=MATCHDAY_STATUS_LABELS[m.status]||m.status||'';
+    const dateWords=normalizePlayerName(m.date).split(' ').filter(Boolean);
+    const words=['spieltag',String(m.number),...dateWords,...normalizePlayerName(opponent||'').split(' '),...normalizePlayerName(status).split(' ')].filter(Boolean);
+    const meta=[seasonLabel,opponent,status].filter(Boolean).join(' · ');
+    return{kind:'matchday',seasonKey,number:m.number,date:String(m.date||''),label:`Spieltag ${m.number} · ${formatDateDE(m.date)}`,meta,words};
+  });
+  return[...players,...matchdays];
+}
+function globalSearchPlayerScore(tokens,norm){
+  if(!tokens.every(t=>norm.includes(t)))return-1;
+  const q=tokens.join(' ');
+  if(norm===q)return 0;
+  if(norm.startsWith(q))return 1;
+  const words=norm.split(' ');
+  return tokens.every(t=>words.some(w=>w.startsWith(t)))?2:3;
+}
+/** Spieltag: Textteile per Teilstring; Zahlen exakt gegen die Spieltagsnummer. Datumsteile (exakt, ab 3 Ziffern als Jahrespräfix) zählen nur bei datumsartigen Anfragen: Jahr/Jahrespräfix (>=3 Ziffern) oder mindestens zwei Zahlen (z.B. "11.04"). Liefert Score oder -1. */
+function globalSearchMatchdayScore(tokens,entry){
+  const words=entry.words;
+  const numeric=t=>/^\d+$/.test(t);
+  const dateLike=tokens.filter(numeric).length>=2;
+  const tokenOk=t=>{
+    if(!numeric(t))return words.some(w=>!numeric(w)&&w.includes(t));
+    if(String(Number(t))===String(entry.number))return true;
+    if(t.length<2||(t.length<3&&!dateLike))return false;
+    return words.some(w=>numeric(w)&&w!==String(entry.number)&&(w===t||(t.length>=3&&w.startsWith(t))));
+  };
+  if(!tokens.every(tokenOk))return-1;
+  return tokens.length===1&&numeric(tokens[0])&&String(Number(tokens[0]))===String(entry.number)?0:1;
+}
+/** Reine Suche: Spieler zuerst (Score, dann Name, dann ID), dann Spieltage (Score, dann Nummer aufsteigend); begrenzt durch GLOBAL_SEARCH_LIMITS. Leere Anfrage -> []. */
+function globalSearchMatch(query,entries){
+  const tokens=globalSearchTokens(query);
+  if(!tokens.length)return[];
+  const players=[],matchdays=[];
+  for(const e of entries||[]){
+    if(e.kind==='player'){const s=globalSearchPlayerScore(tokens,e.norm);if(s>=0)players.push({...e,score:s});}
+    else if(e.kind==='matchday'){const s=globalSearchMatchdayScore(tokens,e);if(s>=0)matchdays.push({...e,score:s});}
+  }
+  players.sort((a,b)=>a.score-b.score||a.label.localeCompare(b.label,'de')||(a.playerId<b.playerId?-1:a.playerId>b.playerId?1:0));
+  matchdays.sort((a,b)=>a.score-b.score||a.number-b.number||(a.date<b.date?-1:a.date>b.date?1:0));
+  return[...players.slice(0,GLOBAL_SEARCH_LIMITS.player),...matchdays.slice(0,GLOBAL_SEARCH_LIMITS.matchday)];
+}
+function globalSearchIsEditableTarget(t){
+  if(!t)return false;
+  const tag=String(t.tagName||'').toUpperCase();
+  return tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||t.isContentEditable===true;
+}
+/** Reine Tastenauswertung: 'open' | 'close' | 'next' | 'prev' | 'activate' | 'trap' (Tab bleibt im Dialog) | null. "/" nie in Eingabefeldern; Strg/Cmd+K immer. */
+function globalSearchKeyAction(e,isOpen){
+  if(!e||e.isComposing)return null;
+  const key=String(e.key||'');
+  if((e.ctrlKey||e.metaKey)&&!e.altKey&&!e.shiftKey&&key.toLowerCase()==='k')return'open';
+  if(isOpen){
+    if(key==='Escape')return'close';
+    if(key==='ArrowDown')return'next';
+    if(key==='ArrowUp')return'prev';
+    if(key==='Enter')return'activate';
+    if(key==='Tab')return'trap';
+    return null;
+  }
+  if(key==='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!globalSearchIsEditableTarget(e.target))return'open';
+  return null;
+}
+function rGlobalSearchToggle(){
+  return`<button type="button" class="ia-search-toggle" data-ia-search-toggle aria-label="Suche öffnen (Tastenkürzel Schrägstrich oder Strg+K)" aria-haspopup="dialog" onclick="openGlobalSearch()">Suche <kbd class="ia-search-kbd" aria-hidden="true">/</kbd></button>`;
+}
+function rGlobalSearchResultsHtml(results,query,active){
+  if(!globalSearchTokens(query).length)return'';
+  if(!results.length)return uiNotiz(`Keine Treffer für „${String(query).trim()}“.`);
+  let html='',lastKind=null;
+  results.forEach((r,i)=>{
+    if(r.kind!==lastKind){html+=`<div class="ia-search-group" role="presentation">${r.kind==='player'?'Spieler':'Spieltage'}</div>`;lastKind=r.kind;}
+    const isActive=i===active;
+    html+=`<button type="button" class="ia-search-item${isActive?' active':''}" role="option" tabindex="-1" id="ia-search-opt-${i}" aria-selected="${isActive?'true':'false'}" onclick="activateGlobalSearchResult(${i})"><span class="ia-search-item-label">${escHtml(r.label)}</span>${r.meta?`<span class="ia-search-item-meta">${escHtml(r.meta)}</span>`:''}</button>`;
+  });
+  return html;
+}
+function rGlobalSearchPanelHtml(query,results,active){
+  return`<div class="ia-search-panel" role="search"><input type="search" id="ia-search-input" class="ia-search-input" role="combobox" aria-expanded="true" aria-controls="ia-search-results" aria-autocomplete="list" aria-label="Suche nach Spielern und Spieltagen" placeholder="Spieler oder Spieltag suchen" autocomplete="off" spellcheck="false" maxlength="${GLOBAL_SEARCH_MAX_QUERY}" value="${escAttr(query)}" oninput="onGlobalSearchInput(this.value)"><div id="ia-search-results" class="ia-search-results" role="listbox" aria-label="Suchergebnisse" aria-live="polite">${rGlobalSearchResultsHtml(results,query,active)}</div><div class="ia-search-hint">↑ ↓ wählen · Enter öffnen · Esc schließen</div></div>`;
+}
+function paintGlobalSearchResults(){
+  const box=document.getElementById('ia-search-results');
+  if(box)box.innerHTML=rGlobalSearchResultsHtml(GLOBAL_SEARCH.results,GLOBAL_SEARCH.query,GLOBAL_SEARCH.active);
+  const input=document.getElementById('ia-search-input');
+  if(input)input.setAttribute('aria-activedescendant',GLOBAL_SEARCH.results.length?`ia-search-opt-${GLOBAL_SEARCH.active}`:'');
+  const item=document.getElementById(`ia-search-opt-${GLOBAL_SEARCH.active}`);
+  if(item&&item.scrollIntoView)item.scrollIntoView({block:'nearest'});
+}
+window.openGlobalSearch=function(){
+  if(S.screen!=='main')return;
+  let overlay=document.getElementById('ia-search-overlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='ia-search-overlay';
+    overlay.className='ia-search-overlay';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-label','Suche');
+    overlay.setAttribute('onclick','if(event.target===this)closeGlobalSearch()');
+    document.body.appendChild(overlay);
+  }
+  if(GLOBAL_SEARCH.open){
+    // bereits offen (z.B. erneutes Strg+K): nur Fokus zurück ins Feld, Eingabe bleibt erhalten
+    const current=document.getElementById('ia-search-input');
+    if(current&&current.focus)current.focus();
+    return;
+  }
+  GLOBAL_SEARCH={open:true,query:'',active:0,entries:globalSearchEntries(),results:[],returnFocus:document.activeElement||null};
+  overlay.innerHTML=rGlobalSearchPanelHtml('',[],0);
+  overlay.hidden=false;
+  const input=document.getElementById('ia-search-input');
+  if(input&&input.focus)input.focus();
+};
+window.closeGlobalSearch=function(){
+  const overlay=document.getElementById('ia-search-overlay');
+  const back=GLOBAL_SEARCH.returnFocus;
+  GLOBAL_SEARCH={open:false,query:'',active:0,entries:[],results:[],returnFocus:null};
+  if(overlay){overlay.hidden=true;overlay.innerHTML='';}
+  const target=(back&&document.contains&&document.contains(back)?back:null)||document.querySelector('[data-ia-search-toggle]');
+  if(target&&target.focus)target.focus();
+};
+window.onGlobalSearchInput=function(value){
+  GLOBAL_SEARCH.query=String(value||'').slice(0,GLOBAL_SEARCH_MAX_QUERY);
+  GLOBAL_SEARCH.results=globalSearchMatch(GLOBAL_SEARCH.query,GLOBAL_SEARCH.entries);
+  GLOBAL_SEARCH.active=0;
+  paintGlobalSearchResults();
+};
+function moveGlobalSearch(step){
+  const n=GLOBAL_SEARCH.results.length;
+  if(!n)return;
+  GLOBAL_SEARCH.active=(GLOBAL_SEARCH.active+step+n)%n;
+  paintGlobalSearchResults();
+}
+window.activateGlobalSearchResult=function(index){
+  const r=GLOBAL_SEARCH.results[index];
+  if(!r)return;
+  // Zustand zuerst zurücksetzen (Overlay schließen), dann über die bestehenden Öffner navigieren
+  GLOBAL_SEARCH={open:false,query:'',active:0,entries:[],results:[],returnFocus:null};
+  const overlay=document.getElementById('ia-search-overlay');
+  if(overlay){overlay.hidden=true;overlay.innerHTML='';}
+  if(r.kind==='player')window.setGlobalPlayer(r.playerId);
+  else Promise.resolve(window.openMatchday(r.seasonKey,r.number)).catch(e=>console.warn('Suche: Spieltag konnte nicht geöffnet werden:',e.message));
+};
+function globalSearchOnKeydown(e){
+  const action=globalSearchKeyAction(e,GLOBAL_SEARCH.open);
+  if(!action)return;
+  if(action==='open'){
+    if(S.screen!=='main')return;
+    e.preventDefault();
+    window.openGlobalSearch();
+  }else if(action==='close'){
+    e.preventDefault();
+    window.closeGlobalSearch();
+  }else if(action==='next'||action==='prev'){
+    e.preventDefault();
+    moveGlobalSearch(action==='next'?1:-1);
+  }else if(action==='activate'){
+    e.preventDefault();
+    window.activateGlobalSearchResult(GLOBAL_SEARCH.active);
+  }else if(action==='trap'){
+    e.preventDefault();
+    const input=document.getElementById('ia-search-input');
+    if(input&&input.focus)input.focus();
+  }
+}
+function initGlobalSearch(){
+  if(GLOBAL_SEARCH_INITIALIZED)return;
+  GLOBAL_SEARCH_INITIALIZED=true;
+  document.addEventListener('keydown',globalSearchOnKeydown);
+}
+document.addEventListener('DOMContentLoaded',initGlobalSearch);
 
 // Init
 document.addEventListener('DOMContentLoaded',()=>{
