@@ -22885,11 +22885,17 @@ function overviewNextMatchdayHtml(nextMatchday){
   const opp=overviewOpponentLabel(nextMatchday);
   return uiHinweisKarte({observation:`Nächster Spieltag: Spieltag ${nextMatchday.number} am ${formatDateDE(nextMatchday.date)}${opp?` gegen ${opp}`:''}.`});
 }
+// P0b-Fix 7 (6.2 Punkt 5 / 6.11: "Keine leere Karte in keinem Datenzustand"): Themenkarten der Übersicht, deren
+// Hauptinhalt bei fehlenden Daten nur ein "noch keine …"-Leerzustand wäre, liefern '' und werden von
+// buildOverviewCards() nicht gerendert (ausgeblendet, keine Ersatz-Notiz). Unverändert bleiben Karten mit
+// eigener Aussage: "kein weiterer Spieltag terminiert" (overviewNextMatchdayHtml), die Vorschau-/Link-Karten und
+// die ausdrücklichen "noch nicht implementiert"-Hinweise (M1/M8/Game Score). Ebenfalls entfällt die Karte
+// "letzter Spieltag" ohne abgeschlossenen Spieltag (die Kernaussage nennt das bereits).
 /** "Tabelle kompakt": Top 5 nach Punkten, über die bestehende Rangliste-Komponente (P0b.2) — respektiert S.asOf über getSeasonStatsAsOf(). */
 function overviewCompactTableHtml(seasonKey){
   const stats=getSeasonStatsAsOf(seasonKey);
   const standings=stats?.standings||[];
-  if(!standings.length)return uiNotiz('Für diese Saison liegt noch keine Tabelle vor.');
+  if(!standings.length)return'';
   const items=standings.slice(0,5).map(t=>({label:`${t.rank}. ${t.name}`,value:t.pts}));
   return uiRangliste({items,maxVisible:5});
 }
@@ -22906,14 +22912,14 @@ function overviewFormHtml(seasonKey){
     const us=side==='home'?hg:gg,os=side==='home'?gg:hg;
     return us>os?3:us<os?0:1;
   }).filter(v=>v!==null);
-  if(points.length<2)return uiNotiz('Für die Formkurve liegen noch nicht genügend ausgetragene Spiele vor.');
+  if(points.length<2)return'';
   return uiVerlauf({points:points.map((v,i)=>({label:String(i+1),value:v})),unit:' Punkte/Spiel'});
 }
 function overviewSeasonBilanzHtml(seasonKey){
   const stats=getSeasonStatsAsOf(seasonKey);
   const standings=stats?.standings||[];
   const ulmRow=standings.find(t=>isUlmTeamName(t.name));
-  if(!ulmRow)return uiNotiz('Für diese Saison liegt noch keine Saisonbilanz vor.');
+  if(!ulmRow)return'';
   return uiHinweisKarte({observation:`Saisonbilanz: ${ulmRow.w} Siege, ${ulmRow.d} Unentschieden, ${ulmRow.l} Niederlagen, ${ulmRow.gf}:${ulmRow.ga} Tore, Tabellenplatz ${ulmRow.rank}.`,n:ulmRow.sp});
 }
 /** "Saison-Awards": bester Scorer der Saison, identifiziert über das bereits bestehende p.seasonScorerRank (keine eigene Sortierung/Filterung neu erfunden), Tore/Vorlagen wie auf der Team-Seite über die bereits vorhandenen S.events-Zähler ermittelt. */
@@ -22921,7 +22927,7 @@ function overviewSeasonAwardHtml(seasonKey){
   const bucket=SEASONS[seasonKey];
   const players=bucket?.data?.players||[];
   const top=players.find(p=>p.seasonScorerRank===1);
-  if(!top)return uiNotiz('Für diese Saison liegt noch kein Top-Scorer vor.');
+  if(!top)return'';
   const ev=bucket.data.events?.[top.key]||[];
   const goals=ev.filter(e=>e.type==='Tor').length;
   const assists=ev.filter(e=>e.type==='Vorlage').length;
@@ -22931,7 +22937,7 @@ function overviewSeasonAwardHtml(seasonKey){
 function overviewRecordHtml(){
   const records=getTeamAllTimeRecords();
   const best=records?.bestWin;
-  if(!best)return uiNotiz('Für die Vereinsrekorde liegen noch nicht genügend Daten vor.');
+  if(!best)return'';
   return`<div class="ia-overview-card">${uiHinweisKarte({observation:`Höchster Sieg (alle Saisons): ${best.us}:${best.os} gegen ${best.opp} (Saison ${SEASON_CONFIG[best.seasonKey]?.label||best.seasonKey}).`})}<a class="ia-overview-link" href="#/hallOfFame">Zur Hall of Fame</a></div>`;
 }
 /** "Entwicklung über die Saisons": Ulm-Tabellenplatz je bereits geladener Saison, über die bestehende Verlauf-Komponente. */
@@ -22941,7 +22947,7 @@ function overviewCrossSeasonTrendHtml(){
     const row=SEASONS[k].data.standings.find(t=>isUlmTeamName(t.name));
     return row?{label:SEASON_CONFIG[k]?.label||k,value:row.rank}:null;
   }).filter(Boolean);
-  if(points.length<2)return uiNotiz('Für eine saisonübergreifende Entwicklung liegen noch nicht genügend Saisons vor.');
+  if(points.length<2)return'';
   return uiVerlauf({points,unit:'. Platz'});
 }
 function overviewOpponentPreviewHtml(nextMatchday){
@@ -23016,7 +23022,7 @@ function buildOverviewCards(seasonKey,now=new Date(),options={}){
       uiNotiz('Power Ranking und Tabellen-Wahrscheinlichkeiten (M1) sind noch nicht implementiert.'),
       uiNotiz('Entwicklung ausgewählter Kennzahlen folgt mit den Liga-Analytics-Modulen (M1–M10).'),
       uiNotiz('Auffälligkeiten (M8) sind noch nicht implementiert.'),
-      uiHinweisKarte({observation:overviewLastMatchdayText(lastMatchday)}),
+      lastMatchday?uiHinweisKarte({observation:overviewLastMatchdayText(lastMatchday)}):'',
       overviewNextMatchdayHtml(nextMatchday),
     ];
   }else if(phase==='vorDemSpieltag'){
@@ -23026,7 +23032,7 @@ function buildOverviewCards(seasonKey,now=new Date(),options={}){
       overviewLineupLinkHtml(),
       overviewFormHtml(seasonKey),
       overviewCompactTableHtml(seasonKey),
-      uiHinweisKarte({observation:overviewLastMatchdayText(lastMatchday)}),
+      lastMatchday?uiHinweisKarte({observation:overviewLastMatchdayText(lastMatchday)}):'',
     ];
   }else{
     themenkarten=[
