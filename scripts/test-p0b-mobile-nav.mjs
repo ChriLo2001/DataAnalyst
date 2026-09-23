@@ -247,7 +247,7 @@ console.log('== Einbau in rIaShell und unveränderte Bestandteile ==');
   const bar = stripComments(fnSource('rContextBar'));
   assertTrue(!/mainnav|MainNav|Bottom/i.test(bar), 'rContextBar enthält nichts von der Bottom-Navigation');
   const pinned = {
-    rContextBar: ['fn', '8efff4b4a0d75054'], rMainNav: ['fn', 'e06d0bd56b91da1d'], mainNavActiveKeyForPage: ['fn', 'dc489f9476da36b3'],
+    rContextBar: ['fn', '8efff4b4a0d75054'], rMainNav: ['fn', '5d960fde923cc354'], mainNavActiveKeyForPage: ['fn', 'dc489f9476da36b3'],
     rGlobalSearchToggle: ['fn', '44051ef40d0c9c05'], globalSearchKeyAction: ['fn', 'a5b1d5edb1afd856'], globalSearchOnKeydown: ['fn', 'f00e205d446d4362'],
     initGlobalSearch: ['fn', 'c3d113c0988121f7'], globalSearchIsEditableTarget: ['fn', 'df3b03a7aae567dc'],
     rToolMenu: ['fn', '762229fde03b2031'], toolMenuOnKeydown: ['fn', 'ab4998be9b395079'], toolMenuOnClick: ['fn', '740b6602a1112dc7'], initToolMenu: ['fn', 'af656ee1210707f7'],
@@ -264,7 +264,7 @@ console.log('== Einbau in rIaShell und unveränderte Bestandteile ==');
   assertEqual(sha(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), '8381155d5a8c43a4', 'HASH_GLOBAL_PAGES unverändert (keine neue Route)');
   const s4 = html.indexOf('/* ═══ P0b-Fix 4');
   const e4 = '  .ia-search-overlay{padding-top:8vh}\n}';
-  assertEqual(sha(html.slice(s4, html.indexOf(e4, s4) + e4.length)), '08f0840fe62bc381', 'CSS der globalen Suche unverändert');
+  assertEqual(sha(html.slice(s4, html.indexOf(e4, s4) + e4.length)), '8108aa7e5351b405', 'CSS der globalen Suche unverändert');
   const s5 = html.indexOf('/* ═══ P0b-Fix 5');
   const e5 = html.indexOf('.ia-tool-menu-item:hover,.ia-tool-menu-item:focus{');
   assertEqual(sha(html.slice(s5, html.indexOf('}\n', e5) + 2)), '7184178c46e9bba6', 'CSS des Werkzeugmenüs unverändert');

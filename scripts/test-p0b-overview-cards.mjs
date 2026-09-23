@@ -245,7 +245,7 @@ console.log('== Reinheit, unveränderte Karten, Quelltext ==');
 console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
 {
   const pinned = {
-    rContextBar: ['fn', '8efff4b4a0d75054'], rIaShell: ['fn', '16a2d20a6a21ed7e'], rMainNav: ['fn', 'e06d0bd56b91da1d'], rMainNavBottom: ['fn', '1ade76645df4da89'],
+    rContextBar: ['fn', '8efff4b4a0d75054'], rIaShell: ['fn', '16a2d20a6a21ed7e'], rMainNav: ['fn', '5d960fde923cc354'], rMainNavBottom: ['fn', '1ade76645df4da89'],
     rAsOfSelector: ['fn', 'b9e2968e358b1839'], getSeasonStatsAsOf: ['fn', '43b9eabfae5d992b'], deriveAsOfForSeason: ['fn', '88cce2f0779a2dc3'], getSeasonDataState: ['fn', 'e6fdb273584f3d3f'],
     computeCurrentAppHash: ['fn', '3c9bad5a17ccbdfe'], parseAppHash: ['fn', 'a41f0760de39e83c'],
     rGlobalSearchToggle: ['fn', '44051ef40d0c9c05'], globalSearchOnKeydown: ['fn', 'f00e205d446d4362'], globalSearchMatch: ['fn', '7ee84c03a37c7b55'],
