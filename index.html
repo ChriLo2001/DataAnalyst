@@ -1492,6 +1492,26 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 .ia-tool-menu-item{box-sizing:border-box;display:block;width:100%;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--tx);font-family:'Inter',sans-serif;font-size:13px;text-align:left;cursor:pointer;overflow-wrap:anywhere}
 .ia-tool-menu-item:hover,.ia-tool-menu-item:focus{background:var(--surf2);border-color:var(--red2);outline:none}
 
+/* ═══ P0b-Fix 6 — Mobile Bottom-Navigation (6.7) ═══════════════════════════
+   .ia-mainnav-bottom* eigener Namensraum. Außerhalb von max-width:600px vollständig
+   ausgeblendet; bis 600px übernimmt die feste untere Leiste die Hauptnavigation und die
+   obere .ia-mainnav entfällt. Fünf gleich breite Elemente (flex:1 1 0, keine feste
+   Gesamtbreite), Tippflächen >=44px, z-index 400 (unter dem Werkzeugmenü 500, dem
+   Such-Overlay 1000 und dem Hall-of-Fame-Intro 9000). #main und der Scroll-Bereich
+   erhalten unten zusätzlichen Platz, damit weder Inhalt noch Fokus verdeckt werden. */
+.ia-mainnav-bottom{display:none}
+@media(max-width:600px){
+  .ia-mainnav{display:none}
+  .ia-mainnav-bottom{position:fixed;left:0;right:0;bottom:0;z-index:400;display:flex;box-sizing:border-box;padding:4px;background:var(--surf);border-top:1px solid var(--border-soft);box-shadow:0 -6px 18px rgba(0,0,0,.35)}
+  .ia-mainnav-bottom-btn{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;padding:6px 2px;border:0;border-radius:10px;background:transparent;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:10px;font-weight:600;cursor:pointer}
+  .ia-mainnav-bottom-icon{width:22px;height:22px;flex:0 0 auto}
+  .ia-mainnav-bottom-label{max-width:100%;text-align:center;line-height:1.15;overflow-wrap:anywhere}
+  .ia-mainnav-bottom-btn:focus-visible{outline:2px solid var(--red2);outline-offset:-2px}
+  .ia-mainnav-bottom-btn.active{color:var(--tx);background:rgba(232,39,63,.16);box-shadow:inset 0 -2px 0 var(--red2)}
+  #main{padding-bottom:88px}
+  html{scroll-padding-bottom:88px}
+}
+
 @media(max-width:600px){
   .ia-context-bar{flex-wrap:wrap}
   .ia-overview-cards{grid-template-columns:1fr}
@@ -22573,6 +22593,31 @@ function rMainNav(){
   return`<nav class="ia-mainnav" aria-label="Hauptnavigation">${buttons}</nav>`;
 }
 /**
+ * P0b-Fix 6 — Mobile Bottom-Navigation (Spezifikation 6.7: "Hauptnavigation auf dem Smartphone als
+ * untere Leiste mit 5 Symbolen"). Verwendet ausschließlich die bestehenden Quellen: dieselben
+ * MAIN_NAV_POINTS (Anzahl, Reihenfolge, Beschriftung), dieselbe aktive Seitenermittlung
+ * (mainNavActiveKeyForPage) und dieselben Aktionen (goToMainNavPoint). Nur die Symbole sind neu:
+ * kleine Inline-SVGs (currentColor, aria-hidden), der zugängliche Name ist die sichtbare
+ * Beschriftung. Wird in rIaShell eingebaut; die Leiste ist außerhalb von max-width:600px
+ * vollständig ausgeblendet und liegt innerhalb von #main (auf dem Cover nicht sichtbar).
+ * aria-current="page" steht nur beim aktiven Punkt (für lexicon/seasonLanding bei keinem).
+ */
+const MAIN_NAV_ICONS={
+  uebersicht:'<svg class="ia-mainnav-bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg>',
+  spieltage:'<svg class="ia-mainnav-bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17"/><path d="M8 3v4M16 3v4"/></svg>',
+  team:'<svg class="ia-mainnav-bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 20c0-3.4 2.7-5.8 6-5.8s6 2.4 6 5.8"/><circle cx="17" cy="9.5" r="2.4"/><path d="M17 14.4c2.4 0 4.2 1.8 4.2 4.6"/></svg>',
+  ligaGegner:'<svg class="ia-mainnav-bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20V11"/><path d="M10 20V5"/><path d="M16 20v-7"/><path d="M2.5 20h19"/></svg>',
+  labor:'<svg class="ia-mainnav-bottom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9.5 3.5h5"/><path d="M10.5 3.5v6L5 19a1.6 1.6 0 0 0 1.4 2.4h11.2A1.6 1.6 0 0 0 19 19l-5.5-9.5v-6"/><path d="M7.5 15h9"/></svg>',
+};
+function rMainNavBottom(){
+  const activeKey=mainNavActiveKeyForPage(S.page);
+  const buttons=MAIN_NAV_POINTS.map(p=>{
+    const active=p.key===activeKey;
+    return`<button type="button" class="ia-mainnav-bottom-btn${active?' active':''}"${active?' aria-current="page"':''} onclick="goToMainNavPoint('${p.key}')">${MAIN_NAV_ICONS[p.key]||''}<span class="ia-mainnav-bottom-label">${escHtml(p.label)}</span></button>`;
+  }).join('');
+  return`<nav class="ia-mainnav-bottom" aria-label="Hauptnavigation, untere Leiste">${buttons}</nav>`;
+}
+/**
  * P0b.7 — Übersicht als neue Startseite (Spezifikation 6.3.1). Übersicht ist
  * gemäß 6.3-Tabelle saisongebunden ("ersetzt ... die leere
  * Saison-Landingpage") — sie lädt daher wie team/player die aktive Saison
@@ -23139,7 +23184,7 @@ function rContextBar(){
 }
 /** Bündelt Suche + Werkzeugmenü + Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
 function rIaShell(){
-  return`<div class="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}`;
+  return`<div class="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}${rMainNavBottom()}`;
 }
 
 // ═══════════════════════════════════════════════════════

@@ -312,7 +312,7 @@ console.log('== Rendering, Zustand, Reinheit ==');
 console.log('== Einbindung und unveränderte Bestandteile ==');
 {
   const shell = stripComments(fnSource('rIaShell')).replace(/\s+/g, '');
-  assertEqual(shell, 'functionrIaShell(){return`<divclass="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}`;}', 'rIaShell: Suche und Werkzeugmenü nebeneinander in .ia-search-row, dann unveränderte Kontextleiste und Hauptnavigation');
+  assertEqual(shell, 'functionrIaShell(){return`<divclass="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}${rMainNavBottom()}`;}', 'rIaShell: Suche und Werkzeugmenü nebeneinander in .ia-search-row, dann unveränderte Kontextleiste und Hauptnavigation, zuletzt die mobile untere Leiste');
   assertEqual((stripComments(html).match(/rToolMenu\(\)/g) || []).length, 2, 'rToolMenu(): Definition und der eine Aufruf in rIaShell');
   assertTrue(!/Werkzeug|ToolMenu|tool-menu/.test(stripComments(fnSource('rContextBar'))), 'rContextBar enthält nichts vom Werkzeugmenü');
   // Fingerprints der Quelltexte, die dieser Fix ausdrücklich nicht verändern darf (Stand P0b-Fix 4)

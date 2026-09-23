@@ -465,10 +465,10 @@ console.log('== Keine Abhängigkeit von rContextBar / Einbindung in rIaShell =='
   const barSrc = stripComments(fnSource('rContextBar'));
   assertTrue(!/Search|search/.test(barSrc), 'rContextBar enthält nichts von der Suche');
   const shell = stripComments(fnSource('rIaShell'));
-  assertEqual(shell.replace(/\s+/g, ''), 'functionrIaShell(){return`<divclass="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}`;}', 'rIaShell: Such-Zeile (Suche, Werkzeugmenü), dann unveränderte Kontextleiste und Hauptnavigation');
+  assertEqual(shell.replace(/\s+/g, ''), 'functionrIaShell(){return`<divclass="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}${rMainNavBottom()}`;}', 'rIaShell: Such-Zeile (Suche, Werkzeugmenü), dann unveränderte Kontextleiste und Hauptnavigation, zuletzt die mobile untere Leiste');
   const b = boot();
-  b.ctx.rContextBar = () => '<BAR/>'; b.ctx.rMainNav = () => '<NAV/>'; b.ctx.rToolMenu = () => '<TOOLS/>';
-  assertEqual(b.run('rIaShell()'), `<div class="ia-search-row">${b.run('rGlobalSearchToggle()')}<TOOLS/></div><BAR/><NAV/>`, 'rIaShell-Zusammenbau (mit Platzhaltern)');
+  b.ctx.rContextBar = () => '<BAR/>'; b.ctx.rMainNav = () => '<NAV/>'; b.ctx.rToolMenu = () => '<TOOLS/>'; b.ctx.rMainNavBottom = () => '<BOTTOM/>';
+  assertEqual(b.run('rIaShell()'), `<div class="ia-search-row">${b.run('rGlobalSearchToggle()')}<TOOLS/></div><BAR/><NAV/><BOTTOM/>`, 'rIaShell-Zusammenbau (mit Platzhaltern)');
   const toggle = b.run('rGlobalSearchToggle()');
   assertTrue(/<button type="button" class="ia-search-toggle" data-ia-search-toggle aria-label="[^"]+" aria-haspopup="dialog" onclick="openGlobalSearch\(\)">/.test(toggle), 'Schaltfläche: button, aria-label, aria-haspopup, onclick');
   assertEqual((stripComments(html).match(/rGlobalSearchToggle\(\)/g) || []).length, 2, 'Schaltfläche: nur Definition und der eine Aufruf in rIaShell');
