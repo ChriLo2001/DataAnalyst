@@ -65,7 +65,7 @@ const REAL_FN_NAMES = [
   'decodeHashSegmentSafe', 'parseAsOfQueryValue', 'isValidAsOfDate', 'isValidAsOfStartTime',
   'hashSegmentToSeasonKey', 'seasonKeyToHashSegment', 'asOfEquals', 'deriveAsOfForSeason',
   'parseAppHash', 'buildAppHash', 'buildGlobalPageHash', 'buildHashStringFromParsed',
-  'computeCurrentAppHash', 'syncHashFromState', 'applyGlobalPageFromHash', 'applyAppHash',
+  'computeCurrentAppHash', 'syncHashFromState', 'withoutHashSync', 'applyGlobalPageFromHash', 'applyAppHash',
   'initHashRouting', 'getActiveSeasonKey', 'clearAnalysisCache',
   'parseLastViewState', 'getStoredLastView', 'saveLastView',
   'einsatzCenterStorageRead', 'einsatzCenterStorageWrite', 'einsatzCenterStorageRemove',
@@ -73,7 +73,7 @@ const REAL_FN_NAMES = [
   'analysisCacheKey', 'cachedAnalysis', 'getSeasonMatchdays', 'matchdayAsOfCutoff',
 ];
 const realFunctions = REAL_FN_NAMES.map(fnSource).join('\n');
-const realConsts = [declLine('HASH_GLOBAL_PAGES'), declLine('HASH_SEASON_PAGE_SEGMENTS'), declLine('LAST_VIEW_STORAGE_KEY'), declLine('LAST_VIEW_MAX_AGE_MS'), declLine('LAST_VIEW_RESTORE_IN_PROGRESS')].join('\n');
+const realConsts = [declLine('HASH_GLOBAL_PAGES'), declLine('HASH_SEASON_PAGE_SEGMENTS'), declLine('LAST_VIEW_STORAGE_KEY'), declLine('LAST_VIEW_MAX_AGE_MS'), declLine('LAST_VIEW_RESTORE_IN_PROGRESS'), declLine('HASH_SYNC_SUSPENDED')].join('\n');
 const setStateSrc = constArrowSource('setState');
 
 const SEASON_KEYS = ['25/26', '24/25'];

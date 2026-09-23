@@ -63,8 +63,8 @@ function winSource(name) {
 const constLine = (name) => new RegExp(`^const ${name}=.*$`, 'm').exec(html)?.[0] ?? (() => { throw new Error(`const ${name} fehlt`); })();
 const stripComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*')).join('\n');
 
-const realFunctions = ['isGameAtOrBeforeAsOf', 'deriveAsOfForSeason', 'getStaticSeasonGames', 'compareGamesChronologically', 'buildMatchdays', 'asOfCacheKeyPart', 'analysisCacheKey', 'cachedAnalysis', 'getSeasonMatchdays', 'matchdayAsOfCutoff', 'formatDateDE', 'overviewMatchdayStartMs', 'overviewMatchdayEndMs', 'detectOverviewPhase', 'getSeasonDataState', 'parseSeasonDataState', 'isNewSeasonDataState', 'recordOverviewVisit', 'overviewLastMatchdayText', 'buildOverviewCards', 'rOverviewPage', 'getActiveSeasonKey', 'uiNotiz', 'einsatzCenterStorageRead', 'einsatzCenterStorageWrite', 'einsatzCenterStorageRemove'].map(fnSource).join('\n');
-const realConsts = [constLine('SEASON_DATA_STATE_KEY_PREFIX'), constLine('OVERVIEW_SESSION_DATA_STATE'), constLine('OVERVIEW_PHASE_LABELS')].join('\n');
+const realFunctions = ['isGameAtOrBeforeAsOf', 'deriveAsOfForSeason', 'getStaticSeasonGames', 'compareGamesChronologically', 'buildMatchdays', 'asOfCacheKeyPart', 'analysisCacheKey', 'cachedAnalysis', 'getSeasonMatchdays', 'matchdayAsOfCutoff', 'formatDateDE', 'overviewMatchdayStartMs', 'overviewMatchdayEndMs', 'detectOverviewPhase', 'getSeasonDataState', 'parseSeasonDataState', 'isNewSeasonDataState', 'recordOverviewVisit', 'overviewLastMatchdayText', 'buildOverviewCards', 'rOverviewPage', 'getActiveSeasonKey', 'uiNotiz', 'einsatzCenterStorageRead', 'einsatzCenterStorageWrite', 'einsatzCenterStorageRemove', 'withoutHashSync'].map(fnSource).join('\n');
+const realConsts = [constLine('SEASON_DATA_STATE_KEY_PREFIX'), constLine('OVERVIEW_SESSION_DATA_STATE'), constLine('OVERVIEW_PHASE_LABELS'), 'let HASH_SYNC_SUSPENDED=0;'].join('\n');
 const openOverviewSrc = winSource('openOverview');
 const switchOverviewSrc = winSource('switchOverviewSeason');
 const einsatzRegion = between('const LINEUP_DATA={};', 'window.einsatzCenterSoftIssues=einsatzCenterSoftIssues;');
@@ -119,6 +119,7 @@ function boot({ games = { '25/26': seasonA() }, storage = makeStorage(), storage
     fetch: () => Promise.reject(new Error('kein Netzwerk im Test')),
     console,
     setState: (p) => { log.push('setState'); patches.push(p); Object.assign(S, p); },
+    syncHashFromState: () => {}, // Attrappe: Adress-Abgleich am Ende von withoutHashSync() (nicht Gegenstand von P0c.7)
     escHtml: (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'),
     escAttr: (s) => String(s).replace(/"/g, '&quot;'),
     loadSeason: async () => { log.push('loadSeason'); },

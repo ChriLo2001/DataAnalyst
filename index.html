@@ -3636,6 +3636,7 @@ function computeCurrentAppHash(){
  * / initHashRouting(), Entscheidung D2: kein Sliding-Freshness).
  */
 function syncHashFromState(){
+  if(HASH_SYNC_SUSPENDED>0)return;
   try{
     const desired=computeCurrentAppHash();
     const current=location.hash||'';
@@ -3644,6 +3645,21 @@ function syncHashFromState(){
       if(!LAST_VIEW_RESTORE_IN_PROGRESS)saveLastView(desired);
     }
   }catch(e){/* Adressleiste darf nie den restlichen State zum Absturz bringen */}
+}
+// P0b-Fix 8 — Zwischenhash unterdrücken: Öffner, die zuerst eine Saison laden (loadSeason()/openSeason() setzen dabei
+// kurz die Team-Seite, Hash "#/25-26") und danach ihre eigentliche Zielseite setzen, würden pro Navigation zwei
+// History-Einträge erzeugen. Während withoutHashSync() läuft, schreibt syncHashFromState() weder Adresse noch
+// lastView; nach dem Verlassen der äußersten Ebene gleicht genau ein Aufruf die Adresse mit dem dann erreichten
+// State ab (auch im Fehlerfall). Der Zähler unterstützt Verschachtelung; er ist kein Zustand von S.
+let HASH_SYNC_SUSPENDED=0;
+async function withoutHashSync(fn){
+  HASH_SYNC_SUSPENDED++;
+  try{
+    return await fn();
+  }finally{
+    HASH_SYNC_SUSPENDED--;
+    if(HASH_SYNC_SUSPENDED===0)syncHashFromState();
+  }
 }
 // ─── P0c.8 — zuletzt geöffnete Ansicht (6.3.1 / Entscheidung 10b) ──────────────
 // Reine Komfort-Wiederherstellung für den hashlosen Start: gespeichert wird NUR der von
@@ -3735,18 +3751,25 @@ async function applyAppHash(parsed){
   }
 
   const currentSeasonKey=S.screen==='main'?getActiveSeasonKey():null;
-  if(parsed.seasonKey!==currentSeasonKey)await window.openSeason(parsed.seasonKey);
-  if(!asOfEquals(parsed.asOf,deriveAsOfForSeason(parsed.seasonKey,S.asOf)))setState({asOf:parsed.asOf});
-  if(parsed.page==='player'){
-    const validPlayer=parsed.objectId&&(S.players||[]).some(p=>p.key===parsed.objectId);
-    setState(validPlayer?{page:'player',activeP:parsed.objectId}:{page:'player'});
-  }
-  if(parsed.page==='matchday'){
-    const requestedNumber=parsed.objectId!=null?Number(parsed.objectId):null;
-    const matchdays=getSeasonMatchdays(parsed.seasonKey).filter(m=>m.number!==null);
-    const validMatchday=requestedNumber!=null&&matchdays.some(m=>m.number===requestedNumber);
-    setState({page:'matchday',activeMatchday:validMatchday?requestedNumber:null});
-  }
+  // P0b-Fix 8: ganzer Saison-Zweig ohne Zwischenhash (openSeason() setzt kurz die Team-Seite); der Zielhash steht bei
+  // Deep-Link/Zurück bereits in der Adresse, sonst schreibt der abschließende Abgleich ihn genau einmal.
+  await withoutHashSync(async()=>{
+    if(parsed.seasonKey!==currentSeasonKey)await window.openSeason(parsed.seasonKey);
+    // Ein seitenloser Saison-Hash ("#/25-26") bezeichnet die Standard-Saisonansicht (Team bzw. Saison-Landingpage):
+    // bei gleicher Saison und anderer aktueller Seite (z.B. nach Zurück) wird sie tatsächlich angezeigt.
+    else if(parsed.page===null&&S.page!=='team'&&S.page!=='seasonLanding')await window.openSeason(parsed.seasonKey);
+    if(!asOfEquals(parsed.asOf,deriveAsOfForSeason(parsed.seasonKey,S.asOf)))setState({asOf:parsed.asOf});
+    if(parsed.page==='player'){
+      const validPlayer=parsed.objectId&&(S.players||[]).some(p=>p.key===parsed.objectId);
+      setState(validPlayer?{page:'player',activeP:parsed.objectId}:{page:'player'});
+    }
+    if(parsed.page==='matchday'){
+      const requestedNumber=parsed.objectId!=null?Number(parsed.objectId):null;
+      const matchdays=getSeasonMatchdays(parsed.seasonKey).filter(m=>m.number!==null);
+      const validMatchday=requestedNumber!=null&&matchdays.some(m=>m.number===requestedNumber);
+      setState({page:'matchday',activeMatchday:validMatchday?requestedNumber:null});
+    }
+  });
 }
 /**
  * Einmaliger Einstiegspunkt beim Laden: wendet einen ggf. bereits in der
@@ -22628,10 +22651,12 @@ function rMainNavBottom(){
  */
 window.openOverview=async()=>{
   const seasonKey=getActiveSeasonKey();
-  await loadSeason(seasonKey);
-  recordOverviewVisit(seasonKey);
-  showMainShell();
-  setState({screen:'main',page:'overview'});
+  await withoutHashSync(async()=>{
+    await loadSeason(seasonKey);
+    recordOverviewVisit(seasonKey);
+    showMainShell();
+    setState({screen:'main',page:'overview'});
+  });
 };
 /**
  * Saison-Auswahl in der Kontextleiste, wenn S.page==='overview': openSeason()
@@ -22642,9 +22667,11 @@ window.openOverview=async()=>{
  * neue Lade-/Routing-Logik.
  */
 window.switchOverviewSeason=async function(value){
-  await window.openSeason(value);
-  recordOverviewVisit(getActiveSeasonKey());
-  setState({page:'overview'});
+  await withoutHashSync(async()=>{
+    await window.openSeason(value);
+    recordOverviewVisit(getActiveSeasonKey());
+    setState({page:'overview'});
+  });
 };
 // ═══════════════════════════════════════════════════════
 //  P0b.8 — SPIELTAGSSEITE (Spezifikation 6.3 Punkt 2, 3.6.4)
@@ -22675,22 +22702,28 @@ window.switchOverviewSeason=async function(value){
 const MATCHDAY_STATUS_LABELS={abgeschlossen:'Abgeschlossen',geplant:'Geplant',unvollstaendig:'Unvollständig'};
 window.openMatchdayTimeline=async function(seasonKey){
   const key=seasonKey||getActiveSeasonKey();
-  await loadSeason(key);
-  showMainShell();
-  setState({screen:'main',page:'matchday',activeMatchday:null});
+  await withoutHashSync(async()=>{
+    await loadSeason(key);
+    showMainShell();
+    setState({screen:'main',page:'matchday',activeMatchday:null});
+  });
 };
 window.openMatchday=async function(seasonKey,number){
   const key=seasonKey||getActiveSeasonKey();
-  await loadSeason(key);
-  showMainShell();
-  const num=Number(number);
-  const valid=getSeasonMatchdays(key).some(m=>m.number===num);
-  setState({screen:'main',page:'matchday',activeMatchday:valid?num:null});
+  await withoutHashSync(async()=>{
+    await loadSeason(key);
+    showMainShell();
+    const num=Number(number);
+    const valid=getSeasonMatchdays(key).some(m=>m.number===num);
+    setState({screen:'main',page:'matchday',activeMatchday:valid?num:null});
+  });
 };
 /** Wie switchOverviewSeason(): verhindert, dass ein Saisonwechsel die Spieltagsseite unbeabsichtigt verlässt. activeMatchday wird zurückgesetzt, da Spieltag-Nummern saisonspezifisch sind (keine Zuordnung über Saisongrenzen hinweg erfunden). */
 window.switchMatchdaySeason=async function(value){
-  await window.openSeason(value);
-  setState({page:'matchday',activeMatchday:null});
+  await withoutHashSync(async()=>{
+    await window.openSeason(value);
+    setState({page:'matchday',activeMatchday:null});
+  });
 };
 /** Ulm/SG-Spiele innerhalb eines Matchdays (buildMatchdays() liefert ALLE Liga-Spiele der Gruppe, siehe P0b.6-Kommentar) — reine Filterung mit der bestehenden detectSide()/detectUlmSide(), keine neue Ulm-Erkennung. */
 function matchdayUlmGames(matchday){

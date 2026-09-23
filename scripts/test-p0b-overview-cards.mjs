@@ -253,7 +253,7 @@ console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
     detectOverviewPhase: ['fn', 'feca652a76e5e822'], overviewOpponentPreviewHtml: ['fn', '2a51e05ee239fe3f'], overviewMatchcenterLinkHtml: ['fn', 'c1201a1504d64034'],
     overviewLineupLinkHtml: ['fn', '06e2392960b9368d'], overviewRankChangeTile: ['fn', 'e31f57e9e108d871'], rMatchdayDetailPage: ['fn', '247d6f9b129d4adc'], rOverviewPage: ['fn', '477ae2f11e11a794'],
     uiNotiz: ['fn', '8794f37984dad161'], uiRangliste: ['fn', '87bad31d1b07438c'], uiVerlauf: ['fn', '1860fc97704b31af'], uiHinweisKarte: ['fn', '4b4ab6d5f2b46c2c'], uiObjektseite: ['fn', '390b5f722db20998'],
-    goToMainNavPoint: ['win', '59d2de50a5f03cda'], openOverview: ['win', 'f627d273b2deeb66'], openMatchdayTimeline: ['win', 'fbc28e9b29ea0b94'], openMatchday: ['win', 'a944d6b752f3ac99'],
+    goToMainNavPoint: ['win', '59d2de50a5f03cda'], openOverview: ['win', 'ee906a0518a9ecf0'], openMatchdayTimeline: ['win', '0baa2da1fa964990'], openMatchday: ['win', 'bca49420ab804f79'],
     openGlobalSearch: ['win', 'f9764bf44087ed75'], openToolMenu: ['win', 'b816957ddf35608f'],
   };
   for (const [name, [kind, hash]] of Object.entries(pinned)) assertEqual(sha(kind === 'fn' ? fnSource(name) : winSource(name)), hash, `${name} unverändert`);
