@@ -13354,23 +13354,6 @@ function getComparisonAlltimeTrend(row){
     return{...r,label:r.label,teamShare:comparisonPct(r.points,teamGoals)};
   });
 }
-function getComparisonCandidates(){
-  const rows=getAllTimePlayerRows().filter(row=>(row.allStats?.games||0)>0||(row.allStats?.points||0)>0);
-  const out=[];
-  for(const row of rows){
-    out.push({type:'playerAlltime',playerId:row.playerId,playerName:row.name,season:'',label:`${row.name} - Alltime`,points:row.allStats?.points||0});
-    for(const [seasonKey,st] of Object.entries(row.profile?.statsBySeason||{})){
-      if(!((st.games||0)>0||(st.points||0)>0))continue;
-      out.push({type:'seasonPerformance',playerId:row.playerId,playerName:row.name,season:seasonKey,label:`${row.name} - ${getComparisonSeasonLabel(seasonKey)}`,points:st.points||0});
-    }
-  }
-  const typeOrder=c=>c.type==='playerAlltime'?0:1;
-  return out.sort((a,b)=>a.playerName.localeCompare(b.playerName)||typeOrder(a)-typeOrder(b)||seasonOrderIndex(a.season)-seasonOrderIndex(b.season));
-}
-function getComparisonSeasonOptions(candidates=getComparisonCandidates()){
-  return[...new Set(candidates.filter(c=>c.type==='seasonPerformance').map(c=>c.season).filter(Boolean))]
-    .sort((a,b)=>seasonOrderIndex(a)-seasonOrderIndex(b));
-}
 function buildComparisonDataset(comparisonItems){
   return(comparisonItems||[]).map(normalizeComparisonItem).slice(0,COMPARISON_MAX_ITEMS).map((item,idx)=>{
     const row=getComparisonPlayerRow(item.playerId);
@@ -13408,16 +13391,6 @@ function buildComparisonDataset(comparisonItems){
   });
 }
 window.buildComparisonDataset=buildComparisonDataset;
-window.setComparisonSearch=value=>setState({comparisonSearch:String(value||''),comparisonMessage:''});
-window.setComparisonSeasonFilter=value=>setState({comparisonSeasonFilter:String(value||'all'),comparisonMessage:''});
-window.addComparisonItem=(type,playerId,season='',roleMode='field')=>{
-  const item=normalizeComparisonItem({type,playerId,season,roleMode});
-  const current=(S.comparisonItems||[]).map(normalizeComparisonItem);
-  if(!item.playerId)return setState({comparisonMessage:'Nicht genügend Daten vorhanden.'});
-  if(current.some(existing=>comparisonItemKey(existing)===comparisonItemKey(item)))return setState({comparisonMessage:'Dieses Vergleichsobjekt ist bereits ausgewählt.'});
-  if(current.length>=COMPARISON_MAX_ITEMS)return setState({comparisonMessage:`Maximal ${COMPARISON_MAX_ITEMS} Vergleichsobjekte möglich.`});
-  setState({comparisonItems:[...current,item],comparisonHasRun:false,comparisonMessage:''});
-};
 window.removeComparisonItem=key=>{
   const next=(S.comparisonItems||[]).map(normalizeComparisonItem).filter(item=>comparisonItemKey(item)!==key);
   setState({comparisonItems:next,comparisonHasRun:S.comparisonHasRun&&next.length>=2,comparisonMessage:''});
@@ -13482,50 +13455,6 @@ function rComparisonStyles(){
     .cmp-summary{font-size:13px;line-height:1.7;color:var(--tx2)}
     @media(max-width:880px){.cmp-grid{grid-template-columns:1fr}.cmp-controls{grid-template-columns:1fr}.cmp-style-row{grid-template-columns:1fr}.cmp-kpi-table{font-size:11px}.cmp-kpi-table th,.cmp-kpi-table td{padding:8px 5px}.cmp-row{grid-template-columns:1fr}.cmp-btn{width:100%}}
   </style>`;
-}
-function rComparisonTrendSvg(rows){
-  if((rows||[]).length<2)return'<div class="noev" style="padding:18px 0;font-size:12px">Nicht genügend Daten vorhanden.</div>';
-  const w=360,h=118,pad=14;
-  const max=Math.max(...rows.flatMap(r=>[r.points||0,r.goals||0,r.assists||0]),1);
-  const line=(key,color)=>`<polyline points="${rows.map((r,i)=>{
-    const x=pad+(i/Math.max(rows.length-1,1))*(w-pad*2);
-    const y=h-pad-((r[key]||0)/max)*(h-pad*2);
-    return`${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ')}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
-  return`<svg class="cmp-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(148,163,184,.18)" stroke-width="1"/>
-    ${line('points','#fbbf24')}${line('goals','#3b82f6')}${line('assists','#10b981')}
-  </svg>
-  <div class="cmp-legend"><span><i class="cmp-dot" style="background:#fbbf24"></i>Punkte</span><span><i class="cmp-dot" style="background:#3b82f6"></i>Tore</span><span><i class="cmp-dot" style="background:#10b981"></i>Assists</span></div>`;
-}
-function rComparisonKpis(dataset){
-  const kpis=[
-    ['Spiele','games',0,''],
-    ['Tore','goals',0,''],
-    ['Assists','assists',0,''],
-    ['Punkte','points',0,''],
-    ['Strafminuten','penalties',0,'m'],
-    ['Team Share','teamShare',1,'%'],
-    ['Goal Share','goalShare',1,'%'],
-    ['Assist Share','assistShare',1,'%'],
-  ];
-  return`<div class="cmp-card"><div class="cmp-card-title">KPI-Vergleich</div><div style="overflow:auto"><table class="cmp-kpi-table"><thead><tr><th>KPI</th>${dataset.map(d=>`<th>${escHtml(d.label)}</th>`).join('')}</tr></thead><tbody>${kpis.map(([label,key,decimals,suffix])=>`<tr><td>${label}</td>${dataset.map(d=>`<td class="cmp-num">${comparisonFmt(d[key],decimals)}${suffix}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
-}
-function rComparisonTrends(dataset){
-  return`<div class="cmp-card"><div class="cmp-card-title">Trendlinien</div><div class="cmp-trends">${dataset.map(d=>`<div>
-    <div class="cmp-trend-title"><span style="color:${d.color}">${escHtml(d.label)}</span><span class="cmp-num">${d.trendData?.length||0} Stationen</span></div>
-    ${rComparisonTrendSvg(d.trendData)}
-  </div>`).join('')}</div></div>`;
-}
-function rComparisonStyleDashboard(dataset){
-  return`<div class="cmp-card"><div class="cmp-card-title">Spielstil-Vergleich</div>${COMPARISON_STYLE_CATEGORIES.map(cat=>`<div class="cmp-style-row">
-    <div class="cmp-style-label">${cat.label}</div>
-    <div class="cmp-style-values">${dataset.map(d=>{const val=pctValue(d.styleProfile?.[cat.key]);return`<div class="cmp-style-value">
-      <div class="cmp-mini-name">${escHtml(d.label)}</div>
-      <div class="cmp-mini-bg"><div class="cmp-mini-fill" style="width:${val?Math.max(5,val):0}%;background:${cat.color}"></div></div>
-      <div class="cmp-num">${val}</div>
-    </div>`;}).join('')}</div>
-  </div>`).join('')}</div>`;
 }
 function rComparisonRoles(dataset){
   return`<div class="cmp-card"><div class="cmp-card-title">Rollen und Traits</div><div class="cmp-role-grid">${dataset.map(d=>`<div class="cmp-role-panel cmp-role" style="--cmp-color:${d.color}">
@@ -13621,74 +13550,6 @@ function rGoalieComparisonDashboard(dataset){
   if(valid.length<2)return`<div class="compare-card"><div class="compare-card-title">Goalie-Vergleich</div><div class="noev" style="font-size:12px">Für einen Goalie-Vergleich werden mindestens zwei Goalie-Leistungen benötigt.</div></div>`;
   return`<div class="compare-dashboard goalie-compare-dashboard"><div class="compare-card"><div class="compare-card-title">Goalie-Fazit</div><div class="compare-summary">${escHtml(buildGoalieComparisonSummary(valid))}</div></div>${rGoalieComparisonKpis(valid)}<div class="kpi-grid"><div class="kpi-col">${rGoalieComparisonRadar(valid)}${rGoalieComparisonExtended(valid)}</div><div class="kpi-col">${rComparisonRoles(valid)}</div></div>${rGoalieComparisonTrend(valid)}</div>`;
 }
-function rComparisonDashboard(){
-  const dataset=buildComparisonDataset(S.comparisonItems||[]);
-  const valid=dataset.filter(d=>d.hasData);
-  if(valid.length<2)return`<div class="cmp-card"><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>`;
-  return`<div class="cmp-dashboard">
-    <div class="cmp-card"><div class="cmp-card-title">Automatisches Fazit</div><div class="cmp-summary">${escHtml(buildComparisonSummary(valid))}</div></div>
-    ${rComparisonKpis(valid)}
-    ${rComparisonTrends(valid)}
-    ${rComparisonStyleDashboard(valid)}
-    ${rComparisonRoles(valid)}
-  </div>`;
-}
-function rComparisonCenterPage(){
-  if(S.comparisonMode==='duo')return`${rComparisonStyles()}${rDuoComparisonPage()}`;
-  if(S.comparisonMode!=='single')return rComparisonModeSelect();
-  const selected=(S.comparisonItems||[]).map(normalizeComparisonItem);
-  const selectedKeys=new Set(selected.map(comparisonItemKey));
-  const allCandidates=getComparisonCandidates();
-  const search=normalizePlayerName(S.comparisonSearch||'');
-  const seasonFilter=S.comparisonSeasonFilter||'all';
-  const candidates=allCandidates.filter(c=>{
-    const matchesSearch=!search||normalizePlayerName(`${c.playerName} ${c.label}`).includes(search);
-    const matchesSeason=seasonFilter==='all'||(c.type==='playerAlltime'&&seasonFilter==='alltime')||c.season===seasonFilter;
-    return matchesSearch&&matchesSeason;
-  }).slice(0,120);
-  const seasons=getComparisonSeasonOptions(allCandidates);
-  const selectedRows=buildComparisonDataset(selected);
-  return`${rComparisonStyles()}<div class="cmp-shell">
-    <div>
-      <div class="cmp-title">Vergleichszentrum</div>
-      <div class="cmp-sub">Spieler-Alltime und einzelne Saisonleistungen per Klick auswählen und stabil vergleichen.</div>
-    </div>
-    <div class="cmp-grid">
-      <div class="cmp-card">
-        <div class="cmp-card-title">Auswahl</div>
-        <div class="cmp-controls">
-          <input class="cmp-input" value="${escAttr(S.comparisonSearch||'')}" placeholder="Spieler suchen" oninput="setComparisonSearch(this.value)">
-          <select class="cmp-select" onchange="setComparisonSeasonFilter(this.value)">
-            <option value="all"${seasonFilter==='all'?' selected':''}>Alle</option>
-            <option value="alltime"${seasonFilter==='alltime'?' selected':''}>Alltime</option>
-            ${seasons.map(seasonKey=>`<option value="${escAttr(seasonKey)}"${seasonFilter===seasonKey?' selected':''}>${escHtml(getComparisonSeasonLabel(seasonKey))}</option>`).join('')}
-          </select>
-        </div>
-        <div class="cmp-list">${candidates.length?candidates.map(c=>{const key=comparisonItemKey(c);const active=selectedKeys.has(key);return`<div class="cmp-row">
-          <div><div class="cmp-row-name">${escHtml(c.playerName)}</div><div class="cmp-row-meta">${escHtml(c.type==='playerAlltime'?'Alltime':getComparisonSeasonLabel(c.season))} · ${c.points||0} Punkte</div></div>
-          <button class="cmp-btn" ${active?'disabled':''} onclick="addComparisonItem(${comparisonJsArg(c.type)},${comparisonJsArg(c.playerId)},${comparisonJsArg(c.season||'')})">${active?'Ausgewählt':'+ Zum Vergleich hinzufügen'}</button>
-        </div>`;}).join(''):'<div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div>'}</div>
-      </div>
-      <div>
-        <div class="cmp-card">
-          <div class="cmp-card-title">Ausgewählte Vergleichsobjekte</div>
-          <div class="cmp-selected">${selectedRows.length?selectedRows.map(d=>`<div class="cmp-chip" style="border-color:${d.color}55">
-            <div><strong>${escHtml(d.playerName)}</strong><br><span>${escHtml(d.season)} · ${d.type==='playerAlltime'?'Spieler-Alltime':'Saisonleistung'}</span></div>
-            <button class="cmp-x" title="Entfernen" onclick="removeComparisonItem(${comparisonJsArg(d.key)})">×</button>
-          </div>`).join(''):'<div class="noev" style="font-size:12px;padding:0">Noch keine Vergleichsobjekte ausgewählt.</div>'}</div>
-          <div class="cmp-actions">
-            <button class="cmp-btn cmp-primary" ${selected.length<2?'disabled':''} onclick="runComparison()">Vergleichen</button>
-            <button class="cmp-btn" ${selected.length?'':'disabled'} onclick="clearComparison()">Auswahl leeren</button>
-            <span class="cmp-sub">${selected.length}/${COMPARISON_MAX_ITEMS} ausgewählt</span>
-          </div>
-          ${S.comparisonMessage?`<div class="cmp-note">${escHtml(S.comparisonMessage)}</div>`:''}
-        </div>
-        ${S.comparisonHasRun?rComparisonDashboard():'<div class="cmp-card" style="margin-top:14px"><div class="noev" style="font-size:12px">Mindestens zwei Objekte auswählen und dann vergleichen.</div></div>'}
-      </div>
-    </div>
-  </div>`;
-}
-
 // Comparison Center v2: player-first picker, richer metrics and SVG-only KPI visuals.
 function getComparisonPlayerOptions(){
   const showSgOnly=!!S.comparisonShowSgOnly;
@@ -14419,26 +14280,6 @@ function rKpiRadar(dataset){
   }).join('');
   return`<div class="kpi-section kpi-radar-card"><div class="kpi-sec-title">Radarvergleich</div><svg class="kpi-radar-svg" viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Radarvergleich der ausgewählten Leistungen">${grid}${axes}${polys}</svg><div class="kpi-legend">${dataset.map((d,i)=>`<span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span>`).join('')}</div></div>`;
 }
-function rKpiTrendCompare(dataset){
-  const lines=(dataset||[]).filter(d=>(d.trendData||[]).length>=2);
-  if(!lines.length)return'<div class="kpi-section"><div class="kpi-sec-title">Kumulativer Verlauf</div><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
-  const w=560,h=190,pad=28;
-  const max=Math.max(...lines.flatMap(d=>(d.trendData||[]).map(r=>comparisonNum(r.points))),1);
-  const line=(rows,color)=>{
-    if(rows.length<2)return'';
-    const points=rows.map((r,i)=>{
-      const x=pad+(i/Math.max(rows.length-1,1))*(w-pad*2);
-      const y=h-pad-(comparisonNum(r.points)/max)*(h-pad*2);
-      return`${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    return`<polyline points="${points}" fill="none" stroke="${color}" stroke-width="${lines.length>4?2.2:3.5}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  };
-  return`<div class="kpi-section"><div class="kpi-sec-title">Kumulativer Verlauf</div><svg class="kpi-trend-svg" viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Kumulativer Punkteverlauf">
-    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(148,163,184,.22)"/>
-    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="rgba(148,163,184,.14)"/>
-    ${lines.map((d,i)=>line(d.trendData||[],kpiItemColor(d,i))).join('')}
-  </svg><div class="kpi-legend">${lines.map((d,i)=>`<span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span>`).join('')}</div></div>`;
-}
 function rKpiShareBars(dataset){
   const rows=[
     ['Team Share',d=>d.teamShare],
@@ -14507,50 +14348,6 @@ function kpiTrendRows(d){
     goals:comparisonNum(r.goals),
     label:String(r.label||r.seasonLabel||r.season||r.index||i+1),
   })).filter(r=>Number.isFinite(r.points));
-}
-function rKpiTrendCompare(dataset){
-  const lines=(dataset||[]).map(d=>({...d,_trend:kpiTrendRows(d)})).filter(d=>d._trend.length>=2);
-  if(!lines.length)return'<div class="kpi-section"><div class="kpi-sec-title">Kumulativer Verlauf</div><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
-  const w=780,h=300,padL=62,padR=24,padT=24,padB=58;
-  const plotW=w-padL-padR,plotH=h-padT-padB;
-  const rawMax=Math.max(...lines.flatMap(d=>d._trend.flatMap(r=>[r.points,r.goals])),1);
-  const maxY=kpiNiceMax(rawMax);
-  const maxLen=Math.max(...lines.map(d=>d._trend.length),2);
-  const allAlltime=lines.every(d=>d.type==='playerAlltime');
-  const allSeason=lines.every(d=>d.type==='seasonPerformance');
-  const xLabel=allAlltime?'Saison':allSeason?'Spiel':'Spiel / Saison';
-  const xTicks=[0,.25,.5,.75,1].map(t=>Math.round((maxLen-1)*t)).filter((v,i,a)=>a.indexOf(v)===i);
-  const yTicks=[0,.25,.5,.75,1].map(t=>Math.round(maxY*t)).filter((v,i,a)=>a.indexOf(v)===i);
-  const xFor=(idx,len)=>padL+(len<=1?0:(idx/(len-1))*plotW);
-  const yFor=value=>padT+plotH-(Math.max(0,Math.min(maxY,comparisonNum(value)))/maxY)*plotH;
-  const lineFor=(d,key,dash='')=>{
-    const rows=d._trend;
-    const points=rows.map((r,i)=>`${xFor(i,rows.length).toFixed(1)},${yFor(r[key]).toFixed(1)}`).join(' ');
-    if(!points)return'';
-    const hasValue=rows.some(r=>comparisonNum(r[key])>0);
-    if(key==='goals'&&!hasValue)return'';
-    return`<polyline points="${points}" fill="none" stroke="${kpiItemColor(d,lines.indexOf(d))}" stroke-width="${lines.length>4?2:3}" ${dash} stroke-linecap="round" stroke-linejoin="round"/>`;
-  };
-  const grid=yTicks.map(v=>{
-    const y=yFor(v);
-    return`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w-padR}" y2="${y.toFixed(1)}" stroke="rgba(148,163,184,.11)"/><text x="${padL-10}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle">${comparisonFmt(v,0)}</text>`;
-  }).join('');
-  const xAxis=xTicks.map(idx=>{
-    const x=padL+(idx/Math.max(maxLen-1,1))*plotW;
-    const tickLabel=allAlltime?(lines[0]?._trend?.[idx]?.label||String(idx+1)):String(idx+1);
-    return`<line x1="${x.toFixed(1)}" y1="${h-padB}" x2="${x.toFixed(1)}" y2="${h-padB+5}" stroke="rgba(148,163,184,.35)"/><text x="${x.toFixed(1)}" y="${h-padB+20}" text-anchor="middle">${escHtml(tickLabel)}</text>`;
-  }).join('');
-  const pointsLines=lines.map(d=>lineFor(d,'points')).join('');
-  return`<div class="kpi-section kpi-trend-card"><div class="kpi-sec-title">Kumulativer Verlauf</div><svg class="kpi-trend-svg" viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Kumulativer Punkteverlauf mit Achsen">
-    <rect x="${padL}" y="${padT}" width="${plotW}" height="${plotH}" fill="rgba(0,0,0,.12)" rx="6"/>
-    ${grid}
-    <line x1="${padL}" y1="${h-padB}" x2="${w-padR}" y2="${h-padB}" stroke="rgba(148,163,184,.32)"/>
-    <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${h-padB}" stroke="rgba(148,163,184,.24)"/>
-    ${xAxis}
-    ${pointsLines}
-    <text class="kpi-axis-label" x="${padL+plotW/2}" y="${h-14}" text-anchor="middle">${escHtml(xLabel)}</text>
-    <text class="kpi-axis-label" x="18" y="${padT+plotH/2}" text-anchor="middle" transform="rotate(-90 18 ${padT+plotH/2})">Kumulative Punkte</text>
-  </svg><div class="kpi-legend">${lines.map((d,i)=>`<span><i style="background:${kpiItemColor(d,i)}"></i>${escHtml(d.label)}</span>`).join('')}</div></div>`;
 }
 function rKpiTrendCompare(dataset){
   const lines=(dataset||[]).map(d=>({...d,_trend:kpiTrendRows(d)})).filter(d=>d._trend.length>=2);
@@ -14728,18 +14525,6 @@ function rKPIVergleich(dataset){
     <div class="kpi-header"><strong>Detailvergleich</strong><span class="kpi-count">${valid.length} Leistungen</span></div>
     ${rKpiCards(valid)}
     ${rKpiMirrorRows(valid)}
-    <div class="kpi-grid"><div class="kpi-col">${rKpiRadar(valid)}${rKpiOpponentStrength(valid)}</div><div class="kpi-col">${rKpiExtendedMetrics(valid)}${rKpiShareBars(valid)}</div></div>
-    ${rKpiTrendCompare(valid)}
-    ${rKpiInfoCards(valid)}
-  </div>`;
-}
-function rKPIVergleich(dataset){
-  const valid=(dataset||[]).filter(d=>d.hasData);
-  if(valid.length<2)return'<div class="kpi-wrap"><div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div></div>';
-  return`<div class="kpi-wrap">
-    <div class="kpi-header"><strong>Detailvergleich</strong><span class="kpi-count">${valid.length} Leistungen</span></div>
-    ${rKpiCards(valid)}
-    ${rKpiMirrorRows(valid)}
     <div class="kpi-grid"><div class="kpi-col">${rKpiRadar(valid)}</div><div class="kpi-col">${rKpiExtendedMetrics(valid)}</div></div>
     ${rKpiTrendCompare(valid)}
     ${rKpiOpponentStrength(valid)}
@@ -14807,50 +14592,6 @@ function rComparisonStyles(){
     @media(max-width:600px){.kpi-header{justify-content:flex-start}.kpi-cards,.kpi-metric-grid,.kpi-detail-summary{grid-template-columns:1fr}.kpi-metric-row{grid-template-columns:minmax(0,1fr);gap:5px}.kpi-metric-row strong{text-align:left}.kpi-rank-row{grid-template-columns:30px minmax(0,1fr) minmax(58px,auto);grid-template-areas:'rank player stat' 'rank bar stat';gap:5px 8px}.kpi-rank-stat strong{font-size:11.5px}.kpi-detail-metric-title{align-items:flex-start;flex-direction:column}.kpi-detail-metric-title em{max-width:100%}.compare-chip{max-width:none;width:100%}.kpi-radar-svg text{font-size:9.5px}}
     @media(max-width:600px){.kpi-profile-list{grid-template-columns:1fr}.kpi-profile-stats{grid-template-columns:1fr}.kpi-strength-scale{font-size:9px}}
   </style>`;
-}
-function rComparisonCenterPage(){
-  if(S.comparisonMode==='duo')return`${rComparisonStyles()}${rDuoComparisonPage()}`;
-  if(S.comparisonMode!=='single')return rComparisonModeSelect();
-  const selected=(S.comparisonItems||[]).map(normalizeComparisonItem);
-  const selectedKeys=new Set(selected.map(comparisonItemKey));
-  const sel=getComparisonCurrentSelection();
-  const search=normalizePlayerName(S.comparisonSearch||'');
-  const players=sel.players;
-  const currentItem={type:sel.variant.type,playerId:sel.playerId,season:sel.variant.season};
-  const currentKey=comparisonItemKey(currentItem);
-  const alreadySelected=selectedKeys.has(currentKey);
-  const selectedRows=buildComparisonDataset(selected);
-  const currentPlayer=sel.players.find(p=>p.playerId===sel.playerId);
-  return`${rComparisonStyles()}<div class="compare-shell">
-    <div><div class="compare-title">Vergleichszentrum</div><div class="compare-sub">Spieler auswählen, Saison oder Alltime wählen und per Klick zum Vergleich hinzufügen.</div></div>
-    <div class="compare-grid">
-      <div class="compare-card compare-picker">
-        <div class="compare-card-title">Spieler auswählen</div>
-        <input class="compare-input" value="${escAttr(S.comparisonSearch||'')}" placeholder="Spieler suchen" oninput="filterComparisonPlayers(this.value)" autocomplete="off">
-        <label class="compare-toggle"><input type="checkbox" ${S.comparisonShowSgOnly?'checked':''} onchange="toggleComparisonSgOnly(this.checked)"> SG-/Tübingen-only Spieler anzeigen</label>
-        <div class="compare-player-list">${players.length?players.map(p=>{const visible=!search||normalizePlayerName(p.name).includes(search);return`<button class="compare-player-row${p.playerId===sel.playerId?' active':''}" data-compare-player-row data-compare-search="${escAttr(normalizePlayerName(p.name))}"${visible?'':' style="display:none"'} onclick="selectComparisonPlayer(${comparisonJsArg(p.playerId)})">
-          <div><div class="compare-row-name">${escHtml(p.name)}${p.sgOnly?' <span class="compare-sg-badge">SG</span>':''}</div><div class="compare-row-meta">${p.points} Alltime-Punkte · ${p.seasons.map(getComparisonSeasonLabel).join(', ')||'keine Saisonleistung'}</div></div><i class="compare-player-dot" style="--compare-color:${p.color}"></i>
-        </button>`}).join(''):'<div class="noev" style="font-size:12px">Nicht genügend Daten vorhanden.</div>'}</div>
-        <div class="compare-current">
-          <div class="compare-card-title" style="margin-bottom:0">Leistung wählen</div>
-          <div class="compare-row-name">${escHtml(currentPlayer?.name||'Kein Spieler')}</div>
-          <select class="compare-select" onchange="setComparisonVariant(this.value)">
-            ${sel.variants.map(v=>`<option value="${escAttr(v.value)}"${v.value===sel.variantValue?' selected':''}>${escHtml(v.label)} · ${v.points} P · ${v.games} Sp</option>`).join('')}
-          </select>
-          <button class="compare-btn compare-primary" ${!sel.playerId||!sel.variants.length||alreadySelected?'disabled':''} onclick="addSelectedComparisonItem()">${alreadySelected?'Bereits ausgewählt':'+ Zum Vergleich hinzufügen'}</button>
-        </div>
-      </div>
-      <div>
-        <div class="compare-card">
-          <div class="compare-card-title">Ausgewählte Vergleichsobjekte</div>
-          <div class="compare-selected">${selectedRows.length?selectedRows.map(d=>`<div class="compare-chip" style="border-color:${d.color}55"><div><strong>${escHtml(d.playerName)}</strong><br><span>${escHtml(d.season)} · ${d.type==='playerAlltime'?'Spieler-Alltime':'Saisonleistung'}</span></div><button class="compare-x" title="Entfernen" onclick="removeComparisonItem(${comparisonJsArg(d.key)})">×</button></div>`).join(''):'<div class="noev" style="font-size:12px;padding:0">Noch keine Vergleichsobjekte ausgewählt.</div>'}</div>
-          <div class="compare-actions"><button class="compare-btn compare-primary" ${selected.length<2?'disabled':''} onclick="runComparison()">Vergleichen</button><button class="compare-btn" ${selected.length?'':'disabled'} onclick="clearComparison()">Auswahl leeren</button><span class="compare-sub">${selected.length}/${COMPARISON_MAX_ITEMS} ausgewählt</span></div>
-          ${S.comparisonMessage?`<div class="compare-note">${escHtml(S.comparisonMessage)}</div>`:''}
-        </div>
-        ${S.comparisonHasRun?rComparisonDashboard():'<div class="compare-card" style="margin-top:14px"><div class="noev" style="font-size:12px">Mindestens zwei Objekte auswählen und dann vergleichen.</div></div>'}
-      </div>
-    </div>
-  </div>`;
 }
 function rComparisonCenterPage(){
   if(S.comparisonMode==='duo')return`${rComparisonStyles()}${rDuoComparisonPage()}`;
