@@ -427,7 +427,13 @@ console.log('== Einbindung und Isolation ==');
   const storageLines = html.split('\n').filter((l) => /(local|session)Storage|indexedDB/.test(l) && !l.trim().startsWith('//'));
   assertEqual(storageLines.length, 3, 'in index.html weiterhin genau die 3 Storage-Zeilen (keine vierte)');
   assertEqual(constLine('SEASON_DATA_STATE_KEY_PREFIX'), "const SEASON_DATA_STATE_KEY_PREFIX='vfbulm.comfort.lastSeenDataState.';", 'Schlüssel-Namensraum vfbulm.comfort.lastSeenDataState.<Saison>');
-  assertEqual((html.match(/vfbulm\.comfort\.lastView/g) || []).length, 0, 'vfbulm.comfort.lastView (P0c.8) wird nicht verwendet');
+  // P0c.7 und P0c.8 (zuletzt geöffnete Ansicht, eigener Key vfbulm.comfort.lastView)
+  // bleiben getrennte Namensräume: keine P0c.7-Funktion kennt/verwendet lastView als
+  // Datenstand, recordOverviewVisit liest/schreibt ausschließlich seinen eigenen Key.
+  assertTrue(!/lastView/i.test(fns.join('\n')), 'lastView (P0c.8, "zuletzt geöffnete Ansicht") wird von keiner P0c.7-Funktion als Datenstand verwendet');
+  assertEqual([...rec.matchAll(/SEASON_DATA_STATE_KEY_PREFIX\+seasonKey/g)].length, 1, 'recordOverviewVisit liest/schreibt ausschließlich über den eigenen Datenstands-Key (SEASON_DATA_STATE_KEY_PREFIX+seasonKey), keinen anderen');
+  const p8KeyLine = /const LAST_VIEW_STORAGE_KEY='([^']+)';/.exec(html)?.[1];
+  assertTrue(!!p8KeyLine && !p8KeyLine.startsWith('vfbulm.comfort.lastSeenDataState'), 'P0c.8-Schlüssel (lastView) bleibt vom P0c.7-Namensraum (lastSeenDataState.<Saison>) getrennt');
   assertTrue(!/vfbulm\.einsatzCenter/.test(fns.join('\n')), 'kein Autosave-Schlüssel im P0c.7-Code');
   // unberührte Bereiche
   for (const n of ['syncHashFromState', 'initHashRouting', 'rContextBar', 'rSeasonDataPreviewContextHint', 'computeCurrentAppHash', 'applyAppHash']) {

@@ -3572,14 +3572,56 @@ function computeCurrentAppHash(){
  * hashchange-Listener (siehe applyAppHash: ein von hier geschriebener Hash
  * beschreibt exakt den bereits aktiven Zustand und führt dort zu einem
  * No-Op). Wird vom bestehenden, zentralen Mutationspunkt setState() nach
- * jeder Zustandsänderung aufgerufen. Unverändert seit P0a.8.
+ * jeder Zustandsänderung aufgerufen. Unverändert seit P0a.8, außer der
+ * P0c.8-Ergänzung: exakt an derselben Stelle (tatsächliche Hash-Änderung)
+ * wird zusätzlich lastView als Komfort-Kopie gesichert — außer während
+ * eines laufenden lastView-Restores selbst (siehe LAST_VIEW_RESTORE_IN_PROGRESS
+ * / initHashRouting(), Entscheidung D2: kein Sliding-Freshness).
  */
 function syncHashFromState(){
   try{
     const desired=computeCurrentAppHash();
     const current=location.hash||'';
-    if(desired&&desired!==current)location.hash=desired;
+    if(desired&&desired!==current){
+      location.hash=desired;
+      if(!LAST_VIEW_RESTORE_IN_PROGRESS)saveLastView(desired);
+    }
   }catch(e){/* Adressleiste darf nie den restlichen State zum Absturz bringen */}
+}
+// ─── P0c.8 — zuletzt geöffnete Ansicht (6.3.1 / Entscheidung 10b) ──────────────
+// Reine Komfort-Wiederherstellung für den hashlosen Start: gespeichert wird NUR der von
+// computeCurrentAppHash() bereits erzeugten Hash-String + Zeitstempel (kein eigenes
+// Routing-Schema). Beim Lesen läuft der Hash erneut durch die bestehende
+// parseAppHash()/applyAppHash()-Logik — dieselbe Validierung wie für eine echte URL.
+// Niemals Quelle der Wahrheit, nie wirksam bei bereits vorhandenem Hash (siehe
+// initHashRouting(): dieser Zweig wird ausschließlich erreicht, wenn parseAppHash()
+// für die tatsächliche location.hash beim Start null liefert).
+const LAST_VIEW_STORAGE_KEY='vfbulm.comfort.lastView';
+const LAST_VIEW_MAX_AGE_MS=3600000;// 1 Stunde, Grenze inklusive (Entscheidung D1)
+// true während initHashRouting() einen lastView-Restore anwendet: unterdrückt in
+// syncHashFromState() ausschließlich das (Neu-)Schreiben von lastView, NICHT das
+// Schreiben der Adresse — der Restore selbst zählt nicht als neue Navigation (D2).
+let LAST_VIEW_RESTORE_IN_PROGRESS=false;
+/** Strenge Validierung des gespeicherten lastView-Eintrags inkl. 1h-Altersgrenze. */
+function parseLastViewState(text){
+  try{
+    const s=JSON.parse(text);
+    if(!s||typeof s!=='object'||s.v!==1)return null;
+    if(typeof s.hash!=='string'||!s.hash)return null;
+    if(typeof s.savedAt!=='string')return null;
+    const savedMs=Date.parse(s.savedAt);
+    if(!Number.isFinite(savedMs))return null;
+    if(Date.now()-savedMs>LAST_VIEW_MAX_AGE_MS)return null;
+    return{hash:s.hash,savedAt:s.savedAt};
+  }catch(e){return null;}
+}
+function getStoredLastView(){
+  const raw=einsatzCenterStorageRead(LAST_VIEW_STORAGE_KEY);
+  return raw===null?null:parseLastViewState(raw);
+}
+/** Einziger Schreibpunkt für lastView (syncHashFromState() bei echter Navigation, initHashRouting() einmalig für eine explizit aufgerufene Startadresse). */
+function saveLastView(hash){
+  einsatzCenterStorageWrite(LAST_VIEW_STORAGE_KEY,JSON.stringify({v:1,hash,savedAt:new Date().toISOString()}));
 }
 /**
  * Wendet einen von einer 'alltimePlayers'/anderen globalen Seite ausgelösten
@@ -3675,14 +3717,42 @@ async function applyAppHash(parsed){
  * ebenfalls Saisondaten lädt (siehe dort), muss GENAU DIESELBE
  * Preload-Race-Absicherung wie oben beschrieben jetzt auch für den
  * hashlosen Fall gelten — deshalb wird ensureGlobalDataLoaded() hier
- * unabhängig von `parsed` immer zuerst abgewartet (das ist die einzige
- * Änderung an dieser Funktion; parseAppHash/buildAppHash/applyAppHash/
- * syncHashFromState() selbst bleiben unverändert).
+ * unabhängig von `parsed` immer zuerst abgewartet.
+ *
+ * P0c.8 — innerhalb desselben hashlosen Zweigs (NIE wenn `parsed` bereits
+ * eine echte Adresse ist — eine explizite URL gewinnt immer): wird ein noch
+ * gültiger (≤1h alter, strukturell über parseAppHash() validierter) lastView
+ * gefunden, wird er über applyAppHash() genauso angewendet wie ein echter
+ * Hash. Der Restore selbst zählt nicht als neue Navigation (Entscheidung
+ * D2) — deshalb LAST_VIEW_RESTORE_IN_PROGRESS während des Restores gesetzt,
+ * das syncHashFromState() das Neu-Schreiben von lastView unterdrücken lässt.
+ * Ohne gültigen lastView bleibt es beim bisherigen Fallback openOverview().
+ * parseAppHash/buildAppHash/applyAppHash/syncHashFromState() selbst bleiben
+ * unverändert.
+ *
+ * Liegt beim Start dagegen bereits ein gültiger Hash vor (parsed), wird dieser wie
+ * bisher direkt über applyAppHash() angewendet — UND die dadurch erreichte Ansicht
+ * anschließend einmalig als lastView gesichert. Nötig, weil syncHashFromState() hier
+ * typischerweise nichts schreibt: der Ziel-Hash steht ja schon in location.hash, also
+ * ändert sich dort nichts (desired===current). Ohne diese eine zusätzliche Sicherung
+ * bliebe eine direkt aufgerufene Adresse nie als lastView erhalten. Das ist EIN
+ * gezielter, einmaliger Aufruf beim Start (kein Eingriff in die bestehende
+ * "nur bei tatsächlicher Änderung"-Bedingung in syncHashFromState()).
  */
 function initHashRouting(){
   const parsed=parseAppHash(location.hash);
   ensureGlobalDataLoaded().catch(()=>{})
-    .then(()=>parsed?applyAppHash(parsed):window.openOverview())
+    .then(()=>{
+      if(parsed)return Promise.resolve(applyAppHash(parsed)).then(()=>{
+        const resolved=computeCurrentAppHash();
+        if(resolved)saveLastView(resolved);
+      });
+      const lastView=getStoredLastView();
+      const restored=lastView?parseAppHash(lastView.hash):null;
+      if(!restored)return window.openOverview();
+      LAST_VIEW_RESTORE_IN_PROGRESS=true;
+      return Promise.resolve(applyAppHash(restored)).finally(()=>{LAST_VIEW_RESTORE_IN_PROGRESS=false;});
+    })
     .catch(e=>console.warn('Hash-Routing (initial) fehlgeschlagen:',e.message));
   window.addEventListener('hashchange',()=>{
     applyAppHash(parseAppHash(location.hash)).catch(e=>console.warn('Hash-Routing (hashchange) fehlgeschlagen:',e.message));
