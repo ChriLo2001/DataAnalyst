@@ -8933,14 +8933,6 @@ function rRosterStatusBadge(status){
   const tip=def.tooltip||status.tooltip||'';
   return`<div class="tags-row" style="margin-top:8px;margin-bottom:0"><span class="tag th-tip" data-tip="${escAttr(tip)}" style="background:${color}14;color:${color};border:1px solid ${color}33">${label}</span></div>`;
 }
-function rRosterStatusInline(status){
-  if(!status?.key)return'—';
-  const def=ROSTER_STATUS_DEF[status.key]||status;
-  const color=def.color||'#94a3b8';
-  const label=def.label||status.key;
-  const tip=def.tooltip||status.tooltip||'';
-  return`<span class="th-tip" data-tip="${escAttr(tip)}" style="color:${color};font-weight:700">${label}</span>`;
-}
 function classicTagLabel(key){
   return TYPE_LABELS[key]||roleTraitLabel(key);
 }
@@ -10555,34 +10547,6 @@ function getAllTimePenaltyRows(playerRows=getHallOfFamePlayerRows()){
     };
   }).filter(r=>r.penaltyMinutes>0).sort((a,b)=>b.penaltyMinutes-a.penaltyMinutes||a.games-b.games||a.name.localeCompare(b.name));
 }
-function rAllTimeGamesPlayedRows(rows){
-  const data=(rows||[]).slice(0,10);
-  if(!data.length)return'<div class="noev" style="padding:14px 0;font-size:11px">Keine Spieldaten verfügbar.</div>';
-  const max=Math.max(...data.map(r=>r.games),1);
-  return data.map((r,i)=>{
-    const first=SEASON_CONFIG[r.firstSeason]?.label||r.firstSeason||'';
-    const last=SEASON_CONFIG[r.lastSeason]?.label||r.lastSeason||'';
-    const sub=first&&last?(first===last?first:`${first} - ${last}`):'';
-    const roleSub=(r.goalieGames||0)>0?`${sub}${sub?' · ':''}Feld ${r.fieldGames||0} · Goalie ${r.goalieGames||0}`:sub;
-    return`<div class="rank-bar">
-      <div class="rank-num">${i+1}</div>
-      <div class="rank-name">${r.name}<div class="mono" style="font-size:9px;color:var(--tx3);margin-top:2px">${escHtml(roleSub)}</div></div>
-      <div class="rank-bg"><div class="rank-fill" style="width:${Math.max(6,(r.games/max)*100)}%;background:#14b8a6"></div></div>
-      <div class="rank-val">${r.games}</div>
-    </div>`;
-  }).join('');
-}
-function rAllTimePenaltyRows(rows){
-  const data=(rows||[]).slice(0,10);
-  if(!data.length)return'<div class="noev" style="padding:14px 0;font-size:11px">Keine Strafminuten verfügbar.</div>';
-  const max=Math.max(...data.map(r=>r.penaltyMinutes),1);
-  return data.map((r,i)=>`<div class="rank-bar">
-    <div class="rank-num">${i+1}</div>
-    <div class="rank-name">${r.name}<div class="mono" style="font-size:9px;color:var(--tx3);margin-top:2px">${r.games} Spiele ? ${r.perGame.toFixed(2)} min/Spiel</div></div>
-    <div class="rank-bg"><div class="rank-fill" style="width:${Math.max(6,(r.penaltyMinutes/max)*100)}%;background:#8b5cf6"></div></div>
-    <div class="rank-val">${r.penaltyMinutes}m</div>
-  </div>`).join('');
-}
 function getSeasonUiPlayerForProfile(profile,seasonKey){
   const bucket=SEASONS[seasonKey];
   return (bucket?.data?.players||[]).find(p=>p.playerId===profile?.playerId||normalizePlayerName(p.label)===profile?.normalizedName)||null;
@@ -10750,18 +10714,6 @@ function buildOpponentIntelligence(gamesData=[],events={},players=[]){
     };
   }).filter(r=>r.topGoals||r.topPoints).sort((a,b)=>(b.topGoals?.val||0)-(a.topGoals?.val||0)||(b.topPoints?.val||0)-(a.topPoints?.val||0)||a.name.localeCompare(b.name));
   return{opponents,favorite,nemesis,bestWinRate,worstWinRate,playerRows};
-}
-
-function rSimpleRankBars(rows,color,unit='',limit=6){
-  const data=rows.filter(r=>Number(r.val)>0).slice(0,limit);
-  if(!data.length)return'<div class="noev" style="padding:14px 0;font-size:11px">Keine Daten verfügbar.</div>';
-  const max=data[0]?.val||1;
-  return data.map((r,i)=>`<div class="rank-bar">
-    <div class="rank-num">${i+1}</div>
-    <div class="rank-name">${r.name}</div>
-    <div class="rank-bg"><div class="rank-fill" style="width:${Math.max(6,(r.val/max)*100)}%;background:${color}"></div></div>
-    <div class="rank-val">${r.val}${unit}</div>
-  </div>`).join('');
 }
 
 function rOpponentIntelBars(rows,color,valueFmt=null,limit=8){
@@ -12722,152 +12674,10 @@ function dedupeIdentityProfileTags(profile){
   return{...profile,traits};
 }
 
-function getGlobalProfileDisplayStatus(profile){
-  const hasPureUlm=(profile?.teams||[]).some(t=>t?.teamStatus==='ulm'||getUlmTeamStatus(t?.name)==='ulm');
-  return hasPureUlm?'Ulm':'SG';
-}
-
 function rGlobalProfileTags(row){
   const dynamic=getGlobalIdentityProfile(row);
   if(dynamic)return rIdentityTags(dedupeIdentityProfileTags(dynamic));
   return'<div class="noev" style="padding:14px 0;font-size:11px">Nicht genügend aktive Saisondaten.</div>';
-}
-
-function rGlobalOverviewLegacyUnused(row){
-  const st=getPlayerAlltimeStats(row.playerId);
-  const teamRecord=getGlobalPlayerTeamRecord(row);
-  const peakGame=getGlobalPlayerPeakGame(row);
-  const bestSeason=getGlobalPlayerBestSeason(row);
-  const partnerRows=getAllTimeDuoRowsForPlayer(row.playerId);
-  const milestones=getGlobalPlayerMilestones(row);
-  const recordText=`${teamRecord.wins}-${teamRecord.draws}-${teamRecord.losses}`;
-  const peakText=peakGame?`${peakGame.points} P · ${peakGame.goals} T · ${peakGame.assists} A vs ${peakGame.opponent}`:'Keine Scorerpunkte';
-  const bestText=bestSeason?`${bestSeason.label}: ${bestSeason.points} P · ${bestSeason.goals} T · ${bestSeason.assists} A`:'Keine Saisonwerte';
-  return`<div class="stats">
-    <div class="sc c1"><div class="sv">${st.goals||0}</div><div class="sl">Tore</div></div>
-    <div class="sc c2"><div class="sv">${st.assists||0}</div><div class="sl">Vorlagen</div></div>
-    <div class="sc c3"><div class="sv">${st.points||0}</div><div class="sl">Punkte</div></div>
-    <div class="sc c4"><div class="sv">${st.games||0}</div><div class="sl">Spiele</div></div>
-    <div class="sc" style="border-top:2.5px solid #ef4444"><div class="sv">${st.penaltyMinutes||0}</div><div class="sl">Strafminuten</div></div>
-    <div class="sc c5"><div class="sv">${(row.profile?.seasons||[]).length}</div><div class="sl">Saisons</div></div>
-    <div class="sc cr"><div class="sv">${getGlobalProfileDisplayStatus(row.profile)}</div><div class="sl">Status</div></div>
-  </div>
-  <div class="team-grid">
-    <div class="team-card"><div class="team-card-title" style="color:${row.color}">📌 Kurzprofil</div>
-      <div class="mono" style="line-height:1.7;color:var(--tx2)">Saisons: ${(row.profile?.seasons||[]).join(', ')||'—'}<br>Teams: ${(row.profile?.teams||[]).map(t=>t.name).filter(Boolean).join(', ')||'—'}</div>
-    </div>
-    <div class="team-card"><div class="team-card-title" style="color:#10b981">Teamrecord mit Spieler</div>
-      <div class="sv" style="font-size:22px">${recordText}</div><div class="sl">${teamRecord.games} Spiele · ${teamRecord.gf}:${teamRecord.ga} Tore</div>
-    </div>
-    <div class="team-card"><div class="team-card-title" style="color:#fbbf24">Peak Game</div>
-      <div class="mono" style="line-height:1.7;color:var(--tx2)">${peakText}${peakGame?.date?`<br>${peakGame.date} · ${SEASON_CONFIG[peakGame.seasonKey]?.label||peakGame.seasonKey}`:''}</div>
-    </div>
-    <div class="team-card"><div class="team-card-title" style="color:#3b82f6">Beste Saison</div>
-      <div class="mono" style="line-height:1.7;color:var(--tx2)">${bestText}</div>
-    </div>
-    <div class="team-card"><div class="team-card-title" style="color:#ec4899">Alltime Duo-Partner</div>${rDuoRows(partnerRows,'#ec4899',5)}</div>
-    <div class="team-card"><div class="team-card-title" style="color:#8b5cf6">Karriere-Meilensteine</div>
-      <div class="mono" style="line-height:1.7;color:var(--tx2)">${milestones.length?milestones.join('<br>'):'Noch keine Meilensteine'}</div>
-    </div>
-    <div class="team-card"><div class="team-card-title" style="color:#fbbf24">🏷 Rollen & Traits</div>${rGlobalProfileTags(row)}</div>
-  </div>`;
-}
-
-function rGlobalAllTimeStatsLegacyUnused(row){
-  const st=getPlayerAlltimeStats(row.playerId);
-  const allTeamGoals=Object.values(S.allTime?.seasonStats||{}).reduce((s,v)=>s+(v.teamGoals||0),0);
-  const share=allTeamGoals>0?((st.points||0)/allTeamGoals*100):0;
-  const partnerRows=getAllTimeDuoRowsForPlayer(row.playerId);
-  return`<div class="stats">
-    <div class="sc c1"><div class="sv">${st.goals||0}</div><div class="sl">Tore</div></div>
-    <div class="sc c2"><div class="sv">${st.assists||0}</div><div class="sl">Assists</div></div>
-    <div class="sc c3"><div class="sv">${st.points||0}</div><div class="sl">Punkte</div></div>
-    <div class="sc c4"><div class="sv">${st.games||0}</div><div class="sl">Spiele</div></div>
-    <div class="sc cr"><div class="sv">${share.toFixed(0)}%</div><div class="sl">Teamanteil</div></div>
-  </div>
-  <div class="team-grid">
-    <div class="team-card"><div class="team-card-title" style="color:#ec4899">🔗 Alltime Duo Partner Ranking</div>${rDuoRows(partnerRows,'#ec4899',8)}</div>
-  </div>`;
-}
-
-function rGlobalDevelopmentLegacyUnused(row){
-  const rows=Object.entries(row.profile?.statsBySeason||{}).map(([seasonKey,st])=>({
-    seasonKey,
-    name:SEASON_CONFIG[seasonKey]?.label||seasonKey,
-    val:st.points||0,
-    goals:st.goals||0,
-    assists:st.assists||0,
-    points:st.points||0,
-    games:st.games||0,
-  })).sort((a,b)=>a.name.localeCompare(b.name));
-  if(!rows.length)return'<div class="noev">Keine Saisonentwicklung verfügbar.</div>';
-  const max=Math.max(...rows.map(r=>r.val),1);
-  const peakGoals=[...rows].sort((a,b)=>b.goals-a.goals||b.points-a.points)[0];
-  const peakAssists=[...rows].sort((a,b)=>b.assists-a.assists||b.points-a.points)[0];
-  const peakPoints=[...rows].sort((a,b)=>b.points-a.points||b.goals-a.goals)[0];
-  const typeRows=rows.map(r=>{
-    let ui=null;
-    const bucket=SEASONS[r.seasonKey];
-    if(bucket?.data?.players){
-      ui=bucket.data.players.find(p=>p.playerId===row.playerId||normalizePlayerName(p.label)===row.profile?.normalizedName);
-    }
-    if(!ui&&r.seasonKey===getActiveSeasonKey())ui=row.ui;
-    const profile=ui?.analysisProfile;
-    const keys=profile?[profile.coreRole,...(profile.traits||[])]:[...(ui?.tags?.types||[]),...(ui?.tags?.status||[])];
-    const cleanKeys=[...new Set(keys.filter(k=>CORE_ROLE_LABELS[k]||TRAIT_LABELS[k]))];
-    return{...r,ui,profile,rosterStatus:ui?.rosterStatus||profile?.rosterStatus||null,coreRole:profile?.coreRole||cleanKeys[0]||null,keys:cleanKeys,labels:cleanKeys.map(roleTraitLabel)};
-  });
-  const typeLabels=typeRows.map(r=>r.labels[0]).filter(Boolean);
-  const uniqueTypes=[...new Set(typeLabels)];
-  const typeSummary=typeLabels.length<2?typeLabels[0]||'Keine Rollendaten':uniqueTypes.length===1?`Konstant: ${uniqueTypes[0]}`:`${typeLabels[0]} → ${typeLabels[typeLabels.length-1]}`;
-  const first=rows[0],last=rows[rows.length-1];
-  const rPeak=(label,r,val,color)=>`<div class="sc" style="border-top:2.5px solid ${color}"><div class="sv">${val}</div><div class="sl">${label}</div><div class="mono" style="font-size:9px;color:var(--tx3);margin-top:2px">${r?.name||'—'}</div></div>`;
-  const rCompare=(label,a,b)=>`<div class="rank-bar">
-    <div class="rank-name">${label}</div>
-    <div class="rank-bg"><div class="rank-fill" style="width:${Math.max(6,(Math.max(a,b)/Math.max(a,b,1))*100)}%;background:#3b82f6"></div></div>
-    <div class="rank-val">${a} → ${b}</div>
-  </div>`;
-  return`<div class="team-grid">
-    <div class="team-card">
-      <div class="team-card-title" style="color:#10b981">📈 Saisonverlauf</div>
-      ${rows.map((r,i)=>`<div class="rank-bar">
-        <div class="rank-num">${i+1}</div>
-        <div class="rank-name">${r.name}</div>
-        <div class="rank-bg"><div class="rank-fill" style="width:${Math.max(6,(r.val/max)*100)}%;background:#10b981"></div></div>
-        <div class="rank-val">${r.points} P · ${r.goals} T · ${r.assists} A · ${r.games} Sp</div>
-      </div>`).join('')}
-    </div>
-    <div class="team-card">
-      <div class="team-card-title" style="color:#fbbf24">🏔 Peak Seasons</div>
-      <div class="stats" style="margin-bottom:0">
-        ${rPeak('Tore',peakGoals,peakGoals?.goals||0,'#3b82f6')}
-        ${rPeak('Assists',peakAssists,peakAssists?.assists||0,'#10b981')}
-        ${rPeak('Punkte',peakPoints,peakPoints?.points||0,'#fbbf24')}
-      </div>
-    </div>
-    <div class="team-card">
-      <div class="team-card-title" style="color:#8b5cf6">🧬 Spieler-Typ Evolution</div>
-      <div class="mono" style="color:var(--tx2);margin-bottom:8px">${typeSummary}</div>
-      ${typeRows.map((r,i)=>`<div class="rank-bar">
-        <div class="rank-num">${i+1}</div>
-        <div class="rank-name">${r.name}</div>
-        <div class="rank-val" style="min-width:230px">${rRosterStatusInline(r.rosterStatus)} · ${r.games} Sp · ${r.points} P · ${r.coreRole?rRoleTraitTip(r.coreRole):'Keine Rollendaten'}</div>
-      </div>`).join('')}
-    </div>
-    <div class="team-card">
-      <div class="team-card-title" style="color:#3b82f6">⚖ Karrierevergleich</div>
-      ${rows.length>1?`<div class="mono" style="color:var(--tx3);margin-bottom:8px">${first.name} vs ${last.name}</div>
-        ${rCompare('Tore',first.goals,last.goals)}
-        ${rCompare('Assists',first.assists,last.assists)}
-        ${rCompare('Punkte',first.points,last.points)}`:'<div class="noev" style="padding:14px 0;font-size:11px">Für einen Vergleich werden mindestens zwei Saisons benötigt.</div>'}
-    </div>
-  </div>`;
-}
-
-function rGlobalRoles(row){
-  const dynamic=getGlobalIdentityProfile(row);
-  if(!dynamic)return'<div class="noev">Nicht genügend aktive Saisondaten.</div>';
-  return rIdentityCards(dedupeIdentityProfileTags(dynamic));
 }
 
 function escHtml(s){
@@ -14743,37 +14553,6 @@ function rGlobalCareerHeader(row){
   </div>`;
 }
 
-function rAllTimePlayersPageLegacyUnused(){
-  const mainRows=getAllTimeMainPlayerRows();
-  const sgRows=getAllTimeSgOnlyRows();
-  const rows=[...mainRows,...(S.showSgOnlyAlltime?sgRows:[])];
-  if(!mainRows.length&&!sgRows.length)return'<div class="stitle" style="font-size:18px;margin-bottom:18px">Alltime Spieler</div><div class="noev">Noch keine globale Player Registry geladen.</div>';
-  const active=rows.find(r=>r.playerId===S.globalPlayerId)||mainRows[0]||sgRows[0];
-  const tabs=[
-    {k:'overview',lbl:'Overview'},
-    {k:'alltime',lbl:'Alltime Stats'},
-    {k:'development',lbl:'Entwicklung'},
-    {k:'traits',lbl:'Rollen & Traits'},
-  ];
-  const tab=S.globalTab||'overview';
-  const content=tab==='alltime'?rGlobalAllTimeStats(active):tab==='development'?rGlobalDevelopment(active):tab==='traits'?rGlobalRoles(active):rGlobalOverview(active);
-  const mainTabs=mainRows.map(r=>`<div class="ptab${r.playerId===active.playerId?' active':''}" style="${r.playerId===active.playerId?`background:${r.color};color:#000;border-color:${r.color}`:''}" onclick="setGlobalPlayer('${r.playerId}')">${r.name}</div>`).join('');
-  const sgTabs=sgRows.map(r=>`<div class="ptab${r.playerId===active.playerId?' active':''}" style="${r.playerId===active.playerId?`background:${r.color};color:#000;border-color:${r.color}`:''}" onclick="setGlobalPlayer('${r.playerId}')">${r.name}</div>`).join('');
-  const sgToggle=sgRows.length?`<button class="nav-btn" style="margin-bottom:10px" onclick="toggleSgOnlyAlltime()">${S.showSgOnlyAlltime?'SG-Zeit Spieler ausblenden':'SG-Zeit Spieler anzeigen'} (${sgRows.length})</button>`:'';
-  const sgBlock=sgRows.length&&S.showSgOnlyAlltime?`<div class="team-card" style="margin-bottom:14px">
-    <div class="team-card-title" style="color:#8b5cf6">SG-Zeit Spieler</div>
-    <div class="ptabs" style="margin-bottom:0">${sgTabs}</div>
-  </div>`:'';
-  return`<div class="stitle" style="font-size:18px;margin-bottom:18px">🌐 Alltime Spieler</div>
-  <div class="ptabs">${mainTabs}</div>
-  ${sgToggle}
-  ${sgBlock}
-  <div class="stitle" style="font-size:15px;margin-bottom:10px">${active.name}</div>
-  ${rGlobalProfileTags(active)}
-  <div class="tabs">${tabs.map(t=>`<button class="tb${tab===t.k?' active':''}" onclick="setGlobalTab('${t.k}')">${t.lbl}</button>`).join('')}</div>
-  <div>${content}</div>`;
-}
-
 function rSeasonLandingPage(){
   const key=getActiveSeasonKey();
   const cfg=SEASON_CONFIG[key]||{label:key};
@@ -14787,121 +14566,6 @@ function rSeasonLandingPage(){
     <div class="team-card">
       <div class="team-card-title" style="color:${key===RESOLVED_CURRENT_SEASON_KEY?'var(--red2)':'var(--tx2)'}">🏒 Saisonansicht</div>
       <div class="mono" style="line-height:1.7;color:var(--tx2)">${msg}</div>
-    </div>`;
-}
-
-function rHallOfFamePageDraftUnused(){
-  const hallStats=getHallOfFameStats();
-  const topGoals=hallStats.topGoals;
-  const topAssists=hallStats.topAssists;
-  const topPoints=hallStats.topPoints;
-  const duoRows=hallStats.duoRows;
-  const teamRecords=hallStats.teamRecords;
-  const opponentIntel=hallStats.opponentIntel;
-  const carryPerformanceRows=hallStats.carryPerformanceRows||[];
-  const gamesPlayedRows=hallStats.gamesPlayedRows||[];
-  const penaltyRows=hallStats.penaltyRows||[];
-  const opponentProfileRows=opponentIntel.opponents.map(o=>({name:o.name,val:o.games,wins:o.wins,draws:o.draws,losses:o.losses,gf:o.gf,ga:o.ga,winRate:o.winRate}));
-  const favoriteRows=opponentIntel.opponents.map(o=>({name:o.name,val:o.wins,games:o.games,winRate:o.winRate})).sort((a,b)=>b.val-a.val||b.winRate-a.winRate||a.name.localeCompare(b.name));
-  const nemesisRows=opponentIntel.opponents.map(o=>({name:o.name,val:o.losses,games:o.games,winRate:o.winRate})).sort((a,b)=>b.val-a.val||a.winRate-b.winRate||a.name.localeCompare(b.name));
-  const opponentTopScorers=hallStats.opponentTopScorers;
-  const rRec=rec=>rec?`<div class="sv" style="font-size:24px">${rec.us}:${rec.os}</div><div class="sl">gegen ${rec.opp}</div><div class="mono" style="margin-top:6px;color:var(--tx3)">${SEASON_CONFIG[rec.seasonKey]?.label||rec.seasonKey}${rec.date?` · ${rec.date}`:''}</div>`:'<div class="noev" style="padding:14px 0;font-size:11px">Keine Daten verfügbar.</div>';
-  const rOpp=opp=>opp?`<div class="sv" style="font-size:22px">${opp.name}</div><div class="sl">${opp.wins} Siege · ${opp.losses} Niederlagen · ${opp.games} Spiele · ${opp.winRate}% Siegquote</div>`:'<div class="noev" style="padding:14px 0;font-size:11px">Keine Daten verfügbar.</div>';
-  return`<div class="stitle" style="font-size:18px;margin-bottom:18px">Hall of Fame</div>
-
-    <div class="stitle" style="font-size:15px;margin-bottom:14px">Alltime Vereinsbilanz</div>
-    <div class="stats" style="margin-bottom:22px">
-      <div class="sc c4"><div class="sv">${teamRecords.totals.games}</div><div class="sl">Spiele</div></div>
-      <div class="sc c2"><div class="sv">${teamRecords.totals.wins}</div><div class="sl">Siege</div></div>
-      <div class="sc" style="border-top:2.5px solid #f59e0b"><div class="sv">${teamRecords.totals.draws}</div><div class="sl">Unentschieden</div></div>
-      <div class="sc c5"><div class="sv">${teamRecords.totals.losses}</div><div class="sl">Niederlagen</div></div>
-      <div class="sc c3"><div class="sv">${teamRecords.totals.points}</div><div class="sl">Punkte</div></div>
-      <div class="sc c1"><div class="sv">${teamRecords.totals.gf}</div><div class="sl">Tore</div></div>
-      <div class="sc" style="border-top:2.5px solid #ef4444"><div class="sv">${teamRecords.totals.ga}</div><div class="sl">Gegentore</div></div>
-      <div class="sc cr"><div class="sv">${teamRecords.totals.diff>0?'+':''}${teamRecords.totals.diff}</div><div class="sl">Tordifferenz</div></div>
-    </div>
-
-    <div class="stitle" style="font-size:15px;margin-bottom:14px">🏆 Alltime Toplisten</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:22px">
-      <div class="team-card">
-        <div class="team-card-title" style="color:#3b82f6">⚽ Alltime Torjäger</div>
-        ${rSimpleRankBars(topGoals,'#3b82f6','',10)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#10b981">🎯 Top Assists</div>
-        ${rSimpleRankBars(topAssists,'#10b981','',10)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#fbbf24">🏆 Top Points</div>
-        ${rSimpleRankBars(topPoints,'#fbbf24','',10)}
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:22px">
-      <div class="team-card">
-        <div class="team-card-title" style="color:#14b8a6">Absolvierte Spiele</div>
-        ${rAllTimeGamesPlayedRows(gamesPlayedRows)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#8b5cf6">Strafminuten</div>
-        ${rAllTimePenaltyRows(penaltyRows)}
-      </div>
-    </div>
-
-    <div class="stitle" style="font-size:15px;margin-bottom:14px">🔗 Duo Rankings</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:22px">
-      <div class="team-card">
-        <div class="team-card-title" style="color:#ec4899">🔗 Duo Rankings</div>
-        ${rDuoRows(duoRows,'#ec4899',10)}
-      </div>
-    </div>
-
-    <div class="stitle" style="font-size:15px;margin-bottom:14px">🏒 Team Alltime Records</div>
-    <div class="stats" style="margin-bottom:18px">
-      <div class="sc c2"><div class="sv">${teamRecords.totals.wins}</div><div class="sl">Siege</div></div>
-      <div class="sc" style="border-top:2.5px solid #f59e0b"><div class="sv">${teamRecords.totals.draws}</div><div class="sl">Unentschieden</div></div>
-      <div class="sc c5"><div class="sv">${teamRecords.totals.losses}</div><div class="sl">Niederlagen</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:18px">
-      <div class="team-card">
-        <div class="team-card-title" style="color:#10b981">📈 Höchster Sieg</div>
-        ${rRec(teamRecords.bestWin)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#ef4444">📉 Höchste Niederlage</div>
-        ${rRec(teamRecords.biggestLoss)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#fbbf24">★ Lieblingsgegner</div>
-        ${rOpp(teamRecords.favorite)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#8b5cf6">⚠ Angstgegner</div>
-        ${rOpp(teamRecords.nemesis)}
-      </div>
-    </div>
-
-    <div class="stitle" style="font-size:15px;margin-bottom:14px">Gegneranalyse Alltime</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:18px">
-      <div class="team-card">
-        <div class="team-card-title" style="color:#38bdf8">Gegnerprofile Alltime</div>
-        ${rOpponentIntelBars(opponentProfileRows,'#38bdf8',(v,r)=>`${r.wins}-${r.draws}-${r.losses} · ${r.gf}:${r.ga} · ${r.winRate}%`,10)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#10b981">Lieblingsgegner des Vereins</div>
-        ${rOpponentIntelBars(favoriteRows,'#10b981',(v,r)=>`${v} S · ${r.winRate}%`,8)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#ef4444">Angstgegner des Vereins</div>
-        ${rOpponentIntelBars(nemesisRows,'#ef4444',(v,r)=>`${v} N · ${r.winRate}%`,8)}
-      </div>
-      <div class="team-card">
-        <div class="team-card-title" style="color:#f59e0b">Carry Performance</div>
-        ${rCarryPerformanceRows(carryPerformanceRows)}
-      </div>
-      <div class="team-card" style="grid-column:1/-1">
-        <div class="team-card-title" style="color:#ec4899">Spieler vs Gegner Alltime</div>
-        ${rOpponentTopScorerTable(opponentTopScorers)}
-      </div>
     </div>`;
 }
 
@@ -15654,74 +15318,6 @@ function rAllTimePlayersPage(){
   </div>`;
 }
 
-function rHallOfFamePageDraftUnused2(){
-  const hof=getHallOfFameStats();
-  const team={balance:{},highestWin:null,highestLoss:null};
-  const players=hof.players||[];
-  const goals=players.slice().sort((a,b)=>(b.goals||0)-(a.goals||0)||(b.points||0)-(a.points||0)||a.name.localeCompare(b.name)).slice(0,10);
-  const assists=players.slice().sort((a,b)=>(b.assists||0)-(a.assists||0)||(b.points||0)-(a.points||0)||a.name.localeCompare(b.name)).slice(0,10);
-  const points=players.slice().sort((a,b)=>(b.points||0)-(a.points||0)||(b.goals||0)-(a.goals||0)||a.name.localeCompare(b.name)).slice(0,10);
-  const games=players.slice().sort((a,b)=>(b.gamesPlayed||0)-(a.gamesPlayed||0)||(b.points||0)-(a.points||0)||a.name.localeCompare(b.name)).slice(0,10);
-  const penalties=players.slice().filter(p=>(p.penaltyMinutes||0)>0).sort((a,b)=>(b.penaltyMinutes||0)-(a.penaltyMinutes||0)||(a.gamesPlayed||0)-(b.gamesPlayed||0)||a.name.localeCompare(b.name)).slice(0,10);
-  const duos=(hof.duos||[]).slice(0,10);
-  const carry=(hof.carryPerformance||[]).slice(0,8);
-  const opponentProfiles=(hof.opponentProfiles||[]).slice(0,8);
-  const playerVsOpp=(hof.playerVsOpponent||[]).slice(0,8);
-  const best=team.highestWin;
-  const worst=team.highestLoss;
-  const balance=team.balance||{};
-  const clubPoints=(balance.wins||0)*3+(balance.draws||0);
-  return`<div class="hof-shell">
-    ${rHallOfFameHero()}
-    <div class="hof-section-title">Alltime Vereinsbilanz</div>
-    <div class="at-kpis">
-      <div class="at-kpi"><div class="at-kpi-val">${balance.games||0}</div><div class="at-kpi-lbl">Spiele</div></div>
-      <div class="at-kpi"><div class="at-kpi-val">${balance.wins||0}</div><div class="at-kpi-lbl">Siege</div></div>
-      <div class="at-kpi"><div class="at-kpi-val">${balance.draws||0}</div><div class="at-kpi-lbl">Unentschieden</div></div>
-      <div class="at-kpi"><div class="at-kpi-val">${balance.losses||0}</div><div class="at-kpi-lbl">Niederlagen</div></div>
-      <div class="at-kpi"><div class="at-kpi-val">${clubPoints}</div><div class="at-kpi-lbl">Punkte</div></div>
-      <div class="at-kpi"><div class="at-kpi-val">${balance.goalsFor||0}:${balance.goalsAgainst||0}</div><div class="at-kpi-lbl">Tore</div></div>
-      <div class="at-kpi"><div class="at-kpi-val">${(balance.goalDiff||0)>0?'+':''}${balance.goalDiff||0}</div><div class="at-kpi-lbl">Tordifferenz</div></div>
-    </div>
-
-    <div class="hof-section-title">Alltime Toplisten</div>
-    <div class="hof-grid">
-      <div class="hof-card" style="--hof-accent:#3b82f6"><div class="team-card-title" style="color:#60a5fa">Alltime Torjäger</div>${rHallPodiumList(goals,'#3b82f6','Tore')}</div>
-      <div class="hof-card" style="--hof-accent:#10b981"><div class="team-card-title" style="color:#34d399">Alltime Assistgeber</div>${rHallPodiumList(assists,'#10b981','Assists')}</div>
-      <div class="hof-card" style="--hof-accent:#fbbf24"><div class="team-card-title" style="color:#f8d98b">Alltime Punkte</div>${rHallPodiumList(points,'#fbbf24','Punkte')}</div>
-    </div>
-    <div class="hof-grid">
-      <div class="hof-card" style="--hof-accent:#8b5cf6"><div class="team-card-title" style="color:#a78bfa">Absolvierte Spiele</div>${rHallPodiumList(games,'#8b5cf6','Spiele')}</div>
-      <div class="hof-card" style="--hof-accent:#ef4444"><div class="team-card-title" style="color:#fca5a5">Strafminuten</div>${rHallPodiumList(penalties,'#ef4444','Min')}</div>
-      <div class="hof-card" style="--hof-accent:#f97316"><div class="team-card-title" style="color:#fdba74">Carry Performance</div>
-        ${carry.length?carry.map((r,i)=>`<div class="partner-pill"><span><b>#${i+1}</b> ${escHtml(r.name)}</span><span>${r.games||r.count||0} Spiele</span></div>`).join(''):'<div class="noev" style="padding:12px">Nicht genügend Daten vorhanden.</div>'}
-      </div>
-    </div>
-
-    <div class="hof-section-title">Alltime Duo Rankings</div>
-    <div class="hof-grid wide">
-      <div class="hof-card" style="--hof-accent:#ec4899">
-        <div class="team-card-title" style="color:#f9a8d4">Beste Scoring-Duos</div>
-        ${rHallDuoTemple(duos)}
-      </div>
-    </div>
-
-    <div class="hof-section-title">Team Alltime Records</div>
-    <div class="hof-grid">
-      <div class="hof-card" style="--hof-accent:#10b981"><div class="team-card-title" style="color:#34d399">Historische Rekorde</div>
-        <div class="partner-pill"><span>Höchster Sieg</span><span>${best?`${best.score||''} vs ${escHtml(best.opponent||'')}`:'-'}</span></div>
-        <div class="partner-pill"><span>Höchste Niederlage</span><span>${worst?`${worst.score||''} vs ${escHtml(worst.opponent||'')}`:'-'}</span></div>
-      </div>
-      <div class="hof-card" style="--hof-accent:#fbbf24"><div class="team-card-title" style="color:#f8d98b">Gegnerprofile Alltime</div>
-        ${opponentProfiles.length?opponentProfiles.map((o,i)=>`<div class="partner-pill"><span><b>#${i+1}</b> ${escHtml(o.name||o.opponent)}</span><span>${o.wins||0}-${o.draws||0}-${o.losses||0}</span></div>`).join(''):'<div class="noev" style="padding:12px">Nicht genügend Gegnerdaten vorhanden.</div>'}
-      </div>
-      <div class="hof-card" style="--hof-accent:#60a5fa"><div class="team-card-title" style="color:#93c5fd">Spieler vs Gegner</div>
-        ${playerVsOpp.length?playerVsOpp.map((r,i)=>`<div class="partner-pill"><span><b>#${i+1}</b> ${escHtml(r.opponent||'')}</span><span>${escHtml(r.player||r.name||'')} · ${r.points||0} P</span></div>`).join(''):'<div class="noev" style="padding:12px">Nicht genügend Daten vorhanden.</div>'}
-      </div>
-    </div>
-  </div>`;
-}
-
 function rHallOfFamePage(){
   const includePureSGPlayers=!!S.showPureSGPlayersInHallOfFame;
   const hallStats=getHallOfFameStats({includePureSGPlayers});
@@ -15810,14 +15406,6 @@ function rHallOfFamePage(){
       <div class="hof-card" style="--hof-accent:#ec4899;grid-column:1/-1"><div class="team-card-title" style="color:#f9a8d4">Spieler vs Gegner Alltime</div>${rOpponentTopScorerTable(opponentTopScorers)}</div>
     </div>
   </div>`;
-}
-
-function rLexiconPageLegacy(){
-  return`<div class="stitle" style="font-size:18px;margin-bottom:18px">Lexikon</div>
-    <div class="team-grid">
-      <div class="team-card"><div class="team-card-title" style="color:#3b82f6">📚 Rollen</div><div class="mono" style="line-height:1.7;color:var(--tx2)">Erklärung von Rollen, Traits und Kategorien vorbereitet.</div></div>
-      <div class="team-card"><div class="team-card-title" style="color:#10b981">🏷 Kategorien</div><div class="mono" style="line-height:1.7;color:var(--tx2)">Das bestehende Rollensystem bleibt unverändert.</div></div>
-    </div>`;
 }
 
 // ═══════════════════════════════════════════════════════
