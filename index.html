@@ -22767,6 +22767,7 @@ function rMatchdayDetailPage(seasonKey,number){
   if(!matchday)return`<div class="ia-overview">${uiNotiz(`Spieltag ${number} wurde für diese Saison nicht gefunden.`)}${backRow}</div>`;
   const ulmGames=matchdayUlmGames(matchday).slice().sort(compareGamesChronologically);
   const playedGames=ulmGames.filter(isGamePlayed);
+  const openUlmGames=ulmGames.length-playedGames.length;
   let points=0,gf=0,ga=0;
   for(const g of playedGames){
     const side=detectSide(g);
@@ -22778,7 +22779,7 @@ function rMatchdayDetailPage(seasonKey,number){
   }
   const statusLabel=MATCHDAY_STATUS_LABELS[matchday.status]||matchday.status;
   const kernaussage=playedGames.length
-    ?`Spieltag ${number}: ${points} Punkte, Tordifferenz ${gf-ga>=0?'+':''}${gf-ga}.`
+    ?`Spieltag ${number}${openUlmGames>0?' bisher':''}: ${points} Punkte, Tordifferenz ${gf-ga>=0?'+':''}${gf-ga}.`
     :`Spieltag ${number} steht noch aus (${statusLabel}).`;
   const rankTile=matchday.status==='abgeschlossen'?overviewRankChangeTile(seasonKey,matchday):null;
   const shell=uiObjektseite({
