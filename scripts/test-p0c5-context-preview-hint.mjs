@@ -95,6 +95,8 @@ function boot({ page = 'team', activeSeasonKey = '25/26', seasonLabels = {}, ext
     uiNotiz: (t) => `<div class="ui-notiz">${t}</div>`,
     // Bestehende Zeitpunkt-Auswahl bleibt unverändert; hier nur ein Platzhalter mit fester Position in der Leiste
     rAsOfSelector: () => '<label class="ia-context-asof">ASOF</label>',
+    // P0b-Fix 3: Datenstand-Renderer ist nicht Gegenstand von P0c.5 (eigener Test: test-p0b-context-data-state); hier leer, damit die Leiste byte-identisch zu vorher bleibt
+    rSeasonDataStateContextHint: () => '',
     ensureExternalSeasonData: async () => externalOk,
     __registry: clone(realRegistry),
   });
@@ -299,12 +301,12 @@ console.log('== Statisch: Zugriff nur über den Accessor, kein neuer State, ein 
   assertTrue(!/setState|localStorage|sessionStorage|indexedDB|fetch\(|window\.|document\./.test(hintCode), 'Renderer: kein setState, kein Storage, kein Netzwerk, kein globaler Zugriff');
   assertTrue(!/\n(let|const|var) /.test(`\n${hintSource}`), 'Renderer: keine Deklaration auf Modulebene (Spalte 0)');
   assertTrue(!/#\/|href|hash|page:/.test(hintCode), 'Renderer: keine Route, kein Link, keine Navigation');
-  // Alles zwischen dem Ende von setContextAsOf und rContextBar (inkl. Doc-Kommentare): nur die eine Renderer-Funktion
+  // Alles zwischen dem Ende von setContextAsOf und rContextBar (inkl. Doc-Kommentare): nur die beiden Renderer-Funktionen (P0c.5-Vorschau-Hinweis, P0b-Fix 3-Datenstand)
   const afterAsOf = html.indexOf('\n};', html.indexOf('window.setContextAsOf=function')) + 3;
   const between2 = html.slice(afterAsOf, html.indexOf('function rContextBar('));
   const topLevel = stripComments(between2).split('\n').filter((l) => /^\S/.test(l) && !/^\s*\*/.test(l));
   assertEqual(topLevel.filter((l) => /^(let|const|var) |^window\./.test(l)), [], 'zwischen setContextAsOf und rContextBar: keine Modulvariable, kein window-Export');
-  assertEqual(topLevel.filter((l) => /^function /.test(l)), ['function rSeasonDataPreviewContextHint(seasonKey){'], 'zwischen setContextAsOf und rContextBar gibt es genau eine Funktion: den neuen Renderer');
+  assertEqual(topLevel.filter((l) => /^function /.test(l)), ['function rSeasonDataPreviewContextHint(seasonKey){', 'function rSeasonDataStateContextHint(seasonKey){'], 'zwischen setContextAsOf und rContextBar gibt es genau zwei Funktionen: den P0c.5-Renderer und den Datenstand-Renderer (P0b-Fix 3)');
   const previewGlobals = [...html.matchAll(/^(?:let|const|var) (\w*(?:PREVIEW|[Pp]review)\w*)/gm)].map((m) => m[1]).sort();
   assertEqual(previewGlobals, ['SEASON_DATA_PREVIEW', 'SEASON_DATA_PREVIEW_LAST_ERROR', 'SEASON_DATA_PREVIEW_UI', '_seasonDataPreviewBusy'].sort(), 'die Preview-bezogenen globalen Variablen sind exakt die vier aus P0c.4 (kein neuer globaler State)');
   const barCode = stripComments(barSource);
@@ -313,7 +315,7 @@ console.log('== Statisch: Zugriff nur über den Accessor, kein neuer State, ein 
   const relevantBlock = /if\(seasonRelevant\)\{[^]*?\n  \}\n  return/.exec(barCode)?.[0] ?? '';
   const inner = /if\(seasonKey&&SEASON_CONFIG\[seasonKey\]\)\{[^]*?\n    \}/.exec(relevantBlock)?.[0] ?? '';
   assertTrue(inner.includes('previewHtml=rSeasonDataPreviewContextHint(seasonKey)'), 'Aufruf steht innerhalb des saisonbezogenen Blocks (seasonRelevant und bekannte Saison)');
-  assertTrue(barCode.includes('${seasonHtml}${asOfHtml}${previewHtml}'), 'previewHtml wird in die Leiste eingesetzt');
+  assertTrue(barCode.includes('${seasonHtml}${asOfHtml}${dataStateHtml}${previewHtml}'), 'previewHtml wird in die Leiste eingesetzt');
   assertTrue(!/localStorage|sessionStorage|indexedDB/.test(hintSource), 'kein Storage-Wort im Renderer (P0c.3-Guard)');
   const storageLines = html.split('\n').filter((l) => /(local|session)Storage|indexedDB/.test(l) && !l.trim().startsWith('//'));
   assertEqual(storageLines.length, 3, 'in index.html weiterhin nur die 3 Storage-Zeilen aus P0c.3');

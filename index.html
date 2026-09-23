@@ -1421,6 +1421,7 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 .ia-context-bar{display:flex;align-items:center;gap:12px;min-height:38px;padding:4px 2px}
 .ia-context-season,.ia-context-asof{display:flex;align-items:center;gap:6px}
 .ia-context-label{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-family:'DM Mono',monospace}
+.ia-context-datastate{min-width:0;font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;overflow-wrap:anywhere}
 .ia-context-select{background:var(--surf);border:1px solid var(--border-soft);color:var(--tx);border-radius:8px;padding:6px 9px;font-size:11px;font-family:'Inter',sans-serif;min-height:44px}
 .ia-mainnav{display:flex;gap:4px;overflow-x:auto;padding-bottom:2px;margin-bottom:8px}
 .ia-mainnav-btn{flex:0 0 auto;min-height:44px;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border-soft);background:var(--surf);color:var(--text-muted);font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;transition:.15s}
@@ -23043,6 +23044,21 @@ function rSeasonDataPreviewContextHint(seasonKey){
   return`<div class="wrn-box" data-ia-context-preview style="margin:0;flex:1 1 100%">${lead} · noch nicht importiert. Tabellen und Statistiken zeigen weiterhin die Produktionsdaten.</div>`;
 }
 /**
+ * P0b-Fix 3 — Datenstand in der Kontextleiste (6.3: "Datenstand ("Daten bis Spieltag 7 · 12.04.2026")").
+ * Reine Anzeige des realen Datenstands (3.3: "ergibt sich aus dem letzten beendeten Spiel") über
+ * getSeasonDataState(seasonKey) — unabhängig vom gewählten asOf und von einer Vorschau (beide fließen
+ * dort nie ein). Ohne ableitbaren Datenstand (keine beendeten Spiele) oder ohne Datum: leer
+ * ("Nichts Leeres zeigen", 6.2). Ohne Spieltagsnummer nur "Daten bis TT.MM.JJJJ". Kein setState,
+ * kein Storage, kein Netzwerk.
+ */
+function rSeasonDataStateContextHint(seasonKey){
+  const state=getSeasonDataState(seasonKey);
+  if(!state||!state.lastDate)return'';
+  const date=formatDateDE(state.lastDate);
+  const text=Number.isFinite(state.lastMatchday)?`Daten bis Spieltag ${state.lastMatchday} · ${date}`:`Daten bis ${date}`;
+  return`<div class="ia-context-datastate" data-ia-context-datastate>${escHtml(text)}</div>`;
+}
+/**
  * Globale Kontextleiste (6.3: "fest oben, auf allen Seiten"). Bewusst NICHT
  * enthalten (strukturell vorgesehen, aber erst später befüllt, siehe
  * Auftrag):
@@ -23070,6 +23086,7 @@ function rContextBar(){
   const seasonRelevant=S.page==='team'||S.page==='player'||S.page==='overview'||S.page==='matchday';
   let seasonHtml='';
   let asOfHtml='';
+  let dataStateHtml='';
   let previewHtml='';
   if(seasonRelevant){
     const seasonKey=getActiveSeasonKey();
@@ -23078,10 +23095,11 @@ function rContextBar(){
       const seasonOnChange=S.page==='overview'?'switchOverviewSeason(this.value)':S.page==='matchday'?'switchMatchdaySeason(this.value)':'openSeason(this.value)';
       seasonHtml=`<label class="ia-context-season"><span class="ia-context-label">Saison</span><select class="ia-context-select" onchange="${seasonOnChange}">${seasonOptions}</select></label>`;
       asOfHtml=rAsOfSelector(seasonKey);
+      dataStateHtml=rSeasonDataStateContextHint(seasonKey);
       previewHtml=rSeasonDataPreviewContextHint(seasonKey);
     }
   }
-  return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}${previewHtml}</div>`;
+  return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}${dataStateHtml}${previewHtml}</div>`;
 }
 /** Bündelt Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
 function rIaShell(){
