@@ -34,7 +34,7 @@ function assertTrue(cond, label) {
 }
 
 console.log('== P0a.2 Baseline: Datei vorhanden und valides JSON ==');
-const raw = await readFile(BASELINE_PATH, 'utf8');
+const raw = (await readFile(BASELINE_PATH, 'utf8')).replace(/^\uFEFF/, '');
 let baseline;
 try {
   baseline = JSON.parse(raw);
