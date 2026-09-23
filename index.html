@@ -1479,6 +1479,19 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
   .ia-search-overlay{padding-top:8vh}
 }
 
+/* ═══ P0b-Fix 5 — Werkzeugmenü v1 (6.3) ═════════════════════════════════
+   .ia-tool-menu* eigener Namensraum. Auslöser als Nachbar der Suche in .ia-search-row;
+   Popover rechts am Auslöser verankert, ohne feste Breite (Inhaltsbreite, höchstens
+   Viewport minus Rand), z-index unter dem Such-Overlay (1000). Tippflächen >=44px. */
+.ia-tool-menu{position:relative;margin-left:8px}
+.ia-tool-menu-toggle{display:inline-flex;align-items:center;gap:8px;min-height:44px;min-width:44px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--border-soft);background:var(--surf);color:var(--text-muted);font-family:'Inter',sans-serif;font-size:12px;cursor:pointer}
+.ia-tool-menu-toggle:hover,.ia-tool-menu-toggle[aria-expanded="true"]{color:var(--tx);border-color:var(--text-faint)}
+.ia-tool-menu-icon{font-size:16px;line-height:1}
+.ia-tool-menu-list{position:absolute;top:calc(100% + 6px);right:0;z-index:500;box-sizing:border-box;display:grid;gap:2px;width:max-content;max-width:calc(100vw - 24px);padding:6px;border-radius:12px;border:1px solid var(--border-soft);background:var(--surf);box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.ia-tool-menu-list[hidden]{display:none}
+.ia-tool-menu-item{box-sizing:border-box;display:block;width:100%;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--tx);font-family:'Inter',sans-serif;font-size:13px;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.ia-tool-menu-item:hover,.ia-tool-menu-item:focus{background:var(--surf2);border-color:var(--red2);outline:none}
+
 @media(max-width:600px){
   .ia-context-bar{flex-wrap:wrap}
   .ia-overview-cards{grid-template-columns:1fr}
@@ -23124,9 +23137,9 @@ function rContextBar(){
   }
   return`<div class="ia-context-bar">${seasonHtml}${asOfHtml}${dataStateHtml}${previewHtml}</div>`;
 }
-/** Bündelt Suche + Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
+/** Bündelt Suche + Werkzeugmenü + Kontextleiste + Hauptnavigation für den Einbau in hdrHtml. */
 function rIaShell(){
-  return`<div class="ia-search-row">${rGlobalSearchToggle()}</div>${rContextBar()}${rMainNav()}`;
+  return`<div class="ia-search-row">${rGlobalSearchToggle()}${rToolMenu()}</div>${rContextBar()}${rMainNav()}`;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -23327,6 +23340,103 @@ function initGlobalSearch(){
   document.addEventListener('keydown',globalSearchOnKeydown);
 }
 document.addEventListener('DOMContentLoaded',initGlobalSearch);
+
+// ═══════════════════════════════════════════════════════
+//  P0b-Fix 5 — WERKZEUGMENÜ v1 (Spezifikation 6.3, Entscheidung 11)
+// ═══════════════════════════════════════════════════════
+// Additiv (die Legacy-Kopfzeile mit Cover/Excel bleibt unverändert). Genau drei Einträge, die
+// ausschließlich bestehende Öffner aufrufen: Lexikon -> openLexicon(), Excel-Export ->
+// exportExcel(), Cover -> backToHome(). Der Auslöser steht als Nachbar der Suche in rIaShell
+// (nicht in rContextBar). Der Öffnungszustand lebt nur im DOM (hidden/aria-expanded): kein S,
+// kein Storage, kein Netzwerk, kein neuer globaler Zustand — ein vollständiges render() baut den
+// Bereich geschlossen neu auf (gewollt). Menü-Semantik (role=menu/menuitem) mit passender
+// Tastatur: Pfeile/Home/End bewegen den Fokus, Escape schließt und gibt den Fokus an den Auslöser
+// zurück, Tab schließt, Klick außerhalb schließt (Fokus nur dann zurück, wenn kein anderes
+// Element ihn übernommen hat). Der Keydown-Handler läuft in der Capture-Phase, damit ein
+// Suchkürzel ("/", Strg/Cmd+K) das Menü schließt, bevor die Suche öffnet; er verschluckt nichts
+// (kein stopPropagation) und ändert den Such-Handler nicht.
+const TOOL_MENU_ITEMS=[
+  {key:'lexicon',label:'Lexikon'},
+  {key:'export',label:'Excel-Export'},
+  {key:'cover',label:'Cover'},
+];
+function rToolMenu(){
+  const items=TOOL_MENU_ITEMS.map(i=>`<button type="button" role="menuitem" tabindex="-1" class="ia-tool-menu-item" data-ia-tool-menu-item="${i.key}" onclick="activateToolMenuItem('${i.key}')">${escHtml(i.label)}</button>`).join('');
+  return`<div class="ia-tool-menu" data-ia-tool-menu><button type="button" class="ia-tool-menu-toggle" id="ia-tool-menu-toggle" data-ia-tool-menu-toggle aria-haspopup="menu" aria-expanded="false" aria-controls="ia-tool-menu-list" onclick="toggleToolMenu()"><span class="ia-tool-menu-icon" aria-hidden="true">⋯</span>Werkzeuge</button><div id="ia-tool-menu-list" class="ia-tool-menu-list" role="menu" aria-label="Werkzeuge" hidden>${items}</div></div>`;
+}
+function toolMenuElements(){
+  return{toggle:document.getElementById('ia-tool-menu-toggle'),list:document.getElementById('ia-tool-menu-list')};
+}
+function toolMenuItemElements(list){
+  return list&&list.querySelectorAll?[...list.querySelectorAll('[role="menuitem"]')]:[];
+}
+function isToolMenuOpen(){
+  const{list}=toolMenuElements();
+  return!!list&&!list.hidden;
+}
+window.openToolMenu=function(){
+  const{toggle,list}=toolMenuElements();
+  if(!toggle||!list)return;
+  list.hidden=false;
+  toggle.setAttribute('aria-expanded','true');
+  const first=toolMenuItemElements(list)[0];
+  if(first&&first.focus)first.focus();
+};
+window.closeToolMenu=function(restoreFocus=true){
+  const{toggle,list}=toolMenuElements();
+  if(!toggle||!list)return;
+  list.hidden=true;
+  toggle.setAttribute('aria-expanded','false');
+  if(restoreFocus&&toggle.focus)toggle.focus();
+};
+window.toggleToolMenu=function(){
+  if(isToolMenuOpen())window.closeToolMenu(true);
+  else window.openToolMenu();
+};
+window.activateToolMenuItem=function(key){
+  window.closeToolMenu(true);
+  const actions={lexicon:()=>window.openLexicon(),export:()=>window.exportExcel(),cover:()=>window.backToHome()};
+  const action=actions[key];
+  if(!action)return;
+  try{Promise.resolve(action()).catch(e=>console.warn('Werkzeugmenü:',e.message));}
+  catch(e){console.warn('Werkzeugmenü:',e.message);}
+};
+function toolMenuOnKeydown(e){
+  if(!e||e.isComposing)return;
+  const{toggle,list}=toolMenuElements();
+  if(!toggle||!list)return;
+  const key=String(e.key||'');
+  if(list.hidden){
+    if(key==='ArrowDown'&&e.target===toggle){e.preventDefault();window.openToolMenu();}
+    return;
+  }
+  if(globalSearchKeyAction(e,false)==='open'){window.closeToolMenu(true);return;}
+  if(key==='Escape'){
+    e.preventDefault();
+    window.closeToolMenu(true);
+  }else if(key==='ArrowDown'||key==='ArrowUp'||key==='Home'||key==='End'){
+    e.preventDefault();
+    const items=toolMenuItemElements(list);
+    if(!items.length)return;
+    const current=items.indexOf(document.activeElement);
+    const next=key==='Home'?0:key==='End'?items.length-1:key==='ArrowDown'?(current+1)%items.length:(current<=0?items.length-1:current-1);
+    if(items[next].focus)items[next].focus();
+  }else if(key==='Tab'){
+    window.closeToolMenu(false);
+  }
+}
+function toolMenuOnClick(e){
+  if(!isToolMenuOpen())return;
+  const inside=e&&e.target&&e.target.closest?e.target.closest('[data-ia-tool-menu]'):null;
+  if(inside)return;
+  const active=document.activeElement;
+  window.closeToolMenu(!active||active===document.body);
+}
+function initToolMenu(){
+  document.addEventListener('keydown',toolMenuOnKeydown,true);
+  document.addEventListener('click',toolMenuOnClick);
+}
+document.addEventListener('DOMContentLoaded',initToolMenu);
 
 // Init
 document.addEventListener('DOMContentLoaded',()=>{
