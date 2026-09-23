@@ -380,7 +380,9 @@ console.log('== Guards ==');
   }
   // kein neuer globaler State außer dem vorgesehenen Schalter
   const names = [...region.matchAll(/^(?:let|const|var) ([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]);
-  assertEqual(names, ['LINEUP_DATA', 'LINEUP_GROUPS_REGISTRY', '_lineupDataLoadPromises', '_lineupGroupsRegistryPromise', 'EINSATZ_CENTER_STATS_CACHE', 'EINSATZ_CENTER_DRAFT', 'EINSATZ_CENTER_DRAFT_EXCLUDED', 'EINSATZ_CENTER_AUTOSAVE_PREFIX', 'EINSATZ_CENTER_AUTOSAVE_VERSION', 'EINSATZ_CENTER_AUTOSAVE_OWNER', 'EINSATZ_CENTER_AUTOSAVE_STATUS', 'EINSATZ_CENTER_AUTOSAVE_INFO'], 'Top-Level-Variablen der Einsatz-Center-Region: bisherige 11 + genau der eine Schalter');
+  // EINSATZ_CENTER_DRAFT_STALE (P0c.9, ausdrücklich freigegebenes Runtime-Flag für den
+  // Stale-Draft-Hinweis, nicht persistiert) kommt bewusst zur bisherigen Liste hinzu.
+  assertEqual(names, ['LINEUP_DATA', 'LINEUP_GROUPS_REGISTRY', '_lineupDataLoadPromises', '_lineupGroupsRegistryPromise', 'EINSATZ_CENTER_STATS_CACHE', 'EINSATZ_CENTER_DRAFT', 'EINSATZ_CENTER_DRAFT_EXCLUDED', 'EINSATZ_CENTER_DRAFT_STALE', 'EINSATZ_CENTER_AUTOSAVE_PREFIX', 'EINSATZ_CENTER_AUTOSAVE_VERSION', 'EINSATZ_CENTER_AUTOSAVE_OWNER', 'EINSATZ_CENTER_AUTOSAVE_STATUS', 'EINSATZ_CENTER_AUTOSAVE_INFO'], 'Top-Level-Variablen der Einsatz-Center-Region: bisherige 11 + der P0c.6-Schalter + das P0c.9-Stale-Flag, sonst nichts');
   const sInit = /\nlet S=\{[^]*?\n\};/.exec(html)?.[0] ?? '';
   assertTrue(sInit.length > 100 && !/EXCLUDED|includeDraft|IncludeDraft/.test(sInit), 'kein neues Feld in der S-Initialisierung (Schalter liegt außerhalb von S)');
   // Storage-Guard der ganzen Datei

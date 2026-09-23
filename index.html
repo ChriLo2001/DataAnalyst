@@ -7095,6 +7095,13 @@ let EINSATZ_CENTER_DRAFT=null;
 // Draft, der gerade AUSGEBLENDET ist. null = Standard = Entwurf einbeziehen; ein neuer oder
 // wiederhergestellter Draft ist eine andere Instanz und ist deshalb automatisch wieder einbezogen.
 let EINSATZ_CENTER_DRAFT_EXCLUDED=null;
+// P0c.9 — true, solange der aktuelle Runtime-Draft über loadEinsatzCenterMismatchedAutosave() aus
+// einem baseHash-Mismatch geladen wurde. Rein informativ für die UI (Hinweistext), nicht
+// persistiert (kein neuer Storage-Key) und NIEMALS Grundlage einer Entscheidung in
+// getEffectiveLineupData() — das entscheidet unverändert ausschließlich EINSATZ_CENTER_DRAFT_EXCLUDED,
+// das beim Laden eines Mismatch-Drafts bewusst auf den Draft selbst gesetzt wird (Default: ausgeschlossen).
+// Wird bei jedem frischen Draft (ensureEinsatzCenterDraft()) zurückgesetzt.
+let EINSATZ_CENTER_DRAFT_STALE=false;
 
 /**
  * Einzige analyse-/anzeigefähige Zugriffsstelle auf Lineup-Daten einer Saison
@@ -7138,13 +7145,17 @@ function rEinsatzCenterDraftStatsHint(seasonKey){
   if(!draft||draft.games.size===0)return'';
   return `<div data-ec-draft-stats style="font-size:11px;color:#fcd34d;margin:0 0 10px">enthält ${draft.games.size} Spiel(e) aus dem Entwurf</div>`;
 }
+/** P0c.9 — Hinweis, solange der aktuelle Runtime-Draft aus einem baseHash-Mismatch geladen wurde (EINSATZ_CENTER_DRAFT_STALE). Rein lesend, keine Persistenz. */
+function einsatzCenterDraftStaleHint(){
+  return EINSATZ_CENTER_DRAFT_STALE?' <span data-ec-draft-stale>⚠ Entwurf basiert auf einem älteren Datenstand — der gespeicherte baseHash passt nicht mehr zum aktuellen Import. Der Entwurf bleibt lesbar und exportierbar, wird aber nicht automatisch in die zusammengeführte Analyse-Sicht übernommen.</span>':'';
+}
 /** P0c.6 — Banner der schreibgeschützten Sicht, solange für die Saison ein Draft mit Inhalt existiert: Schalter und Rückweg. */
 function rEinsatzCenterDraftBanner(seasonKey){
   const draft=EINSATZ_CENTER_DRAFT;
   if(!draft||draft.seasonKey!==seasonKey||einsatzCenterDraftIsEmpty(draft))return'';
   const included=draft!==EINSATZ_CENTER_DRAFT_EXCLUDED;
   const label=escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey);
-  return `<div class="wrn-box" data-ec-draft-banner>ENTWURF AKTIV · Saison ${label} · ${draft.games.size} Spiel(e) im Entwurf, noch nicht importiert. ${included?'Die Ansicht zeigt importierte Daten und Entwurf zusammen.':'Der Entwurf ist ausgeblendet — die Ansicht zeigt nur den importierten Stand.'}
+  return `<div class="wrn-box" data-ec-draft-banner>ENTWURF AKTIV · Saison ${label} · ${draft.games.size} Spiel(e) im Entwurf, noch nicht importiert. ${included?'Die Ansicht zeigt importierte Daten und Entwurf zusammen.':'Der Entwurf ist ausgeblendet — die Ansicht zeigt nur den importierten Stand.'}${einsatzCenterDraftStaleHint()}
     <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${included?'checked':''} onchange="setEinsatzCenterIncludeDraft(this.checked)"> Entwurf einbeziehen</label><button class="btn-back" onclick="returnToEinsatzCenterEdit()">Zurück zur Bearbeitung</button></div></div>`;
 }
 
@@ -7164,6 +7175,7 @@ async function ensureEinsatzCenterDraft(seasonKey){
   const baseRegistry=LINEUP_GROUPS_REGISTRY||{schemaVersion:1,groups:[]};
   const baseHash=await einsatzCenterComputeBaseHash(baseSeasonData,baseRegistry);
   EINSATZ_CENTER_DRAFT={seasonKey,baseHash,games:new Map(),newGroups:new Map(),renamedGroups:new Map()};
+  EINSATZ_CENTER_DRAFT_STALE=false;// P0c.9: ein frischer Draft ist nie "abweichend"
   // Ein neuer Runtime-Draft besitzt keinen bestehenden Autosave-Eintrag (auch nicht den eines
   // zuvor verdrängten Drafts) — ein solcher Eintrag bleibt bis zur Entscheidung des Nutzers erhalten.
   EINSATZ_CENTER_AUTOSAVE_OWNER=null;
@@ -7407,8 +7419,8 @@ function rEinsatzCenterAutosaveBanner(seasonKey){
     return `<div class="wrn-box" data-ec-autosave="restorable">💾 Gespeicherter Entwurf vom ${escHtml(when)} gefunden (${summary}). Er passt zum aktuellen importierten Stand.
       <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn-back" onclick="restoreEinsatzCenterAutosave()">Wiederherstellen</button><button class="btn-back" onclick="discardEinsatzCenterAutosave()">Verwerfen</button></div></div>`;
   }
-  return `<div class="wrn-box" data-ec-autosave="mismatch">⚠ Gespeicherter Entwurf vom ${escHtml(when)} (${summary}) passt NICHT mehr zum aktuellen importierten Stand — die importierten Daten wurden seit dem Speichern geändert. Er wurde nicht wiederhergestellt und verändert die importierten Daten nicht; solange er nicht verworfen ist, sichert ein neuer Entwurf nicht automatisch.
-    <div style="margin-top:8px"><button class="btn-back" onclick="discardEinsatzCenterAutosave()">Gespeicherten Entwurf verwerfen</button></div></div>`;
+  return `<div class="wrn-box" data-ec-autosave="mismatch">⚠ Gespeicherter Entwurf vom ${escHtml(when)} (${summary}) passt NICHT mehr zum aktuellen importierten Stand — die importierten Daten wurden seit dem Speichern geändert. Er wurde nicht automatisch wiederhergestellt und verändert die importierten Daten nicht. Du kannst ihn zum Ansehen und Exportieren laden (bleibt dabei aus der zusammengeführten Analyse-Sicht ausgeschlossen, bis du ihn bewusst einbeziehst) oder verwerfen; solange keine Entscheidung getroffen ist, sichert ein neuer Entwurf nicht automatisch.
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn-back" onclick="loadEinsatzCenterMismatchedAutosave()">Entwurf laden</button><button class="btn-back" onclick="discardEinsatzCenterAutosave()">Gespeicherten Entwurf verwerfen</button></div></div>`;
 }
 /** Autosave-Zustand als Satz für den Warnhinweis der Entwurfs-Seite. */
 function einsatzCenterAutosaveInfoText(){
@@ -7424,6 +7436,37 @@ function einsatzCenterAutosaveInfoText(){
 }
 window.restoreEinsatzCenterAutosave=restoreEinsatzCenterAutosave;
 window.discardEinsatzCenterAutosave=discardEinsatzCenterAutosave;
+/**
+ * P0c.9 — bewusstes Laden eines bei baseHash-Mismatch NICHT automatisch
+ * wiederhergestellten Entwurfs (Spezifikation 3.6.5: "Entwurf bleibt lesbar,
+ * Export wie bisher, Import-Validierung entscheidet"). Eigene, von
+ * restoreEinsatzCenterAutosave() getrennte Aktion — dessen Semantik
+ * (Gate auf kind==='restorable') bleibt unverändert. Einziger fachlicher
+ * Unterschied zu einer Wiederherstellung: EINSATZ_CENTER_DRAFT_EXCLUDED wird
+ * unmittelbar auf den geladenen Draft gesetzt, damit er NICHT automatisch in
+ * getEffectiveLineupData() einfließt — dieselbe, bereits bestehende P0c.6-Weiche
+ * entscheidet danach wie gewohnt, ob der Nutzer ihn bewusst einbezieht.
+ */
+async function loadEinsatzCenterMismatchedAutosave(){
+  const seasonKey=EINSATZ_CENTER_AUTOSAVE_STATUS.seasonKey;
+  if(!seasonKey||EINSATZ_CENTER_AUTOSAVE_STATUS.kind!=='mismatch')return false;
+  const status=await einsatzCenterInspectAutosave(seasonKey);
+  if(status.kind!=='mismatch'){setState({});return false;}
+  if(EINSATZ_CENTER_DRAFT&&!einsatzCenterDraftIsEmpty(EINSATZ_CENTER_DRAFT)){
+    if(!window.confirm('Der aktuelle, noch nicht exportierte Entwurf wird durch den gespeicherten (abweichenden) Entwurf ersetzt. Fortfahren?'))return false;
+  }
+  const parsed=einsatzCenterDeserializeAutosave(einsatzCenterStorageRead(einsatzCenterAutosaveKey(seasonKey)),seasonKey);
+  if(!parsed){setState({});return false;}
+  EINSATZ_CENTER_DRAFT=parsed.draft;
+  EINSATZ_CENTER_DRAFT_EXCLUDED=EINSATZ_CENTER_DRAFT;// P0c.9: Datenintegrität — standardmäßig NICHT in der zusammengeführten Sicht
+  EINSATZ_CENTER_DRAFT_STALE=true;
+  EINSATZ_CENTER_AUTOSAVE_OWNER=seasonKey;
+  EINSATZ_CENTER_AUTOSAVE_STATUS={seasonKey,kind:'none'};
+  EINSATZ_CENTER_AUTOSAVE_INFO={state:'saved',savedAt:parsed.savedAt};
+  setState({einsatzCenterSeasonKey:seasonKey,einsatzCenterMode:'edit',einsatzCenterEditingGameId:null,einsatzCenterComboSelection:[]});
+  return true;
+}
+window.loadEinsatzCenterMismatchedAutosave=loadEinsatzCenterMismatchedAutosave;
 
 /**
  * Portierte, minimale Ableitung gültiger saisonweiter Spieler-IDs — exakt
@@ -7730,7 +7773,7 @@ function rEinsatzCenterEditPage(){
     <div>
       <div class="mc-eyebrow">Einsatz-Center — Entwurfsmodus</div>
       <div class="mc-title" style="font-size:clamp(24px,3.5vw,36px)">Entwurf bearbeiten</div>
-      <div class="wrn-box">⚠ ENTWURF — nicht exportiert, kein Schreiben von Dateien. ${einsatzCenterAutosaveInfoText()} ${draftSummaryText}</div>
+      <div class="wrn-box">⚠ ENTWURF — nicht exportiert, kein Schreiben von Dateien. ${einsatzCenterAutosaveInfoText()} ${draftSummaryText}${einsatzCenterDraftStaleHint()}</div>
     </div>
     <div class="mc-card">
       <div class="mc-card-title">Spiel wählen (${escHtml(SEASON_CONFIG[seasonKey]?.label||seasonKey)})</div>
