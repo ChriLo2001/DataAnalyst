@@ -13,7 +13,8 @@
 //   5. Bewertung                    logLoss, brierScore
 //   6. Zufall                       createRng (seeded xoshiro128**), bootstrapSampleIndices, seededBootstrap
 //   7. Zeitlich geordnete Splits    rollingOriginSplits (generisch, keine konkrete CV-Strategie)
-//   8. Ausgabe                      roundOutput (Rundung an der Serialisierungsgrenze)
+//   8. Gamma-Poisson                logGamma, regularizedGammaP/Q, gammaCdf, gammaQuantile, estimateGammaPrior, gammaPoissonPosterior
+//   9. Ausgabe                      roundOutput (Rundung an der Serialisierungsgrenze)
 
 // ─────────────────────────────────────────────────────────────────────────
 // 1. Fehler und Grundfunktionen
@@ -21,7 +22,8 @@
 
 /**
  * Fehler für ungültige Eingaben oder numerisch nicht lösbare Probleme. `code`:
- *   'invalid-input' | 'not-square' | 'not-symmetric' | 'not-positive-definite' | 'non-finite' | 'bootstrap-failed'
+ *   'invalid-input' | 'not-square' | 'not-symmetric' | 'not-positive-definite' | 'non-finite' | 'bootstrap-failed' |
+ *   'prior-not-estimable' | 'no-convergence'
  */
 export class NumericError extends Error {
   constructor(code, message) {
@@ -590,7 +592,238 @@ export function rollingOriginSplits(groups, { minTrainGroups = 1, testGroups = 1
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 8. Ausgabe
+// 8. Gamma-Poisson (Empirical Bayes, Pseudo-Spiele-Modell)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Modell P (Pseudo-Spiele): Eine Einheit hat die gewichteten Größen  count = Σ wᵢ·yᵢ  und  exposure = Σ wᵢ  (Gewichte wᵢ > 0,
+// z. B. Zeitgewichte; ohne Gewichte ist wᵢ = 1). Sie werden wie eine Poisson-Beobachtung mit Exposure behandelt:
+//   count | λ ~ Poisson(λ · exposure),   λ ~ Gamma(α, β)   (Rate-Parametrisierung: Mittel α/β, Varianz α/β²).
+// Das ist bewusst ein diskontiertes Modell: die Gewichte wirken wie Bruchteile eines Spiels. Prior-Momente, Posterior und
+// Intervall stammen alle aus diesem einen Modell; eine Korrektur der Varianz durch die Gewichte (effektive Stichprobengröße)
+// gibt es nicht. Der Prior wird aus den Daten geschätzt und gilt im Posterior als fest: Prior-Unsicherheit steckt NICHT im Intervall.
+
+/** Technische Schutzgrenze (kein Fachwert): größter Shape-Parameter der Gamma-Funktionen. Darüber wird die Genauigkeit der Exponentialform nicht mehr zugesichert. */
+export const MAX_GAMMA_SHAPE = 1e5;
+const GAMMA_EPS = 5e-16; // relative Abbruchschwelle von Reihe und Kettenbruch
+const GAMMA_MAX_ITER = 100000;
+const GAMMA_TINY = 1e-300;
+const HALF_LOG_TWO_PI = 0.9189385332046727;
+const LANCZOS_G = 7;
+const LANCZOS = [
+  0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
+  12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+];
+
+/**
+ * ln Γ(x) für endliches x > 0 (Lanczos, g = 7, 9 Koeffizienten; relative Genauigkeit ≈ 1e-15; für x < 0.5 über
+ * ln Γ(x) = ln Γ(x + 1) − ln x). Ungültiges x (≤ 0, nicht endlich) → NumericError 'invalid-input'.
+ */
+export function logGamma(x) {
+  if (!isFiniteNumber(x) || !(x > 0)) fail('invalid-input', 'logGamma: x muss endlich und > 0 sein');
+  if (x < 0.5) return logGamma(x + 1) - Math.log(x);
+  const z = x - 1;
+  const t = z + LANCZOS_G + 0.5;
+  let a = LANCZOS[0];
+  for (let i = 1; i < LANCZOS.length; i++) a += LANCZOS[i] / (z + i);
+  const r = HALF_LOG_TWO_PI + (z + 0.5) * Math.log(t) - t + Math.log(a);
+  if (!isFiniteNumber(r)) fail('non-finite', 'logGamma: Ergebnis nicht endlich');
+  return r;
+}
+
+function assertGammaShape(name, a) {
+  if (!isFiniteNumber(a) || !(a > 0) || a > MAX_GAMMA_SHAPE) fail('invalid-input', `${name}: shape muss endlich, > 0 und ≤ ${MAX_GAMMA_SHAPE} sein`);
+}
+
+// P(a, x) per Potenzreihe (nur für x < a + 1).
+function gammaSeriesP(a, x) {
+  let ap = a;
+  let term = 1 / a;
+  let total = term;
+  for (let n = 0; n < GAMMA_MAX_ITER; n++) {
+    ap += 1;
+    term *= x / ap;
+    total += term;
+    if (Math.abs(term) < Math.abs(total) * GAMMA_EPS) return total * Math.exp(a * Math.log(x) - x - logGamma(a));
+  }
+  return fail('no-convergence', 'regularizedGammaP: Reihe konvergiert nicht');
+}
+
+// Q(a, x) per Kettenbruch (modifiziertes Lentz-Verfahren, nur für x ≥ a + 1).
+function gammaContinuedFractionQ(a, x) {
+  let b = x + 1 - a;
+  let c = 1 / GAMMA_TINY;
+  let d = 1 / b;
+  let h = d;
+  for (let i = 1; i < GAMMA_MAX_ITER; i++) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < GAMMA_TINY) d = GAMMA_TINY;
+    c = b + an / c;
+    if (Math.abs(c) < GAMMA_TINY) c = GAMMA_TINY;
+    d = 1 / d;
+    const delta = d * c;
+    h *= delta;
+    if (Math.abs(delta - 1) < GAMMA_EPS) return Math.exp(a * Math.log(x) - x - logGamma(a)) * h;
+  }
+  return fail('no-convergence', 'regularizedGammaQ: Kettenbruch konvergiert nicht');
+}
+
+// [P, Q] mit dem jeweils genaueren Zweig (Reihe für x < a + 1, sonst Kettenbruch); Argumente sind bereits geprüft.
+function gammaPQ(a, x) {
+  if (x === 0) return [0, 1];
+  if (x < a + 1) {
+    const p = Math.min(1, gammaSeriesP(a, x));
+    return [p, 1 - p];
+  }
+  const q = Math.min(1, gammaContinuedFractionQ(a, x));
+  return [1 - q, q];
+}
+
+function assertGammaArgs(name, a, x) {
+  assertGammaShape(name, a);
+  if (!isFiniteNumber(x) || x < 0) fail('invalid-input', `${name}: x muss endlich und ≥ 0 sein`);
+}
+
+/** Regularisierte untere unvollständige Gammafunktion P(a, x) = γ(a, x)/Γ(a), a ∈ (0, MAX_GAMMA_SHAPE], x ≥ 0 endlich. P(a, 0) = 0. */
+export function regularizedGammaP(a, x) {
+  assertGammaArgs('regularizedGammaP', a, x);
+  return gammaPQ(a, x)[0];
+}
+
+/** Regularisierte obere unvollständige Gammafunktion Q(a, x) = 1 − P(a, x) (im oberen Bereich ohne Auslöschung berechnet). */
+export function regularizedGammaQ(a, x) {
+  assertGammaArgs('regularizedGammaQ', a, x);
+  return gammaPQ(a, x)[1];
+}
+
+function assertGammaParams(name, shape, rate) {
+  assertGammaShape(name, shape);
+  if (!isFiniteNumber(rate) || !(rate > 0)) fail('invalid-input', `${name}: rate muss endlich und > 0 sein`);
+}
+
+/** Verteilungsfunktion der Gamma-Verteilung (Rate-Parametrisierung): P(X ≤ x) für X ~ Gamma(shape, rate), x ≥ 0 endlich. */
+export function gammaCdf(x, shape, rate) {
+  assertGammaParams('gammaCdf', shape, rate);
+  if (!isFiniteNumber(x) || x < 0) fail('invalid-input', 'gammaCdf: x muss endlich und ≥ 0 sein');
+  const z = x * rate;
+  if (!isFiniteNumber(z)) fail('non-finite', 'gammaCdf: x · rate nicht endlich');
+  return regularizedGammaP(shape, z);
+}
+
+/**
+ * Quantil der Gamma-Verteilung in Rate-Parametrisierung (X ~ Gamma(shape, rate): Mittel shape/rate, Varianz shape/rate²);
+ * p ∈ [0, 1], shape ∈ (0, MAX_GAMMA_SHAPE], rate > 0. q(0) = 0, q(1) = Infinity (einzige Fälle, in denen das Ergebnis nicht
+ * endlich-positiv ist). Für p ≤ 0.5 wird P(shape, x) = p gelöst, sonst Q(shape, x) = 1 − p (1 − p ist dort exakt); Verfahren:
+ * abgesichertes Newton-Verfahren mit Bisektion in einem Klammerintervall (immer konvergent). Genauigkeit (P(Quantil) gegen p): ≈ 1e-13 bis shape 1000, ≈ 1e-12 bei 2e4 und 1e5 (gemessen; Ursache: Auslöschung in der Exponentialform für große shape).
+ */
+export function gammaQuantile(p, shape, rate) {
+  if (!isFiniteNumber(p) || p < 0 || p > 1) fail('invalid-input', 'gammaQuantile: p muss in [0, 1] liegen');
+  assertGammaParams('gammaQuantile', shape, rate);
+  if (p === 0) return 0;
+  if (p === 1) return Infinity;
+  const upper = p > 0.5;
+  const target = upper ? 1 - p : p;
+  const g = (x) => { // streng wachsend in x, Nullstelle = gesuchtes Quantil
+    const pq = gammaPQ(shape, x);
+    return upper ? target - pq[1] : pq[0] - target;
+  };
+  const logNorm = logGamma(shape);
+  const pdf = (x) => Math.exp((shape - 1) * Math.log(x) - x - logNorm);
+  let lo = 0;
+  let hi = shape + 1;
+  for (let i = 0; g(hi) < 0; i++) {
+    if (i > 2000) fail('no-convergence', 'gammaQuantile: keine obere Klammer gefunden');
+    lo = hi;
+    hi *= 2;
+  }
+  let x = 0.5 * (lo + hi);
+  let converged = false;
+  for (let i = 0; i < 2000; i++) {
+    const gx = g(x);
+    if (gx === 0) { converged = true; break; }
+    if (gx < 0) lo = x; else hi = x;
+    const d = pdf(x);
+    let next = d > 0 && Number.isFinite(d) ? x - gx / d : NaN;
+    if (!(next > lo && next < hi)) next = 0.5 * (lo + hi);
+    const step = Math.abs(next - x);
+    x = next;
+    if (step <= 4 * Number.EPSILON * x || hi - lo <= 4 * Number.EPSILON * hi) { converged = true; break; }
+  }
+  if (!converged) fail('no-convergence', 'gammaQuantile: keine Konvergenz');
+  const result = x / rate;
+  if (!isFiniteNumber(result) || !(result > 0)) fail('non-finite', 'gammaQuantile: Ergebnis nicht endlich und positiv');
+  return result;
+}
+
+/**
+ * Gamma-Prior aus gewichteten Beobachtungen (Momentenschätzung im Pseudo-Spiele-Modell P).
+ * Jede Beobachtung i hat `count` = Σ w·y (≥ 0, endlich, nicht ganzzahlig erlaubt) und `exposure` = Σ w (> 0, endlich).
+ * Modell: rᵢ = countᵢ/exposureᵢ hat Erwartung m = α/β und Varianz τ² + m/exposureᵢ mit τ² = α/β² (Poisson-Rauschen m/exposureᵢ
+ * mit der gewichteten Exposure, nicht mit der Anzahl Spiele). Mit E = Σ exposureᵢ, Y = Σ countᵢ, k Beobachtungen:
+ *   m̂ = Y / E                                  (Exposure-gewichtetes Mittel; ungewichtet: Σy/Σn)
+ *   Q = Σ exposureᵢ · (rᵢ − m̂)²
+ *   τ̂² = (Q − (k − 1)·m̂) / (E − Σ exposureᵢ² / E)      (erwartungstreu für τ² unter Modell P; für exposureᵢ = 1: s² − m̂)
+ *   α = m̂²/τ̂²,  β = m̂/τ̂²
+ * Nicht schätzbar (NumericError 'prior-not-estimable', kein Clamping, keine Ersatzlösung): weniger als 2 Beobachtungen,
+ * Gesamtzähler 0 (m̂ = 0), Nenner numerisch 0 (≤ 1e-12·E, technische Schutzgrenze) oder τ̂² ≤ 0 (keine Überdispersion).
+ * Ungültige Einzelwerte → 'invalid-input'. Die Beobachtungen werden vor dem Summieren kanonisch (exposure, count) sortiert und
+ * kompensiert summiert: das Ergebnis hängt nicht von der Eingabereihenfolge ab. Die Eingabe wird nicht verändert.
+ * @param {{count:number, exposure:number}[]} observations
+ * @returns {{alpha:number, beta:number, mean:number, tau2:number, n:number, totalCount:number, totalExposure:number}}
+ */
+export function estimateGammaPrior(observations) {
+  if (!Array.isArray(observations) || observations.length === 0) fail('invalid-input', 'estimateGammaPrior: nicht leeres Array erwartet');
+  const rows = observations.map((o, i) => {
+    if (o === null || typeof o !== 'object') fail('invalid-input', `estimateGammaPrior: Beobachtung ${i} muss ein Objekt {count, exposure} sein`);
+    if (!isFiniteNumber(o.count) || o.count < 0) fail('invalid-input', `estimateGammaPrior: count von Beobachtung ${i} muss endlich und ≥ 0 sein`);
+    if (!isFiniteNumber(o.exposure) || !(o.exposure > 0)) fail('invalid-input', `estimateGammaPrior: exposure von Beobachtung ${i} muss endlich und > 0 sein`);
+    return [o.exposure, o.count === 0 ? 0 : o.count];
+  });
+  const k = rows.length;
+  if (k < 2) fail('prior-not-estimable', 'estimateGammaPrior: mindestens 2 Beobachtungen nötig');
+  rows.sort((u, v) => u[0] - v[0] || u[1] - v[1]);
+  const totalExposure = sum(rows.map((r) => r[0]));
+  const totalCount = sum(rows.map((r) => r[1]));
+  if (!(totalCount > 0)) fail('prior-not-estimable', 'estimateGammaPrior: Gesamtzähler ist 0 (kein positiver Mittelwert)');
+  const rate = totalCount / totalExposure;
+  const q = sum(rows.map(([e, y]) => e * (y / e - rate) ** 2));
+  const denominator = totalExposure - sum(rows.map((r) => r[0] * r[0])) / totalExposure;
+  if (!(denominator > 1e-12 * totalExposure)) fail('prior-not-estimable', 'estimateGammaPrior: Nenner der τ²-Schätzung numerisch 0');
+  const tau2 = (q - (k - 1) * rate) / denominator;
+  if (!(tau2 > 0)) fail('prior-not-estimable', `estimateGammaPrior: τ² ≤ 0 (${tau2}); keine Überdispersion, Gamma-Prior nicht schätzbar`);
+  const alpha = (rate * rate) / tau2;
+  const beta = rate / tau2;
+  if (!isFiniteNumber(alpha) || !isFiniteNumber(beta) || !(alpha > 0) || !(beta > 0)) fail('prior-not-estimable', 'estimateGammaPrior: α oder β nicht endlich und positiv');
+  return { alpha, beta, mean: rate, tau2, n: k, totalCount, totalExposure };
+}
+
+/**
+ * Gamma-Poisson-Posterior für eine Einheit im Pseudo-Spiele-Modell P: Prior Gamma(alpha, beta) (Rate-Parametrisierung),
+ * gewichtete Beobachtung `count` = Σ w·y und `exposure` = Σ w. Posterior Gamma(alpha + count, beta + exposure).
+ * `ci90` = [q05, q95] dieser Posterior-Verteilung (gleichseitiges 90-%-Intervall). Der Prior gilt als fest: Prior-Unsicherheit
+ * ist nicht enthalten. Vertrag: alpha > 0, beta > 0 endlich; count ≥ 0, exposure ≥ 0 endlich; exposure = 0 verlangt count = 0
+ * (Posterior = Prior), sonst 'invalid-input'.
+ * @returns {{alphaPost:number, betaPost:number, mean:number, ci90:[number, number]}}
+ */
+export function gammaPoissonPosterior({ alpha, beta, count, exposure } = {}) {
+  if (!isFiniteNumber(alpha) || !(alpha > 0)) fail('invalid-input', 'gammaPoissonPosterior: alpha muss endlich und > 0 sein');
+  if (!isFiniteNumber(beta) || !(beta > 0)) fail('invalid-input', 'gammaPoissonPosterior: beta muss endlich und > 0 sein');
+  if (!isFiniteNumber(count) || count < 0) fail('invalid-input', 'gammaPoissonPosterior: count muss endlich und ≥ 0 sein');
+  if (!isFiniteNumber(exposure) || exposure < 0) fail('invalid-input', 'gammaPoissonPosterior: exposure muss endlich und ≥ 0 sein');
+  if (exposure === 0 && count > 0) fail('invalid-input', 'gammaPoissonPosterior: exposure = 0 verlangt count = 0');
+  const alphaPost = alpha + count;
+  const betaPost = beta + exposure;
+  return {
+    alphaPost,
+    betaPost,
+    mean: alphaPost / betaPost,
+    ci90: [gammaQuantile(0.05, alphaPost, betaPost), gammaQuantile(0.95, alphaPost, betaPost)],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 9. Ausgabe
 // ─────────────────────────────────────────────────────────────────────────
 
 /**

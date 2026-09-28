@@ -650,6 +650,300 @@ console.log('== rollingOriginSplits ==');
   assertEqual(groups, gb, 'Eingabe wird nicht verändert');
 }
 
+// ══ 7b. Gamma-Poisson (M2-Numerik) ══════════════════════════════════════
+// Unabhängige Referenzen: Poisson-Identität P(Gamma(k) ≤ x) = 1 − Σ_{j<k} Poisson(j; x) für ganzzahliges k (eigener Code),
+// Halbzahl-Formel mit erf-Reihe (eigener Code), Tabellenwerte der χ²-Verteilung (χ²(ν) = Gamma(ν/2, Rate 1/2)),
+// analytische Sonderfälle (Gamma(1) = Exponential), Handrechnung der Momente (Brüche) und Stirling-Reihe für ln Γ.
+const refPoissonIdentityP = (k, x) => { let s = 0; for (let j = 0; j < k; j++) s += refPmf(j, x); return 1 - s; };
+const refPoissonIdentityQ = (k, x) => { let s = 0; for (let j = 0; j < k; j++) s += refPmf(j, x); return s; };
+const refErf = (z) => { let term = z; let total = z; for (let n = 1; n < 80; n++) { term *= -z * z / n; total += term / (2 * n + 1); } return 2 / Math.sqrt(Math.PI) * total; };
+const refHalfIntegerP = (n, x) => { // P(n + 1/2, x) = erf(√x) − e^{−x} Σ_{j=1..n} x^{j−1/2} / Γ(j + 1/2)
+  let gam = Math.sqrt(Math.PI); // Γ(1/2)
+  let s = 0;
+  for (let j = 1; j <= n; j++) { gam *= j - 0.5; s += Math.pow(x, j - 0.5) / gam; }
+  return refErf(Math.sqrt(x)) - Math.exp(-x) * s;
+};
+const relErr = (a, e) => Math.abs(a - e) / Math.abs(e);
+const stirling = (x) => (x - 0.5) * Math.log(x) - x + 0.5 * Math.log(2 * Math.PI) + 1 / (12 * x) - 1 / (360 * x ** 3);
+
+console.log('== Gamma-Poisson: logGamma ==');
+{
+  const near = (x, expected, tol, label) => assertNear(S.logGamma(x), expected, tol, label);
+  near(1, 0, 2e-15, 'ln Γ(1) = 0');
+  near(2, 0, 2e-15, 'ln Γ(2) = 0');
+  near(0.5, 0.5 * Math.log(Math.PI), 2e-15, 'ln Γ(1/2) = ½·ln π');
+  near(1.5, Math.log(Math.sqrt(Math.PI) / 2), 2e-15, 'ln Γ(3/2) = ln(√π/2)');
+  near(5, Math.log(24), 2e-14, 'ln Γ(5) = ln 24');
+  near(10, Math.log(362880), 2e-14, 'ln Γ(10) = ln 9!');
+  near(4.5, Math.log(11.631728396567448), 2e-14, 'ln Γ(9/2) = ln(105·√π/16)');
+  near(0.1, Math.log(9.513507698668732), 2e-14, 'ln Γ(0.1) (Tabellenwert Γ(0.1) = 9.513507698668732)');
+  near(100, 359.1342053695754, 2e-12, 'ln Γ(100) = ln 99! = 359.1342053695754');
+  near(1e-10, -Math.log(1e-10) - 0.5772156649015329e-10, 1e-14, 'kleines x: ln Γ(x) = −ln x − γ·x + O(x²)');
+  for (const x of [0.1, 0.37, 0.5, 0.9, 1.3, 2.75, 7.1, 33.3, 150.5]) {
+    assertNear(S.logGamma(x + 1) - S.logGamma(x), Math.log(x), 1e-12, `Rekurrenz Γ(x+1) = x·Γ(x) bei x = ${x}`);
+  }
+  let worst = 0;
+  for (let n = 0; n <= 170; n++) worst = Math.max(worst, Math.abs(S.logGamma(n + 1) - S.logFactorial(n)) / Math.max(1, S.logFactorial(n)));
+  assertTrue(worst < 5e-15, `ln Γ(n+1) = logFactorial(n) für n = 0…170 (größter relativer Fehler ${worst.toExponential(2)} < 5e-15)`);
+  for (const x of [1e4, 1e5]) near(x, stirling(x), 1e-8, `große Argumente: Stirling-Reihe bei x = ${x}`);
+  for (const bad of [0, -1, -0.5, NaN, Infinity, -Infinity, '2', null, undefined]) throwsCode(() => S.logGamma(bad), 'invalid-input', `logGamma(${String(bad)}) → Fehler`);
+  assertTrue(Object.is(S.logGamma(3.3), S.logGamma(3.3)), 'logGamma wiederholbar (identisches Ergebnis)');
+}
+
+console.log('== Gamma-Poisson: regularizedGammaP / regularizedGammaQ ==');
+{
+  for (const a of [0.05, 0.5, 1, 2.5, 10, 100]) assertEqual([S.regularizedGammaP(a, 0), S.regularizedGammaQ(a, 0)], [0, 1], `P(${a}, 0) = 0 und Q(${a}, 0) = 1`);
+  for (const x of [0.001, 0.3, 1, 4, 20, 700]) assertNear(S.regularizedGammaP(1, x), 1 - Math.exp(-x), 2e-15, `P(1, x) = 1 − e^−x bei x = ${x}`);
+  for (const [k, xs] of [[2, [0.1, 1, 3, 10]], [5, [0.5, 3, 5, 6, 12, 30]], [10, [2, 9, 10, 11, 25]], [50, [30, 49, 50, 51, 80]], [100, [80, 99, 100, 101, 130]], [150, [120, 150, 151, 190]]]) {
+    for (const x of xs) {
+      assertNear(S.regularizedGammaP(k, x), refPoissonIdentityP(k, x), 1e-13, `Ganzzahl-Identität P(${k}, ${x}) = 1 − Σ_{j<${k}} Poisson(j; ${x})`);
+      assertNear(S.regularizedGammaQ(k, x), refPoissonIdentityQ(k, x), 1e-13, `Ganzzahl-Identität Q(${k}, ${x}) = Σ_{j<${k}} Poisson(j; ${x})`);
+    }
+  }
+  for (const [n, x] of [[0, 0.2], [0, 3], [1, 0.5], [1, 4], [2, 2.5], [2, 6], [5, 3], [5, 9], [10, 8]]) {
+    assertNear(S.regularizedGammaP(n + 0.5, x), refHalfIntegerP(n, x), 1e-12, `Halbzahl-Formel (erf-Reihe) P(${n + 0.5}, ${x})`);
+  }
+  assertNear(S.regularizedGammaP(0.5, 3.841458820694124 / 2), 0.95, 1e-13, 'χ²-Tabelle: P(1/2, 3.8415/2) = 0.95 (ν = 1)');
+  assertNear(S.regularizedGammaP(5, 18.307038053275146 / 2), 0.95, 1e-13, 'χ²-Tabelle: P(5, 18.307/2) = 0.95 (ν = 10)');
+  assertNear(S.regularizedGammaP(50, 124.34211340400407 / 2), 0.95, 1e-13, 'χ²-Tabelle: P(50, 124.34/2) = 0.95 (ν = 100)');
+  // Randbereiche
+  assertTrue(S.regularizedGammaP(3, 200) === 1, 'sehr großes x: P(3, 200) = 1 (Grenzverhalten)');
+  const tail = S.regularizedGammaQ(5, 100);
+  assertTrue(relErr(tail, refPoissonIdentityQ(5, 100)) < 1e-10 && tail > 0 && tail < 1e-30, `obere Randwahrscheinlichkeit Q(5, 100) ≈ ${tail.toExponential(3)} ohne Auslöschung (relativer Fehler < 1e-10)`);
+  assertNear(S.regularizedGammaP(1e4, 1e4), 0.5 + 1 / (3 * Math.sqrt(2 * Math.PI * 1e4)), 1e-8, 'großes a: P(a, a) ≈ ½ + 1/(3·√(2πa)) bei a = 1e4');
+  for (const a of [0.3, 2.5, 40]) {
+    const edge = a + 1;
+    assertNear(S.regularizedGammaP(a, edge * (1 - 1e-12)), S.regularizedGammaP(a, edge * (1 + 1e-12)), 1e-10, `Stetigkeit am Wechsel Reihe/Kettenbruch (a = ${a})`);
+  }
+  // Summe, Monotonie
+  for (const [a, x] of [[0.5, 0.2], [2.5, 3], [40, 35], [40, 45], [1000, 990]]) assertNear(S.regularizedGammaP(a, x) + S.regularizedGammaQ(a, x), 1, 2e-15, `P + Q = 1 bei (${a}, ${x})`);
+  for (const a of [0.5, 3, 40, 1000]) {
+    let last = -1; let mono = true; let inRange = true;
+    for (let i = 0; i <= 60; i++) { const v = S.regularizedGammaP(a, (i / 60) * 3 * a + i * 1e-3); if (!(v >= last)) mono = false; if (v < 0 || v > 1) inRange = false; last = v; }
+    assertTrue(mono && inRange, `P(${a}, x) wächst monoton in x und bleibt in [0, 1]`);
+  }
+  assertTrue(S.regularizedGammaP(2, 3) > S.regularizedGammaP(3, 3) && S.regularizedGammaP(3, 3) > S.regularizedGammaP(6.5, 3), 'P(a, x) fällt monoton in a (festes x)');
+  for (const [a, x] of [[0, 1], [-1, 1], [NaN, 1], [Infinity, 1], [S.MAX_GAMMA_SHAPE * 2, 1], [1, -0.1], [1, NaN], [1, Infinity], ['1', 1], [1, '1']]) {
+    throwsCode(() => S.regularizedGammaP(a, x), 'invalid-input', `regularizedGammaP(${String(a)}, ${String(x)}) → Fehler`);
+    throwsCode(() => S.regularizedGammaQ(a, x), 'invalid-input', `regularizedGammaQ(${String(a)}, ${String(x)}) → Fehler`);
+  }
+}
+
+console.log('== Gamma-Poisson: gammaCdf und gammaQuantile ==');
+{
+  assertNear(S.gammaCdf(1.2, 3, 2.5), S.regularizedGammaP(3, 3), 1e-15, 'gammaCdf(x; shape, rate) = P(shape, rate·x) (Rate-Parametrisierung)');
+  assertEqual(S.gammaCdf(0, 2, 1), 0, 'gammaCdf(0) = 0');
+  throwsCode(() => S.gammaCdf(-1, 2, 1), 'invalid-input', 'gammaCdf: x < 0 → Fehler');
+  throwsCode(() => S.gammaCdf(1, 2, 0), 'invalid-input', 'gammaCdf: rate = 0 → Fehler');
+  throwsCode(() => S.gammaCdf(1e308, 2, 10), 'non-finite', 'gammaCdf: x·rate überläuft → Fehler');
+
+  assertEqual([S.gammaQuantile(0, 2, 1), S.gammaQuantile(1, 2, 1)], [0, Infinity], 'q(0) = 0 und q(1) = Infinity');
+  for (const p of [0.001, 0.05, 0.25, 0.5, 0.9, 0.95, 0.999999]) {
+    assertTrue(relErr(S.gammaQuantile(p, 1, 2), -Math.log(1 - p) / 2) < 1e-13, `Shape 1 (Exponential, Rate 2): q(${p}) = −ln(1−p)/2 (relativer Fehler < 1e-13)`);
+  }
+  for (const [nu, expected] of [[1, 3.841458820694124], [2, 5.991464547107979], [10, 18.307038053275146], [100, 124.34211340400407]]) {
+    assertTrue(relErr(S.gammaQuantile(0.95, nu / 2, 0.5), expected) < 1e-12, `χ²-Tabelle: 95-%-Quantil bei ν = ${nu} = ${expected} (Shape ν/2, Rate 1/2; relativer Fehler < 1e-12)`);
+  }
+  // Rate vs. Scale
+  for (const [p, shape] of [[0.05, 2.165], [0.95, 2.165], [0.5, 40], [0.05, 0.4]]) {
+    const base = S.gammaQuantile(p, shape, 1);
+    for (const rate of [0.25, 2, 7.5]) assertTrue(relErr(S.gammaQuantile(p, shape, rate), base / rate) < 1e-14, `Rate-Parametrisierung: q(${p}; shape ${shape}, rate ${rate}) = q(·; ·, 1)/rate (nicht ·rate)`);
+  }
+  assertTrue(relErr(S.gammaQuantile(0.5, 1000, 2), 500) < 2e-3 && S.gammaQuantile(0.5, 1000, 2) < 500, 'Median bei shape 1000, rate 2 liegt knapp unter dem Mittel 500 (rechtsschiefe Verteilung)');
+  // Round-Trip: CDF(q) ≈ p
+  let worstRound = 0;
+  for (const shape of [0.05, 0.3, 0.5, 1, 1.85, 2.165, 7.5, 20, 60, 150.7, 1000]) {
+    for (const rate of [0.3, 1, 2.34, 50]) {
+      for (const p of [1e-6, 0.001, 0.05, 0.25, 0.5, 0.75, 0.95, 0.999, 1 - 1e-9]) {
+        const q = S.gammaQuantile(p, shape, rate);
+        worstRound = Math.max(worstRound, Math.abs(S.gammaCdf(q, shape, rate) - p));
+      }
+    }
+  }
+  assertTrue(worstRound < 1e-12, `CDF(Quantil) = p für 11 Shapes (0.05 … 1000) × 4 Raten × 9 p-Werte (größte Abweichung ${worstRound.toExponential(2)} < 1e-12)`);
+  let worstBig = 0;
+  for (const shape of [20000, 99999]) for (const p of [1e-6, 0.05, 0.5, 0.95, 0.999]) { const q = S.gammaQuantile(p, shape, 1); worstBig = Math.max(worstBig, Math.abs(S.gammaCdf(q, shape, 1) - p)); }
+  assertTrue(worstBig < 1e-9, `CDF(Quantil) = p bei sehr großem Shape (2e4, 1e5; größte Abweichung ${worstBig.toExponential(2)} < 1e-9)`);
+  let worstId = 0;
+  for (let k = 1; k <= 150; k += 7) for (const p of [1e-6, 0.05, 0.5, 0.95, 0.999]) worstId = Math.max(worstId, Math.abs(refPoissonIdentityP(k, S.gammaQuantile(p, k, 2.5) * 2.5) - p));
+  assertTrue(worstId < 1e-12, `Poisson-Identität als unabhängige Referenz (ganzzahlige Shapes 1 … 148, Rate 2.5; größte Abweichung ${worstId.toExponential(2)} < 1e-12)`);
+  // Halbzahlige Shapes gegen erf-Referenz (Bisektion im Test)
+  for (const [n, p] of [[0, 0.05], [0, 0.95], [1, 0.05], [2, 0.95], [5, 0.5]]) {
+    let lo = 0, hi = 30; for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2; if (refHalfIntegerP(n, mid) < p) lo = mid; else hi = mid; }
+    assertTrue(relErr(S.gammaQuantile(p, n + 0.5, 1), (lo + hi) / 2) < 1e-11, `nicht ganzzahliger Shape ${n + 0.5}: q(${p}) stimmt mit Bisektion auf der erf-Referenz überein`);
+  }
+  // Monotonie
+  for (const [shape, rate] of [[0.7, 1], [2.165, 2.336], [45, 3], [1200, 0.5]]) {
+    const ps = [1e-9, 1e-4, 0.01, 0.05, 0.2, 0.5, 0.8, 0.95, 0.99, 1 - 1e-6];
+    const qs = ps.map((p) => S.gammaQuantile(p, shape, rate));
+    assertTrue(qs.every((q, i) => i === 0 || q > qs[i - 1]) && qs[0] > 0, `q(p) wächst streng monoton in p (shape ${shape}, rate ${rate})`);
+  }
+  assertTrue([0.5, 1, 2, 5, 20, 100].map((a) => S.gammaQuantile(0.9, a, 1)).every((q, i, arr) => i === 0 || q > arr[i - 1]), 'q(0.9) wächst mit dem Shape');
+  assertTrue(S.gammaQuantile(0.05, 3, 1) < S.gammaQuantile(0.95, 3, 1), 'q05 < q95 (Quantil-Richtung)');
+  const tiny = S.gammaQuantile(0.05, 0.01, 1);
+  assertTrue(tiny > 0 && tiny < 1e-100 && Math.abs(S.gammaCdf(tiny, 0.01, 1) - 0.05) < 1e-12, `sehr kleiner Shape 0.01: endliches, positives Quantil (${tiny.toExponential(3)}) mit CDF = p`);
+  assertTrue(Number.isFinite(S.gammaQuantile(1e-15, 2, 1)) && Number.isFinite(S.gammaQuantile(1 - 1e-15, 2, 1)), 'extreme p (1e-15, 1 − 1e-15) liefern endliche Quantile');
+  assertTrue(Object.is(S.gammaQuantile(0.05, 2.165, 2.336), S.gammaQuantile(0.05, 2.165, 2.336)), 'gammaQuantile wiederholbar (identisches Ergebnis)');
+  for (const p of [-0.1, 1.1, NaN, Infinity, '0.5', null]) throwsCode(() => S.gammaQuantile(p, 2, 1), 'invalid-input', `gammaQuantile: p = ${String(p)} → Fehler`);
+  for (const shape of [0, -1, NaN, Infinity, S.MAX_GAMMA_SHAPE * 2]) throwsCode(() => S.gammaQuantile(0.5, shape, 1), 'invalid-input', `gammaQuantile: shape = ${String(shape)} → Fehler`);
+  for (const rate of [0, -1, NaN, Infinity]) throwsCode(() => S.gammaQuantile(0.5, 2, rate), 'invalid-input', `gammaQuantile: rate = ${String(rate)} → Fehler`);
+  throwsCode(() => S.gammaQuantile(0.5, 1e-300, 1e-300), 'non-finite', 'gammaQuantile: nicht darstellbares Ergebnis → Fehler statt Infinity/NaN');
+}
+
+console.log('== Gamma-Poisson: Posterior (Pseudo-Spiele-Modell) ==');
+{
+  const post0 = S.gammaPoissonPosterior({ alpha: 1, beta: 1, count: 0, exposure: 0 });
+  assertEqual([post0.alphaPost, post0.betaPost, post0.mean], [1, 1, 1], 'count = exposure = 0: Posterior = Prior');
+  assertTrue(relErr(post0.ci90[0], -Math.log(0.95)) < 1e-13 && relErr(post0.ci90[1], -Math.log(0.05)) < 1e-13, 'Prior Gamma(1, 1): ci90 = [−ln 0.95, −ln 0.05] (analytisch)');
+  const post1 = S.gammaPoissonPosterior({ alpha: 1, beta: 1, count: 0, exposure: 3 });
+  assertEqual([post1.alphaPost, post1.betaPost, post1.mean], [1, 4, 0.25], 'count = 0: Posterior Gamma(α, β + exposure), Mittel α/(β + exposure)');
+  assertTrue(relErr(post1.ci90[0], -Math.log(0.95) / 4) < 1e-13 && relErr(post1.ci90[1], -Math.log(0.05) / 4) < 1e-13, 'count = 0, exposure 3: ci90 = [−ln 0.95, −ln 0.05]/4 (Rate β + exposure)');
+  const post2 = S.gammaPoissonPosterior({ alpha: 2, beta: 1, count: 3, exposure: 1 });
+  assertEqual([post2.alphaPost, post2.betaPost, post2.mean], [5, 2, 2.5], 'Posterior Gamma(α + count, β + exposure) = Gamma(5, 2), Mittel 2.5');
+  { // Referenz: Bisektion auf der Poisson-Identität (Shape 5, Rate 2)
+    const refQ = (p) => { let lo = 0, hi = 20; for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2; if (refPoissonIdentityP(5, 2 * mid) < p) lo = mid; else hi = mid; } return (lo + hi) / 2; };
+    assertTrue(relErr(post2.ci90[0], refQ(0.05)) < 1e-11 && relErr(post2.ci90[1], refQ(0.95)) < 1e-11, 'ci90 = [q05, q95] der Posterior Gamma(5, 2) (Bisektion auf der Poisson-Identität; nicht q025/q975, nicht q10/q90)');
+  }
+  assertTrue(post2.ci90[0] < post2.mean && post2.mean < post2.ci90[1], 'Mittel liegt im ci90');
+  assertNear(S.gammaCdf(post2.ci90[1], 5, 2) - S.gammaCdf(post2.ci90[0], 5, 2), 0.9, 1e-12, 'ci90 enthält 90 % der Posterior-Masse');
+  assertNear(S.gammaCdf(post2.ci90[0], 5, 2), 0.05, 1e-12, 'unteres Ende trägt 5 % Masse');
+  // gewichtete, nicht ganzzahlige Größen
+  const postW = S.gammaPoissonPosterior({ alpha: 1.85, beta: 2.12, count: 2.75, exposure: 1.4 });
+  assertNear(postW.alphaPost, 4.6, 1e-14, 'gewichteter Zähler 2.75: alphaPost = 1.85 + 2.75');
+  assertNear(postW.betaPost, 3.52, 1e-14, 'gewichtete Exposure 1.4: betaPost = 2.12 + 1.4');
+  assertNear(postW.mean, 4.6 / 3.52, 1e-14, 'Posterior-Mittel = alphaPost/betaPost');
+  // kleine und große Parameter
+  const small = S.gammaPoissonPosterior({ alpha: 0.01, beta: 100, count: 0, exposure: 0.001 });
+  assertTrue(small.ci90[0] > 0 && small.ci90[0] < small.ci90[1] && Number.isFinite(small.ci90[1]), 'sehr kleine Parameter: endliches, geordnetes ci90');
+  const big = S.gammaPoissonPosterior({ alpha: 2, beta: 2, count: 4998, exposure: 4998 });
+  assertNear(big.mean, 5000 / 5000, 1e-14, 'große Zähler: Mittel = (α + count)/(β + exposure) = 1');
+  assertTrue(big.ci90[0] > 0.95 && big.ci90[1] < 1.05 && big.ci90[0] < 1 && big.ci90[1] > 1, 'große Zähler: enges ci90 um 1 (Normalnäherung ± 1.645/√5000 = ± 0.023)');
+  assertNear((big.ci90[1] - big.ci90[0]) / 2, 1.645 / Math.sqrt(5000), 1.5e-3, 'große Zähler: Halbbreite ≈ 1.645·√(α_post)/β_post');
+  // Vertrag
+  throwsCode(() => S.gammaPoissonPosterior({ alpha: 1, beta: 1, count: 1, exposure: 0 }), 'invalid-input', 'exposure = 0 mit count > 0 → Fehler');
+  for (const [k, v] of [['alpha', 0], ['alpha', -1], ['alpha', NaN], ['beta', 0], ['beta', -1], ['beta', Infinity], ['count', -1], ['count', NaN], ['exposure', -1], ['exposure', NaN], ['exposure', Infinity]]) {
+    throwsCode(() => S.gammaPoissonPosterior({ alpha: 2, beta: 2, count: 1, exposure: 1, [k]: v }), 'invalid-input', `${k} = ${v} → Fehler`);
+  }
+  throwsCode(() => S.gammaPoissonPosterior({ alpha: 2, beta: 2, count: 1 }), 'invalid-input', 'fehlende exposure → Fehler');
+  throwsCode(() => S.gammaPoissonPosterior(), 'invalid-input', 'ohne Argumente → Fehler');
+  const inp = { alpha: 2, beta: 2, count: 1, exposure: 1 };
+  const inpBefore = clone(inp);
+  S.gammaPoissonPosterior(inp);
+  assertEqual(inp, inpBefore, 'Eingabe wird nicht verändert');
+}
+
+console.log('== M2-Schrumpfungsgrundlage (synthetisch, ohne Ranking und Stufen) ==');
+{
+  const prior = { alpha: 1.85, beta: 2.12 }; // Prior-Mittel ≈ 0.873
+  const m0 = prior.alpha / prior.beta;
+  const one = S.gammaPoissonPosterior({ ...prior, count: 4, exposure: 1 }); // 1 Spiel, 4 Tore (Rohquote 4)
+  const fifty = S.gammaPoissonPosterior({ ...prior, count: 200, exposure: 50 }); // 50 Spiele, 200 Tore (Rohquote 4)
+  assertTrue(one.mean < fifty.mean && fifty.mean < 4 && one.mean > m0, `gleiche Rohquote 4: n = 1 schrumpft stärker Richtung Prior (${one.mean.toFixed(3)}) als n = 50 (${fifty.mean.toFixed(3)}); beide bleiben zwischen Prior-Mittel und Rohquote`);
+  assertNear((one.mean - m0) / (4 - m0), 1 / (prior.beta + 1), 1e-14, 'Schrumpfanteil n = 1: Posterior-Mittel = Prior + (Roh − Prior)·exposure/(β + exposure), Gewicht 1/(β + 1)');
+  assertNear((fifty.mean - m0) / (4 - m0), 50 / (prior.beta + 50), 1e-14, 'Schrumpfanteil n = 50: Gewicht 50/(β + 50)');
+  const width = (p) => p.ci90[1] - p.ci90[0];
+  assertTrue(width(one) > 2 * width(fifty), `ci90 bei n = 1 (${width(one).toFixed(3)}) ist deutlich breiter als bei n = 50 (${width(fifty).toFixed(3)})`);
+  const lowRateMany = S.gammaPoissonPosterior({ ...prior, count: 75, exposure: 50 }); // 50 Spiele, Rohquote 1.5
+  const oneGameTwoGoals = S.gammaPoissonPosterior({ ...prior, count: 2, exposure: 1 }); // 1 Spiel, Rohquote 2
+  assertTrue(oneGameTwoGoals.mean < lowRateMany.mean, 'ein Spiel mit Rohquote 2 landet unter 50 Spielen mit Rohquote 1.5 (Schrumpfung wirkt gegen Einzelspiel-Ausreißer)');
+  const zero = S.gammaPoissonPosterior({ ...prior, count: 0, exposure: 1 });
+  assertTrue(zero.mean > 0 && zero.mean < m0 && zero.ci90[0] > 0, '1 Spiel ohne Tor: Posterior-Mittel > 0 und unter dem Prior-Mittel (Schrumpfung nach oben)');
+  // Pseudo-Spiele: halbe Gewichte = halbe Information, gleiche Rohquote
+  const half = S.gammaPoissonPosterior({ ...prior, count: 2, exposure: 0.5 });
+  assertTrue(half.mean < S.gammaPoissonPosterior({ ...prior, count: 4, exposure: 1 }).mean && half.mean > m0, 'Pseudo-Spiele: exposure 0.5 (Rohquote 4) schrumpft stärker als exposure 1 (Rohquote 4)');
+}
+
+console.log('== Gamma-Prior: Momentenschätzung im Pseudo-Spiele-Modell ==');
+{
+  // Handrechnung 1: zwei Einheiten, exposure 2 und 2, count 6 und 2: m = 8/4 = 2; r = 3, 1; Q = 2·1 + 2·1 = 4; Nenner = 4 − 8/4 = 2; τ² = (4 − 1·2)/2 = 1; α = 4, β = 2
+  const h1 = S.estimateGammaPrior([{ count: 6, exposure: 2 }, { count: 2, exposure: 2 }]);
+  assertEqual([h1.alpha, h1.beta, h1.mean, h1.tau2, h1.n, h1.totalCount, h1.totalExposure], [4, 2, 2, 1, 2, 8, 4], 'Handrechnung 1: (6, 2), (2, 2) → m = 2, τ² = 1, α = 4, β = 2');
+  // Handrechnung 2 (ungleiche Exposure): (5, 1), (2, 3), (5, 4): E = 8, Y = 12, m = 3/2; Q = 49/4 + 25/12 + 1/4 = 175/12; Nenner = 8 − 26/8 = 19/4; τ² = (175/12 − 3)/(19/4) = 139/57
+  const h2 = S.estimateGammaPrior([{ count: 5, exposure: 1 }, { count: 2, exposure: 3 }, { count: 5, exposure: 4 }]);
+  assertNear(h2.mean, 1.5, 1e-15, 'Handrechnung 2: m = 12/8 = 1.5');
+  assertNear(h2.tau2, 139 / 57, 1e-14, 'Handrechnung 2: τ² = 139/57 (Poisson-Rauschen mit der jeweiligen Exposure)');
+  assertNear(h2.alpha, 2.25 / (139 / 57), 1e-14, 'Handrechnung 2: α = m²/τ²');
+  assertNear(h2.beta, 1.5 / (139 / 57), 1e-14, 'Handrechnung 2: β = m/τ²');
+  assertNear(h2.alpha / h2.beta, h2.mean, 1e-14, 'α/β = m (Gamma-Mittel)');
+  assertNear(h2.alpha / (h2.beta * h2.beta), h2.tau2, 1e-14, 'α/β² = τ² (Gamma-Varianz)');
+  // Sonderfall exposure = 1: klassische Formel τ² = s² − m mit s² = Σ(y − m)²/(k − 1)
+  const ys = [0, 1, 1, 2, 5, 0, 3, 7, 1, 2];
+  const unit = S.estimateGammaPrior(ys.map((y) => ({ count: y, exposure: 1 })));
+  const mU = simpleMean(ys);
+  const s2 = ys.reduce((a, y) => a + (y - mU) ** 2, 0) / (ys.length - 1);
+  assertNear(unit.tau2, s2 - mU, 1e-13, 'Einheitsgewichte: τ² = s² − m (klassischer Poisson-Gamma-Momentenschätzer)');
+  // Unterschied zur naiven Formel: gleiche Raten, aber unterschiedliche Exposure → das Poisson-Rauschen hängt an der Exposure
+  const mixed = [{ count: 2, exposure: 0.5 }, { count: 14, exposure: 4 }, { count: 0, exposure: 0.2 }, { count: 3, exposure: 8 }, { count: 5, exposure: 1 }, { count: 1, exposure: 2 }];
+  const rr = mixed.map((o) => o.count / o.exposure); const rrMean = mixed.reduce((a, o) => a + o.count, 0) / mixed.reduce((a, o) => a + o.exposure, 0);
+  const naive = rr.reduce((a, r) => a + (r - simpleMean(rr)) ** 2, 0) / (rr.length - 1) - rrMean; // ungewichtete Standardformel auf Σwy/Σw
+  const pseudo = S.estimateGammaPrior(mixed).tau2;
+  assertTrue(Math.abs(pseudo - naive) > 0.05, `Modell P ≠ ungewichtete Standardformel auf den Raten (τ² ${pseudo.toFixed(4)} gegenüber ${naive.toFixed(4)})`);
+  // Reihenfolge
+  const base = [{ count: 6, exposure: 1.3 }, { count: 0, exposure: 0.7 }, { count: 9, exposure: 2.2 }, { count: 1, exposure: 3.1 }, { count: 4, exposure: 0.9 }, { count: 0.2, exposure: 0.4 }, { count: 14, exposure: 2.6 }];
+  const ref = JSON.stringify(S.estimateGammaPrior(base));
+  const rng = S.createRng(99);
+  let allSame = true;
+  for (let t = 0; t < 40; t++) {
+    const perm = base.slice();
+    for (let i = perm.length - 1; i > 0; i--) { const j = rng.nextInt(i + 1); [perm[i], perm[j]] = [perm[j], perm[i]]; }
+    if (JSON.stringify(S.estimateGammaPrior(perm)) !== ref) allSame = false;
+  }
+  assertTrue(allSame, 'Eingabereihenfolge (40 Permutationen) ändert das Ergebnis nicht (bitgleich)');
+  const baseBefore = clone(base);
+  S.estimateGammaPrior(base);
+  assertEqual(base, baseBefore, 'Eingabe wird nicht verändert');
+  assertEqual(JSON.stringify(S.estimateGammaPrior(base)), JSON.stringify(S.estimateGammaPrior(base)), 'wiederholte Aufrufe identisch');
+  // Skalierungsverhalten: Verdopplung aller count und exposure (Modell P: doppelt so viel Information bei gleichen Raten)
+  const doubled = S.estimateGammaPrior(base.map((o) => ({ count: 2 * o.count, exposure: 2 * o.exposure })));
+  assertNear(doubled.mean, S.estimateGammaPrior(base).mean, 1e-14, 'Verdopplung aller count/exposure: Mittelwert unverändert');
+  assertTrue(doubled.tau2 > S.estimateGammaPrior(base).tau2, 'Verdopplung: weniger Poisson-Rauschen ⇒ größeres geschätztes τ² bei gleichen Raten');
+  // Nicht schätzbare Fälle
+  throwsCode(() => S.estimateGammaPrior([{ count: 3, exposure: 2 }]), 'prior-not-estimable', 'nur 1 Beobachtung → nicht schätzbar');
+  throwsCode(() => S.estimateGammaPrior([{ count: 0, exposure: 1 }, { count: 0, exposure: 2 }, { count: 0, exposure: 3 }]), 'prior-not-estimable', 'Gesamtzähler 0 → nicht schätzbar');
+  throwsCode(() => S.estimateGammaPrior([{ count: 2, exposure: 1 }, { count: 4, exposure: 2 }, { count: 6, exposure: 3 }]), 'prior-not-estimable', 'identische Raten (keine Überdispersion, τ² < 0) → nicht schätzbar');
+  throwsCode(() => S.estimateGammaPrior([{ count: 3, exposure: 2 }, { count: 1, exposure: 2 }]), 'prior-not-estimable', 'τ² = 0 exakt (Q = (k − 1)·m) → nicht schätzbar (kein Clamping)');
+  throwsCode(() => S.estimateGammaPrior([{ count: 5, exposure: 1e-13 }, { count: 0, exposure: 1e6 }]), 'prior-not-estimable', 'ein Eintrag dominiert die Exposure (Nenner numerisch 0) → nicht schätzbar');
+  // Ungültige Eingaben
+  for (const bad of [null, undefined, {}, 'x', 5, []]) throwsCode(() => S.estimateGammaPrior(bad), 'invalid-input', `estimateGammaPrior(${JSON.stringify(bad)}) → Fehler`);
+  for (const [label, o] of [['count < 0', { count: -1, exposure: 1 }], ['count NaN', { count: NaN, exposure: 1 }], ['count Infinity', { count: Infinity, exposure: 1 }], ['count String', { count: '1', exposure: 1 }], ['exposure 0', { count: 1, exposure: 0 }], ['exposure < 0', { count: 1, exposure: -1 }], ['exposure NaN', { count: 1, exposure: NaN }], ['exposure fehlt', { count: 1 }], ['count fehlt', { exposure: 1 }], ['Eintrag null', null], ['Eintrag Zahl', 3]]) {
+    throwsCode(() => S.estimateGammaPrior([{ count: 2, exposure: 1 }, o, { count: 5, exposure: 1 }]), 'invalid-input', `ungültige Beobachtung: ${label} → Fehler`);
+  }
+  // Simulation: bekannte Parameter (Gamma(4, 2), Mittel 2, τ² = 1), Exposure zwischen 0.25 und 8 (Zeitgewichte machen Exposure nicht ganzzahlig)
+  const simulate = (seed, k) => {
+    const r = S.createRng(seed);
+    const exposures = [0.25, 0.5, 1, 1.75, 3, 8];
+    const out = [];
+    for (let i = 0; i < k; i++) {
+      let lambda = 0;
+      for (let j = 0; j < 4; j++) lambda += -Math.log(1 - r.nextFloat()) / 2; // Gamma(4, Rate 2) als Summe von 4 Exponentialgrößen
+      const e = exposures[i % exposures.length];
+      const u = r.nextFloat();
+      let c = 0; let cum = refPmf(0, lambda * e); let pm = cum;
+      while (u > cum && c < 200) { c++; pm *= (lambda * e) / c; cum += pm; }
+      out.push({ count: c, exposure: e });
+    }
+    return out;
+  };
+  const big = S.estimateGammaPrior(simulate(20260501, 12000));
+  assertTrue(Math.abs(big.mean - 2) < 0.08 && Math.abs(big.tau2 - 1) < 0.12, `Simulation k = 12000, Gamma(4, 2): m = ${big.mean.toFixed(3)} (≈ 2), τ² = ${big.tau2.toFixed(3)} (≈ 1) (Toleranzen 0.08 und 0.12)`);
+  assertTrue(Math.abs(big.alpha - 4) < 0.7 && Math.abs(big.beta - 2) < 0.35, `Simulation: α = ${big.alpha.toFixed(3)} (≈ 4), β = ${big.beta.toFixed(3)} (≈ 2)`);
+  let taus = 0; let fails = 0;
+  for (let s = 1; s <= 300; s++) {
+    try { taus += S.estimateGammaPrior(simulate(1000 + s, 120)).tau2; } catch (e) { if (e.code === 'prior-not-estimable') fails++; else throw e; }
+  }
+  const avgTau = taus / (300 - fails);
+  assertTrue(fails === 0 && Math.abs(avgTau - 1) < 0.05, `Erwartungstreue: Mittel von τ̂² über 300 Simulationen (k = 120) = ${avgTau.toFixed(3)} (≈ 1, Toleranz 0.05), ${fails} nicht schätzbar`);
+}
+
+console.log('== Gamma-Poisson: Determinismus ==');
+{
+  const run = () => {
+    const prior = S.estimateGammaPrior([{ count: 5, exposure: 1 }, { count: 2, exposure: 3 }, { count: 5, exposure: 4 }, { count: 0.6, exposure: 0.4 }]);
+    return JSON.stringify([prior, S.gammaPoissonPosterior({ ...prior, count: 3.3, exposure: 2.2 }), S.gammaQuantile(0.05, 7.7, 1.3), S.regularizedGammaP(3.3, 2.2), S.logGamma(12.34)]);
+  };
+  assertEqual(run() === run(), true, 'zwei identische Läufe liefern byte-identische Ergebnisse');
+}
+
 // ══ 8. Ausgabe-Rundung ══════════════════════════════════════════════════
 console.log('== roundOutput (Rundung erst an der Ausgabegrenze) ==');
 {

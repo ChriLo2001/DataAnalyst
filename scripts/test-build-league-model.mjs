@@ -350,7 +350,7 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   await main(['--only', 'M1', '--replicates=20', '--seed=3'], { stdout: b2.stream });
   assertEqual(b1.text, b2.text, 'M1-Bootstrap (seeded): zwei Läufe byte-identisch');
   assertTrue(b1.text.includes('Bootstrap: 20 Wiederholungen, Seed 3, 90-%-Perzentilintervall, Spielebene (beide Teamzeilen gemeinsam)') && b1.text.includes('Spiele gezogen'), 'M1-Bootstrap-Bericht nennt Spielebene und Seed');
-  for (const [args, label] of [[['--only', 'M2'], '--only M2 (nicht implementiert)'], [['--replicates', '30', '--seed', '1'], '--replicates ohne --only M1'], [['--only', 'M1', '--replicates', '30'], '--replicates ohne --seed (kein versteckter Seed)'], [['--only', 'M1', '--seed', '3'], '--seed ohne --replicates'], [['--only', 'M1', '--replicates', '5', '--seed', '1'], '--replicates < 20'], [['--only', 'M1', '--seed', '-1', '--replicates', '30'], 'ungültiger Seed'], [['--only'], '--only ohne Wert']]) {
+  for (const [args, label] of [[['--only', 'M3'], '--only M3 (nicht implementiert)'], [['--replicates', '30', '--seed', '1'], '--replicates ohne --only M1'], [['--only', 'M1', '--replicates', '30'], '--replicates ohne --seed (kein versteckter Seed)'], [['--only', 'M1', '--seed', '3'], '--seed ohne --replicates'], [['--only', 'M1', '--replicates', '5', '--seed', '1'], '--replicates < 20'], [['--only', 'M1', '--seed', '-1', '--replicates', '30'], 'ungültiger Seed'], [['--only'], '--only ohne Wert']]) {
     const e = capture();
     assertEqual(await main(args, { stdout: e.stream, stderr: e.stream }), 2, `${label}: Exit 2 mit Meldung`);
   }
@@ -358,12 +358,38 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   assertEqual([await main(['--only', 'M1', '--write'], { stdout: w1.stream, stderr: w1.stream }), /nicht implementiert/.test(w1.text)], [2, true], '--write bleibt auch mit --only M1 abgelehnt');
   const m1proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M1'], { encoding: 'utf8' });
   assertEqual(m1proc, m1a.text, 'echter CLI-Aufruf --only M1 liefert denselben Bericht');
+  // ── M2 (Torschützen-Qualität, Dry-Run): deterministisch, schreibt nichts, M0/M1-Ausgaben bleiben byte-identisch ──
+  const m2a = capture(); const m2b = capture(); const m2c = capture(); const m2d = capture();
+  assertEqual(await main(['--only', 'M2'], { stdout: m2a.stream }), 0, '--only M2: Exit 0');
+  await main(['--only=M2'], { stdout: m2b.stream });
+  assertEqual(m2a.text, m2b.text, '--only M2: zwei Läufe (auch als --only=M2) byte-identisch');
+  assertTrue(m2a.text.includes('UNABGESTIMMTER PLATZHALTER') && m2a.text.includes('halfLifeDays=365') && m2a.text.includes('Kaderspiel') && m2a.text.includes('Pseudo-Spiele-Modell') && m2a.text.includes('Prior-Unsicherheit ist nicht im ci90') && m2a.text.includes('Keine Gegnerbereinigung'), 'M2-Bericht: H = 365 unabgestimmt, Kaderspiel, Pseudo-Spiele-Modell, keine Prior-Unsicherheit im ci90, keine Gegnerbereinigung');
+  assertTrue(m2a.text.includes('Status: ok · Spieler: 268 · Kaderplätze (Spieler-Spiele): 3547'), 'M2-Bericht: 268 Spieler, 3547 Kaderplätze');
+  assertTrue(m2a.text.includes('Spielern zugeordnet 3101 (davon Strafschuss 23) · Eigentore 22 · not_assigned 3 · ohne Spielerzeile 1'), 'M2-Bericht: 3101 Tore zugeordnet (23 Strafschuss), 22 Eigentore, 3 not_assigned, 1 Tor ohne Spielerzeile');
+  assertTrue(m2a.text.includes('von Goalies (keinem Feldspieler zugerechnet) 74') && m2a.text.includes('assists-by-goalies-not-attributed ×74') && m2a.text.includes('roster-missing-player-id ×2'), 'M2-Bericht: Goalie-Assists und Kaderzeilen ohne playerId als Warnung');
+  await main(['--only', 'M2', '--json'], { stdout: m2c.stream });
+  await main(['--only=M2', '--json'], { stdout: m2d.stream });
+  assertEqual(m2c.text, m2d.text, '--only M2 --json: zwei Läufe byte-identisch');
+  const m2json = JSON.parse(m2c.text);
+  assertEqual([m2json.snapshots.length, m2json.snapshots[0].label, m2json.snapshots[0].fit.players.length, m2json.snapshots[1].fit.players, m2json.snapshots[1].fit.playerCount, m2json.options.placeholders], [6, 'all', 268, undefined, 110, ['halfLifeDays']], '--only M2 --json: 6 Stände, Spielerliste nur im Hauptstand, Saisonende-Stände mit playerCount');
+  assertEqual([m2json.snapshots[0].fit.players.reduce((a, p) => a + p.goals, 0), m2json.snapshots[0].fit.quality.goals.attributed, m2json.snapshots[0].fit.status], [3101, 3101, 'ok'], '--only M2 --json: Σ Spielertore = 3101 = zugeordnete Tore');
+  assertTrue(!/NaN|Infinity/.test(m2c.text) && !/\d+\.\d{9,}/.test(m2c.text), '--only M2 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
+  for (const [args, label] of [[['--only', 'M2', '--replicates', '30', '--seed', '1'], '--only M2 mit --replicates/--seed (gehören zu M1)'], [['--only', 'M2', '--write'], '--only M2 --write']]) {
+    const e = capture();
+    assertEqual(await main(args, { stdout: e.stream, stderr: e.stream }), 2, `${label}: Exit 2 mit Meldung`);
+  }
+  const m2proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M2'], { encoding: 'utf8' });
+  assertEqual(m2proc, m2a.text, 'echter CLI-Aufruf --only M2 liefert denselben Bericht');
+  // M0/M1-Ausgaben sind byte-identisch zum Stand vor M2 (SHA-256 der Ausgabe von HEAD 734e86f)
+  const m0t = capture(); const m0j = capture(); const m1t = capture(); const m1j = capture();
+  await main([], { stdout: m0t.stream }); await main(['--json'], { stdout: m0j.stream }); await main(['--only', 'M1'], { stdout: m1t.stream }); await main(['--only', 'M1', '--json'], { stdout: m1j.stream });
+  assertEqual([sha(m0t.text), sha(m0j.text), sha(m1t.text), sha(m1j.text)], ['fc0c2a685c6462b9ba218edbc4dea3a3dc7da06c6dd94e3f246cf1e59ed61e62', '73163f2335e13cea42dc1620b44283f8620b0149888d577b3843c91069881392', '84b4c6c70a14fef2f3d4c76000f3b31c9a03b86fcb1295d20b5e9ae9e1c82e12', 'f7b8d829f7eb5b023a59e26f4af8566640e192a8ab12875566c41861cdcfeb5c'], 'M0-Bericht (Text/JSON) und M1-Bericht (Text/JSON) sind byte-identisch zum Stand vor M2 (SHA-256)');
   const snapAfter = await repoSnapshot();
   assertEqual(snapAfter, snapBefore, 'Repository unverändert (Dateiliste, Größen, Änderungszeiten) — Dry-Run schreibt nichts');
   assertEqual(await fileHashes(GUARDED), hashBefore, 'season-data, index.html, Golden-Baseline und die wiederverwendeten Module sind unverändert (SHA-256)');
   assertTrue(!snapAfter.some((l) => l.startsWith('model-data/')), 'kein model-data/ erzeugt');
   assertEqual(fetchCalls, 0, 'kein fetch-Aufruf');
-  for (const f of ['scripts/build-league-model.mjs', 'scripts/model/normalize.mjs']) {
+  for (const f of ['scripts/build-league-model.mjs', 'scripts/model/normalize.mjs', 'scripts/model/shooter-quality.mjs']) {
     const s = (await readFile(path.join(REPO_ROOT, f), 'utf8')).replace(/\/\/.*$/gm, '');
     assertTrue(!/\bfetch\(|node:http|node:https|node:net|node:dns|WebSocket|XMLHttpRequest|writeFile|appendFile|createWriteStream|rename\(|mkdir/.test(s), `${f}: kein Netzwerk- und kein Schreibzugriff im Code`);
   }

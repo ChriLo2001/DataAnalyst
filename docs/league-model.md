@@ -1,6 +1,6 @@
-# Liga-Modell: technische Dokumentation (Stand P1a / M0 und P2 Runde 2 / M1)
+# Liga-Modell: technische Dokumentation (Stand P1a / M0, P2 Runde 2 / M1 und P3 Runde 2 / M2)
 
-Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: **P1a (M0 Datenaufbereitung)** und **P2 Runde 2 (M1 Teamstärke, nur Node/Dry-Run)**, dazu die numerischen Bausteine aus `stats.mjs` (P2 Runde 1). Grundlage ist die Spezifikation `docs/liga-analytics-spezifikation.md` (Abschnitt 4, M0 und M1). Weitere Module sind noch nicht implementiert und hier nicht beschrieben. Der M1-Abschnitt beginnt bei „## M1 · Teamstärke“.
+Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: **P1a (M0 Datenaufbereitung)**, **P2 Runde 2 (M1 Teamstärke, nur Node/Dry-Run)** und **P3 Runde 2 (M2 Torschützen-Qualität, nur Node/Dry-Run)**, dazu die numerischen Bausteine aus `stats.mjs` (P2 Runde 1 und Gamma-Poisson-Grundlagen für M2). Grundlage ist die Spezifikation `docs/liga-analytics-spezifikation.md` (Abschnitt 4, M0 und M1). Weitere Module sind noch nicht implementiert und hier nicht beschrieben. Der M1-Abschnitt beginnt bei „## M1 · Teamstärke“.
 
 **M0 ist Normalisierung und Datenqualitätsbasis.** M0 entscheidet keine späteren fachlichen Kennzahlen: keine Eigentor-Gutschrift, keine Strafminuten, keine Zeitrekonstruktion, keine Spieleridentität aus Platzhaltern, kein Ableiten des Ausrichters ohne Rohwert.
 
@@ -12,9 +12,11 @@ Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: 
 | `scripts/build-league-model.mjs` | CLI: liest `season-data/`, normalisiert alle Saisons, druckt den Datenqualitätsbericht |
 | `scripts/test-model-normalize.mjs` | synthetische Fälle, Negativ-/Invariantentests und Drift-Test gegen `index.html` |
 | `scripts/test-build-league-model.mjs` | Pins der echten Saisons, unabhängige Nachrechnung gegen die Rohdaten, Determinismus, Dry-Run (auch für `--only M1`) |
-| `scripts/model/stats.mjs` | generische Numerik (Poisson-Ridge, Skellam, Log-Loss, seeded Bootstrap, …), Tests in `scripts/test-model-stats.mjs` |
+| `scripts/model/stats.mjs` | generische Numerik (Poisson-Ridge, Skellam, Log-Loss, seeded Bootstrap, Gamma-Poisson-Grundlagen für M2, …), Tests in `scripts/test-model-stats.mjs` |
 | `scripts/model/team-strength.mjs` | M1: Teamstärke-Fit (Stufe 1 + Host-Stufe 2), `asOf`, Vorhersage, Bootstrap auf Spielebene |
 | `scripts/test-model-team-strength.mjs` | M1-Tests mit Mutations-Sensitivität |
+| `scripts/model/shooter-quality.mjs` | M2: Torschützen-Qualität (Gamma-Poisson, Pseudo-Spiele-Modell, Stufen), Aufruf über `--only M2` |
+| `scripts/test-model-shooter-quality.mjs` | M2-Tests (Aggregation, `asOf`/Leakage, Prior/Posterior, Stufen, Identität, Leerzustände, echte Daten) |
 
 Wiederverwendet (nicht kopiert): `compareGamesChronologically` (`game-ordering.mjs`), `buildMatchdays` (`matchday-derivation.mjs`), `canonicalJson` und `sha256Hex` (`lineup-data-hash.mjs`). `index.html` wird nicht verändert und nicht geladen.
 
@@ -25,6 +27,7 @@ node scripts/build-league-model.mjs          # M0-Bericht im Terminal
 node scripts/build-league-model.mjs --json   # derselbe Bericht als kanonisches JSON
 node scripts/build-league-model.mjs --only M1                           # M1-Bericht (ohne Bootstrap)
 node scripts/build-league-model.mjs --only M1 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene)
+node scripts/build-league-model.mjs --only M2                           # M2-Torschützen-Qualität (siehe Abschnitt „M2“)
 ```
 
 - Das Skript ist ein **Dry-Run** und schreibt nichts. Einen Schreibmodus gibt es nicht: `--write` wird mit Exit-Code 2 abgelehnt (auch mit `--only M1`). Es entstehen keine `model-data/`-Dateien und kein `manifest.json`.
@@ -196,6 +199,158 @@ Seeded, **auf Spielebene**: Es werden Spiele mit Zurücklegen gezogen, beide Tea
 - `halfLifeDays`, `ridge`, Kreuzvalidierung und Warnschwelle sind Platzhalter bzw. konfigurierbar; die Abstimmung gehört zu M9.
 - **Owner-Entscheidung offen:** endgültige Definition von `leagueAvgGoalsPerTeamGame`. Die aktuelle Implementierung ist vorläufig und liefert zwei Mittel über die Zeilen im Fit: `leagueAvgGoalsPerTeamGame` (ungewichtet) und `weightedLeagueAvgGoalsPerTeamGame` (mit `w_i` gewichtet). Ein Saisonmittel wie im Beispiel der Spezifikation ist nicht implementiert.
 - Unter O2 tragen die 88 `false`-Zeilen (Teil der 112 bekannten Host-Zeilen in Stufe 2) mathematisch nichts zur Schätzung von `β_host` bei (siehe „Eigenschaft von Stufe 2“); das ist eine Konsequenz der Formel, keine Entscheidung offen.
+
+## Numerische Grundlagen für M2 (Gamma-Poisson, nur `stats.mjs`)
+
+Dieser Abschnitt beschreibt ausschließlich die numerischen Bausteine in `scripts/model/stats.mjs` (Abschnitt 8 der Datei). **Es gibt noch kein M2-Modul:** keine Spieleraggregation, keine Zeitgewichtung, keine `asOf`-Logik, keine Stufen (Tiers), keine Ranglisten, keine Build-/CLI-Integration und keine Ausgabe. Die Funktionen kennen weder Spieler noch Teams noch Zeit, sie rechnen mit gewichteten Zählern und Exposure.
+
+### Pseudo-Spiele-Modell (Modell P)
+
+Eine Einheit (später: ein Spieler) wird durch zwei gewichtete Größen beschrieben:
+
+- `count = Σ wᵢ·yᵢ` (gewichteter Zähler, z. B. Tore),
+- `exposure = Σ wᵢ` (gewichtete Exposure, „Pseudo-Spiele").
+
+Ohne Gewichte ist `wᵢ = 1`. Das Modell behandelt diese Größen wie eine Poisson-Beobachtung mit Exposure:
+
+```
+count | λ ~ Poisson(λ · exposure),      λ ~ Gamma(α, β)   (Rate-Parametrisierung)
+```
+
+Die Rate-Parametrisierung gilt überall: Mittel `α/β`, Varianz `α/β²`. Das Modell ist **bewusst ein diskontiertes Pseudo-Spiele-Modell**: Ein Spiel mit dem Gewicht 0,5 zählt wie ein halbes Spiel. Prior-Momente, Posterior und Intervall stammen aus demselben Modell. Es gibt **keine** Varianzkorrektur über eine effektive Stichprobengröße (`n_eff`); diese Alternative ist nicht implementiert und wurde nicht gewählt.
+
+### Funktionen
+
+| Funktion | Zweck |
+|---|---|
+| `logGamma(x)` | `ln Γ(x)`, x > 0 endlich (Lanczos, g = 7). x ≤ 0, NaN oder Infinity: `NumericError 'invalid-input'`. |
+| `regularizedGammaP(a, x)`, `regularizedGammaQ(a, x)` | regularisierte untere bzw. obere unvollständige Gammafunktion, `a ∈ (0, MAX_GAMMA_SHAPE]`, x ≥ 0 endlich. Reihe für `x < a + 1`, Kettenbruch (Lentz) sonst; jeweils der genauere Zweig, `Q` im oberen Bereich ohne Auslöschung. |
+| `gammaCdf(x, shape, rate)` | Verteilungsfunktion, `P(shape, rate·x)`. |
+| `gammaQuantile(p, shape, rate)` | Quantil in Rate-Parametrisierung. `q(0) = 0`, `q(1) = Infinity`; sonst endlich und positiv. Abgesichertes Newton-Verfahren mit Bisektion im Klammerintervall. |
+| `estimateGammaPrior(observations)` | Momentenschätzung des Priors aus `[{count, exposure}]`. |
+| `gammaPoissonPosterior({alpha, beta, count, exposure})` | Posterior `Gamma(alpha + count, beta + exposure)`, Mittel und `ci90`. |
+
+`MAX_GAMMA_SHAPE = 1e5` ist eine technische Schutzgrenze, kein Fachwert. Alle Funktionen geben ungerundete Werte zurück; gerundet wird erst an der Ausgabegrenze (`roundOutput`, 8 Nachkommastellen).
+
+### Prior-Momente (`estimateGammaPrior`)
+
+Für `k` Beobachtungen mit `rᵢ = countᵢ/exposureᵢ`, `E = Σ exposureᵢ`, `Y = Σ countᵢ` gilt im Modell P `E[rᵢ] = m = α/β` und `Var(rᵢ) = τ² + m/exposureᵢ` mit `τ² = α/β²`. Das Poisson-Rauschen `m/exposureᵢ` verwendet die **gewichtete Exposure**, nicht die Spielzahl. Daraus:
+
+```
+m̂  = Y / E
+Q   = Σ exposureᵢ · (rᵢ − m̂)²
+τ̂² = (Q − (k − 1)·m̂) / (E − Σ exposureᵢ² / E)
+α   = m̂² / τ̂²          β = m̂ / τ̂²
+```
+
+`τ̂²` ist unter Modell P erwartungstreu für `τ²`. Für `exposureᵢ = 1` ergibt die Formel `s² − m̂` (klassischer Poisson-Gamma-Momentenschätzer). Es wird also nicht die ungewichtete Standardformel auf `Σwy/Σw` angewendet. Die Beobachtungen werden vor dem Summieren kanonisch nach (`exposure`, `count`) sortiert und kompensiert summiert; das Ergebnis hängt nicht von der Eingabereihenfolge ab. Die Eingabe wird nicht verändert. Rückgabe: `alpha`, `beta`, `mean` (= `m̂`), `tau2`, `n`, `totalCount`, `totalExposure`.
+
+### Posterior und ci90 (`gammaPoissonPosterior`)
+
+- Posterior: `alphaPost = alpha + count`, `betaPost = beta + exposure`; Mittel `alphaPost / betaPost`.
+- `ci90 = [q05, q95]` der Posterior-Verteilung (gleichseitiges 90-%-Intervall, Rate-Parametrisierung).
+- **Prior-Unsicherheit ist nicht Bestandteil des ci90.** Der aus den Daten geschätzte Prior gilt im Posterior als fest; das Intervall beschreibt nur die Unsicherheit der einzelnen Einheit bei gegebenem Prior. Da Gewichte im Modell P wie Bruchteile eines Spiels wirken, hat das Intervall diese Pseudo-Spiele-Bedeutung; es ist unter Zeitgewichten eine Modellaussage, keine Stichprobenvarianz des gewichteten Schätzers.
+
+### Grenzen und Fehlerfälle
+
+Alle Fehler sind `NumericError`; `stats.mjs` gibt nie stillschweigend NaN oder Infinity zurück.
+
+- `'invalid-input'`: Wertebereich verletzt (z. B. `shape ≤ 0` oder `> MAX_GAMMA_SHAPE`, `rate ≤ 0`, `p ∉ [0, 1]`, `count < 0`, `exposure ≤ 0` in `estimateGammaPrior`, `exposure = 0` mit `count > 0` im Posterior, nicht endliche oder nicht numerische Werte). `gammaPoissonPosterior` erlaubt `exposure = 0` nur mit `count = 0` (Posterior = Prior).
+- `'prior-not-estimable'` (nur `estimateGammaPrior`): weniger als 2 Beobachtungen, Gesamtzähler 0, Nenner der `τ²`-Schätzung numerisch 0 (≤ 1e-12·E, technische Schutzgrenze) oder `τ̂² ≤ 0` (keine Überdispersion). **Kein Clamping, keine Vollschrumpfung, keine Ersatzlösung.** Ein späteres M2-Modul übersetzt diesen Fehler in einen gültigen Warn- bzw. Leerzustand (Spezifikation 3.6.2, Invariante 3); das ist hier nicht implementiert.
+- `'no-convergence'`: Reihe, Kettenbruch oder Quantilsuche konvergieren nicht (in den Tests nicht aufgetreten).
+- `'non-finite'`: Ergebnis nicht darstellbar (z. B. `x·rate` überläuft, Quantil unterläuft).
+
+### Genauigkeit
+
+Gemessen in den Tests: `ln Γ(n+1)` gegen `logFactorial` bis n = 170 mit relativem Fehler < 1e-15; `P` gegen die Poisson-Identität (ganzzahliges `a`) und eine erf-Reihe (halbzahliges `a`) mit Fehler ≤ 1e-13; `P(gammaQuantile(p)) = p` mit Abweichung ≤ 2,3e-13 bis `shape = 1000` und ≤ 1,5e-12 bei `shape = 2e4` und `1e5` (Auslöschung in der Exponentialform), bei Tabellenwerten der χ²-Verteilung mit relativem Fehler < 1e-12. Damit sind 8 Nachkommastellen der ci90-Grenzen gesichert.
+
+### Was hier nicht enthalten ist
+
+Spieleraggregation, Zeitgewichte, `asOf`, Stufen, Ausgabeschema, Build-Integration und die Übersetzung der Fehler in Warnzustände liegen in `shooter-quality.mjs` (siehe Abschnitt „M2 · Torschützen-Qualität“). Gegnerbereinigung, Heißphase und Ranglisten sind nicht implementiert.
+
+## M2 · Torschützen-Qualität (P3 Runde 2, nur Node/Dry-Run)
+
+Umsetzung der Spezifikation (M2, Abschnitt 4) in `scripts/model/shooter-quality.mjs`, Tests in `scripts/test-model-shooter-quality.mjs`, Aufruf über `node scripts/build-league-model.mjs --only M2`. **Keine UI, keine Persistenz, kein `model-data/`.** M2 liest ausschließlich M0-Daten (`teamGames`, `rosterEntries`, `goalEvents`) und die numerischen Bausteine aus `stats.mjs` (siehe „Numerische Grundlagen für M2“).
+
+### Ziel
+
+Für jeden Feldspieler eine belastbare Quote für Tore, Assists und Scorerpunkte je Kaderspiel, die kleine Stichproben zum Ligaschnitt hin schrumpft (Empirical Bayes, Gamma-Poisson), mit 90-%-Intervall und einer Einordnung in Schützen-Stufen.
+
+### Kaderpräsenz statt Einsatzzeit
+
+Ein **Kaderplatz** ist genau **ein Spieler-Spiel**: eine Zeile in `rosterEntries` mit `isGoalie === false` und gültiger `playerId` in einem Modellspiel. Die Quote ist ausdrücklich eine Quote **pro Kaderspiel**, nicht pro Einsatz; Eiszeit ist in den Daten nicht vorhanden. Ein Spiel zählt für einen Spieler höchstens einmal als Exposure (eine weitere Zeile derselben `playerId` im selben Spiel wird nicht gezählt und als Warnung gemeldet; bei widersprüchlichen Duplikaten gewinnt in kanonischer Sortierung die Zeile mit dem kleineren Schlüssel aus Saison, Spiel, Seite, `teamKey`, `playerId`, Name).
+
+Ausgeschlossen (gezählt, nicht still verworfen): Goalie-Zeilen (`isGoalie === true`), Zeilen mit anderem oder fehlendem `isGoalie`, Zeilen ohne gültige `playerId`, Duplikate, Zeilen zu Spielen ohne bekanntes oder mit ungültigem bzw. widersprüchlichem Datum, Zeilen nach dem `asOf`-Datum.
+
+### Tore, Assists, Scorerpunkte
+
+Nur `goalEvents` liefern Tore und Assists; jedes Ereignis wird genau einmal gelesen. `penaltyShotEvents` werden nie gelesen: sie sind dieselben Ereignisse wie die Strafschuss-Tore in `goalEvents` (23 in den echten Daten).
+
+- **Tor:** `derived.scorerMatch === 'roster'` mit gültiger `scorerPlayerId`, sofern der Schütze in diesem Spiel einen Feldspieler-Kaderplatz hat. Ein Tor ohne Spielerzeile (z. B. Kaderzeile ohne `playerId`) wird gezählt und gewarnt, nicht zugerechnet.
+- **Strafschuss-Tore** sind normale Tore (genau einmal); `isPenaltyShot` wird nur als Zähler (`quality.goals.penaltyShot`) ausgewiesen, es gibt keine separate Strafschussquote.
+- **Eigentore** (`isOwnGoal`) und **`not_assigned`** haben keinen Spieler und keinen Assist und zählen nicht als Spielertor. Das ist weder Fehler noch Warnung.
+- **Assists:** `assistKind === 'player'` → 1 Assist für den Assistgeber, wenn er in diesem Spiel einen Feldspieler-Kaderplatz hat; `'none'` → 0; `'placeholder'` und `'unmatched'` → kein zugeordneter Assist (gezählt und gewarnt). Assists von Goalies werden keinem Feldspieler zugerechnet (gezählt und gewarnt). Es wird nichts imputiert; die Assist-Lücken der Quelldaten (in 21/22 fehlt der Schlüssel `assist` bei 138 Toren, M0 liest das als „kein Assist“) sind Datenqualitätsgrenzen, keine Korrektur.
+- **Scorerpunkte** = Tore + Assists je Spieler-Spiel, eigene Zielvariable.
+
+### Zeitachse und Gewichtung (wie M1)
+
+`asOf = { date, inclusive }` wie in M1 (Standard: letztes Datum, inclusive). Spieltag-Etiketten werden vorher mit den M1-Helfern `asOfAfterMatchday` (inclusive, letztes Datum des Spieltags) bzw. `asOfBeforeMatchday` (exclusive, erstes Datum) in ein Datum übersetzt. Es gilt die M1-Funktion `timeWeight(Datum, asOf.date, H)` mit `w = 2^(−Alter/H)`, Alter in Kalendertagen; `H = halfLifeDays` hat denselben unabgestimmten Platzhalter wie M1 (365, Abstimmung über M9). Nur Spiele im Datumsschnitt fließen ein, **für Spielerwerte und Prior gleichermaßen**; Spiele nach `asOf` werden nur als `quality.roster.afterAsOf` gezählt. Vor dem ersten Spiel ist das Ergebnis ein gültiger Leerzustand.
+
+### Modell: drei Priors, Posterior, ci90
+
+Pseudo-Spiele-Modell aus `stats.mjs`, je Zielvariable (`goals`, `assists`, `points`) **getrennt**: `count = Σ w·y`, `exposure = Σ w` je Spieler; der Gamma-Prior wird mit `estimateGammaPrior` aus **allen Feldspielern im `asOf`-Fenster** geschätzt (keine Mindest-Exposure; auch Spieler mit sehr kleiner gewichteter Exposure bleiben in der Grundgesamtheit). Der Posterior ist `Gamma(α + count, β + exposure)`; `…PerGameShrunk` ist sein Mittel, `…Ci90` = [q05, q95]. **Die Prior-Unsicherheit ist nicht Bestandteil des ci90.** Die Gewichte wirken wie Bruchteile eines Spiels; das Intervall ist eine Modellaussage im Pseudo-Spiele-Modell, keine Stichprobenvarianz des gewichteten Schätzers.
+
+`…PerGameRaw` = `goals/games` bzw. `assists/games` bzw. `points/games` — die **ungewichtete** Rohquote über die tatsächlichen Spieler-Spiele. Das gewichtete Zählerpaar (`count`, `exposure`) dient **ausschließlich** der Prior-/Posterior-Schätzung (Pseudo-Spiele-Modell) und ist nicht die Rohquote; `weightedExposure` steht separat im Output. `…PerGameRaw` ist also nicht `count/exposure`.
+
+### Stufen
+
+Je Zielvariable getrennt auf der **ungerundeten** geschrumpften Quote aller schätzbaren Spieler: `q20` und `q80` nach Quantil Typ 7 (`quantile` aus `stats.mjs`); `value > q80` → `top`, `value < q20` → `weak`, sonst `middle`. **Gleichstände an `q20`/`q80` landen in `middle`; es gibt keinen Tie-Break.** Deshalb sind die Stufen nicht exakt gleich große Quintile. Nicht schätzbare Spieler haben `null`. **Keine Mindestgröße** (O2: alle Feldspieler mit Exposure im `asOf`-Fenster, ohne Mindestanzahl an Spielen oder Mindest-Exposure): Stufen werden über alle schätzbaren Spieler berechnet, auch bei sehr kleiner Population (bis hinunter zu 1 Spieler, dann `q20 = q80 = Wert`, Stufe `middle`). Nur wenn kein einziger Spieler einen schätzbaren Posterior hat, ist `tiers.<ziel>.status = 'no-estimable-players'` (rein informativ; entfernt niemanden aus `players[]`, dort ist die Stufe dann ohnehin `null`).
+
+### Identität, Name, Teams
+
+- Identität ausschließlich `playerId`. Keine automatische Zusammenführung verschiedener `playerId`s mit gleichem Namen (in den echten Daten „René Thoma“ und „Vincent Wörner“ mit je zwei IDs); Spieler ohne `playerId` erhalten keine Zeile.
+- `name`: Schreibweise des **jüngsten** Spiels des Spielers im Fenster; bei gleichem Datum die lexikographisch kleinste; leere Namen werden übersprungen.
+- `teams[]`: **alle** `teamKey`s der Spieler-Spiele im Fenster, sortiert nach dem letzten Spieldatum im Fenster absteigend, bei gleichem Datum nach `teamKey` aufsteigend. Es gibt kein Einzelfeld `team`. **Schema-Präzisierung gegenüber dem Spezifikationsbeispiel** (`"team": "…"`): Spieler wechseln zwischen Saisons das Team (46 in den echten Daten), ein einzelnes „aktuelles“ Team wäre eine willkürliche Auswahl.
+- Stufen: `tier` gilt für Tore (wie im Spezifikationsbeispiel), `assistsTier` für Assists, `pointsTier` für Punkte.
+
+### Ergebnisobjekt (`fitShooterQuality(data, { asOf, halfLifeDays })`)
+
+`{ model, status, asOf, asOfGameDate, options, players[], priors, tiers, quality, warnings }`.
+
+- `status`: `'ok'` (alle drei Priors schätzbar), `'partial'`, `'not-estimable'` (kein Prior schätzbar), `'empty'` (kein Spieler im Fenster).
+- `players[]` (nach `playerId` aufsteigend): `playerId, name, teams, games, weightedExposure`, je Ziel `goals|assists|points`, `…PerGameRaw`, `…PerGameShrunk`, `…Ci90` (`[q05, q95]`), sowie `tier, assistsTier, pointsTier`.
+- `priors.<ziel>`: `estimable, reason, alpha, beta, mean, tau2, n, totalCount, totalExposure` (bei nicht schätzbar `null` bzw. `reason` = Fehlercode, z. B. `'prior-not-estimable'`).
+- `tiers.<ziel>`: `status` (`'ok'`, `'no-estimable-players'`, `'prior-not-estimable'`, `'no-data'`), `n`, `q20`, `q80`.
+- Nicht schätzbare Zustände sind gültige Ergebnisse (analog `emptyResult` in M1): geschätzte Felder `null`, keine NaN/Infinity, kein Clamping, keine Vollschrumpfung; Rohquoten bleiben.
+
+### Warnungen (`warnings[]`, nur wenn der Zähler > 0)
+
+`empty-asof` (`reason`: `no-rows-in-cutoff` | `no-eligible-rows`), `roster-missing-date`, `roster-invalid-date`, `roster-invalid-goalie-flag`, `roster-missing-player-id`, `roster-duplicate-row`, `goals-without-player-row`, `goals-unmatched`, `assists-by-goalies-not-attributed`, `assists-without-player-row`, `assists-placeholder`, `assists-unmatched`, `assists-unknown-kind`, `prior-not-estimable` (`target`, `reason`), `player-not-estimable` (`target`, `count`). Kein Warnfall: Eigentore, `not_assigned`, Strafschuss-Tore, Assistart `none`, kleine oder einelementige Stufen-Population (`tiers.<ziel>.status` ist informativ, siehe „Stufen“).
+
+**Assist-Rohkategorien im Detail** (Abgleich mit der M0-Auswertung, Stand aller fünf Saisons): M0 zählt `assistKind` über **alle** 3127 Tor-Ereignisse: `player` 2177, `none` 930, `placeholder` 17, `unmatched` 3. M2 liest `assistKind` nur für Ereignisse, die **weder Eigentor noch `not_assigned`** sind (bei beiden gibt es laut M0 „keinen Schützen, keinen Assist“ — das Ereignis wird komplett übersprungen, bevor die Assist-Art überhaupt geprüft wird). Die Differenz erklärt sich vollständig darüber:
+- `none`: 930 − 21 (auf Eigentoren) = **909** bei M2.
+- `placeholder`: 17 − 1 (ein Eigentor mit Platzhalter-Assistnummer 2000) = **16** bei M2.
+- `unmatched`: 3 − 3 (alle 3 liegen auf `not_assigned`-Ereignissen) = **0** bei M2.
+- `player`: 2177, unverändert (kein `player`-Assist liegt auf einem Eigentor oder `not_assigned`, das erzwingt M0 bereits selbst). Davon zerfällt M2 weiter in `attributed` 2102 (Feldspieler mit Kaderplatz im Spiel), `assists-by-goalies-not-attributed` 74 (Assistgeber ist Torhüter) und `assists-without-player-row` 1 — ein Kaderspieler ohne `playerId` (21/22, Spiel 25691), dessen `assistPlayerId` deshalb `null` ist, obwohl `assistKind` `player` lautet.
+
+Es gibt keine Überschneidung zwischen `placeholder`, `unmatched` und „Spieler ohne `playerId`“: Das sind drei unabhängige Fälle (Rohnummer im Platzhalterbereich; Rohnummer passt zu keinem Kaderspieler; Rohnummer passt zu einem Kaderspieler, dessen `player_id` in den Quelldaten fehlt).
+
+### Aufruf
+
+```bash
+node scripts/build-league-model.mjs --only M2          # Bericht (Stand über alle Daten, Top 10, Stände am Ende jeder Saison)
+node scripts/build-league-model.mjs --only M2 --json   # kanonisches JSON, Werte auf 8 Nachkommastellen gerundet
+```
+
+Die Rundung passiert erst an dieser Ausgabegrenze (`roundOutput`). Im JSON steht die Spielerliste nur im Hauptstand (`snapshots[0]`, `label: "all"`); die Saisonende-Stände enthalten Prior, Stufen, Qualität, Warnungen und `playerCount`. Der Standardlauf ohne `--only` (M0-Bericht) und `--only M1` sind unverändert und byte-identisch zum Stand vor M2; der M0-Vollbericht enthält kein M2. `--replicates`/`--seed` gehören zu M1; M2 hat keinen Bootstrap.
+
+### Datenqualitätsgrenzen (echte Daten, Stand aller fünf Saisons)
+
+268 Feldspieler, 3547 Kaderplätze; 487 Goalie-Zeilen und 2 Kaderzeilen ohne `playerId` ausgeschlossen. 3127 Tor-Ereignisse: 3101 Spielern zugeordnet (davon 23 Strafschüsse), 22 Eigentore, 3 `not_assigned`, 1 Tor eines Kaderspielers ohne `playerId` (keine Spielerzeile; 3101 + 1 = 3102 Tore mit Kaderschütze). Assists: 2102 Feldspielern zugeordnet, 74 von Goalies, 1 vom Spieler ohne `playerId`, 16 Platzhalter. Das sind Beobachtungen, keine Pins der Modellwerte.
+
+### Bewusst nicht enthalten
+
+Gegnerbereinigung (Spezifikation: optional; ein späterer Ausbau würde M1 an M2 koppeln), „Heißphase“ (M8), Persistenz (`model-data/`), UI und Ranglisten-Sortierung im Modul. `H = 365` ist ein unabgestimmter Platzhalter (M9). Die Stufen kennen keine Mindestgröße (Owner-Entscheidung O2).
 
 ## Bewusst nicht interpretierte Daten
 

@@ -6,6 +6,7 @@
 //   node scripts/build-league-model.mjs --only M1                          # M1-Teamstärke (Dry-Run, ohne Bootstrap)
 //   node scripts/build-league-model.mjs --only M1 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap auf Spielebene
 //   (--json wirkt auch mit --only M1)
+//   node scripts/build-league-model.mjs --only M2                          # M2-Torschützen-Qualität (Dry-Run, kein Bootstrap; --json möglich)
 //
 // Schreibt NICHTS ins Repository. Einen Schreibmodus (`--write`, model-data/) gibt es in P1a
 // bewusst noch nicht; der Aufruf wird mit einer Meldung abgelehnt. Kein Netzwerk, keine Uhrzeit
@@ -19,6 +20,7 @@ import { normalizeSeason } from './model/normalize.mjs';
 import { canonicalJson, sha256Hex } from './lineup-data-hash.mjs';
 import { roundOutput } from './model/stats.mjs';
 import { DEFAULTS, PLACEHOLDER_OPTIONS, fitTeamStrength, bootstrapTeamStrength } from './model/team-strength.mjs';
+import { DEFAULTS as M2_DEFAULTS, PLACEHOLDER_OPTIONS as M2_PLACEHOLDER_OPTIONS, fitShooterQuality } from './model/shooter-quality.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -134,6 +136,67 @@ export function formatM1Report(m1) {
   return lines.join('\n') + '\n';
 }
 
+// ── M2 · Torschützen-Qualität (Dry-Run) ────────────────────────────────────
+
+/** Berechnet die M2-Schnappschüsse: Stand über alle Daten und Stand am Ende jeder Saison (asOf = letztes Datum, inclusive). */
+export function buildM2(model) {
+  const data = {
+    teamGames: model.seasons.flatMap((s) => s.teamGames),
+    goalEvents: model.seasons.flatMap((s) => s.goalEvents),
+    rosterEntries: model.seasons.flatMap((s) => s.rosterEntries),
+  };
+  const latest = data.teamGames.map((r) => r.date).sort().at(-1) ?? null;
+  const snapshots = [{ label: 'all', fit: fitShooterQuality(data, { asOf: latest ? { date: latest, inclusive: true } : undefined }) }];
+  for (const s of model.seasons) {
+    const last = s.teamGames.map((r) => r.date).sort().at(-1);
+    if (last) snapshots.push({ label: s.seasonKey, fit: fitShooterQuality(data, { asOf: { date: last, inclusive: true } }) });
+  }
+  return { options: { ...M2_DEFAULTS, placeholders: [...M2_PLACEHOLDER_OPTIONS] }, snapshots };
+}
+
+const r3 = (x) => (x === null || x === undefined ? '–' : x.toFixed(3));
+const TARGET_LABELS = { goals: 'Tore   ', assists: 'Assists', points: 'Punkte ' };
+
+/** Menschenlesbarer M2-Bericht (deterministisch, ohne Zeitstempel). */
+export function formatM2Report(m2) {
+  const o = m2.options;
+  const lines = [];
+  lines.push('Liga-Modell · M2-Torschützen-Qualität (P3 Runde 2) — Dry-Run, es wird nichts geschrieben');
+  lines.push(`Hyperparameter (UNABGESTIMMTER PLATZHALTER, gemeinsam mit M1, Abstimmung erst über M9): halfLifeDays=${o.halfLifeDays}`);
+  lines.push('Hinweis: Quoten je KADERSPIEL (Kaderpräsenz, nicht Einsatzzeit). Zeitgewichtung als Pseudo-Spiele-Modell: Prior, Posterior und ci90 (Posterior q05/q95) verwenden dieselben gewichteten Zähler und Exposure; Prior-Unsicherheit ist nicht im ci90. Drei getrennte Gamma-Priors (Tore, Assists, Punkte). Keine Gegnerbereinigung, keine UI.');
+  const main = m2.snapshots[0].fit;
+  const q = main.quality;
+  lines.push('');
+  lines.push(`══ Stand: alle Daten bis ${main.asOf.date ?? '–'} ══`);
+  lines.push(`Status: ${main.status} · Spieler: ${main.players.length} · Kaderplätze (Spieler-Spiele): ${q.roster.playerGames}`);
+  lines.push('Prior je Zielvariable (Gamma, Rate-Parametrisierung; Ø = α/β, τ² = α/β²):');
+  for (const t of ['goals', 'assists', 'points']) {
+    const p = main.priors[t];
+    lines.push(`   ${TARGET_LABELS[t]} ${p.estimable ? `α ${r3(p.alpha)}  β ${r3(p.beta)}  Ø ${r3(p.mean)}  τ² ${r3(p.tau2)}` : `nicht schätzbar (${p.reason})`}  (Spieler ${p.n})`);
+  }
+  lines.push('Stufen (Quintile der ungerundeten geschrumpften Quote, Typ 7; top > q80, weak < q20, Gleichstand = middle):');
+  for (const t of ['goals', 'assists', 'points']) {
+    const s = main.tiers[t];
+    lines.push(`   ${TARGET_LABELS[t]} ${s.status === 'ok' ? `q20 ${r3(s.q20)}  q80 ${r3(s.q80)}` : `keine Stufen (${s.status})`}  (Spieler ${s.n})`);
+  }
+  lines.push(`Kader: im Fenster ${q.roster.inWindow} · Goalies ausgeschlossen ${q.roster.goalieExcluded} · ohne playerId ausgeschlossen ${q.roster.noPlayerId} · doppelt ${q.roster.duplicate} · nach asOf ${q.roster.afterAsOf} · Datum fehlt/ungültig ${q.roster.missingDate}/${q.roster.invalidDate}`);
+  lines.push(`Tore: Ereignisse ${q.goals.events} · Spielern zugeordnet ${q.goals.attributed} (davon Strafschuss ${q.goals.penaltyShot}) · Eigentore ${q.goals.own} · not_assigned ${q.goals.notAssigned} · ohne Spielerzeile ${q.goals.withoutPlayerRow} · nicht zuordenbar ${q.goals.unmatched}`);
+  lines.push(`Assists: Spielern zugeordnet ${q.assists.attributed} · kein Assist ${q.assists.none} · Platzhalter ${q.assists.placeholder} · unmatched ${q.assists.unmatched} · von Goalies (keinem Feldspieler zugerechnet) ${q.assists.byGoalie} · ohne Spielerzeile ${q.assists.withoutPlayerRow}`);
+  lines.push(`Warnungen: ${main.warnings.length}`);
+  for (const w of main.warnings) lines.push(`   · ${w.code}${w.target ? ' ' + w.target : ''}${w.count !== undefined ? ' ×' + w.count : ''}${w.reason ? ' (' + w.reason + ')' : ''}`);
+  lines.push('Top 10 nach geschrumpfter Torquote (Tore je Kaderspiel, zeitgewichtet; games = Kaderspiele im Fenster):');
+  const top = main.players.filter((p) => p.goalsPerGameShrunk !== null).sort((a, b) => b.goalsPerGameShrunk - a.goalsPerGameShrunk || a.playerId - b.playerId).slice(0, 10);
+  for (const p of top) lines.push(`   ${String(p.name ?? p.playerId).padEnd(26)} games ${String(p.games).padStart(3)}  Tore ${String(p.goals).padStart(3)}  roh ${r3(p.goalsPerGameRaw)}  geschrumpft ${r3(p.goalsPerGameShrunk)}  ci90 [${r3(p.goalsCi90[0])}; ${r3(p.goalsCi90[1])}]  Stufe ${p.tier}  Teams ${p.teams.join(', ')}`);
+  lines.push('');
+  lines.push('══ Stand am Ende jeder Saison (asOf = letztes Datum der Saison, inclusive) ══');
+  for (const sn of m2.snapshots.slice(1)) {
+    const fit = sn.fit;
+    const g = fit.priors.goals;
+    lines.push(`${sn.label} (bis ${fit.asOf.date}): Status ${fit.status} · Spieler ${fit.players.length} · Prior Tore ${g.estimable ? `α ${r3(g.alpha)} β ${r3(g.beta)}` : 'nicht schätzbar'} · Warnungen ${fit.warnings.length}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
 function parseArgs(argv) {
   const out = { json: false, only: null, replicates: null, seed: null, unknown: [], errors: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -155,18 +218,18 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
   const args = parseArgs(argv);
   if (args.unknown.length) {
     if (args.unknown.includes('--write')) stderr.write('--write ist nicht implementiert: es werden keine model-data-Dateien geschrieben (nur Dry-Run).\n');
-    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S]]\n`);
+    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2]\n`);
     return 2;
   }
   const problems = [...args.errors];
-  if (args.only !== null && args.only !== 'M1') problems.push('nur --only M1 ist implementiert');
+  if (args.only !== null && args.only !== 'M1' && args.only !== 'M2') problems.push('nur --only M1 und --only M2 sind implementiert');
   if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1') problems.push('--replicates und --seed gehören zu --only M1');
   if (args.replicates !== null && !(Number.isInteger(args.replicates) && args.replicates >= 20)) problems.push('--replicates muss eine ganze Zahl ≥ 20 sein');
   if (args.seed !== null && !(Number.isInteger(args.seed) && args.seed < 2 ** 32)) problems.push('--seed muss eine ganze Zahl in [0, 2^32) sein');
   if (args.replicates !== null && args.seed === null) problems.push('--replicates braucht ausdrücklich --seed (kein versteckter Standard-Seed)');
   if (args.seed !== null && args.replicates === null) problems.push('--seed ohne --replicates hat keine Wirkung');
   if (problems.length) {
-    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S]]\n`);
+    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2]\n`);
     return 2;
   }
   const model = await buildLeagueModel(repoRoot);
@@ -176,6 +239,15 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
       const strip = (fit) => { const { bootstrap, ...rest } = fit; return bootstrap ? { ...rest, bootstrap } : rest; };
       stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m1.options, snapshots: m1.snapshots.map((sn) => ({ label: sn.label, fit: strip(sn.fit) })) })) + '\n');
     } else stdout.write(formatM1Report(m1));
+    return 0;
+  }
+  if (args.only === 'M2') {
+    const m2 = buildM2(model);
+    if (args.json) {
+      // Spielerliste nur im Hauptstand (alle Daten); die Saisonende-Stände enthalten die Zusammenfassung ohne Spielerliste (playerCount).
+      const slim = (fit, keepPlayers) => { const { players, ...rest } = fit; return keepPlayers ? fit : { ...rest, playerCount: players.length }; };
+      stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m2.options, snapshots: m2.snapshots.map((sn, i) => ({ label: sn.label, fit: slim(sn.fit, i === 0) })) })) + '\n');
+    } else stdout.write(formatM2Report(m2));
     return 0;
   }
   if (args.json) {
