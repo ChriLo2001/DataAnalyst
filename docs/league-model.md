@@ -1,6 +1,6 @@
-# Liga-Modell: technische Dokumentation (Stand P1a / M0, P2 Runde 2 / M1 und P3 Runde 2 / M2)
+# Liga-Modell: technische Dokumentation (Stand P1a / M0, P2 Runde 2 / M1 und P3 Runde 2 / M2 + M3)
 
-Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: **P1a (M0 Datenaufbereitung)**, **P2 Runde 2 (M1 Teamstärke, nur Node/Dry-Run)** und **P3 Runde 2 (M2 Torschützen-Qualität, nur Node/Dry-Run)**, dazu die numerischen Bausteine aus `stats.mjs` (P2 Runde 1 und Gamma-Poisson-Grundlagen für M2). Grundlage ist die Spezifikation `docs/liga-analytics-spezifikation.md` (Abschnitt 4, M0 und M1). Weitere Module sind noch nicht implementiert und hier nicht beschrieben. Der M1-Abschnitt beginnt bei „## M1 · Teamstärke“.
+Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: **P1a (M0 Datenaufbereitung)**, **P2 Runde 2 (M1 Teamstärke, nur Node/Dry-Run)** und **P3 Runde 2 (M2 Torschützen-Qualität und M3 Goalie-Bewertung, nur Node/Dry-Run)**, dazu die numerischen Bausteine aus `stats.mjs` (P2 Runde 1 und Gamma-Poisson-Grundlagen für M2). Grundlage ist die Spezifikation `docs/liga-analytics-spezifikation.md` (Abschnitt 4, M0 und M1). Weitere Module sind noch nicht implementiert und hier nicht beschrieben. Der M1-Abschnitt beginnt bei „## M1 · Teamstärke“.
 
 **M0 ist Normalisierung und Datenqualitätsbasis.** M0 entscheidet keine späteren fachlichen Kennzahlen: keine Eigentor-Gutschrift, keine Strafminuten, keine Zeitrekonstruktion, keine Spieleridentität aus Platzhaltern, kein Ableiten des Ausrichters ohne Rohwert.
 
@@ -17,6 +17,8 @@ Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: 
 | `scripts/test-model-team-strength.mjs` | M1-Tests mit Mutations-Sensitivität |
 | `scripts/model/shooter-quality.mjs` | M2: Torschützen-Qualität (Gamma-Poisson, Pseudo-Spiele-Modell, Stufen), Aufruf über `--only M2` |
 | `scripts/test-model-shooter-quality.mjs` | M2-Tests (Aggregation, `asOf`/Leakage, Prior/Posterior, Stufen, Identität, Leerzustände, echte Daten) |
+| `scripts/model/goalie-rating.mjs` | M3: Goalie-Bewertung (erwartete Gegentore Variante A, TvE, Bootstrap über M1, Schützenqualität der Gegentore über M2, Kontext-Splits), Aufruf über `--only M3` |
+| `scripts/test-model-goalie-rating.mjs` | M3-Tests (Variante-A-Formel, Solo/Shared, Sichtbarkeit, Bootstrap, Response-Momentum, Halbzeit, Weak-Shooter, `asOf`/Leakage, Teamhistorie, echte Daten) |
 
 Wiederverwendet (nicht kopiert): `compareGamesChronologically` (`game-ordering.mjs`), `buildMatchdays` (`matchday-derivation.mjs`), `canonicalJson` und `sha256Hex` (`lineup-data-hash.mjs`). `index.html` wird nicht verändert und nicht geladen.
 
@@ -28,10 +30,12 @@ node scripts/build-league-model.mjs --json   # derselbe Bericht als kanonisches 
 node scripts/build-league-model.mjs --only M1                           # M1-Bericht (ohne Bootstrap)
 node scripts/build-league-model.mjs --only M1 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene)
 node scripts/build-league-model.mjs --only M2                           # M2-Torschützen-Qualität (siehe Abschnitt „M2“)
+node scripts/build-league-model.mjs --only M3                           # M3-Goalie-Bewertung (ohne Bootstrap, siehe Abschnitt „M3“)
+node scripts/build-league-model.mjs --only M3 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene)
 ```
 
-- Das Skript ist ein **Dry-Run** und schreibt nichts. Einen Schreibmodus gibt es nicht: `--write` wird mit Exit-Code 2 abgelehnt (auch mit `--only M1`). Es entstehen keine `model-data/`-Dateien und kein `manifest.json`.
-- `--only M1`: `--replicates N` (ganze Zahl ≥ 20) und `--seed S` gehören zusammen; es gibt keinen versteckten Standard-Seed.
+- Das Skript ist ein **Dry-Run** und schreibt nichts. Einen Schreibmodus gibt es nicht: `--write` wird mit Exit-Code 2 abgelehnt (auch mit `--only M1`/`--only M3`). Es entstehen keine `model-data/`-Dateien und kein `manifest.json`.
+- `--only M1`/`--only M3`: `--replicates N` (ganze Zahl ≥ 20) und `--seed S` gehören zusammen; es gibt keinen versteckten Standard-Seed.
 - Kein Netzwerk, keine externen Pakete, keine Uhrzeit in der Ausgabe. Gleiche Eingabedaten ergeben byte-identische Ausgabe.
 - Der Bericht enthält den `inputHash` (SHA-256 über die kanonisch serialisierten Saisondateien in der Reihenfolge von `season-data/seasons.json`).
 
@@ -351,6 +355,99 @@ Die Rundung passiert erst an dieser Ausgabegrenze (`roundOutput`). Im JSON steht
 ### Bewusst nicht enthalten
 
 Gegnerbereinigung (Spezifikation: optional; ein späterer Ausbau würde M1 an M2 koppeln), „Heißphase“ (M8), Persistenz (`model-data/`), UI und Ranglisten-Sortierung im Modul. `H = 365` ist ein unabgestimmter Platzhalter (M9). Die Stufen kennen keine Mindestgröße (Owner-Entscheidung O2).
+
+## M3 · Goalie-Bewertung (P3 Runde 2, nur Node/Dry-Run)
+
+Umsetzung der Spezifikation (M3, Abschnitt 4) in `scripts/model/goalie-rating.mjs`, Tests in `scripts/test-model-goalie-rating.mjs`, Aufruf über `node scripts/build-league-model.mjs --only M3`. **Keine UI, keine Persistenz, kein `model-data/`.** M3 liest M0-Daten (`teamGames`, `rosterEntries`, `goalEvents`) und ruft **ausschließlich die öffentlichen Funktionen** von M1 (`fitTeamStrength`, `bootstrapTeamStrength`, `kaderStage`) und M2 (`fitShooterQuality`) auf — keine Änderung, keine Fachlogik-Duplikation in `team-strength.mjs`/`shooter-quality.mjs`.
+
+### Ziel
+
+Goalies aller Teams vergleichbar machen, ohne Schussdaten: Tore verhindert gegenüber Erwartung (TvE), Schützenqualität der Gegentore, Kontext-Splits.
+
+### Erwartete Gegentore: ausschließlich Variante A
+
+`expectedGA` verwendet **ausschließlich** die Angriffsstärke des Gegners und dessen Kontext — **bewusst kein `defense[eigenesTeam]`-Term** (anders als M1s `predictDuel`, das für ein Duell immer beide Teamstärken gegeneinander aufrechnet). Grund: „eigene Abwehr ohne Goalie-Anteil ist mit diesen Daten nicht trennbar“ — genau das ist die Größe, die TvE messen soll; sie darf nicht durch das Abziehen der bereits gefitteten Team-Abwehr vorab neutralisiert werden. Formel (`expectedGoalsAgainst(fit, opponentRow)`):
+
+```
+η_A = μ + attack[Gegner] + β_order·O_i + β_le6·K6_i + β_ge9·K9_i + (β_host, falls der GEGNER in diesem Spiel Ausrichter ist)
+expectedGA = exp(η_A)
+```
+
+`O_i`/`K6_i`/`K9_i` stammen aus der **eigenen Zeile des Gegners** in genau diesem Spiel (dessen `gameOrderOfDay`/`fieldPlayerCount`, über `kaderStage` aus M1), nicht aus der Zeile des eigenen Teams. `μ`, `attack[…]`, die Effekte und `β_host` kommen unverändert aus `fitTeamStrength`s öffentlichem Rückgabeobjekt; ein Team ohne Eintrag im Fit erhält `attack = 0` (Ligaschnitt, wie bei `predictDuel`). Variante B (Goalie als eigener Effekt in einer M1-Regression) ist **nicht implementiert** und nicht Teil dieses Umfangs.
+
+### Solo- versus Shared-Goalie-Spiele
+
+Ein Team-Spiel mit `goalieCount === 1` ist **Solo** und zählt in jeder individuellen Metrik voll. `goalieCount === 2` ist **Shared**: nicht in `games`, `goalsAgainst`, `expectedGA`, `tve`, `tvePerGame`, `tveCI90`, `weakShooterGA`, `weakShooterGAExpected` oder den Kontext-Splits — `sharedGames` ist ein **reiner Zähler** ohne numerischen Beitrag. Team-Spiele ohne Goalie im Kader (`goalieCount === 0`) werden gezählt (`quality.teamGames.none`, Warnung `team-games-without-goalie`), aber keinem Goalie zugeordnet.
+
+### TvE (Tore verhindert gegenüber Erwartung)
+
+```
+tve = Σ (expectedGA_i − actualGA_i)   über die Solo-Spiele des Goalies (Neumaier-Summe, stats.sum)
+tvePerGame = tve / games
+```
+
+**Positives TvE = weniger Gegentore als erwartet** (der Goalie/das Team hat besser verteidigt als der Modell-Erwartungswert für einen durchschnittlichen Gegner in diesem Kontext).
+
+### Sichtbarkeit (0 / 1–3 / ≥4 Solo-Spiele)
+
+`games` = Anzahl **Solo**-Spiele. Bei **0** Spielen bleibt der Goalie in `players[]` (nichts wird entfernt); alle numerischen Metriken sind `null`, `confidence: 'insufficient'`, `teams[]`/`sharedGames` bleiben erhalten, sofern vorhanden. Bei **1–3** Spielen sind die numerischen Werte, soweit berechenbar, vorhanden; `confidence: 'insufficient'`; der Goalie steht **nicht** in `rankList`. Ab **≥ 4** Spielen ist `confidence: 'ok'`, der Goalie kann in `rankList` stehen (zusätzlich nur, wenn `tve` tatsächlich nicht `null` ist). Die Schwelle (`MIN_GAMES_FOR_RANK = 4`) ist das Akzeptanzkriterium der Spezifikation.
+
+### Bootstrap (`tveCI90`)
+
+Einheit = **vollständige Liga-Spiele** (`gameUnits`, beide Team-Seiten gemeinsam) — dieselbe Einheit, die M1s eigenes Bootstrap verwendet, weil `attack[Gegner]` eine ligaweite Größe ist und nur bei vollständigem M1-Refit pro Wiederholung sinnvoll neu geschätzt werden kann. M3 implementiert **kein eigenes Refit**: Es ruft `bootstrapTeamStrength(teamGames, { asOf, replicates, seed, keepReplicates: true })` genau einmal auf und wertet für jedes Replikat denselben `η_A`-Ausdruck auf den **unveränderten, echten** Solo-Spielen des jeweiligen Goalies aus (nur die Koeffizienten variieren). `tveCI90 = [quantile(0.05), quantile(0.95)]` der Replikat-TvE-Werte. Ohne `replicates`/`seed` bleibt `tveCI90` überall `null`.
+
+### Schützenqualität der Gegentore (M2-Kopplung)
+
+`weakShooterGA` = tatsächliche Anzahl Gegentore mit M2-Tier `'weak'` (nur Solo-Spiele). `weakShooterGAExpected` ist **gegnerspezifisch**: je Gegner-Team der Anteil `weak`-getierter Tore an **allen** seinen zuordenbaren Toren im selben `asOf`-Fenster (unabhängig vom einzelnen Spiel, **nicht** ligaweit, nicht zirkulär), angewendet auf die tatsächlichen Gegentore je Spiel dieses Gegners. Ein Gegentor ohne bestimmbaren Tier (kein Kaderplatz mit `playerId`, oder M2-Prior nicht schätzbar) zählt als `tierUnknown` (`quality.scoring.tierUnknown`), **nie** als `weak` oder `top`, bleibt aber Teil von `goalsAgainst`.
+
+### asOf-Kopplung an M1 und M2
+
+M3 erhält **ein** `asOf`-Objekt (`{ date, inclusive }`, dasselbe Format wie M1) und reicht es **unverändert** an `fitTeamStrength`/`bootstrapTeamStrength` **und** `fitShooterQuality` durch. Keine Daten nach `asOf` fließen ein (weder in die Goalie-Spiele selbst noch in M1 noch in M2).
+
+### Kontext-Splits (nur Solo-Spiele)
+
+- `order1vs2`: eigene `derived.gameOrderOfDay` des Goalie-Teams (1. gegenüber 2. Spiel).
+- `kaderStufe`: eigene `fieldPlayerCount` über `kaderStage` (le6 / Referenz 7–8 / ge9).
+- `hz1vsHz2`: **ausschließlich** über `goalEvents[].period` (1/2) — robust gegenüber kumulierten Zeitformaten, in denen `absSec` allein die Halbzeit nicht mehr zuverlässig anzeigt; rein deskriptiv (Rohzahlen je Halbzeit), kein halbzeitspezifisches Erwartungsmodell.
+- `concededShortlyAfterOwnGoal` (Response-Momentum): für jedes eigene Tor eines Solo-Spiels das **chronologisch nächste** Tor-Ereignis desselben Spiels (Reihenfolge über den laufenden Index in `eventKey`, quellgetreu, unabhängig von `absSec`-Lesbarkeit). Ist es ein Gegentor **und** liegt die `absSec`-Differenz ≤ 60 s bzw. ≤ 120 s, zählt `within60`/`within120` (60 s ⊂ 120 s). Eigenes Tor oder nächstes Tor mit `absSec === null` → ausgeschlossen, gezählt/gewarnt, keine Schätzung. **Nicht** die bestehende Response-Momentum-Logik aus `index.html` (andere Richtung: dort Antwort nach einem Gegentor, hier Gegentor nach einem eigenen Tor; andere Fenster 120 s/300 s).
+- `shorthandedVsEqual` (Unterzahl gegenüber gleicher Anzahl): **immer `null`**, mit Warnung `shorthanded-split-not-available`. M0 liefert keine abgeleitete Verknüpfung zwischen Strafzeiten (`penaltyEvents`) und Torzeitpunkt (`absSec`); eine solche Ableitung wäre eine neue Fachlogik und ist bewusst nicht gebaut worden. Alle anderen Splits werden davon unabhängig berechnet.
+
+### `highLeverageGA`
+
+**Immer `null`**, mit Warnung `high-leverage-not-available`. M6 (Win Probability/Leverage) existiert nicht; die Phasenreihenfolge (P3 vor P6) wird nicht vorgezogen.
+
+### Identität, Teams
+
+Aggregation ausschließlich über `playerId`. `name`: exakt die M2-Regel (Schreibweise des jüngsten Spiels im Fenster, bei Gleichstand lexikographisch kleinste). `teams[]`: alle tatsächlichen `teamKey`s aus jeder Kaderzeile im Fenster (Solo, Shared und sonstige), sortiert wie in M2 (letztes Datum absteigend, dann `teamKey` aufsteigend). **Keine SG-/`statisticalClub`-Zuordnung** — `teamKey`/`teams[]` bilden ausschließlich die tatsächliche Spielseite ab, wie in M1/M2.
+
+### Ergebnisobjekt (`fitGoalieRating(data, { asOf, halfLifeDays, ridge, replicates, seed })`)
+
+`{ model, status, asOf, asOfGameDate, options, players[], rankList[], priors, quality, warnings }`.
+
+- `status`: `'ok'` (M1 schätzbar), `'not-estimable'` (M1 nicht schätzbar — dann sind `expectedGA`/`tve`/`tveCI90` für alle Goalies `null`), `'empty'` (kein Goalie im Fenster).
+- `players[]` (nach `playerId` aufsteigend): `playerId, name, teams, games, sharedGames, goalsAgainst, expectedGA, tve, tvePerGame, tveCI90, weakShooterGA, weakShooterGAExpected, highLeverageGA, splits{order1vs2, hz1vsHz2, kaderStufe, shorthandedVsEqual, concededShortlyAfterOwnGoal}, confidence`.
+- `rankList[]`: nur Goalies mit `confidence === 'ok'` und `tve !== null`, sortiert nach `tvePerGame` absteigend (Tiebreak `tve`, dann `playerId`).
+- `priors`: `{ m1: {estimable, reason}, m2: {estimable, reason} }` — Transparenz, ob die zugrunde liegenden M1-/M2-Fits schätzbar waren.
+- Rundung erst an der Ausgabegrenze (`roundOutput`, 8 Nachkommastellen); das Modul selbst liefert ungerundete Werte.
+- Determinismus: fester `seed` (Pflicht zusammen mit `replicates`), kanonisch sortierte Zwischenschritte, `stats.sum` (Neumaier) statt naiver Array-Summe — Ergebnis unabhängig von der Eingabereihenfolge.
+
+### Aufruf
+
+```bash
+node scripts/build-league-model.mjs --only M3                           # Bericht (Stand über alle Daten, Rangliste, Stände am Ende jeder Saison)
+node scripts/build-league-model.mjs --only M3 --json                    # kanonisches JSON, Werte auf 8 Nachkommastellen gerundet
+node scripts/build-league-model.mjs --only M3 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene, wie M1)
+```
+
+Im JSON stehen `players[]`/`rankList[]` nur im Hauptstand (`snapshots[0]`, `label: "all"`); die Saisonende-Stände enthalten `playerCount`/`rankListCount` statt der Listen. `--replicates`/`--seed` gehören zu `--only M1` oder `--only M3`. Der Standardlauf ohne `--only` (M0-Bericht), `--only M1` und `--only M2` sind unverändert und byte-identisch zum Stand vor M3.
+
+### Datenlage (echte Daten, Stand aller fünf Saisons)
+
+43 Goalies, 428 Team-Spiel-Zeilen im Fenster: 365 Solo, 61 Shared, 2 ohne Goalie im Kader. 39 Goalies mit mindestens einem Solo-Spiel, davon 16 mit weniger als 4 Solo-Spielen; 4 Goalies ganz ohne Solo-Spiel. Das sind Beobachtungen, keine Pins der Modellwerte.
+
+### Bewusst nicht enthalten
+
+Variante B (Goalie-Ridge-Effekt in einer eigenen Regression), `highLeverageGA` (M6), `shorthandedVsEqual` (keine passende abgeleitete M0-Information), Persistenz (`model-data/`), UI, SG-/Vereinszuordnung.
 
 ## Bewusst nicht interpretierte Daten
 

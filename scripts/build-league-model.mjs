@@ -7,6 +7,8 @@
 //   node scripts/build-league-model.mjs --only M1 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap auf Spielebene
 //   (--json wirkt auch mit --only M1)
 //   node scripts/build-league-model.mjs --only M2                          # M2-Torschützen-Qualität (Dry-Run, kein Bootstrap; --json möglich)
+//   node scripts/build-league-model.mjs --only M3                          # M3-Goalie-Bewertung (Dry-Run, ohne Bootstrap)
+//   node scripts/build-league-model.mjs --only M3 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene, wie M1)
 //
 // Schreibt NICHTS ins Repository. Einen Schreibmodus (`--write`, model-data/) gibt es in P1a
 // bewusst noch nicht; der Aufruf wird mit einer Meldung abgelehnt. Kein Netzwerk, keine Uhrzeit
@@ -21,6 +23,7 @@ import { canonicalJson, sha256Hex } from './lineup-data-hash.mjs';
 import { roundOutput } from './model/stats.mjs';
 import { DEFAULTS, PLACEHOLDER_OPTIONS, fitTeamStrength, bootstrapTeamStrength } from './model/team-strength.mjs';
 import { DEFAULTS as M2_DEFAULTS, PLACEHOLDER_OPTIONS as M2_PLACEHOLDER_OPTIONS, fitShooterQuality } from './model/shooter-quality.mjs';
+import { MIN_GAMES_FOR_RANK as M3_MIN_GAMES_FOR_RANK, BOOTSTRAP_LEVEL as M3_BOOTSTRAP_LEVEL, fitGoalieRating } from './model/goalie-rating.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -197,6 +200,59 @@ export function formatM2Report(m2) {
   return lines.join('\n') + '\n';
 }
 
+// ── M3 · Goalie-Bewertung (Dry-Run) ────────────────────────────────────────
+
+/**
+ * Berechnet die M3-Schnappschüsse: Stand über alle Daten (optional mit Bootstrap) und Stand am Ende jeder Saison
+ * (ohne Bootstrap, wie bei M1). Ruft ausschließlich die öffentliche `fitGoalieRating` aus goalie-rating.mjs auf —
+ * keine M3-Fachlogik hier. asOf identisch zum M1/M2-Muster (letztes Datum, inclusive).
+ */
+export function buildM3(model, { replicates, seed } = {}) {
+  const data = {
+    teamGames: model.seasons.flatMap((s) => s.teamGames),
+    goalEvents: model.seasons.flatMap((s) => s.goalEvents),
+    rosterEntries: model.seasons.flatMap((s) => s.rosterEntries),
+  };
+  const run = (asOf) => (replicates ? fitGoalieRating(data, { asOf, replicates, seed }) : fitGoalieRating(data, { asOf }));
+  const latest = data.teamGames.map((r) => r.date).sort().at(-1) ?? null;
+  const snapshots = [{ label: 'all', fit: run(latest ? { date: latest, inclusive: true } : undefined) }];
+  for (const s of model.seasons) {
+    const last = s.teamGames.map((r) => r.date).sort().at(-1);
+    if (last) snapshots.push({ label: s.seasonKey, fit: fitGoalieRating(data, { asOf: { date: last, inclusive: true } }) });
+  }
+  return { options: { minGamesForRank: M3_MIN_GAMES_FOR_RANK, bootstrap: replicates ? { replicates, seed, level: M3_BOOTSTRAP_LEVEL, unit: 'game' } : null }, snapshots };
+}
+
+/** Menschenlesbarer M3-Bericht (deterministisch, ohne Zeitstempel). */
+export function formatM3Report(m3) {
+  const o = m3.options;
+  const lines = [];
+  lines.push('Liga-Modell · M3-Goalie-Bewertung (P3 Runde 2) — Dry-Run, es wird nichts geschrieben');
+  lines.push(`Mindestspiele für Rang (Akzeptanzkriterium): ${o.minGamesForRank}`);
+  lines.push(o.bootstrap ? `Bootstrap: ${o.bootstrap.replicates} Wiederholungen, Seed ${o.bootstrap.seed}, 90-%-Perzentilintervall, Spielebene (beide Teamzeilen gemeinsam, wie M1)` : 'Bootstrap: aus (--replicates N --seed S aktiviert ihn, wie bei --only M1)');
+  lines.push('Hinweis: expectedGA ausschließlich Variante A (μ + attack[Gegner] + Kontext des Gegners + Host-Faktor nur für den Gegner, BEWUSST ohne defense[eigenesTeam]-Term). Shared-Goalie-Spiele (goalieCount = 2) fließen in keine individuelle Metrik ein, nur in sharedGames. weakShooterGAExpected ist gegnerspezifisch (Weak-Anteil des Gegners im selben asOf-Fenster, nicht ligaweit). HZ-Split ausschließlich über period. highLeverageGA ist aktuell immer null (M6 existiert nicht), shorthandedVsEqual ist aktuell immer null (M0 liefert keine passende abgeleitete Information). Keine UI, keine Gegner-Vereinszuordnung.');
+  const main = m3.snapshots[0].fit;
+  const q = main.quality;
+  lines.push('');
+  lines.push(`══ Stand: alle Daten bis ${main.asOf.date ?? '–'} ══`);
+  lines.push(`Status: ${main.status} · Goalies: ${main.players.length} · Rangliste: ${main.rankList.length}`);
+  lines.push(`Team-Spiele im Fenster: ${q.teamGames.total} · Solo ${q.teamGames.solo} · Shared ${q.teamGames.shared} · ohne Goalie ${q.teamGames.none}`);
+  lines.push(`Kaderzeilen: ${q.roster.goalieRowsInWindow} (Solo ${q.roster.solo}, Shared ${q.roster.shared}, sonstige ${q.roster.other}, doppelt ${q.roster.duplicate})`);
+  lines.push(`Schützenqualität der Gegentore: bekannter Tier ${q.scoring.tierKnown} (davon weak ${q.scoring.weak}) · unbekannter Tier ${q.scoring.tierUnknown}`);
+  lines.push(`Momentum (Gegentor kurz nach eigenem Tor): Zeit nicht bestimmbar bei ${q.momentum.ownGoalNullAbsSec + q.momentum.nextGoalNullAbsSec} Ereignissen (eigenes Tor ${q.momentum.ownGoalNullAbsSec}, nächstes Tor ${q.momentum.nextGoalNullAbsSec})`);
+  lines.push(`Warnungen: ${main.warnings.length}`);
+  for (const w of main.warnings) lines.push(`   · ${w.code}${w.count !== undefined ? ' ×' + w.count : ''}${w.reason ? ' (' + w.reason + ')' : ''}`);
+  lines.push(`Rangliste nach TvE je Spiel (nur Goalies mit confidence = ok, mindestens ${o.minGamesForRank} Solo-Spiele):`);
+  for (const r of main.rankList.slice(0, 10)) lines.push(`   ${String(r.name ?? r.playerId).padEnd(26)} tve ${f3(r.tve)}  tvePerGame ${f3(r.tvePerGame)}`);
+  lines.push('');
+  lines.push('══ Stand am Ende jeder Saison (asOf = letztes Datum der Saison, inclusive) ══');
+  for (const sn of m3.snapshots.slice(1)) {
+    const fit = sn.fit;
+    lines.push(`${sn.label} (bis ${fit.asOf.date}): Status ${fit.status} · Goalies ${fit.players.length} · Rangliste ${fit.rankList.length} · Warnungen ${fit.warnings.length}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
 function parseArgs(argv) {
   const out = { json: false, only: null, replicates: null, seed: null, unknown: [], errors: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -218,18 +274,18 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
   const args = parseArgs(argv);
   if (args.unknown.length) {
     if (args.unknown.includes('--write')) stderr.write('--write ist nicht implementiert: es werden keine model-data-Dateien geschrieben (nur Dry-Run).\n');
-    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2]\n`);
+    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S]]\n`);
     return 2;
   }
   const problems = [...args.errors];
-  if (args.only !== null && args.only !== 'M1' && args.only !== 'M2') problems.push('nur --only M1 und --only M2 sind implementiert');
-  if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1') problems.push('--replicates und --seed gehören zu --only M1');
+  if (args.only !== null && args.only !== 'M1' && args.only !== 'M2' && args.only !== 'M3') problems.push('nur --only M1, --only M2 und --only M3 sind implementiert');
+  if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1' && args.only !== 'M3') problems.push('--replicates und --seed gehören zu --only M1 oder --only M3');
   if (args.replicates !== null && !(Number.isInteger(args.replicates) && args.replicates >= 20)) problems.push('--replicates muss eine ganze Zahl ≥ 20 sein');
   if (args.seed !== null && !(Number.isInteger(args.seed) && args.seed < 2 ** 32)) problems.push('--seed muss eine ganze Zahl in [0, 2^32) sein');
   if (args.replicates !== null && args.seed === null) problems.push('--replicates braucht ausdrücklich --seed (kein versteckter Standard-Seed)');
   if (args.seed !== null && args.replicates === null) problems.push('--seed ohne --replicates hat keine Wirkung');
   if (problems.length) {
-    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2]\n`);
+    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S]]\n`);
     return 2;
   }
   const model = await buildLeagueModel(repoRoot);
@@ -248,6 +304,15 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
       const slim = (fit, keepPlayers) => { const { players, ...rest } = fit; return keepPlayers ? fit : { ...rest, playerCount: players.length }; };
       stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m2.options, snapshots: m2.snapshots.map((sn, i) => ({ label: sn.label, fit: slim(sn.fit, i === 0) })) })) + '\n');
     } else stdout.write(formatM2Report(m2));
+    return 0;
+  }
+  if (args.only === 'M3') {
+    const m3 = buildM3(model, { replicates: args.replicates ?? undefined, seed: args.seed ?? undefined });
+    if (args.json) {
+      // Goalie-Liste (players) und rankList nur im Hauptstand; die Saisonende-Stände enthalten playerCount/rankListCount statt der Listen.
+      const slim = (fit, keepPlayers) => { const { players, rankList, ...rest } = fit; return keepPlayers ? fit : { ...rest, playerCount: players.length, rankListCount: rankList.length }; };
+      stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m3.options, snapshots: m3.snapshots.map((sn, i) => ({ label: sn.label, fit: slim(sn.fit, i === 0) })) })) + '\n');
+    } else stdout.write(formatM3Report(m3));
     return 0;
   }
   if (args.json) {
