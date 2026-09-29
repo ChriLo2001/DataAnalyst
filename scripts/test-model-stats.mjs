@@ -944,6 +944,468 @@ console.log('== Gamma-Poisson: Determinismus ==');
   assertEqual(run() === run(), true, 'zwei identische Läufe liefern byte-identische Ergebnisse');
 }
 
+// ══ 7c. Normal-Normal Empirical Bayes (M4-Numerik) ═══════════════════════
+// Unabhängige Referenzen: Handrechnung mit exakten Brüchen, algebraische Identitäten (Gewicht bei variance → 0/∞),
+// bewusst FALSCHE Referenzimplementierungen zur Mutationsprüfung (k statt k−1, k+1, ungewichtetes μ, ungepoolte σ²),
+// eigene Simulation einer Normal-Normal-Hierarchie mit bekannten Parametern.
+
+console.log('== Normal-EB: estimateNormalPrior — Handrechnung ==');
+{
+  // A = [1,2,0,1] (n=4, mean=1), B = [-1,0,-2,-1] (n=4, mean=-1), C = [3,3] (n=2, mean=3, sqDev=0)
+  // σ² = (2+2+0)/(3+3+1) = 4/7; v_A=v_B=1/7, v_C=2/7; μ = 0.6; Q = 39.2; τ² = (39.2−2)/17.5 = 372/175
+  const groups = [[1, 2, 0, 1], [-1, 0, -2, -1], [3, 3]];
+  const p = S.estimateNormalPrior(groups);
+  assertNear(p.sigma2, 4 / 7, 1e-14, 'Handrechnung: σ² = 4/7');
+  assertNear(p.mu, 0.6, 1e-14, 'Handrechnung: μ = 0.6');
+  assertNear(p.tau2, 372 / 175, 1e-13, 'Handrechnung: τ² = 372/175 (mit k−1, nicht k)');
+  assertEqual(p.k, 3, 'k = 3 Gruppen');
+  assertNear(p.groups[0].variance, 1 / 7, 1e-14, 'v_A = σ²/4 = 1/7');
+  assertNear(p.groups[1].variance, 1 / 7, 1e-14, 'v_B = σ²/4 = 1/7');
+  assertNear(p.groups[2].variance, 2 / 7, 1e-14, 'v_C = σ²/2 = 2/7');
+  assertEqual([p.groups[0].n, p.groups[0].mean], [4, 1], 'Gruppe A: n = 4, mean = 1');
+  assertEqual([p.groups[1].n, p.groups[1].mean], [4, -1], 'Gruppe B: n = 4, mean = −1');
+  assertEqual([p.groups[2].n, p.groups[2].mean], [2, 3], 'Gruppe C: n = 2, mean = 3');
+
+  const wA = S.shrinkToReference({ mu: p.mu, tau2: p.tau2, value: p.groups[0].mean, variance: p.groups[0].variance });
+  const wB = S.shrinkToReference({ mu: p.mu, tau2: p.tau2, value: p.groups[1].mean, variance: p.groups[1].variance });
+  const wC = S.shrinkToReference({ mu: p.mu, tau2: p.tau2, value: p.groups[2].mean, variance: p.groups[2].variance });
+  assertNear(wA.weight, 372 / 397, 1e-13, 'Handrechnung: weight_A = 372/397');
+  assertNear(wB.weight, 372 / 397, 1e-13, 'Handrechnung: weight_B = 372/397 (gleiche Varianz wie A)');
+  assertNear(wC.weight, 186 / 211, 1e-13, 'Handrechnung: weight_C = 186/211');
+  assertNear(wA.shrunkEffect, 387 / 397, 1e-12, 'Handrechnung: shrunkEffect_A = 387/397 ≈ 0.97481');
+  assertNear(wB.shrunkEffect, -357 / 397, 1e-12, 'Handrechnung: shrunkEffect_B = −357/397 ≈ −0.89924');
+  assertNear(wC.shrunkEffect, 573 / 211, 1e-12, 'Handrechnung: shrunkEffect_C = 573/211 ≈ 2.71564');
+}
+
+console.log('== Normal-EB: Reihenfolge, n = 1-Gruppen, Eingabe unverändert ==');
+{
+  const base = [[3, 5, 1, 4], [0, -2], [7, 6, 8, 9, 5], [2], [-1, -3, 0]];
+  const ref = JSON.stringify(S.estimateNormalPrior(base));
+  const aggregate = (r) => JSON.stringify([r.mu, r.sigma2, r.tau2, r.k]);
+  const refAggregate = aggregate(S.estimateNormalPrior(base));
+  const rng = S.createRng(2026);
+  let allSameWithinGroup = true; // Gruppenreihenfolge fix, nur Werte je Gruppe gemischt: `groups` bleibt an derselben Position, Ergebnis muss bitgleich sein
+  let allSameAggregate = true; // Gruppenreihenfolge gemischt: `groups`-Reihenfolge im Ergebnis ändert sich erwartungsgemäß mit — nur die Aggregatgrößen (mu, sigma2, tau2, k) müssen invariant bleiben
+  for (let t = 0; t < 40; t++) {
+    const withinPerm = base.map((g) => g.slice());
+    for (const g of withinPerm) for (let i = g.length - 1; i > 0; i--) { const j = rng.nextInt(i + 1); [g[i], g[j]] = [g[j], g[i]]; }
+    if (JSON.stringify(S.estimateNormalPrior(withinPerm)) !== ref) allSameWithinGroup = false;
+
+    const groupPerm = base.map((g) => g.slice());
+    for (let i = groupPerm.length - 1; i > 0; i--) { const j = rng.nextInt(i + 1); [groupPerm[i], groupPerm[j]] = [groupPerm[j], groupPerm[i]]; }
+    if (aggregate(S.estimateNormalPrior(groupPerm)) !== refAggregate) allSameAggregate = false;
+  }
+  assertTrue(allSameWithinGroup, 'Reihenfolge der Werte innerhalb jeder Gruppe (40 Permutationen, Gruppenreihenfolge fix) ändert das Ergebnis nicht (bitgleich)');
+  assertTrue(allSameAggregate, 'Reihenfolge der Gruppen (40 Permutationen): mu, sigma2, tau2, k bleiben invariant (die `groups`-Liste folgt erwartungsgemäß der Eingabereihenfolge)');
+  const baseBefore = clone(base);
+  S.estimateNormalPrior(base);
+  assertEqual(base, baseBefore, 'Eingabe wird nicht verändert');
+
+  // n = 1-Gruppe: trägt nicht zu σ² bei, nimmt aber an μ und Schrumpfung teil
+  const withSingle = [[3, 5, 1, 4], [0, -2], [100]]; // dritte Gruppe hat n = 1
+  const withoutSingle = [[3, 5, 1, 4], [0, -2]];
+  const pWith = S.estimateNormalPrior(withSingle);
+  const pWithout = S.estimateNormalPrior(withoutSingle);
+  assertEqual(pWith.sigma2, pWithout.sigma2, 'n = 1-Gruppe trägt nicht zu σ² bei (identisch zum Ergebnis ohne sie)');
+  assertEqual(pWith.k, 3, 'n = 1-Gruppe zählt zu k');
+  assertNear(pWith.groups[2].variance, pWith.sigma2 / 1, 1e-14, 'v für n = 1-Gruppe = σ²/1 = σ²');
+  assertTrue(pWith.mu !== pWithout.mu, 'n = 1-Gruppe verändert μ (nimmt an der Präzisionsgewichtung teil)');
+  const shrunkSingle = S.shrinkToReference({ mu: pWith.mu, tau2: pWith.tau2, value: pWith.groups[2].mean, variance: pWith.groups[2].variance });
+  assertTrue(Number.isFinite(shrunkSingle.shrunkEffect) && shrunkSingle.weight > 0 && shrunkSingle.weight < 1, 'n = 1-Gruppe erhält ein wohldefiniertes, echtes Shrinkage-Gewicht');
+}
+
+console.log('== Normal-EB: nicht schätzbare Fälle ==');
+{
+  throwsCode(() => S.estimateNormalPrior([[1, 2, 3]]), 'prior-not-estimable', 'nur 1 Gruppe → nicht schätzbar');
+  throwsCode(() => S.estimateNormalPrior([[1], [2], [3]]), 'prior-not-estimable', 'keine Gruppe mit n ≥ 2 → σ² nicht bestimmbar');
+  throwsCode(() => S.estimateNormalPrior([[5, 5, 5], [2, 2], [9, 9, 9, 9]]), 'prior-not-estimable', 'σ² numerisch 0 (alle Gruppen intern konstant) → nicht schätzbar');
+  // τ² ≤ 0: Gruppenmittel liegen sehr nah beieinander relativ zur Stichprobenunsicherheit
+  throwsCode(() => S.estimateNormalPrior([[1, 3], [2, 0], [1.4, 1.6]]), 'prior-not-estimable', 'τ² ≤ 0 (Gruppenmittel kaum verschieden von der Stichprobenstreuung) → nicht schätzbar');
+  for (const bad of [null, undefined, {}, 'x', 5, []]) throwsCode(() => S.estimateNormalPrior(bad), 'invalid-input', `estimateNormalPrior(${JSON.stringify(bad)}) → Fehler`);
+  throwsCode(() => S.estimateNormalPrior([[1, 2], []]), 'invalid-input', 'leere Gruppe → Fehler');
+  throwsCode(() => S.estimateNormalPrior([[1, 2], [NaN, 3]]), 'non-finite', 'nicht endlicher Wert in einer Gruppe → Fehler');
+  throwsCode(() => S.estimateNormalPrior([[1, 2], [Infinity, 3]]), 'non-finite', 'Infinity in einer Gruppe → Fehler');
+  throwsCode(() => S.estimateNormalPrior([[1, 2], ['3', 4]]), 'non-finite', 'String in einer Gruppe → Fehler');
+  throwsCode(() => S.estimateNormalPrior([[1, 2], null]), 'invalid-input', 'null statt Gruppe → Fehler');
+}
+
+console.log('== Normal-EB: shrinkToReference — Grenzverhalten und Vertrag ==');
+{
+  // Schrumpfung liegt strikt zwischen value und mu
+  for (const [mu, tau2, value, variance] of [[0, 1, 5, 2], [10, 0.5, 3, 4], [-2, 3, -2, 1]]) {
+    const { shrunkEffect, weight } = S.shrinkToReference({ mu, tau2, value, variance });
+    const lo = Math.min(mu, value); const hi = Math.max(mu, value);
+    assertTrue(shrunkEffect >= lo && shrunkEffect <= hi && weight > 0 && weight < 1, `shrunkEffect liegt zwischen value (${value}) und mu (${mu}) bei tau2=${tau2}, variance=${variance}`);
+  }
+  // variance → 0: weight → 1 (keine Schrumpfung, Rohwert dominiert)
+  const tiny = S.shrinkToReference({ mu: 0, tau2: 1, value: 5, variance: 1e-9 });
+  assertTrue(tiny.weight > 1 - 1e-6 && Math.abs(tiny.shrunkEffect - 5) < 1e-5, 'variance → 0: weight → 1, shrunkEffect → value (keine Schrumpfung)');
+  // große variance: weight → 0 (starke Schrumpfung Richtung mu)
+  const huge = S.shrinkToReference({ mu: 0, tau2: 1, value: 5, variance: 1e9 });
+  assertTrue(huge.weight < 1e-6 && Math.abs(huge.shrunkEffect - 0) < 1e-5, 'variance → ∞: weight → 0, shrunkEffect → mu (starke Schrumpfung)');
+  // tau2 sehr groß: weight → 1 ebenfalls (Prior praktisch uninformativ)
+  const bigTau = S.shrinkToReference({ mu: 0, tau2: 1e9, value: 5, variance: 1 });
+  assertTrue(bigTau.weight > 1 - 1e-6, 'tau2 → ∞: weight → 1 (Prior uninformativ, kein Shrinkage)');
+  // Vertrag
+  for (const [k, v] of [['mu', NaN], ['mu', Infinity], ['tau2', 0], ['tau2', -1], ['tau2', NaN], ['tau2', Infinity], ['value', NaN], ['value', Infinity], ['variance', 0], ['variance', -1], ['variance', NaN], ['variance', Infinity]]) {
+    throwsCode(() => S.shrinkToReference({ mu: 0, tau2: 1, value: 1, variance: 1, [k]: v }), 'invalid-input', `shrinkToReference: ${k} = ${v} → Fehler`);
+  }
+  throwsCode(() => S.shrinkToReference(), 'invalid-input', 'shrinkToReference ohne Argumente → Fehler');
+  throwsCode(() => S.shrinkToReference({ mu: 0, tau2: 1, value: 1 }), 'invalid-input', 'shrinkToReference: fehlende variance → Fehler');
+  const inp = { mu: 1, tau2: 2, value: 3, variance: 4 };
+  const inpBefore = clone(inp);
+  S.shrinkToReference(inp);
+  assertEqual(inp, inpBefore, 'shrinkToReference: Eingabe wird nicht verändert');
+}
+
+console.log('== Normal-EB: Mutationsprüfung (bewusst falsche Referenzformeln) ==');
+{
+  // Datensatz mit spürbarem, aber nicht trivialem τ² (drei Gruppen, ungleiche n und Varianz)
+  const data = [[4, 6, 5, 7, 3], [1, 2, 0], [10, 12, 9, 11]];
+  const correct = S.estimateNormalPrior(data);
+  const rows = data.map((g) => { const n = g.length; const mean = simpleMean(g); const sqDev = g.reduce((a, x) => a + (x - mean) ** 2, 0); return { n, mean, sqDev }; });
+  const k = rows.length;
+  const dfTotal = rows.reduce((a, r) => a + (r.n - 1), 0);
+  const sigma2 = rows.reduce((a, r) => a + r.sqDev, 0) / dfTotal;
+  const withV = rows.map((r) => ({ ...r, v: sigma2 / r.n }));
+  const sumInvV = withV.reduce((a, r) => a + 1 / r.v, 0);
+  const muCorrect = withV.reduce((a, r) => a + r.mean / r.v, 0) / sumInvV;
+  const Q = withV.reduce((a, r) => a + ((r.mean - muCorrect) ** 2) / r.v, 0);
+
+  const tauWrongK = (Q - k) / sumInvV; // Mutation: k statt k−1
+  const tauWrongKPlus1 = (Q - (k + 1)) / sumInvV; // Mutation: k+1 statt k−1
+  assertTrue(Math.abs(correct.tau2 - tauWrongK) > 1e-6, 'τ² unterscheidet sich von der Mutation "k statt k−1"');
+  assertTrue(Math.abs(correct.tau2 - tauWrongKPlus1) > 1e-6, 'τ² unterscheidet sich von der Mutation "k+1 statt k−1"');
+  assertNear(correct.tau2, (Q - (k - 1)) / sumInvV, 1e-13, 'τ² verwendet korrekt (k−1)');
+
+  const muUnweighted = simpleMean(rows.map((r) => r.mean)); // Mutation: ungewichtetes μ
+  assertTrue(Math.abs(correct.mu - muUnweighted) > 1e-6, 'μ unterscheidet sich vom ungewichteten Gruppenmittel (echte Präzisionsgewichtung)');
+
+  // Mutation: ungepoolte σ² (Mittel der Einzelgruppen-Varianzen statt gepoolte Summe)
+  const sigma2Unpooled = simpleMean(rows.filter((r) => r.n >= 2).map((r) => r.sqDev / (r.n - 1)));
+  assertTrue(Math.abs(correct.sigma2 - sigma2Unpooled) > 1e-6, 'σ² unterscheidet sich vom (falschen) ungewichteten Mittel der Einzelgruppen-Varianzen (echtes Pooling über die Freiheitsgrade)');
+}
+
+console.log('== Normal-EB: Simulation (Erwartungstreue) ==');
+{
+  // Bekannte Hierarchie: μ = 10, τ² = 4 (Gruppeneffekte), σ² = 9 (Beobachtungsrauschen), variable Gruppengrößen
+  const trueMu = 10; const trueTau2 = 4; const trueSigma2 = 9;
+  const groupSizes = [3, 5, 8, 4, 6, 10, 3, 7];
+  const normalFromUniform = (r) => { // Box-Muller
+    const u1 = Math.max(r.nextFloat(), 1e-12); const u2 = r.nextFloat();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  };
+  const simulateOnce = (seed) => {
+    const r = S.createRng(seed);
+    const groups = groupSizes.map((n) => {
+      const delta = normalFromUniform(r) * Math.sqrt(trueTau2);
+      const vals = [];
+      for (let i = 0; i < n; i++) vals.push(trueMu + delta + normalFromUniform(r) * Math.sqrt(trueSigma2));
+      return vals;
+    });
+    return S.estimateNormalPrior(groups);
+  };
+  let sumMu = 0; let sumSigma2 = 0; let sumTau2 = 0; let ok = 0; let fails = 0;
+  const REPS = 400;
+  for (let s = 0; s < REPS; s++) {
+    try { const p = simulateOnce(500000 + s); sumMu += p.mu; sumSigma2 += p.sigma2; sumTau2 += p.tau2; ok++; } catch (e) { if (e.code === 'prior-not-estimable') fails++; else throw e; }
+  }
+  const avgMu = sumMu / ok; const avgSigma2 = sumSigma2 / ok; const avgTau2 = sumTau2 / ok;
+  assertTrue(fails < REPS * 0.08, `Simulation: höchstens 8 % nicht schätzbar (${fails} von ${REPS}; τ² ≤ 0 tritt bei diesem Momentenschätzer stichprobenbedingt gelegentlich auf)`);
+  assertTrue(Math.abs(avgMu - trueMu) < 0.3, `Erwartungstreue μ: Mittel über ${ok} Simulationen = ${avgMu.toFixed(3)} (≈ ${trueMu}, Toleranz 0.3)`);
+  assertTrue(Math.abs(avgSigma2 - trueSigma2) < 0.5, `Erwartungstreue σ²: Mittel = ${avgSigma2.toFixed(3)} (≈ ${trueSigma2}, Toleranz 0.5; σ² ist ein unverzerrter gepoolter Schätzer)`);
+  assertTrue(Math.abs(avgTau2 - trueTau2) < 1.2, `Erwartungstreue τ²: Mittel = ${avgTau2.toFixed(3)} (≈ ${trueTau2}, Toleranz 1.2 — Momentenschätzer mit größerer Stichprobenstreuung als σ², vereinfachter DL-Nenner gemäß Vorgabe, keine künstliche Verengung der Toleranz)`);
+}
+
+console.log('== Normal-EB: Determinismus ==');
+{
+  const run = () => {
+    const p = S.estimateNormalPrior([[4, 6, 5, 7, 3], [1, 2, 0], [10, 12, 9, 11]]);
+    return JSON.stringify([p, S.shrinkToReference({ mu: p.mu, tau2: p.tau2, value: p.groups[0].mean, variance: p.groups[0].variance })]);
+  };
+  assertEqual(run() === run(), true, 'zwei identische Läufe liefern byte-identische Ergebnisse');
+}
+
+// ══ 7d. Beta-Binomial Empirical Bayes (M4-Numerik) ════════════════════════
+// Unabhängige Referenzen: Handrechnung mit exakten Brüchen, Binomial-Summenidentität für I_x(a,b) bei ganzzahligen
+// a, b (eigener Code, unabhängig von logGamma/logBeta), Arkussinus-Formel I_x(1/2,1/2) = (2/π)·asin(√x) (analytisch),
+// Uniform-Sonderfall I_x(1,1) = x, Symmetrie I_x(a,b) = 1 − I_{1−x}(b,a), eigene Simulation einer Beta-Binomial-
+// Hierarchie mit bekannten Parametern.
+const refBinomialSurvival = (n, k, x) => { // P(Y ≥ k) für Y ~ Binomial(n, x), naive Summe mit eigener PMF (kein logGamma)
+  let logC = 0; // ln C(n, 0) = 0
+  let s = 0;
+  for (let j = 0; j <= n; j++) {
+    if (j > 0) logC += Math.log(n - j + 1) - Math.log(j); // ln C(n,j) = ln C(n,j-1) + ln((n-j+1)/j)
+    if (j >= k) {
+      const logPmf = logC + j * Math.log(x) + (n - j) * Math.log(1 - x);
+      s += Math.exp(logPmf);
+    }
+  }
+  return s;
+};
+
+console.log('== Beta-EB: estimateBetaPrior und Posterior — Handrechnung ==');
+{
+  // P1{4,8} p̂=1/2, P2{2,10} p̂=1/5, P3{3,6} p̂=1/2: m̂=9/24=3/8; Q=0.525=21/40; Nenner=376/24=47/3;
+  // τ_p²=(21/40 − 2·15/64)/(47/3)=(9/160)/(47/3)=27/7520; κ=(15/64)/(27/7520)−1=1157/18; α=1157/48; β=5785/144
+  const obs = [{ successes: 4, trials: 8 }, { successes: 2, trials: 10 }, { successes: 3, trials: 6 }];
+  const p = S.estimateBetaPrior(obs);
+  assertNear(p.mean, 3 / 8, 1e-14, 'Handrechnung: m̂ = 3/8 = 0.375');
+  assertNear(p.tau2, 27 / 7520, 1e-14, 'Handrechnung: τ_p² = 27/7520 ≈ 0.0035904');
+  assertNear(p.alpha, 1157 / 48, 1e-12, 'Handrechnung: α = 1157/48 ≈ 24.1042');
+  assertNear(p.beta, 5785 / 144, 1e-12, 'Handrechnung: β = 5785/144 ≈ 40.1736');
+  assertNear(p.alpha + p.beta, 1157 / 18, 1e-12, 'κ = α + β = 1157/18 ≈ 64.2778');
+  assertEqual([p.n, p.totalSuccesses, p.totalTrials], [3, 9, 24], 'n = 3, Σsuccesses = 9, Σtrials = 24');
+
+  const post = S.betaBinomialPosterior({ alpha: p.alpha, beta: p.beta, successes: 2, trials: 10 });
+  assertNear(post.alphaPost, 1253 / 48, 1e-11, 'Handrechnung Posterior P2: alphaPost = 1253/48 ≈ 26.1042');
+  assertNear(post.betaPost, 6937 / 144, 1e-11, 'Handrechnung Posterior P2: betaPost = 6937/144 ≈ 48.1736');
+  assertNear(post.mean, 3759 / 10696, 1e-11, 'Handrechnung Posterior P2: mean = 3759/10696 ≈ 0.35144');
+  assertTrue(post.ci90[0] < post.mean && post.mean < post.ci90[1], 'Posterior-Mittel liegt im ci90');
+}
+
+console.log('== Beta-EB: trials = 0, successes = 0, successes = trials ==');
+{
+  // trials = 0 wird aus estimateBetaPrior verworfen (keine Information)
+  const withZero = S.estimateBetaPrior([{ successes: 0, trials: 0 }, { successes: 4, trials: 8 }, { successes: 2, trials: 10 }, { successes: 3, trials: 6 }]);
+  const withoutZero = S.estimateBetaPrior([{ successes: 4, trials: 8 }, { successes: 2, trials: 10 }, { successes: 3, trials: 6 }]);
+  assertEqual(withZero, withoutZero, 'Beobachtung mit trials = 0 wird ignoriert (identisches Ergebnis)');
+
+  // successes = 0 (p̂ = 0) ist eine gültige, informative Beobachtung (kein trials = 0)
+  const withAllZeroSuccess = S.estimateBetaPrior([{ successes: 0, trials: 8 }, { successes: 2, trials: 10 }, { successes: 3, trials: 6 }]);
+  assertTrue(Number.isFinite(withAllZeroSuccess.alpha) && withAllZeroSuccess.alpha > 0, 'successes = 0 in einer Gruppe: weiterhin schätzbar');
+
+  // successes = trials (p̂ = 1) ist ebenfalls gültig und informativ
+  const withAllSuccess = S.estimateBetaPrior([{ successes: 8, trials: 8 }, { successes: 2, trials: 10 }, { successes: 3, trials: 6 }]);
+  assertTrue(Number.isFinite(withAllSuccess.alpha) && withAllSuccess.alpha > 0, 'successes = trials in einer Gruppe: weiterhin schätzbar');
+
+  // betaBinomialPosterior: trials = 0 verlangt successes = 0 und liefert Posterior = Prior
+  const same = S.betaBinomialPosterior({ alpha: 3, beta: 5, successes: 0, trials: 0 });
+  assertEqual([same.alphaPost, same.betaPost], [3, 5], 'trials = 0, successes = 0: Posterior = Prior (alphaPost = alpha, betaPost = beta)');
+  assertNear(same.mean, 3 / 8, 1e-14, 'trials = 0: Posterior-Mittel = Prior-Mittel');
+  throwsCode(() => S.betaBinomialPosterior({ alpha: 3, beta: 5, successes: 1, trials: 0 }), 'invalid-input', 'successes > trials (hier: trials = 0, successes = 1) → Fehler');
+
+  // successes = trials im Posterior (alle Versuche erfolgreich)
+  const allSucc = S.betaBinomialPosterior({ alpha: 3, beta: 5, successes: 6, trials: 6 });
+  assertEqual([allSucc.alphaPost, allSucc.betaPost], [9, 5], 'successes = trials = 6: alphaPost = alpha + 6, betaPost = beta + 0');
+  // successes = 0 im Posterior
+  const noSucc = S.betaBinomialPosterior({ alpha: 3, beta: 5, successes: 0, trials: 6 });
+  assertEqual([noSucc.alphaPost, noSucc.betaPost], [3, 11], 'successes = 0: alphaPost = alpha, betaPost = beta + trials');
+}
+
+console.log('== Beta-EB: Reihenfolge, <2 gültige Gruppen, Eingabe unverändert ==');
+{
+  const base = [{ successes: 3, trials: 10 }, { successes: 7, trials: 12 }, { successes: 1, trials: 5 }, { successes: 9, trials: 15 }, { successes: 0, trials: 6 }];
+  const ref = JSON.stringify(S.estimateBetaPrior(base));
+  const rng = S.createRng(4242);
+  let allSame = true;
+  for (let t = 0; t < 40; t++) {
+    const perm = base.slice();
+    for (let i = perm.length - 1; i > 0; i--) { const j = rng.nextInt(i + 1); [perm[i], perm[j]] = [perm[j], perm[i]]; }
+    if (JSON.stringify(S.estimateBetaPrior(perm)) !== ref) allSame = false;
+  }
+  assertTrue(allSame, 'Eingabereihenfolge (40 Permutationen) ändert das Ergebnis nicht (bitgleich)');
+  const baseBefore = clone(base);
+  S.estimateBetaPrior(base);
+  assertEqual(base, baseBefore, 'Eingabe wird nicht verändert');
+
+  throwsCode(() => S.estimateBetaPrior([{ successes: 3, trials: 10 }]), 'prior-not-estimable', 'nur 1 Beobachtung mit trials > 0 → nicht schätzbar');
+  throwsCode(() => S.estimateBetaPrior([{ successes: 3, trials: 10 }, { successes: 0, trials: 0 }]), 'prior-not-estimable', 'nur 1 Beobachtung mit trials > 0 (andere hat trials = 0) → nicht schätzbar');
+  throwsCode(() => S.estimateBetaPrior([{ successes: 0, trials: 0 }, { successes: 0, trials: 0 }]), 'prior-not-estimable', 'alle Beobachtungen trials = 0 → nicht schätzbar');
+}
+
+console.log('== Beta-EB: nicht schätzbare Fälle (m̂ = 0, m̂ = 1, τ_p² ≤ 0, κ ≤ 0) ==');
+{
+  throwsCode(() => S.estimateBetaPrior([{ successes: 0, trials: 10 }, { successes: 0, trials: 5 }, { successes: 0, trials: 8 }]), 'prior-not-estimable', 'm̂ = 0 (nie ein Erfolg) → nicht schätzbar');
+  throwsCode(() => S.estimateBetaPrior([{ successes: 10, trials: 10 }, { successes: 5, trials: 5 }, { successes: 8, trials: 8 }]), 'prior-not-estimable', 'm̂ = 1 (immer Erfolg) → nicht schätzbar');
+  // τ_p² ≤ 0: alle Gruppen haben (nahezu) dieselbe Erfolgsquote → keine Streuung über das Binomial-Rauschen hinaus
+  throwsCode(() => S.estimateBetaPrior([{ successes: 5, trials: 10 }, { successes: 10, trials: 20 }, { successes: 15, trials: 30 }]), 'prior-not-estimable', 'identische Erfolgsquoten (τ_p² ≤ 0) → nicht schätzbar');
+  // κ ≤ 0: τ_p² ≥ m̂(1−m̂), d. h. extreme Streuung (Gruppen abwechselnd bei p ≈ 0 und p ≈ 1 mit großem trials)
+  throwsCode(() => S.estimateBetaPrior([{ successes: 0, trials: 100 }, { successes: 100, trials: 100 }, { successes: 1, trials: 100 }, { successes: 99, trials: 100 }]), 'prior-not-estimable', 'κ ≤ 0 (τ_p² ≥ m̂(1−m̂), extreme Streuung) → nicht schätzbar');
+  for (const bad of [null, undefined, {}, 'x', 5, []]) throwsCode(() => S.estimateBetaPrior(bad), 'invalid-input', `estimateBetaPrior(${JSON.stringify(bad)}) → Fehler`);
+  for (const [label, o] of [['trials fehlt', { successes: 1 }], ['successes fehlt', { trials: 5 }], ['trials negativ', { successes: 1, trials: -1 }], ['trials nicht ganzzahlig', { successes: 1, trials: 5.5 }], ['successes negativ', { successes: -1, trials: 5 }], ['successes > trials', { successes: 6, trials: 5 }], ['successes nicht ganzzahlig', { successes: 1.5, trials: 5 }], ['successes NaN', { successes: NaN, trials: 5 }], ['trials NaN', { successes: 1, trials: NaN }], ['Eintrag null', null], ['Eintrag Zahl', 3]]) {
+    throwsCode(() => S.estimateBetaPrior([{ successes: 3, trials: 10 }, o, { successes: 7, trials: 12 }]), 'invalid-input', `ungültige Beobachtung: ${label} → Fehler`);
+  }
+}
+
+console.log('== Beta-EB: regularizedIncompleteBeta — Grenzwerte und analytische Identitäten ==');
+{
+  for (const [a, b] of [[1, 1], [2.5, 3], [50, 0.3], [100, 100]]) {
+    assertEqual(S.regularizedIncompleteBeta(0, a, b), 0, `I_0(${a}, ${b}) = 0`);
+    assertEqual(S.regularizedIncompleteBeta(1, a, b), 1, `I_1(${a}, ${b}) = 1`);
+  }
+  // Uniform-Sonderfall: I_x(1,1) = x
+  for (const x of [0.01, 0.2, 0.5, 0.73, 0.99]) assertNear(S.regularizedIncompleteBeta(x, 1, 1), x, 1e-13, `Uniform-Sonderfall I_${x}(1,1) = ${x}`);
+  // Arkussinus-Formel: I_x(1/2,1/2) = (2/π)·asin(√x) (analytisch)
+  for (const x of [0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99]) {
+    const expected = (2 / Math.PI) * Math.asin(Math.sqrt(x));
+    assertNear(S.regularizedIncompleteBeta(x, 0.5, 0.5), expected, 1e-12, `Arkussinus-Formel I_${x}(1/2,1/2) = (2/π)·asin(√${x})`);
+  }
+  // Symmetrie: I_x(a,b) = 1 − I_{1−x}(b,a)
+  for (const [x, a, b] of [[0.3, 2, 5], [0.6, 7.5, 2.1], [0.15, 40, 3], [0.85, 1.5, 90]]) {
+    assertNear(S.regularizedIncompleteBeta(x, a, b), 1 - S.regularizedIncompleteBeta(1 - x, b, a), 1e-12, `Symmetrie I_${x}(${a},${b}) = 1 − I_${1 - x}(${b},${a})`);
+  }
+  // Ganzzahlige a, b gegen unabhängige Binomial-Summenidentität: I_x(a,b) = P(Y ≥ a), Y ~ Binomial(a+b−1, x)
+  for (const [a, b, xs] of [[3, 4, [0.1, 0.3, 0.5, 0.7, 0.9]], [1, 10, [0.05, 0.2, 0.5, 0.8]], [10, 1, [0.05, 0.2, 0.5, 0.95]], [5, 5, [0.1, 0.5, 0.9]]]) {
+    for (const x of xs) {
+      const expected = refBinomialSurvival(a + b - 1, a, x);
+      assertNear(S.regularizedIncompleteBeta(x, a, b), expected, 1e-10, `Binomial-Summenidentität I_${x}(${a},${b}) = P(Y ≥ ${a}), Y ~ Binomial(${a + b - 1}, ${x})`);
+    }
+  }
+  // Summe = 1, Monotonie in x
+  for (const [a, b] of [[2, 3], [0.5, 40], [15, 15]]) {
+    let last = -1; let mono = true;
+    for (let i = 0; i <= 40; i++) { const x = i / 40; const v = S.regularizedIncompleteBeta(x === 0 ? 1e-9 : x === 1 ? 1 - 1e-9 : x, a, b); if (!(v >= last)) mono = false; last = v; }
+    assertTrue(mono, `I_x(${a},${b}) wächst monoton in x`);
+  }
+  // Vertrag
+  for (const x of [-0.1, 1.1, NaN, Infinity, '0.5', null]) throwsCode(() => S.regularizedIncompleteBeta(x, 2, 3), 'invalid-input', `regularizedIncompleteBeta: x = ${String(x)} → Fehler`);
+  for (const [a, b] of [[0, 2], [-1, 2], [NaN, 2], [Infinity, 2], [S.MAX_GAMMA_SHAPE * 2, 2], [2, 0], [2, -1], [2, NaN], [2, Infinity]]) {
+    throwsCode(() => S.regularizedIncompleteBeta(0.5, a, b), 'invalid-input', `regularizedIncompleteBeta: a=${a}, b=${b} → Fehler`);
+  }
+}
+
+console.log('== Beta-EB: logBeta ==');
+{
+  assertNear(S.logBeta(1, 1), 0, 1e-14, 'B(1,1) = 1 → ln = 0');
+  assertNear(S.logBeta(3, 4), Math.log(1 / 60), 1e-13, 'B(3,4) = 2!·3!/6! = 1/60 (Handrechnung mit ganzzahligen Fakultäten)');
+  assertNear(S.logBeta(5, 3), Math.log(1 / 105), 1e-12, 'B(5,3) = 4!·2!/7! = 1/105 (Handrechnung)');
+  for (const [a, b] of [[2, 3], [3, 2]]) assertNear(S.logBeta(a, b), S.logBeta(b, a), 1e-14, `Symmetrie logBeta(${a},${b}) = logBeta(${b},${a})`);
+  for (const bad of [0, -1, NaN, Infinity, '2', null, undefined]) {
+    throwsCode(() => S.logBeta(bad, 2), 'invalid-input', `logBeta(${String(bad)}, 2) → Fehler`);
+    throwsCode(() => S.logBeta(2, bad), 'invalid-input', `logBeta(2, ${String(bad)}) → Fehler`);
+  }
+}
+
+console.log('== Beta-EB: betaQuantile — Round-Trip, Monotonie, Grenzwerte ==');
+{
+  assertEqual([S.betaQuantile(0, 3, 5), S.betaQuantile(1, 3, 5)], [0, 1], 'q(0) = 0 und q(1) = 1');
+  // (0.5, 0.5) bewusst ausgeschlossen: bei a < 1 UND b < 1 gleichzeitig (beidseitige Dichte-Singularität, Arkussinus-Fall)
+  // ist die CDF an den äußersten p-Werten (1e-6, 1 − 1e-9) so steil, dass 1 ULP Abstand im Quantil bereits eine CDF-
+  // Abweichung von rund 1e-8 erzeugt — eine analytisch verstandene Grenze der IEEE-754-Auflösung, keine Konvergenzlücke.
+  // Der symmetrische Arkussinus-Fall selbst ist im Test "Arkussinus-Formel" mit moderaten p-Werten bereits abgedeckt.
+  let worstRound = 0;
+  for (const [a, b] of [[1, 1], [2, 5], [24.1, 40.2], [100, 2], [2, 100], [0.3, 30], [150, 150], [0.5, 5]]) {
+    for (const p of [1e-6, 0.001, 0.05, 0.25, 0.5, 0.75, 0.95, 0.999, 1 - 1e-9]) {
+      const q = S.betaQuantile(p, a, b);
+      worstRound = Math.max(worstRound, Math.abs(S.regularizedIncompleteBeta(q, a, b) - p));
+    }
+  }
+  assertTrue(worstRound < 1e-9, `CDF(Quantil) = p für 8 Parameterpaare × 9 p-Werte (größte Abweichung ${worstRound.toExponential(2)} < 1e-9)`);
+  // Uniform-Sonderfall: q(p; 1,1) = p exakt
+  for (const p of [0.01, 0.2, 0.5, 0.9]) assertNear(S.betaQuantile(p, 1, 1), p, 1e-13, `Uniform-Sonderfall q(${p}; 1,1) = ${p}`);
+  // Symmetrischer Fall a = b: Median = 0.5
+  for (const ab of [1, 5, 30, 150]) assertNear(S.betaQuantile(0.5, ab, ab), 0.5, 1e-10, `symmetrischer Fall a = b = ${ab}: Median = 0.5`);
+  // Monotonie in p
+  for (const [a, b] of [[2, 5], [0.5, 0.5], [80, 3]]) {
+    const ps = [1e-6, 0.01, 0.1, 0.3, 0.5, 0.7, 0.9, 0.99, 1 - 1e-6];
+    const qs = ps.map((p) => S.betaQuantile(p, a, b));
+    assertTrue(qs.every((q, i) => i === 0 || q > qs[i - 1]), `q(p) wächst streng monoton in p (a=${a}, b=${b})`);
+  }
+  assertTrue(Object.is(S.betaQuantile(0.3, 5, 7), S.betaQuantile(0.3, 5, 7)), 'betaQuantile wiederholbar (identisches Ergebnis)');
+  // Vertrag
+  for (const p of [-0.1, 1.1, NaN, Infinity, '0.5', null]) throwsCode(() => S.betaQuantile(p, 2, 3), 'invalid-input', `betaQuantile: p = ${String(p)} → Fehler`);
+  for (const [a, b] of [[0, 2], [-1, 2], [NaN, 2], [S.MAX_GAMMA_SHAPE * 2, 2], [2, 0], [2, -1], [2, NaN]]) {
+    throwsCode(() => S.betaQuantile(0.5, a, b), 'invalid-input', `betaQuantile: a=${a}, b=${b} → Fehler`);
+  }
+}
+
+console.log('== Beta-EB: Posterior — ci90-Korrektheit ==');
+{
+  const post = S.betaBinomialPosterior({ alpha: 24.104166666666668, beta: 40.17361111111111, successes: 2, trials: 10 });
+  assertNear(S.regularizedIncompleteBeta(post.ci90[1], post.alphaPost, post.betaPost) - S.regularizedIncompleteBeta(post.ci90[0], post.alphaPost, post.betaPost), 0.9, 1e-10, 'ci90 enthält 90 % der Posterior-Masse');
+  assertNear(S.regularizedIncompleteBeta(post.ci90[0], post.alphaPost, post.betaPost), 0.05, 1e-10, 'unteres Ende trägt 5 % Masse');
+  assertNear(S.regularizedIncompleteBeta(post.ci90[1], post.alphaPost, post.betaPost), 0.95, 1e-10, 'oberes Ende trägt 95 % Masse (zusammen 90 %)');
+  assertTrue(post.ci90[0] < post.mean && post.mean < post.ci90[1], 'Posterior-Mittel liegt innerhalb des ci90');
+  // Mehr Beobachtungen → engeres ci90 (mehr Information)
+  const priorArgs = { alpha: 3, beta: 5 };
+  const few = S.betaBinomialPosterior({ ...priorArgs, successes: 2, trials: 4 });
+  const many = S.betaBinomialPosterior({ ...priorArgs, successes: 50, trials: 100 });
+  assertTrue((many.ci90[1] - many.ci90[0]) < (few.ci90[1] - few.ci90[0]), 'mehr Beobachtungen bei gleicher Rohquote: engeres ci90');
+  // Vertrag
+  for (const [k, v] of [['alpha', 0], ['alpha', -1], ['alpha', NaN], ['beta', 0], ['beta', -1], ['beta', NaN], ['trials', -1], ['trials', 2.5], ['trials', NaN], ['successes', -1], ['successes', 2.5], ['successes', NaN]]) {
+    throwsCode(() => S.betaBinomialPosterior({ alpha: 2, beta: 2, successes: 1, trials: 3, [k]: v }), 'invalid-input', `betaBinomialPosterior: ${k} = ${v} → Fehler`);
+  }
+  throwsCode(() => S.betaBinomialPosterior({ alpha: 2, beta: 2, successes: 5, trials: 3 }), 'invalid-input', 'successes > trials → Fehler');
+  throwsCode(() => S.betaBinomialPosterior(), 'invalid-input', 'betaBinomialPosterior ohne Argumente → Fehler');
+  const inp = { alpha: 2, beta: 2, successes: 1, trials: 3 };
+  const inpBefore = clone(inp);
+  S.betaBinomialPosterior(inp);
+  assertEqual(inp, inpBefore, 'betaBinomialPosterior: Eingabe wird nicht verändert');
+}
+
+console.log('== Beta-EB: Simulation (Erwartungstreue) ==');
+{
+  // Bekannte Hierarchie: α = 6, β = 14 (Prior-Mittel 0.3, Var(p) = αβ/((α+β)²(α+β+1)) = 0.01), p_i ~ Beta(6,14) über
+  // Inversion (betaQuantile mit dem eigenen RNG — nutzt die getestete Funktion selbst nur zur DATENERZEUGUNG, die
+  // Schätzung selbst wird unabhängig gegen die bekannten wahren Parameter geprüft), Binomial(trials, p) über Inversion
+  // mit derselben PMF-Summation wie refBinomialSurvival (kein Aufruf von S für die Datenerzeugung der Zählung selbst).
+  const trueAlpha = 6; const trueBeta = 14;
+  const trueMean = trueAlpha / (trueAlpha + trueBeta);
+  const trueTau2 = (trueAlpha * trueBeta) / (((trueAlpha + trueBeta) ** 2) * (trueAlpha + trueBeta + 1));
+  const simulateGroups = (r, trialCounts) => trialCounts.map((trials) => {
+    const p = S.betaQuantile(r.nextFloat(), trueAlpha, trueBeta);
+    const u = r.nextFloat();
+    let cum = Math.pow(1 - p, trials); let successes = 0; let pmf = cum;
+    while (u > cum && successes < trials) { successes++; pmf *= ((trials - successes + 1) / successes) * (p / (1 - p)); cum += pmf; }
+    return { successes, trials };
+  });
+
+  // α, β sind über κ = m̂(1−m̂)/τ̂² − 1 eine NICHTLINEARE (reziproke) Funktion von τ̂²: Mittelung von α̂/β̂ über viele
+  // Wiederholungen mit kleinem k ist wegen der Konvexität von 1/x systematisch nach oben verzerrt (Jensen-Ungleichung) —
+  // exakt das Muster, das schon bei estimateGammaPrior dazu führt, α/β nur an EINEM großen Datensatz zu prüfen (Zeile
+  // "Simulation k = 12000") und die Erwartungstreue über viele Wiederholungen NUR für τ² selbst zu prüfen (dort ebenfalls
+  // eine direkte, nicht-reziproke Größe). Hier entsprechend: ein einzelner großer Lauf (k = 4000) für α, β, m̂; eine
+  // Mittelung über viele Wiederholungen mit moderatem k NUR für τ̂² und m̂ (beide ohne Reziprok-Verzerrung).
+  {
+    const k = 4000;
+    const trialCounts = Array.from({ length: k }, (_, i) => 6 + (i % 8) * 5);
+    const r = S.createRng(20260929);
+    const big = S.estimateBetaPrior(simulateGroups(r, trialCounts));
+    assertTrue(Math.abs(big.mean - trueMean) < 0.02, `Simulation k = ${k}: m̂ = ${big.mean.toFixed(4)} (≈ ${trueMean.toFixed(4)}, Toleranz 0.02)`);
+    assertTrue(Math.abs(big.alpha - trueAlpha) < 1.5 && Math.abs(big.beta - trueBeta) < 3, `Simulation k = ${k}: α = ${big.alpha.toFixed(3)} (≈ ${trueAlpha}), β = ${big.beta.toFixed(3)} (≈ ${trueBeta})`);
+  }
+
+  let sumTau2 = 0; let sumMean = 0; let ok = 0; let fails = 0;
+  const REPS = 400; const kSmall = 20;
+  const trialCountsSmall = Array.from({ length: kSmall }, (_, i) => 6 + (i % 8) * 5);
+  for (let s = 0; s < REPS; s++) {
+    const r = S.createRng(900000 + s);
+    try { const p = S.estimateBetaPrior(simulateGroups(r, trialCountsSmall)); sumTau2 += p.tau2; sumMean += p.mean; ok++; } catch (e) { if (e.code === 'prior-not-estimable') fails++; else throw e; }
+  }
+  const avgTau2 = sumTau2 / ok; const avgMean = sumMean / ok;
+  assertTrue(fails < REPS * 0.1, `Simulation (k = ${kSmall}, ${REPS} Wiederholungen): höchstens 10 % nicht schätzbar (${fails} von ${REPS})`);
+  assertTrue(Math.abs(avgMean - trueMean) < 0.02, `Erwartungstreue m̂: Mittel über ${ok} Wiederholungen = ${avgMean.toFixed(4)} (≈ ${trueMean.toFixed(4)}, Toleranz 0.02)`);
+  assertTrue(Math.abs(avgTau2 - trueTau2) < 0.006, `Erwartungstreue τ̂² (direkte, nicht-reziproke Größe): Mittel = ${avgTau2.toFixed(5)} (≈ ${trueTau2.toFixed(5)}, Toleranz 0.006)`);
+}
+
+console.log('== Beta-EB: numerische Grenzfälle / Konvergenz ==');
+{
+  // Sehr kleine bzw. sehr große Shapes: endliche, geordnete Ergebnisse ohne Absturz
+  const tinyQ = S.betaQuantile(0.5, 0.01, 0.01);
+  assertTrue(Number.isFinite(tinyQ) && tinyQ > 0 && tinyQ < 1, `sehr kleine Shapes (0.01, 0.01): endliches Quantil ${tinyQ.toFixed(6)} in (0,1)`);
+  const bigQ = S.betaQuantile(0.5, S.MAX_GAMMA_SHAPE, S.MAX_GAMMA_SHAPE);
+  assertTrue(Number.isFinite(bigQ) && Math.abs(bigQ - 0.5) < 1e-3, `Shapes an der oberen Grenze (${S.MAX_GAMMA_SHAPE}, ${S.MAX_GAMMA_SHAPE}): Median ≈ 0.5 (${bigQ.toFixed(6)})`);
+  // extreme p sehr nah an 0/1
+  assertTrue(Number.isFinite(S.betaQuantile(1e-15, 3, 3)) && Number.isFinite(S.betaQuantile(1 - 1e-15, 3, 3)), 'extreme p (1e-15, 1 − 1e-15) liefern endliche Quantile');
+  // regularizedIncompleteBeta bei extrem asymmetrischen Shapes bleibt in [0,1]
+  const extreme = S.regularizedIncompleteBeta(0.5, 0.02, S.MAX_GAMMA_SHAPE);
+  assertTrue(extreme >= 0 && extreme <= 1 && Number.isFinite(extreme), `extrem asymmetrische Shapes: I_0.5(0.02, ${S.MAX_GAMMA_SHAPE}) = ${extreme.toExponential(3)} ∈ [0,1]`);
+  // Shape über der Grenze → Fehler statt stiller Fehlrechnung
+  throwsCode(() => S.regularizedIncompleteBeta(0.5, S.MAX_GAMMA_SHAPE * 10, 2), 'invalid-input', 'Shape über MAX_GAMMA_SHAPE → Fehler (regularizedIncompleteBeta)');
+  throwsCode(() => S.betaQuantile(0.5, S.MAX_GAMMA_SHAPE * 10, 2), 'invalid-input', 'Shape über MAX_GAMMA_SHAPE → Fehler (betaQuantile)');
+}
+
+console.log('== Beta-EB: Determinismus ==');
+{
+  const run = () => {
+    const p = S.estimateBetaPrior([{ successes: 4, trials: 8 }, { successes: 2, trials: 10 }, { successes: 3, trials: 6 }]);
+    return JSON.stringify([p, S.betaBinomialPosterior({ ...p, successes: 2, trials: 10 }), S.betaQuantile(0.05, 7.7, 1.3), S.regularizedIncompleteBeta(0.3, 3.3, 2.2), S.logBeta(4.4, 5.5)]);
+  };
+  assertEqual(run() === run(), true, 'zwei identische Läufe liefern byte-identische Ergebnisse');
+}
+
+
 // ══ 8. Ausgabe-Rundung ══════════════════════════════════════════════════
 console.log('== roundOutput (Rundung erst an der Ausgabegrenze) ==');
 {

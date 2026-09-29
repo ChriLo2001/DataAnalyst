@@ -14,6 +14,8 @@
 //   6. Zufall                       createRng (seeded xoshiro128**), bootstrapSampleIndices, seededBootstrap
 //   7. Zeitlich geordnete Splits    rollingOriginSplits (generisch, keine konkrete CV-Strategie)
 //   8. Gamma-Poisson                logGamma, regularizedGammaP/Q, gammaCdf, gammaQuantile, estimateGammaPrior, gammaPoissonPosterior
+//   8b. Normal-Normal EB            estimateNormalPrior, shrinkToReference
+//   8c. Beta-Binomial EB            logBeta, regularizedIncompleteBeta, betaQuantile, estimateBetaPrior, betaBinomialPosterior
 //   9. Ausgabe                      roundOutput (Rundung an der Serialisierungsgrenze)
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -821,6 +823,258 @@ export function gammaPoissonPosterior({ alpha, beta, count, exposure } = {}) {
     ci90: [gammaQuantile(0.05, alphaPost, betaPost), gammaQuantile(0.95, alphaPost, betaPost)],
   };
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// 8b. Normal-Normal Empirical Bayes (Shrinkage einer kontinuierlichen Größe Richtung eines mitgeschätzten Referenzwerts)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Modell: x_ij = μ + δ_i + ε_ij, δ_i ~ (0, τ²) (Zwischen-Gruppen-Streuung), ε_ij ~ (0, σ²) (Innerhalb-Gruppen-Streuung,
+// homogen über alle Gruppen angenommen), unabhängig. Momentenschätzer im DerSimonian-Laird-Muster, μ wird aus denselben
+// Gruppen präzisionsgewichtet mitgeschätzt (daher (k−1) statt k Freiheitsgrade für τ², analog zur Stichprobenvarianz mit
+// geschätztem statt bekanntem Mittelwert). Der Nenner ist bewusst die vereinfachte Form Σ(1/v_i), NICHT die vollständige
+// DerSimonian-Laird-Nenner-Korrektur Σ(1/v_i) − Σ(1/v_i)²/Σ(1/v_i) — eine bewusste, freigegebene Designentscheidung,
+// keine versehentliche Vereinfachung.
+
+/**
+ * Momentenschätzung einer Normal-Normal-Hierarchie aus rohen Gruppenbeobachtungen (DerSimonian-Laird-Muster, analog
+ * `estimateGammaPrior` für die Poisson-Gamma-Hierarchie, hier für eine kontinuierliche Differenzgröße statt einer Rate).
+ *   mean_i = Gruppenmittel;  σ² = Σ_i Σ_j (x_ij − mean_i)² / Σ_i(n_i − 1)   (nur Gruppen mit n_i ≥ 2 tragen bei)
+ *   v_i = σ²/n_i
+ *   μ = Σ_i(mean_i/v_i) / Σ_i(1/v_i)                                        (präzisionsgewichteter Ligamittelwert)
+ *   Q = Σ_i (mean_i − μ)² / v_i
+ *   τ² = (Q − (k−1)) / Σ_i(1/v_i)
+ * Nicht schätzbar (NumericError 'prior-not-estimable', kein Clamping, keine Ersatzlösung): weniger als 2 Gruppen, keine
+ * Gruppe mit n_i ≥ 2 (σ² nicht bestimmbar), σ² numerisch 0 (nicht strikt positiv), oder τ² ≤ 0 (keine nachweisbare
+ * Streuung zwischen den Gruppen über die Stichprobenunsicherheit hinaus). n=1-Gruppen tragen NICHT zu σ² bei, nehmen
+ * aber an μ und (über `shrinkToReference`) an der Schrumpfung teil — v_i bleibt für sie wohldefiniert, solange σ² aus
+ * anderen Gruppen stammt. Die Gruppen werden vor dem Summieren kanonisch (Größe, Mittelwert) sortiert und kompensiert
+ * summiert: das Ergebnis hängt nicht von der Eingabereihenfolge ab (weder der Gruppen noch der Werte je Gruppe). Die
+ * Eingabe wird nicht verändert.
+ * @param {number[][]} groups  je Gruppe die rohen Beobachtungswerte (n_i ≥ 1 je Gruppe)
+ * @returns {{mu:number, sigma2:number, tau2:number, k:number, groups:{n:number, mean:number, variance:number}[]}}
+ *   `groups` in derselben Reihenfolge wie die Eingabe zurückgegeben; `variance` = σ²/n_i (Eingabe für `shrinkToReference`).
+ */
+export function estimateNormalPrior(groups) {
+  if (!Array.isArray(groups) || groups.length === 0) fail('invalid-input', 'estimateNormalPrior: nicht leeres Array erwartet');
+  const rows = groups.map((g, i) => {
+    if (!Array.isArray(g) || g.length === 0) fail('invalid-input', `estimateNormalPrior: Gruppe ${i} muss ein nicht leeres Array sein`);
+    if (!g.every(isFiniteNumber)) fail('non-finite', `estimateNormalPrior: Gruppe ${i} enthält nicht endliche Werte`);
+    const sorted = [...g].sort((a, b) => a - b);
+    const n = sorted.length;
+    const meanVal = sum(sorted) / n;
+    const sqDev = n >= 2 ? sum(sorted.map((x) => (x - meanVal) ** 2)) : 0;
+    return { n, mean: meanVal, sqDev };
+  });
+  const k = rows.length;
+  if (k < 2) fail('prior-not-estimable', 'estimateNormalPrior: mindestens 2 Gruppen nötig');
+  const dfTotal = sum(rows.map((r) => (r.n >= 2 ? r.n - 1 : 0)));
+  if (!(dfTotal > 0)) fail('prior-not-estimable', 'estimateNormalPrior: keine Gruppe mit n ≥ 2 — σ² nicht bestimmbar');
+  const sigma2 = sum(rows.map((r) => r.sqDev)) / dfTotal;
+  if (!(sigma2 > 0)) fail('prior-not-estimable', 'estimateNormalPrior: σ² numerisch 0');
+  const withV = rows.map((r) => ({ ...r, v: sigma2 / r.n }));
+  const order = withV.map((r, i) => i).sort((a, b) => withV[a].n - withV[b].n || withV[a].mean - withV[b].mean);
+  const sortedV = order.map((i) => withV[i]);
+  const sumInvV = sum(sortedV.map((r) => 1 / r.v));
+  const mu = sum(sortedV.map((r) => r.mean / r.v)) / sumInvV;
+  const Q = sum(sortedV.map((r) => ((r.mean - mu) ** 2) / r.v));
+  const tau2 = (Q - (k - 1)) / sumInvV;
+  if (!(tau2 > 0)) fail('prior-not-estimable', `estimateNormalPrior: τ² ≤ 0 (${tau2}); keine nachweisbare Streuung zwischen den Gruppen`);
+  return { mu, sigma2, tau2, k, groups: withV.map((r) => ({ n: r.n, mean: r.mean, variance: r.v })) };
+}
+
+/**
+ * Empirical-Bayes-Shrinkage EINER Gruppe Richtung `mu` (Normal-Normal-Posterior-Mittel): `weight = tau2/(tau2+variance)`
+ * ∈ (0, 1), `shrunkEffect = mu + weight·(value − mu)`. Vertrag: `mu`/`value` endlich; `tau2` endlich und > 0; `variance`
+ * endlich und > 0.
+ * @param {{mu:number, tau2:number, value:number, variance:number}} args
+ * @returns {{weight:number, shrunkEffect:number}}
+ */
+export function shrinkToReference({ mu, tau2, value, variance } = {}) {
+  if (!isFiniteNumber(mu)) fail('invalid-input', 'shrinkToReference: mu muss endlich sein');
+  if (!isFiniteNumber(tau2) || !(tau2 > 0)) fail('invalid-input', 'shrinkToReference: tau2 muss endlich und > 0 sein');
+  if (!isFiniteNumber(value)) fail('invalid-input', 'shrinkToReference: value muss endlich sein');
+  if (!isFiniteNumber(variance) || !(variance > 0)) fail('invalid-input', 'shrinkToReference: variance muss endlich und > 0 sein');
+  const weight = tau2 / (tau2 + variance);
+  const shrunkEffect = mu + weight * (value - mu);
+  if (!isFiniteNumber(weight) || !isFiniteNumber(shrunkEffect)) fail('non-finite', 'shrinkToReference: Ergebnis nicht endlich');
+  return { weight, shrunkEffect };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 8c. Beta-Binomial Empirical Bayes (Schrumpfung eines Anteils aus einer festen Gesamtzahl von Versuchen)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// Modell: successes_i ~ Binomial(trials_i, p_i), p_i ~ Beta(alpha, beta). Konjugiertes Empirical-Bayes-Gegenstück zu
+// Gamma-Poisson (Abschnitt 8), hier für einen ANTEIL aus einer festen Gesamtzahl (successes ≤ trials immer — anders als
+// eine unbeschränkte Poisson-Rate, für die eine Teilmengen-Zählung mit Gamma-Poisson nicht sauber modellierbar wäre).
+// Momentenschätzung analog `estimateGammaPrior`, mit dem Binomial-Rauschterm m̂(1−m̂) anstelle des Poisson-Rauschterms m̂.
+
+/**
+ * ln B(a, b) = ln Γ(a) + ln Γ(b) − ln Γ(a+b), a, b > 0 endlich (reine Wiederverwendung von `logGamma`).
+ */
+export function logBeta(a, b) {
+  if (!isFiniteNumber(a) || !(a > 0)) fail('invalid-input', 'logBeta: a muss endlich und > 0 sein');
+  if (!isFiniteNumber(b) || !(b > 0)) fail('invalid-input', 'logBeta: b muss endlich und > 0 sein');
+  return logGamma(a) + logGamma(b) - logGamma(a + b);
+}
+
+function assertBetaShape(name, x) {
+  if (!isFiniteNumber(x) || !(x > 0) || x > MAX_GAMMA_SHAPE) fail('invalid-input', `${name}: Parameter muss endlich, > 0 und ≤ ${MAX_GAMMA_SHAPE} sein`);
+}
+
+// Kettenbruch für I_x(a,b) (modifiziertes Lentz-Verfahren, Numerical-Recipes-Form), konvergiert zuverlässig nur für
+// x < (a+1)/(a+b+2) — für den anderen Bereich wird über die Symmetriebeziehung 1 − I_{1−x}(b,a) aufgerufen.
+function betaContinuedFraction(x, a, b) {
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
+  let c = 1;
+  let d = 1 - (qab * x) / qap;
+  if (Math.abs(d) < GAMMA_TINY) d = GAMMA_TINY;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m < GAMMA_MAX_ITER; m++) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < GAMMA_TINY) d = GAMMA_TINY;
+    c = 1 + aa / c; if (Math.abs(c) < GAMMA_TINY) c = GAMMA_TINY;
+    d = 1 / d;
+    h *= d * c;
+    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < GAMMA_TINY) d = GAMMA_TINY;
+    c = 1 + aa / c; if (Math.abs(c) < GAMMA_TINY) c = GAMMA_TINY;
+    d = 1 / d;
+    const delta = d * c;
+    h *= delta;
+    if (Math.abs(delta - 1) < GAMMA_EPS) return h;
+  }
+  return fail('no-convergence', 'regularizedIncompleteBeta: Kettenbruch konvergiert nicht');
+}
+
+/**
+ * Regularisierte unvollständige Betafunktion I_x(a, b) = B(x; a, b)/B(a, b), a, b ∈ (0, MAX_GAMMA_SHAPE], x ∈ [0, 1].
+ * I_0(a,b) = 0, I_1(a,b) = 1. Kettenbruch (Lentz) für x < (a+1)/(a+b+2), sonst über die Symmetriebeziehung
+ * I_x(a,b) = 1 − I_{1−x}(b,a) berechnet (dort konvergiert derselbe Kettenbruch zuverlässig).
+ */
+export function regularizedIncompleteBeta(x, a, b) {
+  assertBetaShape('regularizedIncompleteBeta', a);
+  assertBetaShape('regularizedIncompleteBeta', b);
+  if (!isFiniteNumber(x) || x < 0 || x > 1) fail('invalid-input', 'regularizedIncompleteBeta: x muss endlich und in [0, 1] liegen');
+  if (x === 0) return 0;
+  if (x === 1) return 1;
+  const front = Math.exp(a * Math.log(x) + b * Math.log(1 - x) - logBeta(a, b));
+  if (x < (a + 1) / (a + b + 2)) {
+    const cf = betaContinuedFraction(x, a, b);
+    return Math.min(1, (front * cf) / a);
+  }
+  const cf = betaContinuedFraction(1 - x, b, a);
+  return Math.max(0, 1 - (front * cf) / b);
+}
+
+/**
+ * Quantil der Beta-Verteilung: löst I_x(a,b) = p nach x auf, p ∈ [0, 1], a, b ∈ (0, MAX_GAMMA_SHAPE]. q(0) = 0, q(1) = 1
+ * (einzige Fälle, in denen das Ergebnis nicht im offenen Intervall (0,1) liegt). Abgesichertes Newton-Verfahren mit
+ * Bisektion im festen Klammerintervall [0, 1] (immer konvergent, analog `gammaQuantile`).
+ */
+export function betaQuantile(p, a, b) {
+  if (!isFiniteNumber(p) || p < 0 || p > 1) fail('invalid-input', 'betaQuantile: p muss in [0, 1] liegen');
+  assertBetaShape('betaQuantile', a);
+  assertBetaShape('betaQuantile', b);
+  if (p === 0) return 0;
+  if (p === 1) return 1;
+  const logNorm = logBeta(a, b);
+  const pdf = (x) => (x <= 0 || x >= 1 ? 0 : Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logNorm));
+  let lo = 0;
+  let hi = 1;
+  let x = 0.5;
+  let converged = false;
+  for (let i = 0; i < 2000; i++) {
+    const gx = regularizedIncompleteBeta(x, a, b) - p; // streng wachsend in x, Nullstelle = gesuchtes Quantil
+    if (gx === 0) { converged = true; break; }
+    if (gx < 0) lo = x; else hi = x;
+    const d = pdf(x);
+    let next = d > 0 && Number.isFinite(d) ? x - gx / d : NaN;
+    if (!(next > lo && next < hi)) next = 0.5 * (lo + hi);
+    const step = Math.abs(next - x);
+    x = next;
+    if (step <= 4 * Number.EPSILON * x || hi - lo <= 4 * Number.EPSILON * hi) { converged = true; break; }
+  }
+  if (!converged) fail('no-convergence', 'betaQuantile: keine Konvergenz');
+  if (!isFiniteNumber(x) || x < 0 || x > 1) fail('non-finite', 'betaQuantile: Ergebnis nicht endlich/in [0, 1]');
+  return x;
+}
+
+/**
+ * Beta-Prior aus Erfolgs-/Versuchszahlen (Momentenschätzung, DerSimonian-Laird-Muster wie `estimateNormalPrior`, hier
+ * für einen Anteil statt eine Differenz — Binomial-Rauschterm m̂(1−m̂) statt Poisson-Rauschterm m̂ wie bei
+ * `estimateGammaPrior`). Jede Beobachtung hat `successes` (ganzzahlig, 0 ≤ successes ≤ trials) und `trials`
+ * (ganzzahlig, ≥ 0). Beobachtungen mit `trials = 0` werden verworfen (keine Information). Mit m̂ = Σsuccesses/Σtrials,
+ * p̂_i = successes_i/trials_i, k Beobachtungen mit trials > 0:
+ *   Q = Σ trials_i·(p̂_i − m̂)²
+ *   Nenner = Σtrials_i − Σtrials_i²/Σtrials_i
+ *   τ_p² = (Q − (k−1)·m̂(1−m̂)) / Nenner
+ *   κ = m̂(1−m̂)/τ_p² − 1     (= α+β);   α = m̂·κ,   β = (1−m̂)·κ
+ * Nicht schätzbar (NumericError 'prior-not-estimable', kein Clamping, keine Ersatzlösung): weniger als 2 Beobachtungen
+ * mit trials > 0, m̂ ≤ 0 oder m̂ ≥ 1 (keine Streuung möglich), Nenner numerisch 0 (≤ 1e-12·Σtrials, technische
+ * Schutzgrenze wie bei `estimateGammaPrior`), τ_p² ≤ 0, oder κ ≤ 0. Ungültige Einzelwerte → 'invalid-input'. Die
+ * Beobachtungen werden vor dem Summieren kanonisch (trials, successes) sortiert und kompensiert summiert: das Ergebnis
+ * hängt nicht von der Eingabereihenfolge ab. Die Eingabe wird nicht verändert.
+ * @param {{successes:number, trials:number}[]} observations
+ * @returns {{alpha:number, beta:number, mean:number, tau2:number, n:number, totalSuccesses:number, totalTrials:number}}
+ */
+export function estimateBetaPrior(observations) {
+  if (!Array.isArray(observations) || observations.length === 0) fail('invalid-input', 'estimateBetaPrior: nicht leeres Array erwartet');
+  const all = observations.map((o, i) => {
+    if (o === null || typeof o !== 'object') fail('invalid-input', `estimateBetaPrior: Beobachtung ${i} muss ein Objekt {successes, trials} sein`);
+    if (!Number.isInteger(o.trials) || o.trials < 0) fail('invalid-input', `estimateBetaPrior: trials von Beobachtung ${i} muss eine ganze Zahl ≥ 0 sein`);
+    if (!Number.isInteger(o.successes) || o.successes < 0 || o.successes > o.trials) fail('invalid-input', `estimateBetaPrior: successes von Beobachtung ${i} muss eine ganze Zahl in [0, trials] sein`);
+    return [o.trials, o.successes];
+  });
+  const rows = all.filter(([trials]) => trials > 0);
+  const k = rows.length;
+  if (k < 2) fail('prior-not-estimable', 'estimateBetaPrior: mindestens 2 Beobachtungen mit trials > 0 nötig');
+  rows.sort((u, v) => u[0] - v[0] || u[1] - v[1]);
+  const totalTrials = sum(rows.map((r) => r[0]));
+  const totalSuccesses = sum(rows.map((r) => r[1]));
+  const mHat = totalSuccesses / totalTrials;
+  if (!(mHat > 0) || !(mHat < 1)) fail('prior-not-estimable', 'estimateBetaPrior: m̂ ≤ 0 oder m̂ ≥ 1 (keine Streuung möglich)');
+  const Q = sum(rows.map(([n, s]) => n * (s / n - mHat) ** 2));
+  const denominator = totalTrials - sum(rows.map((r) => r[0] * r[0])) / totalTrials;
+  if (!(denominator > 1e-12 * totalTrials)) fail('prior-not-estimable', 'estimateBetaPrior: Nenner der τ_p²-Schätzung numerisch 0');
+  const tau2 = (Q - (k - 1) * mHat * (1 - mHat)) / denominator;
+  if (!(tau2 > 0)) fail('prior-not-estimable', `estimateBetaPrior: τ_p² ≤ 0 (${tau2}); keine nachweisbare Streuung zwischen den Gruppen`);
+  const kappa = (mHat * (1 - mHat)) / tau2 - 1;
+  if (!(kappa > 0)) fail('prior-not-estimable', `estimateBetaPrior: κ ≤ 0 (${kappa}); Beta-Prior nicht schätzbar`);
+  const alpha = mHat * kappa;
+  const beta = (1 - mHat) * kappa;
+  if (!isFiniteNumber(alpha) || !isFiniteNumber(beta) || !(alpha > 0) || !(beta > 0)) fail('prior-not-estimable', 'estimateBetaPrior: α oder β nicht endlich und positiv');
+  return { alpha, beta, mean: mHat, tau2, n: k, totalSuccesses, totalTrials };
+}
+
+/**
+ * Beta-Binomial-Posterior für eine Einheit: Prior Beta(alpha, beta), Beobachtung `successes` von `trials` Versuchen.
+ * Posterior Beta(alpha+successes, beta+trials−successes). `ci90` = [q05, q95] dieser Posterior-Verteilung (gleichseitiges
+ * 90-%-Intervall). Der Prior gilt als fest: Prior-Unsicherheit ist nicht enthalten. Vertrag: alpha > 0, beta > 0 endlich;
+ * `trials` ganzzahlig ≥ 0; `successes` ganzzahlig in [0, trials] (schließt `trials = 0, successes = 0` mit ein — dann
+ * ist der Posterior identisch zum Prior).
+ * @returns {{alphaPost:number, betaPost:number, mean:number, ci90:[number, number]}}
+ */
+export function betaBinomialPosterior({ alpha, beta, successes, trials } = {}) {
+  if (!isFiniteNumber(alpha) || !(alpha > 0)) fail('invalid-input', 'betaBinomialPosterior: alpha muss endlich und > 0 sein');
+  if (!isFiniteNumber(beta) || !(beta > 0)) fail('invalid-input', 'betaBinomialPosterior: beta muss endlich und > 0 sein');
+  if (!Number.isInteger(trials) || trials < 0) fail('invalid-input', 'betaBinomialPosterior: trials muss eine ganze Zahl ≥ 0 sein');
+  if (!Number.isInteger(successes) || successes < 0 || successes > trials) fail('invalid-input', 'betaBinomialPosterior: successes muss eine ganze Zahl in [0, trials] sein');
+  const alphaPost = alpha + successes;
+  const betaPost = beta + (trials - successes);
+  return {
+    alphaPost,
+    betaPost,
+    mean: alphaPost / (alphaPost + betaPost),
+    ci90: [betaQuantile(0.05, alphaPost, betaPost), betaQuantile(0.95, alphaPost, betaPost)],
+  };
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // 9. Ausgabe

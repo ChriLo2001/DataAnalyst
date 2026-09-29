@@ -350,7 +350,7 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   await main(['--only', 'M1', '--replicates=20', '--seed=3'], { stdout: b2.stream });
   assertEqual(b1.text, b2.text, 'M1-Bootstrap (seeded): zwei Läufe byte-identisch');
   assertTrue(b1.text.includes('Bootstrap: 20 Wiederholungen, Seed 3, 90-%-Perzentilintervall, Spielebene (beide Teamzeilen gemeinsam)') && b1.text.includes('Spiele gezogen'), 'M1-Bootstrap-Bericht nennt Spielebene und Seed');
-  for (const [args, label] of [[['--only', 'M4'], '--only M4 (nicht implementiert)'], [['--replicates', '30', '--seed', '1'], '--replicates ohne --only M1/M3'], [['--only', 'M1', '--replicates', '30'], '--replicates ohne --seed (kein versteckter Seed)'], [['--only', 'M1', '--seed', '3'], '--seed ohne --replicates'], [['--only', 'M1', '--replicates', '5', '--seed', '1'], '--replicates < 20'], [['--only', 'M1', '--seed', '-1', '--replicates', '30'], 'ungültiger Seed'], [['--only'], '--only ohne Wert']]) {
+  for (const [args, label] of [[['--only', 'M4'], '--only M4 ohne --replicates/--seed (M4 erfordert Bootstrap zwingend)'], [['--replicates', '30', '--seed', '1'], '--replicates ohne --only M1/M3/M4'], [['--only', 'M1', '--replicates', '30'], '--replicates ohne --seed (kein versteckter Seed)'], [['--only', 'M1', '--seed', '3'], '--seed ohne --replicates'], [['--only', 'M1', '--replicates', '5', '--seed', '1'], '--replicates < 20'], [['--only', 'M1', '--seed', '-1', '--replicates', '30'], 'ungültiger Seed'], [['--only'], '--only ohne Wert']]) {
     const e = capture();
     assertEqual(await main(args, { stdout: e.stream, stderr: e.stream }), 2, `${label}: Exit 2 mit Meldung`);
   }
@@ -415,9 +415,37 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   }
   const m3proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M3'], { encoding: 'utf8' });
   assertEqual(m3proc, m3a.text, 'echter CLI-Aufruf --only M3 liefert denselben Bericht');
-  // bestehende CLI-Pfade (M0/M1/M2) bleiben nach der M3-Integration funktionsfähig (Ausgabe verworfen, nur Exit-Code geprüft)
+  // ── M4 (Müdigkeit und Belastung, Dry-Run): deterministisch, schreibt nichts, M0/M1/M2/M3-Ausgaben bleiben byte-identisch, Load Index nicht berechnet ──
+  const m4a = capture(); const m4b = capture(); const m4c = capture(); const m4d = capture();
+  assertEqual(await main(['--only', 'M4', '--replicates', '20', '--seed', '3'], { stdout: m4a.stream }), 0, '--only M4 --replicates 20 --seed 3: Exit 0');
+  await main(['--only=M4', '--replicates=20', '--seed=3'], { stdout: m4b.stream });
+  assertEqual(m4a.text, m4b.text, '--only M4: zwei Läufe (auch als --only=M4 --replicates=20 --seed=3) byte-identisch');
+  assertTrue(m4a.text.includes('Bootstrap: 20 Wiederholungen, Seed 3, 90-%-Perzentilintervall, Spielebene (beide Teamzeilen gemeinsam, wie M1) — bei M4 PFLICHT (kein Nur-Punktschätzung-Pfad, ein gemeinsamer Bootstrap für Liga- und Team-Ebene)'), 'M4-Bericht: Bootstrap ist bei M4 als Pflicht (kein Nur-Punktschätzung-Pfad) gekennzeichnet');
+  assertTrue(m4a.text.includes('Hinweis: Load Index ist NICHT implementiert (M0 liefert keine belastbare Information über gleichzeitig auf dem Feld stehende Feldspieler).'), 'M4-Bericht: Load Index ausdrücklich als nicht implementiert gekennzeichnet, mit Begründung');
+  assertTrue(m4a.text.includes('Status: ok') && m4a.text.includes('Teams: 11 · Spieler: 266 · Fresh-vs-Tired-Beobachtungen: 38'), 'M4-Bericht: Status ok, 11 Teams, 266 Spieler, 38 Fresh-vs-Tired-Beobachtungen (Realdaten)');
+  assertTrue(m4a.text.includes('Fresh-vs-Tired: fresh n=19 Ø-Tordifferenz -1.316 · tired n=19 Ø-Tordifferenz +1.316'), 'M4-Bericht: Fresh-vs-Tired-Zusammenfassung (19 fresh, 19 tired, symmetrische Ø-Tordifferenz)');
+  assertTrue(m4a.text.includes('Warnungen: 10') && m4a.text.includes('player-assist-by-goalie-not-attributed ×74') && m4a.text.includes('fresh-vs-tired-same-order-excluded ×382'), 'M4-Bericht: 10 Warnungen, inkl. Fresh-vs-Tired-Warnungen auf oberster Ebene (Audit-Fix)');
+  await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--json'], { stdout: m4c.stream });
+  await main(['--only=M4', '--replicates=20', '--seed=3', '--json'], { stdout: m4d.stream });
+  assertEqual(m4c.text, m4d.text, '--only M4 --json: zwei Läufe byte-identisch');
+  const m4json = JSON.parse(m4c.text);
+  assertEqual([m4json.snapshots.length, m4json.snapshots[0].label, m4json.options.replicates, m4json.options.seed], [1, 'all', 20, 3], '--only M4 --json: genau ein Stand ("all", keine Saison-Snapshots), --replicates/--seed korrekt an M4 durchgereicht');
+  const m4fit = m4json.snapshots[0].fit;
+  assertEqual(Object.keys(m4fit).sort(), ['asOf', 'asOfGameDate', 'freshVsTired', 'league', 'model', 'players', 'quality', 'status', 'teams', 'warnings'].sort(), '--only M4 --json: volles fitFatigue()-Ausgabeschema (model/status/asOf/league/teams/players/freshVsTired/quality/warnings)');
+  assertTrue(!('loadIndex' in m4fit), '--only M4 --json: loadIndex ist NICHT im Ergebnis vorhanden (bewusst nicht implementiert)');
+  assertEqual([m4fit.model, m4fit.status, m4fit.asOf, m4fit.teams.length, m4fit.players.length, m4fit.freshVsTired.observations.length], ['M4-fatigue', 'ok', { date: '2026-04-11', inclusive: true }, 11, 266, 38], '--only M4 --json: model/status/asOf (identisch zu M1/M2/M3) sowie Team-/Spieler-/Fresh-vs-Tired-Zähler (Realdaten)');
+  assertEqual(m4fit.asOf, m1json.snapshots[0].fit.asOf, '--only M4: identisches asOf wie M1/M2/M3 (Hauptstand)');
+  assertEqual(m4fit.freshVsTired.summary, { fresh: { meanGoalDiff: -1.31578947, meanM1AdjustedGoalDiff: -0.85882788, n: 19 }, tired: { meanGoalDiff: 1.31578947, meanM1AdjustedGoalDiff: 0.85882788, n: 19 } }, '--only M4 --json: Fresh-vs-Tired-Zusammenfassung (Realdaten, symmetrisch)');
+  assertEqual(m4fit.warnings, [{ code: 'goal-credit-unknown-excluded', count: 4 }, { code: 'abs-sec-null-excluded-from-segments', count: 6 }, { code: 'team-level-opponent-order-unknown', count: 4 }, { code: 'player-missing-player-id', count: 2 }, { code: 'player-goal-without-roster-row', count: 1 }, { code: 'player-assist-without-roster-row', count: 1 }, { code: 'player-assist-by-goalie-not-attributed', count: 74 }, { code: 'fresh-vs-tired-own-order-unknown', count: 4 }, { code: 'fresh-vs-tired-opponent-order-unknown', count: 4 }, { code: 'fresh-vs-tired-same-order-excluded', count: 382 }], '--only M4 --json: vollständige, exakte Warnungsliste auf oberster Ebene (inkl. Fresh-vs-Tired-Warnungen, Audit-Fix)');
+  assertEqual([m4fit.quality.teamGames, m4fit.quality.bootstrap, m4fit.quality.teamLevel, m4fit.quality.player.comparison], [{ eligible: 424, excludedM1Unavailable: 0, excludedOrderNull: 4, excludedOutsideCutoff: 0 }, { failed: 0, replicates: 20, usable: 20 }, { eligible: 420, excludedM1Unavailable: 0, excludedOpponentOrderUnknown: 4, teams: 11 }, { eligible: 108, insufficient: 158, players: 266 }], '--only M4 --json: Qualitätskennzahlen (Realdaten-Pins)');
+  assertTrue(!/NaN|Infinity/.test(m4c.text) && !/\d+\.\d{9,}/.test(m4c.text), '--only M4 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
+  const w4 = capture();
+  assertEqual([await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--write'], { stdout: w4.stream, stderr: w4.stream }), /nicht implementiert/.test(w4.text)], [2, true], '--write bleibt auch mit --only M4 abgelehnt');
+  const m4proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M4', '--replicates', '20', '--seed', '3'], { encoding: 'utf8' });
+  assertEqual(m4proc, m4a.text, 'echter CLI-Aufruf --only M4 --replicates 20 --seed 3 liefert denselben Bericht');
+  // bestehende CLI-Pfade (M0/M1/M2/M3) bleiben nach der M4-Integration funktionsfähig (Ausgabe verworfen, nur Exit-Code geprüft)
   const discard = capture();
-  assertEqual([await main([], { stdout: discard.stream }), await main(['--only', 'M1'], { stdout: discard.stream }), await main(['--only', 'M2'], { stdout: discard.stream })], [0, 0, 0], 'bestehende CLI-Pfade M0 (Standard), --only M1 und --only M2 bleiben funktionsfähig (Exit 0)');
+  assertEqual([await main([], { stdout: discard.stream }), await main(['--only', 'M1'], { stdout: discard.stream }), await main(['--only', 'M2'], { stdout: discard.stream }), await main(['--only', 'M3'], { stdout: discard.stream })], [0, 0, 0, 0], 'bestehende CLI-Pfade M0 (Standard), --only M1, --only M2 und --only M3 bleiben nach der M4-Integration funktionsfähig (Exit 0)');
   // M0/M1/M2-Ausgaben sind byte-identisch zum Stand vor M3 (SHA-256 der Ausgabe von HEAD c5ef6d0)
   const m0t = capture(); const m0j = capture(); const m1t = capture(); const m1j = capture(); const m2t = capture(); const m2j = capture();
   await main([], { stdout: m0t.stream }); await main(['--json'], { stdout: m0j.stream }); await main(['--only', 'M1'], { stdout: m1t.stream }); await main(['--only', 'M1', '--json'], { stdout: m1j.stream }); await main(['--only', 'M2'], { stdout: m2t.stream }); await main(['--only', 'M2', '--json'], { stdout: m2j.stream });

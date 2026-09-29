@@ -9,6 +9,9 @@
 //   node scripts/build-league-model.mjs --only M2                          # M2-Torschützen-Qualität (Dry-Run, kein Bootstrap; --json möglich)
 //   node scripts/build-league-model.mjs --only M3                          # M3-Goalie-Bewertung (Dry-Run, ohne Bootstrap)
 //   node scripts/build-league-model.mjs --only M3 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene, wie M1)
+//   node scripts/build-league-model.mjs --only M4 --replicates 200 --seed 1 # M4-Müdigkeit und Belastung (Liga/Team/Spieler/Fresh-vs-Tired)
+//   (--replicates/--seed sind bei --only M4 PFLICHT, anders als bei M1/M3 — fitFatigue liefert ausschließlich
+//   Bootstrap-ci90, keinen Nur-Punktschätzung-Pfad; Load Index ist bewusst NICHT implementiert)
 //
 // Schreibt NICHTS ins Repository. Einen Schreibmodus (`--write`, model-data/) gibt es in P1a
 // bewusst noch nicht; der Aufruf wird mit einer Meldung abgelehnt. Kein Netzwerk, keine Uhrzeit
@@ -24,6 +27,7 @@ import { roundOutput } from './model/stats.mjs';
 import { DEFAULTS, PLACEHOLDER_OPTIONS, fitTeamStrength, bootstrapTeamStrength } from './model/team-strength.mjs';
 import { DEFAULTS as M2_DEFAULTS, PLACEHOLDER_OPTIONS as M2_PLACEHOLDER_OPTIONS, fitShooterQuality } from './model/shooter-quality.mjs';
 import { MIN_GAMES_FOR_RANK as M3_MIN_GAMES_FOR_RANK, BOOTSTRAP_LEVEL as M3_BOOTSTRAP_LEVEL, fitGoalieRating } from './model/goalie-rating.mjs';
+import { fitFatigue } from './model/fatigue.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -253,6 +257,47 @@ export function formatM3Report(m3) {
   return lines.join('\n') + '\n';
 }
 
+// ── M4 · Müdigkeit und Belastung (Dry-Run) ─────────────────────────────────
+
+/**
+ * Berechnet den M4-Stand über alle Daten (asOf = letztes Datum, inclusive). Ruft ausschließlich die öffentliche
+ * `fitFatigue` aus fatigue.mjs auf — keine M4-Fachlogik hier, keine zweite Normalisierung. Anders als M1/M3 gibt es
+ * KEINE Saisonende-Schnappschüsse: `fitFatigue` verlangt IMMER `replicates`/`seed` (kein Nur-Punktschätzung-Pfad,
+ * siehe fatigue.mjs), ein zusätzlicher Bootstrap-Lauf je Saison wäre daher kein „billiger" Zusatzstand wie bei
+ * M1/M3 (dort läuft die Saisonende-Schleife bewusst OHNE Bootstrap) und wurde hier nicht angefordert.
+ */
+export function buildM4(model, { replicates, seed }) {
+  const data = {
+    teamGames: model.seasons.flatMap((s) => s.teamGames),
+    goalEvents: model.seasons.flatMap((s) => s.goalEvents),
+    rosterEntries: model.seasons.flatMap((s) => s.rosterEntries),
+  };
+  const fit = fitFatigue(data, { replicates, seed });
+  return { options: { replicates, seed, bootstrap: { replicates, seed, level: 0.9, unit: 'game' } }, snapshots: [{ label: 'all', fit }] };
+}
+
+const ciArr = (iv) => (iv ? ` [${f3(iv[0])}; ${f3(iv[1])}]` : '');
+
+/** Menschenlesbarer M4-Bericht (deterministisch, ohne Zeitstempel). */
+export function formatM4Report(m4) {
+  const o = m4.options;
+  const lines = [];
+  lines.push('Liga-Modell · M4-Müdigkeit und Belastung (P4) — Dry-Run, es wird nichts geschrieben');
+  lines.push(`Bootstrap: ${o.replicates} Wiederholungen, Seed ${o.seed}, 90-%-Perzentilintervall, Spielebene (beide Teamzeilen gemeinsam, wie M1) — bei M4 PFLICHT (kein Nur-Punktschätzung-Pfad, ein gemeinsamer Bootstrap für Liga- und Team-Ebene)`);
+  lines.push('Hinweis: Load Index ist NICHT implementiert (M0 liefert keine belastbare Information über gleichzeitig auf dem Feld stehende Feldspieler). Fresh-vs-Tired-Kernmodell und Spieler-Ebene sind M1-unabhängig; m1AdjustedGoalDiff (Fresh-vs-Tired) ist ein rein optionaler Zusatz.');
+  const main = m4.snapshots[0].fit;
+  lines.push('');
+  lines.push(`══ Stand: alle Daten bis ${main.asOf.date ?? '–'} ══`);
+  lines.push(`Status: ${main.status}`);
+  const le = main.league.effects;
+  lines.push(`Liga-Effekte: HZ2 ${f3(le.halfHz2.estimate)}${ciArr(le.halfHz2.ci90)} · order2×HZ2 ${f3(le.orderXHalf.estimate)}${ciArr(le.orderXHalf.ci90)}`);
+  lines.push(`Teams: ${main.teams.length} · Spieler: ${main.players.length} · Fresh-vs-Tired-Beobachtungen: ${main.freshVsTired.observations.length}`);
+  lines.push(`Fresh-vs-Tired: fresh n=${main.freshVsTired.summary.fresh.n} Ø-Tordifferenz ${f3(main.freshVsTired.summary.fresh.meanGoalDiff)} · tired n=${main.freshVsTired.summary.tired.n} Ø-Tordifferenz ${f3(main.freshVsTired.summary.tired.meanGoalDiff)}`);
+  lines.push(`Warnungen: ${main.warnings.length}`);
+  for (const w of main.warnings) lines.push(`   · ${w.code}${w.count !== undefined ? ' ×' + w.count : ''}${w.reason ? ' (' + w.reason + ')' : ''}`);
+  return lines.join('\n') + '\n';
+}
+
 function parseArgs(argv) {
   const out = { json: false, only: null, replicates: null, seed: null, unknown: [], errors: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -274,18 +319,19 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
   const args = parseArgs(argv);
   if (args.unknown.length) {
     if (args.unknown.includes('--write')) stderr.write('--write ist nicht implementiert: es werden keine model-data-Dateien geschrieben (nur Dry-Run).\n');
-    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S]]\n`);
+    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S] | --only M4 --replicates N --seed S]\n`);
     return 2;
   }
   const problems = [...args.errors];
-  if (args.only !== null && args.only !== 'M1' && args.only !== 'M2' && args.only !== 'M3') problems.push('nur --only M1, --only M2 und --only M3 sind implementiert');
-  if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1' && args.only !== 'M3') problems.push('--replicates und --seed gehören zu --only M1 oder --only M3');
+  if (args.only !== null && args.only !== 'M1' && args.only !== 'M2' && args.only !== 'M3' && args.only !== 'M4') problems.push('nur --only M1, --only M2, --only M3 und --only M4 sind implementiert');
+  if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1' && args.only !== 'M3' && args.only !== 'M4') problems.push('--replicates und --seed gehören zu --only M1, --only M3 oder --only M4');
   if (args.replicates !== null && !(Number.isInteger(args.replicates) && args.replicates >= 20)) problems.push('--replicates muss eine ganze Zahl ≥ 20 sein');
   if (args.seed !== null && !(Number.isInteger(args.seed) && args.seed < 2 ** 32)) problems.push('--seed muss eine ganze Zahl in [0, 2^32) sein');
   if (args.replicates !== null && args.seed === null) problems.push('--replicates braucht ausdrücklich --seed (kein versteckter Standard-Seed)');
   if (args.seed !== null && args.replicates === null) problems.push('--seed ohne --replicates hat keine Wirkung');
+  if (args.only === 'M4' && (args.replicates === null || args.seed === null)) problems.push('--only M4 erfordert --replicates und --seed (M4 liefert ausschließlich Bootstrap-ci90, kein Nur-Punktschätzung-Pfad)');
   if (problems.length) {
-    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S]]\n`);
+    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S] | --only M4 --replicates N --seed S]\n`);
     return 2;
   }
   const model = await buildLeagueModel(repoRoot);
@@ -313,6 +359,13 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
       const slim = (fit, keepPlayers) => { const { players, rankList, ...rest } = fit; return keepPlayers ? fit : { ...rest, playerCount: players.length, rankListCount: rankList.length }; };
       stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m3.options, snapshots: m3.snapshots.map((sn, i) => ({ label: sn.label, fit: slim(sn.fit, i === 0) })) })) + '\n');
     } else stdout.write(formatM3Report(m3));
+    return 0;
+  }
+  if (args.only === 'M4') {
+    const m4 = buildM4(model, { replicates: args.replicates, seed: args.seed });
+    if (args.json) {
+      stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m4.options, snapshots: m4.snapshots })) + '\n');
+    } else stdout.write(formatM4Report(m4));
     return 0;
   }
   if (args.json) {
