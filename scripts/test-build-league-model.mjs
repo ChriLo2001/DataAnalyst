@@ -323,7 +323,7 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   const code = await main([], { stdout: out.stream, stderr: err.stream });
   assertEqual([code, out.text === formatReport(model), err.text], [0, true, ''], 'Standardlauf ohne Optionen = Dry-Run-Bericht, Exit 0, keine Fehlerausgabe');
   const w = capture();
-  assertEqual([await main(['--write'], { stdout: w.stream, stderr: w.stream }), /nicht implementiert/.test(w.text)], [2, true], '--write wird in P1a abgelehnt (Exit 2)');
+  assertEqual([await main(['--write'], { stdout: w.stream, stderr: w.stream }), /--write erfordert --replicates und --seed/.test(w.text)], [2, true], '--write ohne --replicates/--seed wird abgelehnt (Exit 2, Persistenz-bezogene Meldung, kein versteckter Standardwert)');
   const u = capture();
   assertEqual(await main(['--unbekannt'], { stdout: u.stream, stderr: u.stream }), 2, 'unbekannte Option → Exit 2');
   const cliOut = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs')], { encoding: 'utf8' });
@@ -355,7 +355,7 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
     assertEqual(await main(args, { stdout: e.stream, stderr: e.stream }), 2, `${label}: Exit 2 mit Meldung`);
   }
   const w1 = capture();
-  assertEqual([await main(['--only', 'M1', '--write'], { stdout: w1.stream, stderr: w1.stream }), /nicht implementiert/.test(w1.text)], [2, true], '--write bleibt auch mit --only M1 abgelehnt');
+  assertEqual([await main(['--only', 'M1', '--write'], { stdout: w1.stream, stderr: w1.stream }), /--write und --only schließen sich aus/.test(w1.text)], [2, true], '--write und --only M1 zusammen werden abgelehnt (--write berechnet immer alle vier Module)');
   const m1proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M1'], { encoding: 'utf8' });
   assertEqual(m1proc, m1a.text, 'echter CLI-Aufruf --only M1 liefert denselben Bericht');
   // ── M2 (Torschützen-Qualität, Dry-Run): deterministisch, schreibt nichts, M0/M1-Ausgaben bleiben byte-identisch ──
@@ -440,7 +440,7 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   assertEqual([m4fit.quality.teamGames, m4fit.quality.bootstrap, m4fit.quality.teamLevel, m4fit.quality.player.comparison], [{ eligible: 424, excludedM1Unavailable: 0, excludedOrderNull: 4, excludedOutsideCutoff: 0 }, { failed: 0, replicates: 20, usable: 20 }, { eligible: 420, excludedM1Unavailable: 0, excludedOpponentOrderUnknown: 4, teams: 11 }, { eligible: 108, insufficient: 158, players: 266 }], '--only M4 --json: Qualitätskennzahlen (Realdaten-Pins)');
   assertTrue(!/NaN|Infinity/.test(m4c.text) && !/\d+\.\d{9,}/.test(m4c.text), '--only M4 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   const w4 = capture();
-  assertEqual([await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--write'], { stdout: w4.stream, stderr: w4.stream }), /nicht implementiert/.test(w4.text)], [2, true], '--write bleibt auch mit --only M4 abgelehnt');
+  assertEqual([await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--write'], { stdout: w4.stream, stderr: w4.stream }), /--write und --only schließen sich aus/.test(w4.text)], [2, true], '--write und --only M4 zusammen werden abgelehnt (--write berechnet immer alle vier Module)');
   const m4proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M4', '--replicates', '20', '--seed', '3'], { encoding: 'utf8' });
   assertEqual(m4proc, m4a.text, 'echter CLI-Aufruf --only M4 --replicates 20 --seed 3 liefert denselben Bericht');
   // bestehende CLI-Pfade (M0/M1/M2/M3) bleiben nach der M4-Integration funktionsfähig (Ausgabe verworfen, nur Exit-Code geprüft)
@@ -455,10 +455,17 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   assertEqual(await fileHashes(GUARDED), hashBefore, 'season-data, index.html, Golden-Baseline und die wiederverwendeten Module sind unverändert (SHA-256)');
   assertTrue(!snapAfter.some((l) => l.startsWith('model-data/')), 'kein model-data/ erzeugt');
   assertEqual(fetchCalls, 0, 'kein fetch-Aufruf');
-  for (const f of ['scripts/build-league-model.mjs', 'scripts/model/normalize.mjs', 'scripts/model/shooter-quality.mjs', 'scripts/model/goalie-rating.mjs']) {
+  const NETWORK_RE = /\bfetch\(|node:http|node:https|node:net|node:dns|WebSocket|XMLHttpRequest/;
+  const WRITE_RE = /writeFile|appendFile|createWriteStream|rename\(|mkdir/;
+  for (const f of ['scripts/model/normalize.mjs', 'scripts/model/shooter-quality.mjs', 'scripts/model/goalie-rating.mjs']) {
     const s = (await readFile(path.join(REPO_ROOT, f), 'utf8')).replace(/\/\/.*$/gm, '');
-    assertTrue(!/\bfetch\(|node:http|node:https|node:net|node:dns|WebSocket|XMLHttpRequest|writeFile|appendFile|createWriteStream|rename\(|mkdir/.test(s), `${f}: kein Netzwerk- und kein Schreibzugriff im Code`);
+    assertTrue(!NETWORK_RE.test(s) && !WRITE_RE.test(s), `${f}: kein Netzwerk- und kein Schreibzugriff im Code`);
   }
+  // build-league-model.mjs hat seit P4b (Modelldaten-Persistenz) legitimen, hinter --write gated Schreibzugriff
+  // (model-data/) — die Dry-Run-Garantie "nichts geschrieben" ist oben bereits über repoSnapshot() (Zeile 453/454)
+  // verhaltensbasiert geprüft (kein statischer Ersatz nötig); hier bleibt ausschließlich der Netzwerk-Check bestehen.
+  const cliSrc = (await readFile(path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), 'utf8')).replace(/\/\/.*$/gm, '');
+  assertTrue(!NETWORK_RE.test(cliSrc), 'scripts/build-league-model.mjs: kein Netzwerkzugriff im Code');
 }
 globalThis.fetch = realFetch;
 
