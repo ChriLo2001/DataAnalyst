@@ -21,6 +21,7 @@ Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: 
 | `scripts/test-model-goalie-rating.mjs` | M3-Tests (Variante-A-Formel, Solo/Shared, Sichtbarkeit, Bootstrap, Response-Momentum, Halbzeit, Weak-Shooter, `asOf`/Leakage, Teamhistorie, echte Daten) |
 | `scripts/model/fatigue.mjs` | M4: Müdigkeit und Belastung (Liga-, Team-, Spieler-Ebene, Fresh-vs-Tired; Load Index bewusst nicht implementiert), Aufruf über `--only M4` |
 | `scripts/test-model-fatigue.mjs` | M4-Tests (unabhängige Kontrollpfade je Ebene, Bootstrap, Shrinkage, Fresh-vs-Tired-Symmetrie, Determinismus, echte Daten) |
+| `scripts/test-model-persistence.mjs` | P4b-Persistenz-Tests (atomares Schreiben, Dry-Run schreibt nichts, Determinismus, `inputHash`-Sensitivität, Snapshot-vs-Saisonende-Invariante, Saison-Team-Filter, `null`-Erhalt, Größenlimit) |
 
 Wiederverwendet (nicht kopiert): `compareGamesChronologically` (`game-ordering.mjs`), `buildMatchdays` (`matchday-derivation.mjs`), `canonicalJson` und `sha256Hex` (`lineup-data-hash.mjs`). `index.html` wird nicht verändert und nicht geladen.
 
@@ -534,6 +535,67 @@ Anders als M1/M2/M3 gibt es für `--only M4` **keine** Saisonende-Schnappschüss
 ### Bewusst nicht enthalten
 
 Load Index (siehe oben), M9-Walk-forward-Akzeptanz (wie M1/M3), Anreise-Analyse (Spezifikation M4.6, Entscheidung 4: verschoben), UI, SG-/Vereinszuordnung über die tatsächliche Spielseite hinaus.
+
+## Modelldaten-Persistenz (P4b, `--write`)
+
+Umgesetzt in `scripts/build-league-model.mjs` (keine neue Rechenlogik — ausschließlich Aufbau- und Schreibfunktionen um die bestehenden `buildM1`–`buildM4`/`fitFatigue`-Aufrufe herum), Tests in `scripts/test-model-persistence.mjs` (Persistenz-spezifisch) und ergänzend `scripts/test-build-league-model.mjs` (CLI-Validierung, SHA-256-Pins für die unveränderten Dry-Run-Berichte).
+
+### `--write`
+
+```bash
+node scripts/build-league-model.mjs --write --replicates 200 --seed 1
+```
+
+- `--replicates`/`--seed` sind bei `--write` **immer** Pflicht — kein versteckter Standardwert (dieselbe Konvention wie bei `--only M4`). Fehlen sie, Exit-Code 2 mit einer auf die Persistenz bezogenen Meldung.
+- `--write` und `--only` schließen sich **aus**: `--write` berechnet und schreibt immer alle vier Module gemeinsam, nie eine Teilmenge. **Bewusste Abweichung von der Spezifikation** (Abschnitt 3.2 nennt dort `--only M1,M3` als Mehrfachauswahl-Beispiel): `--only` blieb in der tatsächlichen Umsetzung seit P2 durchgehend einwertig (`M1` **oder** `M2` **oder** `M3` **oder** `M4`, nie eine Kombination); eine Mehrfachauswahl wurde nie gebaut. Für `--write` wäre eine Teilmengen-Option ohnehin nur ein Konsistenzrisiko (unvollständige `model-data/`-Stände) ohne echten Nutzen, deshalb hier explizit ausgeschlossen statt nachträglich eine Mehrfachauswahl-Syntax einzuführen.
+- Dry-Run bleibt der Standard: ohne `--write` entsteht kein `model-data/`-Verzeichnis, unabhängig von `--only`/`--replicates`/`--seed`.
+- Determinismus: gleiche Eingabedaten und gleicher Seed ergeben byte-identische Dateien (kanonische JSON-Serialisierung, siehe unten). Kein Zeitstempel in den Ausgabedateien.
+
+### Zwei Bootstrap-Präzisionsstufen
+
+`alltime.json` und `model-data/<season>.json` verwenden die von `--replicates`/`--seed` angeforderten Werte (volle, vom Aufrufer gewählte Präzision). `model-data/snapshots/<season>.json` verwendet dagegen **immer** `SNAPSHOT_REPLICATES = 20` (die technische Mindestzahl) mit demselben `--seed` — nicht, weil 20 Replikate statistisch als ausreichend gelten, sondern weil `fitFatigue` für **jeden einzelnen** der aktuell 35 abgeschlossenen Spieltage einen eigenen, zwingenden Bootstrap-Lauf braucht; eine volle Replikatzahl (z. B. 200) an jedem Spieltag würde die Laufzeit vervielfachen, ohne dass die Snapshots überhaupt ein sichtbares Intervall hätten (siehe unten). Beide Werte stehen in `manifest.json` (`bootstrap.alltime`, `bootstrap.snapshots`), Letzteres zusätzlich mit `intervals: false`.
+
+### Dateien
+
+```
+model-data/
+  manifest.json           # schemaVersion, inputHash (SHA-256, canonicalJson wie lineup-data-hash.mjs), modules[], seasons[], bootstrap-Konfiguration
+  <season>.json            # Saisonende-Stand (asOf = letztes Datum ALLER ended:true-Modellspiele der Saison) aller vier Module, VOLLE Fit-Objekte
+  alltime.json              # aktueller Gesamtstand ("all") aller vier Module, VOLLE Fit-Objekte
+  snapshots/
+    <season>.json          # NUR abgeschlossene Spieltage (buildMatchdays, Status "abgeschlossen"); je Spieltag schlanke "Kernwerte", KEINE ci90
+```
+
+`<season>.json` und `alltime.json` enthalten die **vollständigen, ungeschmälerten** `fit`-Objekte je Modul (`teamStrength` = `fitTeamStrength`-Ergebnis, `shooterQuality` = `fitShooterQuality`-Ergebnis, `goalieRatings` = `fitGoalieRating`-Ergebnis, `fatigue` = `fitFatigue`-Ergebnis) — strukturell identisch zu dem, was `--only M<n> --json` bereits liefert, nur mit gemeinsamer `asOf`-Hülle statt Snapshot-Array. `fatigue` in `<season>.json` ist dabei **neu** berechnet (M4 kennt sonst keine Saisonende-Stände, `buildM4()` für `--only M4` bleibt unverändert; die neue Funktion `buildM4SeasonEnd` läuft ausschließlich hinter `--write`).
+
+### Snapshots: schlanke „Kernwerte", keine Intervalle (Owner-Entscheidung)
+
+Regel: in den Snapshot nur, was eine Verlaufskurve über Spieltage speisen kann, sonst nichts — insbesondere **keine `ci90`-Felder irgendwo**. Verläufe brauchen keine Intervalle; Intervalle gehören zum Hauptstand (`<season>.json`/`alltime.json`).
+
+| Modul | Snapshot-Inhalt |
+|---|---|
+| `teamStrength` | alle Teams **dieser Saison** mit `attack`/`defense` (Punktschätzer) |
+| `shooterQuality` | nur Prior-Kennzahlen (`alpha`, `beta`, `mean`, `tau2`) und Tier-Schwellen (`q20`, `q80`) je Zielvariable, **kein** `players[]` |
+| `goalieRatings` | die Rangliste mit `playerId`/`name`/`tvePerGame`, kein `tve`, kein `tveCI90` |
+| `fatigue` | Liga-Effekte (Punktschätzer) und je Team `game1`/`game2` mit `hz`/`lateGameIndex`, je nur `shrunkEffect` |
+
+**Saison-Team-Filter (`teamStrength`):** M1 selbst rechnet unverändert über alle Saisons mit Zeitgewichtung; ein Snapshot einer Saison zeigt aber **ausschließlich** Teams, die in **dieser** Saison tatsächlich mindestens ein Modellspiel bestritten haben (nicht die vollständige, zeitgewichtete Teamliste über alle Saisons hinweg — für 25/26 sind das 8 Teams, nicht die 11 des multi-saisonalen Fits). Owner-Entscheidung, Begründung: ein Team ohne Spiel in der betrachteten Saison hat dort keinen sinnvollen Verlauf.
+
+**`null` bleibt `null`:** Ist ein Prior an einem Spieltag nicht schätzbar (kleine Stichprobe, `τ² ≤ 0` o. Ä. — insbesondere bei `game1`×`lateGameIndex` an frühen Spieltagen häufig), ist `shrunkEffect`/`q20`/`q80`/etc. `null`. Kein Clamping, kein Ersatzwert, kein Runden auf `0`.
+
+**Bootstrap-Instabilität an sehr frühen Spieltagen:** Ein Spieltag mit sehr wenigen Zeilen kann M4s Pflicht-Bootstrap über die eigene Fehlschlagsquote-Schwelle (> 10 % nicht konvergierter Refits, `stats.mjs`) treiben; `bootstrapTeamStrength` wirft dann `NumericError('bootstrap-failed', …)`. Der Build fängt genau diesen Fall pro Spieltag ab und trägt einen gültigen `status: 'not-estimable'`-Zustand ein (leere Liga-Effekte, leere Teams) statt den gesamten `--write`-Lauf abzubrechen — in den echten Daten tritt das exakt einmal auf (21/22, Spieltag 1, das mit Abstand datenärmste Fenster).
+
+### Atomares Schreiben
+
+`writeJsonCanonicalAtomic(filePath, value)`: `mkdir` (rekursiv) für das Zielverzeichnis, Schreiben nach `<Ziel>.tmp-<pid>`, dann `rename` auf den endgültigen Pfad — dieselbe Temp-Datei-plus-rename-Konvention wie `update-season-data.mjs`/`import-season-data.mjs`. Der Inhalt ist die **kanonische** JSON-Form (`canonicalJson` aus `lineup-data-hash.mjs`, alphabetisch sortierte Schlüssel), nicht `JSON.stringify` — Determinismus unabhängig von der zufälligen Objektschlüssel-Erzeugungsreihenfolge im Code. Ein fehlschlagender Schreibversuch (z. B. ungültiger Zielpfad) hinterlässt weder eine Teildatei am Zielpfad noch verändert er eine andere, bereits vorhandene Datei.
+
+### Laufzeit und Größe (echte Daten, alle fünf Saisons, 20 Replikate Alltime + Snapshots, Seed 1)
+
+Vollständiger `--write`-Lauf: **≈ 25 Sekunden** (gemessen, weit unter dem 2-Minuten-Ziel). 12 Dateien insgesamt; `<season>.json`/`alltime.json` zwischen 138 KB (21/22, wenigste Saisons-Teams) und 353 KB (`alltime.json`); `snapshots/<season>.json` zwischen 14 KB (24/25, nur 3 abgeschlossene Spieltage) und 40 KB (23/24) — alle weit unter dem 2-MB-Grenzwert je Datei. Höhere Alltime-Replikatzahlen (z. B. 200) verlängern nur den Alltime-/Saisonende-Teil messbar (M4 allein ≈ 7,5 s bei 200 Replikaten auf dem vollen Datensatz), nicht den Snapshot-Teil (fest bei `SNAPSHOT_REPLICATES`).
+
+### Bewusst nicht enthalten
+
+Dashboard-Anbindung (`fetch('model-data/…')`, Spezifikation 3.4), Veraltet-Hinweis im UI bei abweichendem `inputHash`, `spieltag.mjs`-Befehl (Spezifikation 3.6.6) und dessen Aufruf der bestehenden Importer, `--only`-Mehrfachauswahl.
 
 ## Bewusst nicht interpretierte Daten
 
