@@ -317,12 +317,12 @@ export function formatM4Report(m4) {
 // (siehe Laufzeitmessung im Schritt-1-Plan). Snapshots enthalten ohnehin keine ci90-Werte (Owner-Entscheidung),
 // die Replikatzahl wirkt sich dort NUR auf den intern verwendeten Punktschätzer-Pfad aus, nicht auf ein sichtbares
 // Intervall. Kein zweiter, versteckter Seed: derselbe --seed wie für alltime/<season>.json.
-const SNAPSHOT_REPLICATES = 20;
+export const SNAPSHOT_REPLICATES = 20;
 
 /** M4 je Saisonende (asOf = letztes Datum der Saison, inclusive) — analog zum bestehenden M1/M2/M3-Saisonschleifen-
  * Muster, aber NEU (buildM4() kennt bewusst keine Saisonende-Stände, siehe dortiger Kommentar) und in einer
  * eigenen Funktion, damit --only M4 (ruft ausschließlich buildM4() auf) unverändert bleibt. */
-function buildM4SeasonEnd(model, data, { replicates, seed }) {
+export function buildM4SeasonEnd(model, data, { replicates, seed }) {
   const out = {};
   for (const s of model.seasons) {
     const last = s.teamGames.map((r) => r.date).sort().at(-1);
@@ -332,7 +332,7 @@ function buildM4SeasonEnd(model, data, { replicates, seed }) {
 }
 
 /** manifest.json — kein Zeitstempel (Determinismus), Bootstrap-Konfiguration beider Präzisionsstufen dokumentiert. */
-function buildManifest(model, { allTimeReplicates, allTimeSeed, snapshotReplicates, snapshotSeed }) {
+export function buildManifest(model, { allTimeReplicates, allTimeSeed, snapshotReplicates, snapshotSeed }) {
   return {
     schemaVersion: 1,
     inputHash: model.inputHash,
@@ -346,7 +346,7 @@ function buildManifest(model, { allTimeReplicates, allTimeSeed, snapshotReplicat
 }
 
 /** model-data/<season>.json je Saison — Saisonende-Stand aller vier Module, volle (ungeschmälerte) Objekte. */
-function buildSeasonFiles(model, m1, m2, m3, m4SeasonEnd) {
+export function buildSeasonFiles(model, m1, m2, m3, m4SeasonEnd) {
   const out = {};
   for (const s of model.seasons) {
     const key = s.seasonKey;
@@ -361,7 +361,7 @@ function buildSeasonFiles(model, m1, m2, m3, m4SeasonEnd) {
 }
 
 /** model-data/alltime.json — aktueller Gesamtstand ("all") aller vier Module, volle (ungeschmälerte) Objekte. */
-function buildAlltimeFile(m1, m2, m3, m4All) {
+export function buildAlltimeFile(m1, m2, m3, m4All) {
   return { asOf: m1.snapshots[0].fit.asOf, teamStrength: m1.snapshots[0].fit, shooterQuality: m2.snapshots[0].fit, goalieRatings: m3.snapshots[0].fit, fatigue: m4All };
 }
 
@@ -372,12 +372,12 @@ function buildAlltimeFile(m1, m2, m3, m4All) {
 /** M1: nur Teams, die in DIESER Saison tatsächlich mindestens ein Spiel bestritten haben (activeTeamKeys) — nicht
  * alle Teams des multi-saisonalen, zeitgewichteten Fits. Das Modell selbst rechnet unverändert über alle Saisons;
  * gefiltert wird ausschließlich die Ausgabe dieses einen Saison-Snapshots (Owner-Entscheidung, Variante A). */
-function slimTeamStrength(fit, activeTeamKeys) {
+export function slimTeamStrength(fit, activeTeamKeys) {
   return { estimable: fit.estimable, teams: fit.estimable ? fit.stage1.teams.filter((t) => activeTeamKeys.has(t.teamKey)).map((t) => ({ teamKey: t.teamKey, attack: t.attack, defense: t.defense })) : [] };
 }
 
 /** M2: nur Prior-Kennzahlen und Tier-Schwellen, kein vollständiges players[]. */
-function slimShooterQuality(fit) {
+export function slimShooterQuality(fit) {
   const slimPrior = (p) => (p.estimable ? { estimable: true, alpha: p.alpha, beta: p.beta, mean: p.mean, tau2: p.tau2 } : { estimable: false, reason: p.reason });
   const slimTier = (t) => (t.status === 'ok' ? { status: 'ok', q20: t.q20, q80: t.q80 } : { status: t.status });
   return {
@@ -388,14 +388,14 @@ function slimShooterQuality(fit) {
 }
 
 /** M3: nur die Rangliste mit tvePerGame je Goalie (kein tve, keine tveCI90, kein volles players[]). */
-function slimGoalieRatings(fit) {
+export function slimGoalieRatings(fit) {
   return { status: fit.status, rankList: fit.rankList.map((r) => ({ playerId: r.playerId, name: r.name, tvePerGame: r.tvePerGame })) };
 }
 
 /** M4: nur Liga-Effekte (Punktschätzer, kein ci90) und je Team die Kernwerte (hz/lateGameIndex je Spiel 1/2,
  * NUR shrunkEffect). shrunkEffect bleibt explizit `null`, wenn der Prior nicht schätzbar ist (kein Ersatzwert,
  * kein Clamping) — insbesondere bei frühen Spieltagen häufig für game1.lateGameIndex (kleine Stichprobe). */
-function slimFatigue(fit) {
+export function slimFatigue(fit) {
   const est = (e) => e.estimate;
   const metric = (m) => ({ shrunkEffect: m.shrunkEffect });
   const seg = fit.league.effects.segments;
@@ -410,7 +410,7 @@ function slimFatigue(fit) {
  * einem frühen Spieltag mit wenigen Zeilen die eigene Fehlschlagsquote-Schwelle reißt (`bootstrap-failed`,
  * stats.mjs, unverändert) — kein Absturz des gesamten Schreibvorgangs, sondern ein gültiger, ehrlicher
  * "nicht schätzbar"-Zustand (kein Clamping, kein Ersatzwert), analog zu fitFatigue()s eigenen not-estimable-Zweigen. */
-function emptySlimFatigue() {
+export function emptySlimFatigue() {
   return {
     status: 'not-estimable',
     league: { effects: { halfHz2: null, orderXHalf: null, segments: { seg1: null, seg2: null, seg3: null, seg4: null, orderXSeg2: null, orderXSeg3: null, orderXSeg4: null } } },
@@ -421,7 +421,7 @@ function emptySlimFatigue() {
 /** Kernwerte aller vier Module für EINEN Spieltag (asOf = asOfAfterMatchday, M1-Helfer unverändert wiederverwendet,
  * keine zweite asOf-Auflösung). `null`, wenn der Spieltag keine Zeilen hat (in der Praxis nicht der Fall, da nur
  * bereits über buildMatchdays gefilterte, tatsächlich vorhandene Spieltage aufgerufen werden). */
-function buildMatchdaySnapshot(data, teamGames, seasonKey, matchdayNumber, activeTeamKeys, { snapshotReplicates, snapshotSeed }) {
+export function buildMatchdaySnapshot(data, teamGames, seasonKey, matchdayNumber, activeTeamKeys, { snapshotReplicates, snapshotSeed }) {
   const asOf = asOfAfterMatchday(teamGames, seasonKey, matchdayNumber);
   if (!asOf) return null;
   const m1 = fitTeamStrength(teamGames, { asOf });
@@ -440,21 +440,21 @@ function buildMatchdaySnapshot(data, teamGames, seasonKey, matchdayNumber, activ
 /** model-data/snapshots/<season>.json — NUR abgeschlossene Spieltage (buildMatchdays, Status "abgeschlossen", wie
  * spezifiziert); `rawSeason` ist der unnormalisierte Saisonobjekt aus loadSeasonFiles() (buildMatchdays erwartet
  * dessen Rohformat, nicht das normalisierte M0-Ergebnis). */
-function buildSnapshotsFile(data, teamGames, seasonKey, rawSeason, activeTeamKeys, options) {
+export function buildSnapshotsFile(data, teamGames, seasonKey, rawSeason, activeTeamKeys, options) {
   const mds = buildMatchdays(rawSeason).filter((md) => md.status === 'abgeschlossen' && md.number !== null);
   const matchdaySnapshots = mds.map((md) => buildMatchdaySnapshot(data, teamGames, seasonKey, md.number, activeTeamKeys, options)).filter(Boolean);
   return { seasonKey, matchdays: matchdaySnapshots };
 }
 
 /** Dateiname für einen Saisonschlüssel wie "21/22" -> "21-22" (Konvention identisch zu season-data/21-22.json). */
-function fileNameForSeasonKey(seasonKey) {
+export function fileNameForSeasonKey(seasonKey) {
   return seasonKey.replace('/', '-');
 }
 
 /** Atomarer Text-Schreibvorgang (Temp-Datei + rename), analog zum bestehenden Muster in import-season-data.mjs/
  * update-season-data.mjs. Schreibt die kanonische JSON-Form (canonicalJson, nicht JSON.stringify) für Determinismus
  * unabhängig von der zufälligen Objektschlüssel-Erzeugungsreihenfolge. */
-async function writeJsonCanonicalAtomic(filePath, value) {
+export async function writeJsonCanonicalAtomic(filePath, value) {
   await mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp-${process.pid}`;
   await writeFile(tmpPath, canonicalJson(value) + '\n', 'utf8');
