@@ -1,6 +1,6 @@
-# Liga-Modell: technische Dokumentation (Stand P1a / M0, P2 Runde 2 / M1 und P3 Runde 2 / M2 + M3)
+# Liga-Modell: technische Dokumentation (Stand P1a / M0, P2 Runde 2 / M1, P3 Runde 2 / M2 + M3 und P4 / M4)
 
-Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: **P1a (M0 Datenaufbereitung)**, **P2 Runde 2 (M1 Teamstärke, nur Node/Dry-Run)** und **P3 Runde 2 (M2 Torschützen-Qualität und M3 Goalie-Bewertung, nur Node/Dry-Run)**, dazu die numerischen Bausteine aus `stats.mjs` (P2 Runde 1 und Gamma-Poisson-Grundlagen für M2). Grundlage ist die Spezifikation `docs/liga-analytics-spezifikation.md` (Abschnitt 4, M0 und M1). Weitere Module sind noch nicht implementiert und hier nicht beschrieben. Der M1-Abschnitt beginnt bei „## M1 · Teamstärke“.
+Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: **P1a (M0 Datenaufbereitung)**, **P2 Runde 2 (M1 Teamstärke, nur Node/Dry-Run)**, **P3 Runde 2 (M2 Torschützen-Qualität und M3 Goalie-Bewertung, nur Node/Dry-Run)** und **P4 (M4 Müdigkeit und Belastung, nur Node/Dry-Run bis einschließlich der Build-Integration)**, dazu die numerischen Bausteine aus `stats.mjs` (P2 Runde 1, Gamma-Poisson-Grundlagen für M2, Normal-EB- und Beta-Binomial-EB-Grundlagen für M4). Grundlage ist die Spezifikation `docs/liga-analytics-spezifikation.md` (Abschnitt 4, M0 bis M4). Weitere Module sind noch nicht implementiert und hier nicht beschrieben. Der M1-Abschnitt beginnt bei „## M1 · Teamstärke“, der M4-Abschnitt bei „## M4 · Müdigkeit und Belastung“.
 
 **M0 ist Normalisierung und Datenqualitätsbasis.** M0 entscheidet keine späteren fachlichen Kennzahlen: keine Eigentor-Gutschrift, keine Strafminuten, keine Zeitrekonstruktion, keine Spieleridentität aus Platzhaltern, kein Ableiten des Ausrichters ohne Rohwert.
 
@@ -19,6 +19,8 @@ Dieses Dokument beschreibt ausschließlich, was tatsächlich implementiert ist: 
 | `scripts/test-model-shooter-quality.mjs` | M2-Tests (Aggregation, `asOf`/Leakage, Prior/Posterior, Stufen, Identität, Leerzustände, echte Daten) |
 | `scripts/model/goalie-rating.mjs` | M3: Goalie-Bewertung (erwartete Gegentore Variante A, TvE, Bootstrap über M1, Schützenqualität der Gegentore über M2, Kontext-Splits), Aufruf über `--only M3` |
 | `scripts/test-model-goalie-rating.mjs` | M3-Tests (Variante-A-Formel, Solo/Shared, Sichtbarkeit, Bootstrap, Response-Momentum, Halbzeit, Weak-Shooter, `asOf`/Leakage, Teamhistorie, echte Daten) |
+| `scripts/model/fatigue.mjs` | M4: Müdigkeit und Belastung (Liga-, Team-, Spieler-Ebene, Fresh-vs-Tired; Load Index bewusst nicht implementiert), Aufruf über `--only M4` |
+| `scripts/test-model-fatigue.mjs` | M4-Tests (unabhängige Kontrollpfade je Ebene, Bootstrap, Shrinkage, Fresh-vs-Tired-Symmetrie, Determinismus, echte Daten) |
 
 Wiederverwendet (nicht kopiert): `compareGamesChronologically` (`game-ordering.mjs`), `buildMatchdays` (`matchday-derivation.mjs`), `canonicalJson` und `sha256Hex` (`lineup-data-hash.mjs`). `index.html` wird nicht verändert und nicht geladen.
 
@@ -32,10 +34,11 @@ node scripts/build-league-model.mjs --only M1 --replicates 200 --seed 1 # zusät
 node scripts/build-league-model.mjs --only M2                           # M2-Torschützen-Qualität (siehe Abschnitt „M2“)
 node scripts/build-league-model.mjs --only M3                           # M3-Goalie-Bewertung (ohne Bootstrap, siehe Abschnitt „M3“)
 node scripts/build-league-model.mjs --only M3 --replicates 200 --seed 1 # zusätzlich seeded 90-%-Bootstrap (Spielebene)
+node scripts/build-league-model.mjs --only M4 --replicates 200 --seed 1 # M4-Müdigkeit und Belastung (siehe Abschnitt „M4“; --replicates/--seed hier PFLICHT)
 ```
 
-- Das Skript ist ein **Dry-Run** und schreibt nichts. Einen Schreibmodus gibt es nicht: `--write` wird mit Exit-Code 2 abgelehnt (auch mit `--only M1`/`--only M3`). Es entstehen keine `model-data/`-Dateien und kein `manifest.json`.
-- `--only M1`/`--only M3`: `--replicates N` (ganze Zahl ≥ 20) und `--seed S` gehören zusammen; es gibt keinen versteckten Standard-Seed.
+- Das Skript ist standardmäßig ein **Dry-Run** und schreibt nichts (`--write`, siehe Abschnitt „Modelldaten-Persistenz“).
+- `--only M1`/`--only M3`: `--replicates N` (ganze Zahl ≥ 20) und `--seed S` gehören zusammen; es gibt keinen versteckten Standard-Seed. `--only M4` verlangt beide zwingend (M4 kennt keinen bootstrap-losen Pfad).
 - Kein Netzwerk, keine externen Pakete, keine Uhrzeit in der Ausgabe. Gleiche Eingabedaten ergeben byte-identische Ausgabe.
 - Der Bericht enthält den `inputHash` (SHA-256 über die kanonisch serialisierten Saisondateien in der Reihenfolge von `season-data/seasons.json`).
 
@@ -448,6 +451,89 @@ Im JSON stehen `players[]`/`rankList[]` nur im Hauptstand (`snapshots[0]`, `labe
 ### Bewusst nicht enthalten
 
 Variante B (Goalie-Ridge-Effekt in einer eigenen Regression), `highLeverageGA` (M6), `shorthandedVsEqual` (keine passende abgeleitete M0-Information), Persistenz (`model-data/`), UI, SG-/Vereinszuordnung.
+
+## M4 · Müdigkeit und Belastung (P4, nur Node/Dry-Run bis einschließlich Build-Integration)
+
+Umsetzung der Spezifikation (M4, Abschnitt 4) in `scripts/model/fatigue.mjs`, Tests in `scripts/test-model-fatigue.mjs`, Aufruf über `node scripts/build-league-model.mjs --only M4`. **Keine UI.** M4 liest M0-Daten (`teamGames`, `goalEvents`, `rosterEntries` — Letzteres optional, nur für die Spieler-Ebene) und ruft für die Liga- und Team-Ebene **ausschließlich** die öffentlichen Funktionen von M1 (`bootstrapTeamStrength`, `predictDuel`) auf — kein Refit, keine Fachlogik-Duplikation in `team-strength.mjs`. Die Spieler-Ebene und Fresh-vs-Tired sind vollständig M1-unabhängig (siehe dort). Persistenz ist seit P4b über `--write` möglich, siehe Abschnitt „Modelldaten-Persistenz“ weiter unten.
+
+### Ziel
+
+Prüfen, ob und wie stark die Leistung im 2. Spiel des Tages, in der 2. Halbzeit und in den Schlussminuten nachlässt — für die Liga, für einzelne Teams und für einzelne Spieler — sowie „frisch gegen müde"-Duelle sichtbar machen.
+
+### Liga-Ebene: Poisson-Modell mit M1-Erwartung als Offset
+
+Für jede Team-Spiel-Zeile mit bekannter eigener `derived.gameOrderOfDay` (1 oder 2) liefert `predictDuel` die volle M1-Erwartung `lambdaFull` (die eigene Reihenfolge fließt echt ein, die des Gegners nur als wirkungsloser Vertragsplatzhalter, falls sie fehlt). Halbzeit-Beobachtungen verwenden den Offset `log(lambdaFull/2)`, Segment-Beobachtungen (4 Zehn-Minuten-Abschnitte je Spiel) den Offset `log(lambdaFull/4)`. Zwei getrennte Poisson-Fits ohne Ridge:
+
+```
+Halbzeit:  [Intercept, H2-Dummy, order2×H2]                                      Referenz: Halbzeit 1
+Segment:   [Intercept, Seg2, Seg3, Seg4, order2×Seg2, order2×Seg3, order2×Seg4]   Referenz: Segment 1
+```
+
+`order2` erscheint **nur** in den Interaktionsspalten, nie als eigener Haupteffekt — M1s bereits geschätzter Order-Effekt wird nicht erneut geschätzt. Spalten ohne Variation im Datensatz werden entfernt und gewarnt (`half-effect-not-estimable`/`segment-effect-not-estimable`), ihr Output ist `null`.
+
+Torzuordnung je Halbzeit/Segment folgt `derived.scoreDeltaSide` (nicht `teamSide`) — dieselbe Regel, gegen die `lambdaFull` kalibriert ist (Eigentore zählen für die Gegenseite). Halbzeit ausschließlich über `period` (robust gegenüber kumulierten Zeitformaten, wie bei M3). Segment über `period` + Sekunden innerhalb der Halbzeit. Events mit `scoreDeltaSide === null`, `period ∉ {1,2}` oder `absSec === null` werden gezählt/gewarnt, nicht künstlich zugeordnet.
+
+### Bootstrap: genau ein gemeinsamer Aufruf für Liga- UND Team-Ebene
+
+`bootstrapTeamStrength(teamGames, { asOf, replicates, seed, keepReplicates: true })` wird **genau einmal** aufgerufen. Je Replikat wird aus den Replikat-Koeffizienten ein minimales, mit `predictDuel` kompatibles Fit-Objekt rekonstruiert (`fitLikeFromReplicate`, lokal, nicht exportiert), `lambdaFull` für alle echten Team-Games neu berechnet, beide Poisson-Modelle neu gefittet — **und** dieselben rekonstruierten Koeffizienten treiben `computeTeamLevel` für die Team-Ebene (unten). Kein zweites, eigenes Resampling. `replicates`/`seed` sind bei M4 **Pflicht** (anders als M1/M3): `fitFatigue` liefert ausschließlich bootstrap-gestützte `ci90`-Werte, keinen Nur-Punktschätzung-Pfad. Ein Replikat, dessen Refit fehlschlägt, wird für beide Teilmodelle einheitlich übersprungen (`bootstrap-replicate-refit-failed`); überschreitet der Bootstrap selbst seine Fehlschlagsquote (> 10 %, `stats.mjs`-Regel), wirft `bootstrapTeamStrength` eine `NumericError('bootstrap-failed', …)` — bei sehr datenarmen Datumsschnitten (z. B. frühe Spieltag-Snapshots, siehe Persistenz-Abschnitt) möglich und dort abgefangen, in `fitFatigue` selbst **nicht** abgefangen (kein bootstrap-loser Ausweichpfad vorgesehen).
+
+### Team-Ebene: Halbzeit-Residual, Schlussphasen-Index, Normal-EB-Schrumpfung
+
+Strengere Zeilenauswahl als die Ligaebene: **beide** Seiten müssen eine bekannte `gameOrderOfDay` haben (`expectedDuelForRow` braucht die echte gegnerische Reihenfolge für `expectedGoals.b`, ein Platzhalter wäre hier kein reiner Vertragswert mehr). Je Team-Game:
+
+```
+expectedOwn/expectedOpp = predictDuel(fit, …echte Werte beider Seiten…).expectedGoals.{a,b}
+diffResidualHalf(HZ1/HZ2) = actualDiffHalf − (expectedOwn/2 − expectedOpp/2)         (2 Beobachtungen je Spiel)
+lateResidual = (actualLateOwn − actualLateOpp) − (expectedOwn/4 − expectedOpp/4)      (1 Beobachtung je Spiel, Segment 4)
+```
+
+Aggregation getrennt nach `gameOrderOfDay` (1/2) und Kennzahl (Halbzeit/Late-Game): je Team eine Gruppe der **rohen**, nicht vorab gemittelten Beobachtungen. Je Zelle (4 insgesamt) ein `estimateNormalPrior`-Aufruf (Schritt-1-Numerik aus `stats.mjs`, unverändert) über alle Teams mit ≥ 1 Beobachtung, danach je Team `shrinkToReference`. Prior nicht schätzbar (`τ² ≤ 0`, < 2 Teams) → `shrunkEffect = null`, `raw`/`n` bleiben erhalten (kein Clamping, kein Ersatzwert) — bei kleiner Datenlage (frühe Spieltage, insbesondere `game1`×`lateGameIndex`) in der Praxis häufig.
+
+### Spieler-Ebene: game1-vs-game2-Vergleich, H2-Share, Shrinkage gegen den TEAM-Wert
+
+M1-unabhängig, liest ausschließlich `teamGames`/`goalEvents`/`rosterEntries`. Feldspieler-Kaderzeilen-Auswahl wortgleich zu M2 (`isGoalie === false`, gültige `playerId`, höchstens eine Zeile je Spiel/`playerId`), zusätzlich mit der eigenen `teamGames`-Zeile für `gameOrderOfDay` verknüpft. `points = goals + assists` je Spieler-Spiel (wie M2, keine Halbzeit-Bedingung); für den H2-Share-Zähler zählen dagegen **nur** Tore/Assists mit bekannter Halbzeit (`eventHalf`, `period`-basiert).
+
+- **Punkte pro Spiel:** je (`teamKey`, `gameOrderOfDay`)-Zelle ein `estimateNormalPrior` über alle Spieler dieses Teams in dieser Zelle (Gruppe = einzelne Spiel-Punktewerte, nicht vorab gemittelt); Schrumpfung Richtung **Team**-Wert (nicht Liga, nicht ein anderer Spieler). Eligibilität für den game1-vs-game2-Vergleich: `nGame1 ≥ 6 UND nGame2 ≥ 6` (`MIN_GAMES_FOR_PLAYER_COMPARISON`, einzige Schwelle). Spieler mit weniger Spielen bleiben mit Rohwerten in `players[]`, `confidence.eligible = false`.
+- **Multi-Team-Fall** (ein Spieler spielt innerhalb derselben Order-Zelle für mehr als ein Team, selten): Rohwert (`points`/`pointsPerGameRaw`) bleibt die Summe/das Mittel über **alle** seine Teams; die Schrumpfung verwendet dagegen nur **eine** Referenz-Zelle (das Team mit den meisten Spielen dieses Spielers in dieser Zelle, Gleichstand `teamKey` aufsteigend) — kein Mischen mehrerer Referenzwerte. Bewusst dokumentierte Randfall-Entscheidung, im Spieler-Level-Audit geprüft.
+- **H2-Share:** `estimateBetaPrior`/`betaBinomialPosterior` (Schritt-1-Numerik, unverändert), ein **ligaweiter** (nicht team-spezifischer) Prior je Order-Zelle über alle Spieler mit `halfKnownPoints > 0`. `trials === 0` → alle Felder `null`. Prior nicht schätzbar → `raw` bleibt (falls `trials > 0`), `posteriorMean`/`ci90 = null`.
+- Keine Goalie-Zählung, keine doppelte Spielerzeile (dieselbe Dublettenregel wie M2), kein M1-Bootstrap auf dieser Ebene (M1s Bootstrap läuft ohnehin schon für Liga-/Team-Ebene).
+
+### Fresh-vs-Tired: ausschließlich vorhandene M0-Felder
+
+Gerichtete Beobachtung je Team-Game mit bekannter eigener **und** gegnerischer `derived.gameOrderOfDay` (beide 1 oder 2) **und** `ownOrder !== opponentOrder` (sonst kein Fresh-vs-Tired-Duell). Dasselbe reale Spiel liefert bewusst **zwei** gerichtete Beobachtungen (eine je Seite), da die Zielgröße teambezogen ist — strukturell garantiert symmetrisch, da beide Team-Game-Zeilen eines Spiels dieselben Eligibilitätskriterien spiegelbildlich durchlaufen. `state`/`opponentState` = `order === 1 ? 'fresh' : 'tired'`. `opponentPrevGameGoalDiff`/`opponentGameOrderOfDay` werden **unverändert** aus M0 (`normalize.mjs`) übernommen — dort bereits korrekt über die chronologische Spieltags-Gruppierung des Gegners bestimmt, keine `gameId − 1`-Arithmetik hier. `opponentPrevGameResult` wird ausschließlich aus dem **Vorzeichen** von `opponentPrevGameGoalDiff` abgeleitet (`win`/`draw`/`loss`) — keine neue Knappheitskategorie. `m1AdjustedGoalDiff` ist ein rein **optionaler** Zusatz (nur wenn M1 schätzbar, über das bereits vorhandene `expectedDuelForRow`) und ersetzt nie die Kernklassifikation, die ausschließlich aus den Order-Feldern folgt.
+
+### Load Index: bewusst NICHT implementiert
+
+Die Spezifikation (M4.4) sieht `40 · (Feldspieler auf dem Feld) / fieldPlayerCount` mit einer konfigurierbaren Konstante (Kleinfeld: 3) vor. **M0 liefert keine belastbare, zeitlich veränderliche Auf-dem-Feld-Größe:** Es gibt kein Wechsel-/Lineup-Zeitstempel-Feld in den Rohdaten — nur eine statische Spiel-Kaderliste und die feste Start-Aufstellung `starting_players`, die über alle 237 geprüften echten Spiele hinweg konstant aus 5 Feldrollen + 1 Torrolle besteht (kein genuiner, spielabhängig variierender Wert). Eine Rekonstruktion aus Event- oder Minutendaten oder eine erfundene Ersatzkonstante wäre keine Ableitung aus vorhandenen Daten, sondern eine neue Annahme — deshalb nicht umgesetzt. Kein `loadIndex`-Feld irgendwo im Output, kein versteckter Ersatzwert.
+
+### Ergebnisobjekt (`fitFatigue(data, { asOf, replicates, seed, halfLifeDays, ridge })`)
+
+`{ model: 'M4-fatigue', status, asOf, asOfGameDate, league: { effects, halfModel, segmentModel }, teams[], players[], freshVsTired: { status, observations[], summary, quality, warnings }, quality, warnings }`.
+
+- `status`: `'ok'` (M1 UND mindestens eine Team-Game-Zeile mit lambdaFull schätzbar), `'not-estimable'` (M1 nicht schätzbar, oder keine Zeile liefert eine M1-Vorhersage), `'empty'` (keine Zeile im Datumsschnitt). Alle vier Rückgabezweige haben ein **strukturell identisches** Schema (Abschluss-Audit geprüft) — `players`, `freshVsTired`, `quality.player` sind in JEDEM Zweig identisch verfügbar (M1-unabhängig, vor der M1-Estimability-Prüfung berechnet).
+- `league.effects`: `halfHz2`, `orderXHalf`, `segments.{seg1..seg4, orderXSeg2..orderXSeg4}`, je `{estimate, ci90}`; `seg1` ist das Referenzsegment (Intercept selbst, keine eigene Design-Spalte).
+- `teams[]` (nach `teamKey` aufsteigend): `{teamKey, game1: {hz, lateGameIndex}, game2: {hz, lateGameIndex}}`, je `{n, raw, shrunkEffect, ci90}`.
+- `players[]` (nach `playerId` aufsteigend): `{playerId, name, teams[], game1, game2, comparison: {deltaRaw, deltaShrunk}, h2Share: {game1, game2}, confidence: {eligible, nGame1, nGame2, reason}}`.
+- `freshVsTired.observations[]`: `{gameId, seasonKey, teamKey, opponentTeamKey, ownOrder, opponentOrder, state, opponentState, ownGoals, opponentGoals, ownGoalDiff, opponentPrevGameResult, opponentPrevGameGoalDiff, m1AdjustedGoalDiff}`; `summary.{fresh,tired}` = `{n, meanGoalDiff, meanM1AdjustedGoalDiff}`.
+- `warnings[]` ist in **allen vier** Rückgabezweigen die vollständige Vereinigung aus Liga-/Team-Ebenen-Warnungen, `playerLevel.warnings` und `freshVsTired.warnings` (Abschluss-Audit-Fix: `freshVsTired.warnings` wurde davor nicht auf oberster Ebene gemergt).
+- Rundung erst an der Ausgabegrenze (`roundOutput`, 8 Nachkommastellen); das Modul selbst liefert ungerundete Werte.
+
+### Aufruf
+
+```bash
+node scripts/build-league-model.mjs --only M4 --replicates 200 --seed 1 # Bericht (--replicates/--seed hier PFLICHT)
+node scripts/build-league-model.mjs --only M4 --replicates 200 --seed 1 --json # kanonisches JSON, 8 Nachkommastellen
+```
+
+Anders als M1/M2/M3 gibt es für `--only M4` **keine** Saisonende-Schnappschüsse (`snapshots` enthält nur den Hauptstand `"all"`): `fitFatigue` verlangt immer einen Bootstrap, ein zusätzlicher Bootstrap-Lauf je Saison wäre kein „billiger" Zusatzstand wie bei M1/M3 (deren Saisonende-Schleife bewusst ohne Bootstrap läuft) und wurde nicht angefordert. Der Standardlauf ohne `--only` sowie `--only M1`, `--only M2` und `--only M3` sind unverändert und byte-identisch zum Stand vor M4.
+
+### Datenlage (echte Daten, Stand aller fünf Saisons, Bootstrap 20 Replikate Seed 1)
+
+424 Team-Spiel-Zeilen mit bekannter Reihenfolge (11 Teams über alle Saisons), 266 Feldspieler (108 mit 6+6 Eligibilität für den game1-vs-game2-Vergleich), 38 gerichtete Fresh-vs-Tired-Beobachtungen (19 fresh + 19 tired, 19 mit bekanntem `opponentPrevGameGoalDiff`). Das sind Beobachtungen, keine Pins der Modellwerte.
+
+### Bewusst nicht enthalten
+
+Load Index (siehe oben), M9-Walk-forward-Akzeptanz (wie M1/M3), Anreise-Analyse (Spezifikation M4.6, Entscheidung 4: verschoben), UI, SG-/Vereinszuordnung über die tatsächliche Spielseite hinaus.
 
 ## Bewusst nicht interpretierte Daten
 
