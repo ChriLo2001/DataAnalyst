@@ -13,21 +13,25 @@
 //   (--replicates/--seed sind bei --only M4 PFLICHT, anders als bei M1/M3 — fitFatigue liefert ausschließlich
 //   Bootstrap-ci90, keinen Nur-Punktschätzung-Pfad; Load Index ist bewusst NICHT implementiert)
 //
-// Schreibt NICHTS ins Repository. Einen Schreibmodus (`--write`, model-data/) gibt es in P1a
-// bewusst noch nicht; der Aufruf wird mit einer Meldung abgelehnt. Kein Netzwerk, keine Uhrzeit
+//   node scripts/build-league-model.mjs --write --replicates 200 --seed 1  # P4b: rechnet + schreibt model-data/ atomisch
+//   (--write erfordert IMMER --replicates/--seed, kein versteckter Standardwert, und berechnet/schreibt IMMER alle
+//   vier Module gemeinsam — --only zusammen mit --write wird abgelehnt, siehe docs/league-model.md)
+//
+// Schreibt ohne `--write` NICHTS ins Repository (Dry-Run bleibt der Standard). Kein Netzwerk, keine Uhrzeit
 // in der Ausgabe (gleiche Eingabedaten → byte-identische Ausgabe), keine externen Pakete.
 
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { normalizeSeason } from './model/normalize.mjs';
 import { canonicalJson, sha256Hex } from './lineup-data-hash.mjs';
-import { roundOutput } from './model/stats.mjs';
-import { DEFAULTS, PLACEHOLDER_OPTIONS, fitTeamStrength, bootstrapTeamStrength } from './model/team-strength.mjs';
+import { roundOutput, NumericError } from './model/stats.mjs';
+import { DEFAULTS, PLACEHOLDER_OPTIONS, fitTeamStrength, bootstrapTeamStrength, asOfAfterMatchday } from './model/team-strength.mjs';
 import { DEFAULTS as M2_DEFAULTS, PLACEHOLDER_OPTIONS as M2_PLACEHOLDER_OPTIONS, fitShooterQuality } from './model/shooter-quality.mjs';
 import { MIN_GAMES_FOR_RANK as M3_MIN_GAMES_FOR_RANK, BOOTSTRAP_LEVEL as M3_BOOTSTRAP_LEVEL, fitGoalieRating } from './model/goalie-rating.mjs';
 import { fitFatigue } from './model/fatigue.mjs';
+import { buildMatchdays } from './matchday-derivation.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -298,12 +302,172 @@ export function formatM4Report(m4) {
   return lines.join('\n') + '\n';
 }
 
+// ── Persistenz (model-data/, P4b) ───────────────────────────────────────────
+//
+// Reine Aufbau-Funktionen ohne Dateisystemzugriff (Konvention wie überall sonst in diesem Modul); das tatsächliche
+// Schreiben passiert ausschließlich in main() hinter --write (siehe dort). --write erfordert IMMER --replicates/
+// --seed (kein versteckter Standardwert, wie bei --only M4) und berechnet/schreibt IMMER alle vier Module gemeinsam
+// (kein --only zusammen mit --write — bewusste Abweichung von der Spezifikation, siehe docs/league-model.md).
+//
+// Zwei getrennte Bootstrap-Konfigurationen: alltime.json und <season>.json verwenden die von --replicates/--seed
+// angeforderten Werte (volle Präzision, Owner-Entscheidung). model-data/snapshots/<season>.json verwendet dagegen
+// IMMER SNAPSHOT_REPLICATES (20, die technische Mindestzahl) mit dem GLEICHEN --seed — nicht, weil 20 Replikate
+// statistisch ausreichen, sondern weil M4 keinen bootstrap-losen Pfad kennt (jeder der 35 Spieltag-Snapshots
+// braucht zwingend einen Bootstrap-Lauf) und 200 Replikate × 35 Spieltage das 2-Minuten-Laufzeitziel sprengen würden
+// (siehe Laufzeitmessung im Schritt-1-Plan). Snapshots enthalten ohnehin keine ci90-Werte (Owner-Entscheidung),
+// die Replikatzahl wirkt sich dort NUR auf den intern verwendeten Punktschätzer-Pfad aus, nicht auf ein sichtbares
+// Intervall. Kein zweiter, versteckter Seed: derselbe --seed wie für alltime/<season>.json.
+export const SNAPSHOT_REPLICATES = 20;
+
+/** M4 je Saisonende (asOf = letztes Datum der Saison, inclusive) — analog zum bestehenden M1/M2/M3-Saisonschleifen-
+ * Muster, aber NEU (buildM4() kennt bewusst keine Saisonende-Stände, siehe dortiger Kommentar) und in einer
+ * eigenen Funktion, damit --only M4 (ruft ausschließlich buildM4() auf) unverändert bleibt. */
+export function buildM4SeasonEnd(model, data, { replicates, seed }) {
+  const out = {};
+  for (const s of model.seasons) {
+    const last = s.teamGames.map((r) => r.date).sort().at(-1);
+    if (last) out[s.seasonKey] = fitFatigue(data, { asOf: { date: last, inclusive: true }, replicates, seed });
+  }
+  return out;
+}
+
+/** manifest.json — kein Zeitstempel (Determinismus), Bootstrap-Konfiguration beider Präzisionsstufen dokumentiert. */
+export function buildManifest(model, { allTimeReplicates, allTimeSeed, snapshotReplicates, snapshotSeed }) {
+  return {
+    schemaVersion: 1,
+    inputHash: model.inputHash,
+    modules: ['teamStrength', 'shooterQuality', 'goalieRatings', 'fatigue'],
+    seasons: model.seasons.map((s) => s.seasonKey),
+    bootstrap: {
+      alltime: { replicates: allTimeReplicates, seed: allTimeSeed },
+      snapshots: { replicates: snapshotReplicates, seed: snapshotSeed, intervals: false },
+    },
+  };
+}
+
+/** model-data/<season>.json je Saison — Saisonende-Stand aller vier Module, volle (ungeschmälerte) Objekte. */
+export function buildSeasonFiles(model, m1, m2, m3, m4SeasonEnd) {
+  const out = {};
+  for (const s of model.seasons) {
+    const key = s.seasonKey;
+    const m1snap = m1.snapshots.find((sn) => sn.label === key);
+    const m2snap = m2.snapshots.find((sn) => sn.label === key);
+    const m3snap = m3.snapshots.find((sn) => sn.label === key);
+    const fatigueFit = m4SeasonEnd[key];
+    if (!m1snap || !m2snap || !m3snap || !fatigueFit) continue; // Saison ohne beendetes Spiel (in den echten Daten nicht der Fall)
+    out[key] = { seasonKey: key, asOf: m1snap.fit.asOf, teamStrength: m1snap.fit, shooterQuality: m2snap.fit, goalieRatings: m3snap.fit, fatigue: fatigueFit };
+  }
+  return out;
+}
+
+/** model-data/alltime.json — aktueller Gesamtstand ("all") aller vier Module, volle (ungeschmälerte) Objekte. */
+export function buildAlltimeFile(m1, m2, m3, m4All) {
+  return { asOf: m1.snapshots[0].fit.asOf, teamStrength: m1.snapshots[0].fit, shooterQuality: m2.snapshots[0].fit, goalieRatings: m3.snapshots[0].fit, fatigue: m4All };
+}
+
+// ── Schlanke „Kernwerte" für model-data/snapshots/ (Punktschätzer, KEINE ci90/Intervalle, Owner-Entscheidung) ────
+//
+// Regel: nur, was eine Verlaufskurve über Spieltage speisen kann, sonst nichts (siehe Schritt-1-Plan-Freigabe).
+
+/** M1: nur Teams, die in DIESER Saison tatsächlich mindestens ein Spiel bestritten haben (activeTeamKeys) — nicht
+ * alle Teams des multi-saisonalen, zeitgewichteten Fits. Das Modell selbst rechnet unverändert über alle Saisons;
+ * gefiltert wird ausschließlich die Ausgabe dieses einen Saison-Snapshots (Owner-Entscheidung, Variante A). */
+export function slimTeamStrength(fit, activeTeamKeys) {
+  return { estimable: fit.estimable, teams: fit.estimable ? fit.stage1.teams.filter((t) => activeTeamKeys.has(t.teamKey)).map((t) => ({ teamKey: t.teamKey, attack: t.attack, defense: t.defense })) : [] };
+}
+
+/** M2: nur Prior-Kennzahlen und Tier-Schwellen, kein vollständiges players[]. */
+export function slimShooterQuality(fit) {
+  const slimPrior = (p) => (p.estimable ? { estimable: true, alpha: p.alpha, beta: p.beta, mean: p.mean, tau2: p.tau2 } : { estimable: false, reason: p.reason });
+  const slimTier = (t) => (t.status === 'ok' ? { status: 'ok', q20: t.q20, q80: t.q80 } : { status: t.status });
+  return {
+    status: fit.status,
+    priors: { goals: slimPrior(fit.priors.goals), assists: slimPrior(fit.priors.assists), points: slimPrior(fit.priors.points) },
+    tiers: { goals: slimTier(fit.tiers.goals), assists: slimTier(fit.tiers.assists), points: slimTier(fit.tiers.points) },
+  };
+}
+
+/** M3: nur die Rangliste mit tvePerGame je Goalie (kein tve, keine tveCI90, kein volles players[]). */
+export function slimGoalieRatings(fit) {
+  return { status: fit.status, rankList: fit.rankList.map((r) => ({ playerId: r.playerId, name: r.name, tvePerGame: r.tvePerGame })) };
+}
+
+/** M4: nur Liga-Effekte (Punktschätzer, kein ci90) und je Team die Kernwerte (hz/lateGameIndex je Spiel 1/2,
+ * NUR shrunkEffect). shrunkEffect bleibt explizit `null`, wenn der Prior nicht schätzbar ist (kein Ersatzwert,
+ * kein Clamping) — insbesondere bei frühen Spieltagen häufig für game1.lateGameIndex (kleine Stichprobe). */
+export function slimFatigue(fit) {
+  const est = (e) => e.estimate;
+  const metric = (m) => ({ shrunkEffect: m.shrunkEffect });
+  const seg = fit.league.effects.segments;
+  return {
+    status: fit.status,
+    league: { effects: { halfHz2: est(fit.league.effects.halfHz2), orderXHalf: est(fit.league.effects.orderXHalf), segments: { seg1: est(seg.seg1), seg2: est(seg.seg2), seg3: est(seg.seg3), seg4: est(seg.seg4), orderXSeg2: est(seg.orderXSeg2), orderXSeg3: est(seg.orderXSeg3), orderXSeg4: est(seg.orderXSeg4) } } },
+    teams: fit.teams.map((t) => ({ teamKey: t.teamKey, game1: { hz: metric(t.game1.hz), lateGameIndex: metric(t.game1.lateGameIndex) }, game2: { hz: metric(t.game2.hz), lateGameIndex: metric(t.game2.lateGameIndex) } })),
+  };
+}
+
+/** Leerer, strukturell zu slimFatigue() identischer Zustand für den Fall, dass der (bei M4 zwingende) Bootstrap an
+ * einem frühen Spieltag mit wenigen Zeilen die eigene Fehlschlagsquote-Schwelle reißt (`bootstrap-failed`,
+ * stats.mjs, unverändert) — kein Absturz des gesamten Schreibvorgangs, sondern ein gültiger, ehrlicher
+ * "nicht schätzbar"-Zustand (kein Clamping, kein Ersatzwert), analog zu fitFatigue()s eigenen not-estimable-Zweigen. */
+export function emptySlimFatigue() {
+  return {
+    status: 'not-estimable',
+    league: { effects: { halfHz2: null, orderXHalf: null, segments: { seg1: null, seg2: null, seg3: null, seg4: null, orderXSeg2: null, orderXSeg3: null, orderXSeg4: null } } },
+    teams: [],
+  };
+}
+
+/** Kernwerte aller vier Module für EINEN Spieltag (asOf = asOfAfterMatchday, M1-Helfer unverändert wiederverwendet,
+ * keine zweite asOf-Auflösung). `null`, wenn der Spieltag keine Zeilen hat (in der Praxis nicht der Fall, da nur
+ * bereits über buildMatchdays gefilterte, tatsächlich vorhandene Spieltage aufgerufen werden). */
+export function buildMatchdaySnapshot(data, teamGames, seasonKey, matchdayNumber, activeTeamKeys, { snapshotReplicates, snapshotSeed }) {
+  const asOf = asOfAfterMatchday(teamGames, seasonKey, matchdayNumber);
+  if (!asOf) return null;
+  const m1 = fitTeamStrength(teamGames, { asOf });
+  const m2 = fitShooterQuality(data, { asOf });
+  const m3 = fitGoalieRating(data, { asOf });
+  let fatigue;
+  try {
+    fatigue = slimFatigue(fitFatigue(data, { asOf, replicates: snapshotReplicates, seed: snapshotSeed }));
+  } catch (e) {
+    if (!(e instanceof NumericError)) throw e;
+    fatigue = emptySlimFatigue(); // z. B. bootstrap-failed: zu wenige Zeilen für 20 stabile Replikate an diesem frühen Spieltag
+  }
+  return { number: matchdayNumber, asOf, teamStrength: slimTeamStrength(m1, activeTeamKeys), shooterQuality: slimShooterQuality(m2), goalieRatings: slimGoalieRatings(m3), fatigue };
+}
+
+/** model-data/snapshots/<season>.json — NUR abgeschlossene Spieltage (buildMatchdays, Status "abgeschlossen", wie
+ * spezifiziert); `rawSeason` ist der unnormalisierte Saisonobjekt aus loadSeasonFiles() (buildMatchdays erwartet
+ * dessen Rohformat, nicht das normalisierte M0-Ergebnis). */
+export function buildSnapshotsFile(data, teamGames, seasonKey, rawSeason, activeTeamKeys, options) {
+  const mds = buildMatchdays(rawSeason).filter((md) => md.status === 'abgeschlossen' && md.number !== null);
+  const matchdaySnapshots = mds.map((md) => buildMatchdaySnapshot(data, teamGames, seasonKey, md.number, activeTeamKeys, options)).filter(Boolean);
+  return { seasonKey, matchdays: matchdaySnapshots };
+}
+
+/** Dateiname für einen Saisonschlüssel wie "21/22" -> "21-22" (Konvention identisch zu season-data/21-22.json). */
+export function fileNameForSeasonKey(seasonKey) {
+  return seasonKey.replace('/', '-');
+}
+
+/** Atomarer Text-Schreibvorgang (Temp-Datei + rename), analog zum bestehenden Muster in import-season-data.mjs/
+ * update-season-data.mjs. Schreibt die kanonische JSON-Form (canonicalJson, nicht JSON.stringify) für Determinismus
+ * unabhängig von der zufälligen Objektschlüssel-Erzeugungsreihenfolge. */
+export async function writeJsonCanonicalAtomic(filePath, value) {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  const tmpPath = `${filePath}.tmp-${process.pid}`;
+  await writeFile(tmpPath, canonicalJson(value) + '\n', 'utf8');
+  await rename(tmpPath, filePath);
+}
+
 function parseArgs(argv) {
-  const out = { json: false, only: null, replicates: null, seed: null, unknown: [], errors: [] };
+  const out = { json: false, write: false, only: null, replicates: null, seed: null, unknown: [], errors: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const valued = ['--only', '--replicates', '--seed'].find((k) => a === k || a.startsWith(k + '='));
     if (a === '--json') out.json = true;
+    else if (a === '--write') out.write = true;
     else if (valued) {
       const v = a.includes('=') ? a.slice(a.indexOf('=') + 1) : argv[++i];
       if (v === undefined) out.errors.push(`${valued} braucht einen Wert`);
@@ -317,21 +481,23 @@ function parseArgs(argv) {
 
 export async function main(argv = process.argv.slice(2), { stdout = process.stdout, stderr = process.stderr, repoRoot = REPO_ROOT } = {}) {
   const args = parseArgs(argv);
+  const usage = 'Aufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S] | --only M4 --replicates N --seed S | --write --replicates N --seed S]\n';
   if (args.unknown.length) {
-    if (args.unknown.includes('--write')) stderr.write('--write ist nicht implementiert: es werden keine model-data-Dateien geschrieben (nur Dry-Run).\n');
-    else stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S] | --only M4 --replicates N --seed S]\n`);
+    stderr.write(`Unbekannte Option(en): ${args.unknown.join(' ')}\n${usage}`);
     return 2;
   }
   const problems = [...args.errors];
   if (args.only !== null && args.only !== 'M1' && args.only !== 'M2' && args.only !== 'M3' && args.only !== 'M4') problems.push('nur --only M1, --only M2, --only M3 und --only M4 sind implementiert');
-  if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1' && args.only !== 'M3' && args.only !== 'M4') problems.push('--replicates und --seed gehören zu --only M1, --only M3 oder --only M4');
+  if ((args.replicates !== null || args.seed !== null) && args.only !== 'M1' && args.only !== 'M3' && args.only !== 'M4' && !args.write) problems.push('--replicates und --seed gehören zu --only M1, --only M3, --only M4 oder --write');
   if (args.replicates !== null && !(Number.isInteger(args.replicates) && args.replicates >= 20)) problems.push('--replicates muss eine ganze Zahl ≥ 20 sein');
   if (args.seed !== null && !(Number.isInteger(args.seed) && args.seed < 2 ** 32)) problems.push('--seed muss eine ganze Zahl in [0, 2^32) sein');
   if (args.replicates !== null && args.seed === null) problems.push('--replicates braucht ausdrücklich --seed (kein versteckter Standard-Seed)');
   if (args.seed !== null && args.replicates === null) problems.push('--seed ohne --replicates hat keine Wirkung');
   if (args.only === 'M4' && (args.replicates === null || args.seed === null)) problems.push('--only M4 erfordert --replicates und --seed (M4 liefert ausschließlich Bootstrap-ci90, kein Nur-Punktschätzung-Pfad)');
+  if (args.write && args.only !== null) problems.push('--write und --only schließen sich aus (--write berechnet und schreibt immer alle vier Module gemeinsam, siehe docs/league-model.md)');
+  if (args.write && (args.replicates === null || args.seed === null)) problems.push('--write erfordert --replicates und --seed (Modelldaten-Persistenz liefert ausschließlich Bootstrap-gestützte Werte, kein Nur-Punktschätzung-Pfad, kein versteckter Standard-Seed)');
   if (problems.length) {
-    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\nAufruf: node scripts/build-league-model.mjs [--json] [--only M1 [--replicates N --seed S] | --only M2 | --only M3 [--replicates N --seed S] | --only M4 --replicates N --seed S]\n`);
+    stderr.write(`Ungültige Optionen: ${problems.join('; ')}\n${usage}`);
     return 2;
   }
   const model = await buildLeagueModel(repoRoot);
@@ -366,6 +532,54 @@ export async function main(argv = process.argv.slice(2), { stdout = process.stdo
     if (args.json) {
       stdout.write(canonicalJson(roundOutput({ inputHash: model.inputHash, options: m4.options, snapshots: m4.snapshots })) + '\n');
     } else stdout.write(formatM4Report(m4));
+    return 0;
+  }
+  if (args.write) {
+    const data = {
+      teamGames: model.seasons.flatMap((s) => s.teamGames),
+      goalEvents: model.seasons.flatMap((s) => s.goalEvents),
+      rosterEntries: model.seasons.flatMap((s) => s.rosterEntries),
+    };
+    const m1 = buildM1(model, { replicates: args.replicates, seed: args.seed });
+    const m2 = buildM2(model);
+    const m3 = buildM3(model, { replicates: args.replicates, seed: args.seed });
+    const m4All = fitFatigue(data, { replicates: args.replicates, seed: args.seed });
+    const m4SeasonEnd = buildM4SeasonEnd(model, data, { replicates: args.replicates, seed: args.seed });
+
+    const manifest = buildManifest(model, { allTimeReplicates: args.replicates, allTimeSeed: args.seed, snapshotReplicates: SNAPSHOT_REPLICATES, snapshotSeed: args.seed });
+    const seasonFiles = buildSeasonFiles(model, m1, m2, m3, m4SeasonEnd);
+    const alltimeFile = buildAlltimeFile(m1, m2, m3, m4All);
+
+    const rawSeasons = await loadSeasonFiles(repoRoot);
+    const snapshotOptions = { snapshotReplicates: SNAPSHOT_REPLICATES, snapshotSeed: args.seed };
+    const snapshotFiles = {};
+    for (const s of model.seasons) {
+      const raw = rawSeasons.find((r) => r.season === s.seasonKey);
+      const activeTeamKeys = new Set(s.teamGames.map((t) => t.teamKey));
+      snapshotFiles[s.seasonKey] = buildSnapshotsFile(data, data.teamGames, s.seasonKey, raw, activeTeamKeys, snapshotOptions);
+    }
+
+    const modelDataDir = path.join(repoRoot, 'model-data');
+    const written = [];
+    const manifestPath = path.join(modelDataDir, 'manifest.json');
+    await writeJsonCanonicalAtomic(manifestPath, manifest);
+    written.push(manifestPath);
+    const alltimePath = path.join(modelDataDir, 'alltime.json');
+    await writeJsonCanonicalAtomic(alltimePath, roundOutput(alltimeFile));
+    written.push(alltimePath);
+    for (const [key, content] of Object.entries(seasonFiles)) {
+      const p = path.join(modelDataDir, `${fileNameForSeasonKey(key)}.json`);
+      await writeJsonCanonicalAtomic(p, roundOutput(content));
+      written.push(p);
+    }
+    for (const [key, content] of Object.entries(snapshotFiles)) {
+      const p = path.join(modelDataDir, 'snapshots', `${fileNameForSeasonKey(key)}.json`);
+      await writeJsonCanonicalAtomic(p, roundOutput(content));
+      written.push(p);
+    }
+
+    stdout.write(`Modelldaten geschrieben (${written.length} Dateien) nach ${path.relative(repoRoot, modelDataDir)}\n`);
+    for (const p of written) stdout.write(`   · ${path.relative(repoRoot, p)}\n`);
     return 0;
   }
   if (args.json) {

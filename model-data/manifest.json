@@ -1,0 +1,1 @@
+{"bootstrap":{"alltime":{"replicates":200,"seed":1},"snapshots":{"intervals":false,"replicates":20,"seed":1}},"inputHash":"310da620e44dc0e68465efe0422dbd26e12fcdc67ce9e866e8b413f1e6b8308c","modules":["teamStrength","shooterQuality","goalieRatings","fatigue"],"schemaVersion":1,"seasons":["21/22","22/23","23/24","24/25","25/26"]}
