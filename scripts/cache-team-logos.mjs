@@ -64,10 +64,15 @@ function absoluteLogoUrl(raw) {
 }
 
 /** Sammelt je Team (Schlüssel via teamKeyFor) den Anzeigenamen, die Saisons, in denen er vorkommt, und die
- * erste gefundene Logo-URL. Ulm/SG läuft wie überall im Projekt unter dem Schlüssel des eigenen Teams. */
+ * Logo-URL der JÜNGSTEN Saison, in der eine gefunden wird (nicht die erste über alle Saisons hinweg) — ältere
+ * Saisonmanager-URLs (`/api/storage/blobs/redirect/...`) sind signierte, offenbar zeitlich begrenzte Links und
+ * in der Praxis oft nicht mehr erreichbar (siehe Dry-Run-/--fetch-Bericht); die URL-Form der aktuellen Saison
+ * (`/api/storage/representations/proxy/...`) ist deutlich verlässlicher. `seasons` wird in der Reihenfolge von
+ * season-data/seasons.json übergeben (chronologisch aufsteigend, geprüft) — der Saison-Index bestimmt "jünger",
+ * nicht die Verarbeitungsreihenfolge. Ulm/SG läuft wie überall im Projekt unter dem Schlüssel des eigenen Teams. */
 function collectTeams(seasons) {
-  const teams = new Map(); // key -> { key, name, seasons:Set, logoUrl }
-  for (const { key: seasonKey, data } of seasons) {
+  const teams = new Map(); // key -> { key, name, seasons:Set, logoUrl, logoUrlSeasonIndex }
+  seasons.forEach(({ key: seasonKey, data }, seasonIndex) => {
     for (const game of data.games || []) {
       for (const side of ['home', 'guest']) {
         const name = game?.[`${side}_team_name`];
@@ -75,15 +80,15 @@ function collectTeams(seasons) {
         const teamKey = teamKeyFor(name, seasonKey);
         if (!teamKey) continue;
         let entry = teams.get(teamKey);
-        if (!entry) { entry = { key: teamKey, name, seasons: new Set(), logoUrl: '' }; teams.set(teamKey, entry); }
+        if (!entry) { entry = { key: teamKey, name, seasons: new Set(), logoUrl: '', logoUrlSeasonIndex: -1 }; teams.set(teamKey, entry); }
         entry.seasons.add(seasonKey);
-        if (!entry.logoUrl) {
+        if (seasonIndex > entry.logoUrlSeasonIndex) {
           const abs = absoluteLogoUrl(rawLogoUrl(game, side));
-          if (abs) entry.logoUrl = abs;
+          if (abs) { entry.logoUrl = abs; entry.logoUrlSeasonIndex = seasonIndex; }
         }
       }
     }
-  }
+  });
   return [...teams.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
