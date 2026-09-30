@@ -269,7 +269,9 @@ console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
   assertEqual(sha(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), '8381155d5a8c43a4', 'HASH_GLOBAL_PAGES unverändert');
   const a = html.indexOf('<style>');
   const style = html.slice(a, html.indexOf('</style>', a));
-  assertEqual([sha(style), style.length], ['f65fabe2ad16f6a4', 170218], 'CSS-Block unverändert (kein CSS in diesem Fix)');
+  // Fingerprint-Basiswert zuletzt nach S1 aktualisiert (neue .mc-feed-*-Regeln, siehe
+  // docs/social-video-spezifikation.md) — unabhängig von diesem Fix.
+  assertEqual([sha(style), style.length], ['5132a0633d50f579', 173243], 'CSS-Block unverändert (kein CSS in diesem Fix; Fingerprint seit S1 aktualisiert)');
 }
 
 console.log('');

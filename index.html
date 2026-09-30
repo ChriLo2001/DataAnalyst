@@ -493,6 +493,29 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;min-hei
 .mc-story-frame.mc-story-fit-ultra .mc-story-battle{padding:6px 8px}
 .mc-story-frame.mc-story-fit-ultra .mc-story-focus-title{font-size:14.3px}
 .mc-story-frame.mc-story-fit-ultra .mc-story-focus-text{font-size:10.2px;line-height:1.22}
+/* S1 (Social-Video-Spezifikation, Abschnitt 4.2) — Feed-Post 4:5, eigener Klassen-Präfix .mc-feed-*, keine
+   neuen Farben/Schriften: dieselben --story-*-Tokens (definiert auf .mc-story-frame,.mc-story-card, hier
+   ebenfalls auf .mc-feed-frame) und Syne/DM Mono wie die Story. Bestehende .mc-story-*-Regeln bleiben davon
+   unberührt (Owner-Entscheidung). Sichere Ränder (Spezifikation 4.3: 120 px oben/unten, 64 px links/rechts im
+   1080×1350-Export) über die Innenpolsterung von .mc-feed-inner (14px/20px im Vorschau-Maßstab, skaliert beim
+   PNG-Export auf die Zielauflösung wie bei .mc-story-inner). */
+.mc-feed-frame,.mc-feed-card{--story-red:#CC1A27;--story-red-glow:rgba(204,26,39,.55);--story-orange:#E87E0A;--story-orange-lit:#F09020;--story-gold:#E8A020;--story-bg:#0E0306;--story-white:#FFFFFF;--story-muted:rgba(255,255,255,.38);--story-faint:rgba(255,255,255,.10)}
+.mc-feed-frame{position:relative;isolation:isolate;width:min(432px,92vw);aspect-ratio:4/5;overflow:hidden;border-radius:24px;border:1px solid rgba(232,160,32,.28);background:var(--story-bg);color:var(--story-white);box-shadow:0 36px 88px rgba(0,0,0,.58),0 0 54px rgba(204,26,39,.2),0 0 0 1px rgba(255,255,255,.06) inset}
+.mc-feed-frame:before{content:'';position:absolute;inset:0;z-index:-2;background:radial-gradient(circle at 72% 6%,rgba(204,26,39,.62),transparent 25%),radial-gradient(circle at 12% 78%,rgba(204,26,39,.30),transparent 32%),linear-gradient(165deg,var(--story-bg) 0%,#17070b 50%,#070203 100%)}
+.mc-feed-inner{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:14px 20px 12px;min-width:0;min-height:0}
+.mc-feed-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.mc-feed-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;text-align:center}
+.mc-feed-meta{text-align:center;color:rgba(255,255,255,.62);font:800 10px 'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
+.mc-feed-opponents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;flex:1 1 auto;min-height:0}
+.mc-feed-opponent{border-radius:15px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.10);padding:12px 10px;display:grid;justify-items:center;gap:6px;min-width:0;text-align:center}
+.mc-feed-opponent-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:900;line-height:1.1}
+.mc-feed-opponent-name.tight{font-size:13.5px}
+.mc-feed-opponent-rank{font:900 12px 'DM Mono',monospace;color:#ffb1b8}
+.mc-feed-form{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
+.mc-feed-outro{display:flex;justify-content:space-around;gap:8px;border-top:1px solid rgba(232,160,32,.26);padding-top:8px}
+.mc-feed-kickoff{display:grid;gap:2px;text-align:center}
+.mc-feed-kickoff span{font:800 8px 'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.mc-feed-kickoff strong{font-family:'Syne',sans-serif;font-size:15px;font-weight:900}
 @media(max-width:980px){.mc-hero-grid,.mc-split,.mc-insight-grid{grid-template-columns:1fr}.mc-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mc-control-grid{grid-template-columns:1fr}.mc-vs-grid{grid-template-columns:1fr}.mc-vs-chip{justify-self:center}}
 @media(max-width:980px){.mc-watch-grid,.mc-rank-grid,.mc-special-grid,.mc-goalie-grid,.mc-plan-grid,.mc-plan-watch-grid,.mc-summary-grid,.mc-intel-summary-grid,.mc-timing-grid,.mc-intel-grid,.mc-intel-kpis,.mc-intel-coach,.mc-coach-grid,.mc-coach-grid.two,.mc-locker-grid,.mc-social-grid,.player-explain-grid,.lineup-builder-grid,.lineup-builder-two,.lineup-builder-hero-grid,.lineup-builder-controls{grid-template-columns:1fr}.mc-plan-card.full,.mc-locker-card.full,.player-explain-card.full{grid-column:auto}.mc-coach-model,.mc-locker-head{grid-template-columns:1fr}.mc-coach-if{grid-template-columns:1fr}}
 @media(max-width:620px){.mc-hero{padding:18px}.mc-kpi-grid,.mc-mini-grid{grid-template-columns:1fr}.mc-game-row,.mc-st-game{grid-template-columns:1fr 1fr;gap:6px}.mc-game-row span:nth-child(3),.mc-st-game strong{grid-column:1/-1}.mc-game-row strong{justify-self:start}.mc-player-row{grid-template-columns:26px minmax(0,1fr)}.mc-player-metrics{grid-column:2;text-align:left;white-space:normal}.mc-goalie-fit{grid-template-columns:1fr}.mc-story-panel{padding:12px}.mc-story-frame{border-radius:24px;width:min(380px,94vw)}.mc-story-inner{padding:13px 17px 11px;gap:3.5px}.mc-story-matchup{gap:5px}.mc-story-team{grid-template-rows:54px auto;gap:4px}.mc-story-logo{width:54px;height:54px}.mc-story-vs{margin-top:9px;width:32px;height:32px}.mc-story-name{font-size:17px;line-height:1.07}.mc-story-name.long{font-size:15.3px}.mc-story-name.xlong{font-size:13.8px}.mc-story-meta{font-size:8.6px}.mc-story-snapshot{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:4px 0}.mc-story-mini span{font-size:7.3px;margin-bottom:3px}.mc-story-mini strong{font-size:13.4px}.mc-story-ranks{font-size:10px!important;gap:2px!important}.mc-story-ranks i{padding:2px 5px}.mc-story-ranks b{font-size:10.6px}.mc-story-form-block{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mc-story-form-team{padding:5px 7px;gap:3px}.mc-story-form-caption{font-size:7px}.mc-story-pill{width:18px;height:18px;font-size:8px}.mc-story-battle{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);gap:7px;padding:7px 8px}.mc-story-battle-vs{order:0;width:32px;height:32px}.mc-story-battle-card.ulm{order:0}.mc-story-battle-name{font-size:15.2px}.mc-story-battle-stat{font-size:11px}.mc-story-battle-sub{font-size:9.4px;line-height:1.22}.mc-story-facts{gap:3.5px}.mc-story-section-title{font-size:8.7px}.mc-story-fact{font-size:9.9px;line-height:1.19;padding:4px 7px}.mc-story-focus{padding:7px 9px;gap:3px}.mc-story-focus-title{font-size:14.6px}.mc-story-focus-text{font-size:10.2px;line-height:1.23}}
@@ -20287,6 +20310,51 @@ window.downloadMatchdayStory=async(button=null)=>{
     if(button)button.textContent=oldText||'Story als PNG herunterladen';
   }
 };
+/** S1 — "Vorschauvideos"-Block (Spezifikation Abschnitt 6.1/6.2/6.3): Spieltagsauswahl, Standbild-Knopf,
+ * dauerhafter ffmpeg-Hinweis (auch ohne Video-Teil, als Ankündigung formuliert), Logo-/Schriften-Hinweise.
+ * Nur bestehende Bausteine (.mc-section/.mc-output-btn/.mc-coach-confidence/rEmptyState-Muster), kein Inline-Style. */
+function rSocialVideoBlock(){
+  const seasonKey=matchcenterSeasonHasGames(S.matchcenterSeasonKey)?S.matchcenterSeasonKey:matchcenterDefaultSeasonKey();
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  if(!matchdays.length)return`<section class="mc-section"><div class="mc-section-title">Vorschauvideos</div>${rEmptyState('story')}</section>`;
+  const selectedKey=matchdays.some(m=>m.key===S.socialVideoMatchdayKey)?S.socialVideoMatchdayKey:matchdays[matchdays.length-1].key;
+  return`<section class="mc-section">
+    <div class="mc-section-head">
+      <div>
+        <div class="mc-section-title">Vorschauvideos</div>
+        <div class="mc-scout-note">Standbilder aus der Szenen-Spezifikation (S1): eine Story je Gegner, ein Feed-Post für den Spieltag. Die eigentliche Video-Aufnahme folgt in einer späteren Phase.</div>
+      </div>
+    </div>
+    <div class="mc-output-actions">
+      <select onchange="setState({socialVideoMatchdayKey:this.value})">
+        ${matchdays.map(m=>`<option value="${escAttr(m.key)}" ${m.key===selectedKey?'selected':''}>Spieltag ${m.number} (${escHtml(formatDateDE(m.date))})</option>`).join('')}
+      </select>
+      <button class="mc-output-btn" onclick="generateSocialVideoStandbilder(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Standbilder erzeugen</button>
+    </div>
+    <div class="mc-coach-confidence"><strong>Für MP4-Dateien wird ffmpeg benötigt.</strong> Die App erzeugt WebM-Dateien (Video-Aufnahme folgt in S2). Instagram akzeptiert MP4, deshalb einmal im Projektordner ausführen: <code>node scripts/social-video.mjs --in &lt;ordner-mit-webm&gt; --write</code>. Ist ffmpeg nicht installiert, meldet das Skript das mit Installationshinweis. Die WebM-Dateien bleiben in jedem Fall erhalten.</div>
+    <div class="mc-coach-confidence">Fehlt ein Team-Logo lokal (<code>assets/teams/&lt;team&gt;.png</code>), erscheinen Initialen statt Logo. Einmalig laden: <code>node scripts/cache-team-logos.mjs --fetch</code>.</div>
+    ${S.socialVideoFontsFallback?'<div class="mc-coach-confidence">Hinweis: Syne/DM Mono sind in diesem Browser nicht vollständig geladen — Standbilder verwenden Ersatzschriften.</div>':''}
+  </section>`;
+}
+window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
+  const oldText=button?.textContent;
+  try{
+    if(button){button.disabled=true;button.textContent='Erzeuge Standbilder...';}
+    const fonts=await socialVideoCheckFonts();
+    if(fonts.fallback&&!S.socialVideoFontsFallback)setState({socialVideoFontsFallback:true});
+    const stories=buildSocialVideoSpec({seasonKey,matchdayKey,format:'story-9x16'});
+    const feed=buildSocialVideoSpec({seasonKey,matchdayKey,format:'feed-4x5'});
+    const names=[];
+    for(const spec of stories){if(!spec.matchday)continue;const n=await downloadSocialVideoStandbild(spec,seasonKey);if(n)names.push(n);}
+    if(feed.matchday){const n=await downloadSocialVideoStandbild(feed,seasonKey);if(n)names.push(n);}
+    alert(names.length?`${names.length} Standbild(er) heruntergeladen:\n${names.join('\n')}`:'Keine Standbilder erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');
+  }catch(e){
+    console.warn('Social-Video-Standbild-Erzeugung fehlgeschlagen:',e);
+    alert('Standbilder konnten nicht erzeugt werden.');
+  }finally{
+    if(button){button.disabled=false;button.textContent=oldText||'Standbilder erzeugen';}
+  }
+};
 function rMatchcenterSocialMediaCenter(content){
   const story=content?.matchdayStory||{};
   const hasStory=!!content?.matchdayStory;
@@ -20336,7 +20404,8 @@ function rMatchcenterSocialMediaCenter(content){
         <div class="mc-coach-confidence">${escHtml(content?.confidenceNote||'Datenbasis offen.')}</div>
       </div>
     </div>
-  </section>`;
+  </section>
+  ${rSocialVideoBlock()}`;
 }
 function rLineupScoreRows(analysis){
   const rows=[
@@ -21911,6 +21980,138 @@ function buildSocialVideoSpec({seasonKey,matchdayKey,format}={}){
   const warningsUnused=[];
   return ulmGames.map(g=>socialVideoBuildStorySpec(seasonKey,matchday,g,warningsUnused));
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// S1 — Standbild-Export aus der Spezifikation (Abschnitt 3.3/6, Umfangspunkt 4). Story (9:16) nutzt UNVERÄNDERT
+// rMatchcenterStoryFrame (dieselbe Darstellung wie die bestehende Story-Vorschau, Abschnitt 2 der
+// Spezifikation) — dafür wird das Szenen-Spec-Objekt auf dasselbe Datenformat wie
+// buildMatchcenterStoryPreviewData abgebildet, KEINE neue Story-Gestaltung. Feed (4:5) hat noch keine
+// bestehende Darstellung (Spezifikation Abschnitt 4.2) und bekommt deshalb einen eigenen, neuen Klassen-
+// Präfix .mc-feed-* (Owner-Entscheidung: bestehende .mc-story-*-Regeln bleiben unberührt), der dieselben
+// --story-*-Farbtokens/Schriften wiederverwendet, keine neuen Farben/Schriften definiert.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Bildet die Kernwerte eines Story-Specs (ein Gegner) auf das Datenformat ab, das rMatchcenterStoryFrame
+ * erwartet (siehe buildMatchcenterStoryPreviewData) — Wiederverwendung der bestehenden Darstellung. */
+function socialVideoStoryFrameData(seasonKey,storySpec){
+  const oppName=storySpec.opponentDisplay||'Gegner';
+  const oppScene=storySpec.scenes.find(s=>s.id==='opponent');
+  const oppLogo=oppScene?.elements.find(e=>e.type==='logo'&&e.team!=='vfb-ulm')?.asset||'';
+  const duelScene=storySpec.scenes.find(s=>s.id==='lastDuel');
+  const duelText=duelScene?.elements.find(e=>e.type==='result')?.text||null;
+  const watchScene=storySpec.scenes.find(s=>s.id==='playersToWatch');
+  const ulmCard=watchScene?.elements.find(e=>e.type==='playerCard'&&e.team==='ulm');
+  const oppCard=watchScene?.elements.find(e=>e.type==='playerCard'&&e.team==='opponent');
+  const rankStat=oppScene?.elements.find(e=>e.type==='stat'&&e.label==='Tabelle');
+  const formEl=oppScene?.elements.find(e=>e.type==='form');
+  const introScene=storySpec.scenes.find(s=>s.id==='intro');
+  const metaLine=introScene?.elements.filter(e=>e.type==='meta').map(e=>e.text).join(' · ')||storySpec.matchday?.date||'';
+  const outroScene=storySpec.scenes.find(s=>s.id==='outro');
+  const kickoffStat=outroScene?.elements.find(e=>e.type==='stat'&&e.label==='Anpfiff');
+  return{
+    opponentName:oppName,
+    opponentLogo:oppLogo,
+    opponentInitials:matchcenterStoryInitials(oppName),
+    home:{name:'VfB Ulm',logoUrl:'assets/vfb-ulm-logo-mark.png',rank:null},
+    away:{name:oppName,logoUrl:oppLogo,rank:rankStat?Number(String(rankStat.text).replace('#','')):null},
+    storyMeta:`${socialVideoMatchdayLabel({number:storySpec.matchday?.number})} · ${metaLine}`,
+    oppFormLetters:formEl?.pills||[],ulmFormLetters:(oppScene?.elements.find(e=>e.type==='form')?.pills)||[],
+    oppFormRecord:formEl?.record||'keine Spiele',ulmFormRecord:'',
+    directRecord:'-',
+    lastResult:duelText?`Ulm ${duelText}`:'Kein direktes Duell',
+    lastResultShort:duelText?`Ulm ${duelText}`:'Kein direktes Duell',
+    topOpponent:oppCard?{name:oppCard.name,stat:oppCard.stat,line:oppCard.note,note:''}:{name:'Noch offen',stat:'Keine Scorerdaten',line:'Datenbasis offen',note:''},
+    topUlm:ulmCard?{name:ulmCard.name,stat:ulmCard.stat,line:ulmCard.note,note:''}:{name:'Noch offen',stat:'Keine Scorerdaten',line:'Datenbasis offen',note:''},
+    keyFacts:[kickoffStat?`Anpfiff ${kickoffStat.text} Uhr${outroScene?.elements.find(e=>e.type==='meta')?.text?', '+outroScene.elements.find(e=>e.type==='meta').text:''}.`:null].filter(Boolean),
+    scoutingNotes:[],
+    dataQuality:'Datenbasis: App',
+  };
+}
+
+/** Feed-Post-Markup (4:5, Spezifikation Abschnitt 4.2) — eigener Klassen-Präfix .mc-feed-*, dieselben
+ * --story-*-Tokens wie die Story (siehe CSS), keine neue Farbe/Schrift. */
+function rSocialVideoFeedFrame(feedSpec){
+  const introScene=feedSpec.scenes.find(s=>s.id==='intro');
+  const metaLine=introScene?.elements.filter(e=>e.type==='meta').map(e=>e.text).join(' · ')||'';
+  const oppBlock=(sceneId)=>{
+    const scene=feedSpec.scenes.find(s=>s.id===sceneId);
+    if(!scene)return'';
+    const logo=scene.elements.find(e=>e.type==='logo');
+    const title=scene.elements.find(e=>e.type==='title');
+    const rank=scene.elements.find(e=>e.type==='stat'&&e.label==='Tabelle');
+    const form=scene.elements.find(e=>e.type==='form');
+    return`<div class="mc-feed-opponent">
+      ${rMatchcenterStoryLogo('',logo?.asset,matchcenterStoryInitials(title?.text||''),title?.text||'')}
+      <div class="mc-feed-opponent-name${title?.textStage==='tight'?' tight':''}">${escHtml(title?.text||'')}</div>
+      ${rank?`<div class="mc-feed-opponent-rank">${escHtml(rank.text)}</div>`:''}
+      <div class="mc-feed-form">${rMatchcenterStoryForm(form?.pills||[])}</div>
+    </div>`;
+  };
+  const outroScene=feedSpec.scenes.find(s=>s.id==='outro');
+  const kickoffStats=(outroScene?.elements||[]).filter(e=>e.type==='stat');
+  return`<article class="mc-feed-frame mc-feed-card" aria-label="Instagram Feed-Post Vorschau">
+    <div class="mc-feed-inner">
+      <div class="mc-feed-topline">
+        <div class="mc-story-brand"><img src="assets/vfb-ulm-logo-mark.png" alt="VfB Ulm"><span>VfB Ulm Floorball</span></div>
+        <div class="mc-story-badge">Pre-Match</div>
+      </div>
+      <div class="mc-feed-title">${escHtml(socialVideoMatchdayLabel(feedSpec.matchday))}</div>
+      <div class="mc-feed-meta">${escHtml(metaLine)}</div>
+      <div class="mc-feed-opponents">
+        ${oppBlock('opponentA')}
+        ${oppBlock('opponentB')}
+      </div>
+      <div class="mc-feed-outro">
+        ${kickoffStats.map(s=>`<div class="mc-feed-kickoff"><span>${escHtml(s.label)}</span><strong>${escHtml(s.text)}</strong></div>`).join('')}
+      </div>
+    </div>
+  </article>`;
+}
+
+/** Baut das Standbild-Markup (Story oder Feed) aus EINEM Spec-Objekt — nie aus DOM-/Matchcenter-Zustand. */
+function socialVideoStandbildFrame(seasonKey,spec){
+  if(spec.format==='feed-4x5')return rSocialVideoFeedFrame(spec);
+  return rMatchcenterStoryFrame(socialVideoStoryFrameData(seasonKey,spec));
+}
+
+/** PNG-Export eines Standbilds aus einem Spec-Objekt (Story ODER Feed), über denselben SVG-foreignObject-Weg
+ * wie window.downloadMatchdayStory — hier aber aus buildSocialVideoSpec() statt aus der Live-Story-Vorschau,
+ * und mit der jeweils korrekten Zielauflösung (Story 1080×1920, Feed 1080×1350). Sichere Ränder (120 px oben/
+ * unten, 64 px links/rechts) kommen aus der bestehenden .mc-story-inner/.mc-feed-inner-Polsterung (CSS). */
+window.downloadSocialVideoStandbild=async(spec,seasonKey,button=null)=>{
+  const oldText=button?.textContent;
+  if(button)button.textContent='Export läuft...';
+  try{
+    const frameHtml=socialVideoStandbildFrame(seasonKey,spec);
+    const styles=[...document.querySelectorAll('style')].map(style=>style.textContent||'').join('\n');
+    const width=1080,height=spec.format==='feed-4x5'?1350:1920;
+    const frameClass=spec.format==='feed-4x5'?'mc-feed-frame':'mc-story-frame';
+    const html=`<html xmlns="http://www.w3.org/1999/xhtml"><head><style>${styles}body{margin:0;background:#020617}.${frameClass}{width:${width}px!important;height:${height}px!important;border-radius:0!important}</style></head><body>${frameHtml}</body></html>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    const img=new Image();
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+    const canvas=document.createElement('canvas');
+    canvas.width=width;canvas.height=height;
+    const ctx2d=canvas.getContext('2d');
+    ctx2d.drawImage(img,0,0,width,height);
+    URL.revokeObjectURL(url);
+    const png=canvas.toDataURL('image/png');
+    const a=document.createElement('a');
+    a.href=png;
+    a.download=socialVideoFileName({matchdayNumber:spec.matchday?.number,date:spec.matchday?.date,format:spec.format,opponentAssetKey:spec.opponentAssetKey},'png');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return a.download;
+  }catch(e){
+    console.warn('Social-Video-Standbild-Export fehlgeschlagen:',e);
+    alert('Standbild-Export ist in diesem Browser gerade nicht möglich.');
+    return null;
+  }finally{
+    if(button)button.textContent=oldText||'Standbild herunterladen';
+  }
+};
 
 function rMatchcenterPage(){
   const seasonKey=matchcenterSeasonHasGames(S.matchcenterSeasonKey)?S.matchcenterSeasonKey:matchcenterDefaultSeasonKey();
