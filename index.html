@@ -20314,6 +20314,8 @@ window.downloadMatchdayStory=async(button=null)=>{
  * dauerhafter ffmpeg-Hinweis (auch ohne Video-Teil, als Ankündigung formuliert), Logo-/Schriften-Hinweise.
  * Nur bestehende Bausteine (.mc-section/.mc-output-btn/.mc-coach-confidence/rEmptyState-Muster), kein Inline-Style. */
 function rSocialVideoBlock(){
+  ensureSocialVideoExportCapabilityChecked();
+  const exportBlocked=S.socialVideoExportPossible===false;
   const seasonKey=matchcenterSeasonHasGames(S.matchcenterSeasonKey)?S.matchcenterSeasonKey:matchcenterDefaultSeasonKey();
   const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
   if(!matchdays.length)return`<section class="mc-section"><div class="mc-section-title">Vorschauvideos</div>${rEmptyState('story')}</section>`;
@@ -20329,8 +20331,9 @@ function rSocialVideoBlock(){
       <select onchange="setState({socialVideoMatchdayKey:this.value})">
         ${matchdays.map(m=>`<option value="${escAttr(m.key)}" ${m.key===selectedKey?'selected':''}>Spieltag ${m.number} (${escHtml(formatDateDE(m.date))})</option>`).join('')}
       </select>
-      <button class="mc-output-btn" onclick="generateSocialVideoStandbilder(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Standbilder erzeugen</button>
+      <button class="mc-output-btn" ${exportBlocked?'disabled':''} onclick="generateSocialVideoStandbilder(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Standbilder erzeugen</button>
     </div>
+    ${exportBlocked?'<div class="mc-coach-confidence">PNG-Export in diesem Browser nicht möglich (Chrome-Sicherheitsrichtlinie). Kommt mit dem Canvas-Renderer in S2.</div>':''}
     <div class="mc-coach-confidence"><strong>Für MP4-Dateien wird ffmpeg benötigt.</strong> Die App erzeugt WebM-Dateien (Video-Aufnahme folgt in S2). Instagram akzeptiert MP4, deshalb einmal im Projektordner ausführen: <code>node scripts/social-video.mjs --in &lt;ordner-mit-webm&gt; --write</code>. Ist ffmpeg nicht installiert, meldet das Skript das mit Installationshinweis. Die WebM-Dateien bleiben in jedem Fall erhalten.</div>
     <div class="mc-coach-confidence">Fehlt ein Team-Logo lokal (<code>assets/teams/&lt;team&gt;.png</code>), erscheinen Initialen statt Logo. Einmalig laden: <code>node scripts/cache-team-logos.mjs --fetch</code>.</div>
     ${S.socialVideoFontsFallback?'<div class="mc-coach-confidence">Hinweis: Syne/DM Mono sind in diesem Browser nicht vollständig geladen — Standbilder verwenden Ersatzschriften.</div>':''}
@@ -20361,6 +20364,7 @@ window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
   }
 };
 function rMatchcenterSocialMediaCenter(content){
+  ensureSocialVideoExportCapabilityChecked();
   const story=content?.matchdayStory||{};
   const hasStory=!!content?.matchdayStory;
   window.__lastMatchdayStoryData=story;
@@ -20379,6 +20383,7 @@ function rMatchcenterSocialMediaCenter(content){
         ${rMatchcenterCopyButton(storyText,'Story-Text kopieren')}
       </div>
     </div>
+    ${hasStory&&S.socialVideoExportPossible===false?'<div class="mc-coach-confidence">PNG-Export in diesem Browser nicht möglich (Chrome-Sicherheitsrichtlinie). Kommt mit dem Canvas-Renderer in S2.</div>':''}
     <div class="mc-social-grid">
       <div class="mc-social-panel">
         <div class="mc-card-title">Matchday Story</div>
@@ -21719,6 +21724,40 @@ async function socialVideoCheckFonts(){
   }catch(e){
     return{ready:false,syne:false,dmMono:false,fallback:true};
   }
+}
+
+/** Fähigkeitsprüfung für den SVG-foreignObject->Canvas->PNG-Export (siehe downloadSocialVideoStandbild
+ * und window.downloadMatchdayStory weiter unten): ein winziges, rein lokales 1x1-foreignObject-SVG ohne
+ * jeden externen Inhalt wird auf einen 1x1-Canvas gezeichnet und per toDataURL() ausgelesen. Aktuelle
+ * Chrome-Versionen "tainten" dabei JEDEN Canvas, auf den ein SVG mit <foreignObject> gezeichnet wurde —
+ * unabhängig von externen Ressourcen (siehe Kommentar bei downloadSocialVideoStandbild) —, andere Engines
+ * (z. B. Firefox) erlauben es. Das Ergebnis hängt nur von der Browser-Engine ab, nicht von den jeweiligen
+ * Spec-Daten, deshalb genügt EIN winziger, günstiger Testlauf statt einer echten Story/Feed-Auszeichnung. */
+async function probeSocialVideoExportCapability(){
+  try{
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><foreignObject width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml"></div></foreignObject></svg>';
+    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    const img=new Image();
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+    const canvas=document.createElement('canvas');
+    canvas.width=1;canvas.height=1;
+    canvas.getContext('2d').drawImage(img,0,0,1,1);
+    URL.revokeObjectURL(url);
+    canvas.toDataURL('image/png');
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+/** Löst probeSocialVideoExportCapability() genau einmal aus (Promise-Cache analog zu
+ * ensureExternalSeasonData) und schreibt das Ergebnis nach S.socialVideoExportPossible, sobald es
+ * feststeht — von rSocialVideoBlock() und rMatchcenterSocialMediaCenter() aus aufgerufen, damit die
+ * Prüfung schon beim ersten Rendern dieser Bereiche losläuft, nicht erst beim Klick auf den Knopf. */
+let _socialVideoExportCapabilityChecked=false;
+function ensureSocialVideoExportCapabilityChecked(){
+  if(_socialVideoExportCapabilityChecked)return;
+  _socialVideoExportCapabilityChecked=true;
+  probeSocialVideoExportCapability().then(possible=>setState({socialVideoExportPossible:possible}));
 }
 
 /** Ulms eigene Spiele eines Spieltags, sortiert nach Anpfiffzeit (Owner-Entscheidung Punkt 1 — NICHT über
