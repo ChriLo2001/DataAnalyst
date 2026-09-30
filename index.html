@@ -493,6 +493,29 @@ body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;min-hei
 .mc-story-frame.mc-story-fit-ultra .mc-story-battle{padding:6px 8px}
 .mc-story-frame.mc-story-fit-ultra .mc-story-focus-title{font-size:14.3px}
 .mc-story-frame.mc-story-fit-ultra .mc-story-focus-text{font-size:10.2px;line-height:1.22}
+/* S1 (Social-Video-Spezifikation, Abschnitt 4.2) — Feed-Post 4:5, eigener Klassen-Präfix .mc-feed-*, keine
+   neuen Farben/Schriften: dieselben --story-*-Tokens (definiert auf .mc-story-frame,.mc-story-card, hier
+   ebenfalls auf .mc-feed-frame) und Syne/DM Mono wie die Story. Bestehende .mc-story-*-Regeln bleiben davon
+   unberührt (Owner-Entscheidung). Sichere Ränder (Spezifikation 4.3: 120 px oben/unten, 64 px links/rechts im
+   1080×1350-Export) über die Innenpolsterung von .mc-feed-inner (14px/20px im Vorschau-Maßstab, skaliert beim
+   PNG-Export auf die Zielauflösung wie bei .mc-story-inner). */
+.mc-feed-frame,.mc-feed-card{--story-red:#CC1A27;--story-red-glow:rgba(204,26,39,.55);--story-orange:#E87E0A;--story-orange-lit:#F09020;--story-gold:#E8A020;--story-bg:#0E0306;--story-white:#FFFFFF;--story-muted:rgba(255,255,255,.38);--story-faint:rgba(255,255,255,.10)}
+.mc-feed-frame{position:relative;isolation:isolate;width:min(432px,92vw);aspect-ratio:4/5;overflow:hidden;border-radius:24px;border:1px solid rgba(232,160,32,.28);background:var(--story-bg);color:var(--story-white);box-shadow:0 36px 88px rgba(0,0,0,.58),0 0 54px rgba(204,26,39,.2),0 0 0 1px rgba(255,255,255,.06) inset}
+.mc-feed-frame:before{content:'';position:absolute;inset:0;z-index:-2;background:radial-gradient(circle at 72% 6%,rgba(204,26,39,.62),transparent 25%),radial-gradient(circle at 12% 78%,rgba(204,26,39,.30),transparent 32%),linear-gradient(165deg,var(--story-bg) 0%,#17070b 50%,#070203 100%)}
+.mc-feed-inner{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:14px 20px 12px;min-width:0;min-height:0}
+.mc-feed-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.mc-feed-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;text-align:center}
+.mc-feed-meta{text-align:center;color:rgba(255,255,255,.62);font:800 10px 'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase}
+.mc-feed-opponents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;flex:1 1 auto;min-height:0}
+.mc-feed-opponent{border-radius:15px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.10);padding:12px 10px;display:grid;justify-items:center;gap:6px;min-width:0;text-align:center}
+.mc-feed-opponent-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:900;line-height:1.1}
+.mc-feed-opponent-name.tight{font-size:13.5px}
+.mc-feed-opponent-rank{font:900 12px 'DM Mono',monospace;color:#ffb1b8}
+.mc-feed-form{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
+.mc-feed-outro{display:flex;justify-content:space-around;gap:8px;border-top:1px solid rgba(232,160,32,.26);padding-top:8px}
+.mc-feed-kickoff{display:grid;gap:2px;text-align:center}
+.mc-feed-kickoff span{font:800 8px 'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.mc-feed-kickoff strong{font-family:'Syne',sans-serif;font-size:15px;font-weight:900}
 @media(max-width:980px){.mc-hero-grid,.mc-split,.mc-insight-grid{grid-template-columns:1fr}.mc-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mc-control-grid{grid-template-columns:1fr}.mc-vs-grid{grid-template-columns:1fr}.mc-vs-chip{justify-self:center}}
 @media(max-width:980px){.mc-watch-grid,.mc-rank-grid,.mc-special-grid,.mc-goalie-grid,.mc-plan-grid,.mc-plan-watch-grid,.mc-summary-grid,.mc-intel-summary-grid,.mc-timing-grid,.mc-intel-grid,.mc-intel-kpis,.mc-intel-coach,.mc-coach-grid,.mc-coach-grid.two,.mc-locker-grid,.mc-social-grid,.player-explain-grid,.lineup-builder-grid,.lineup-builder-two,.lineup-builder-hero-grid,.lineup-builder-controls{grid-template-columns:1fr}.mc-plan-card.full,.mc-locker-card.full,.player-explain-card.full{grid-column:auto}.mc-coach-model,.mc-locker-head{grid-template-columns:1fr}.mc-coach-if{grid-template-columns:1fr}}
 @media(max-width:620px){.mc-hero{padding:18px}.mc-kpi-grid,.mc-mini-grid{grid-template-columns:1fr}.mc-game-row,.mc-st-game{grid-template-columns:1fr 1fr;gap:6px}.mc-game-row span:nth-child(3),.mc-st-game strong{grid-column:1/-1}.mc-game-row strong{justify-self:start}.mc-player-row{grid-template-columns:26px minmax(0,1fr)}.mc-player-metrics{grid-column:2;text-align:left;white-space:normal}.mc-goalie-fit{grid-template-columns:1fr}.mc-story-panel{padding:12px}.mc-story-frame{border-radius:24px;width:min(380px,94vw)}.mc-story-inner{padding:13px 17px 11px;gap:3.5px}.mc-story-matchup{gap:5px}.mc-story-team{grid-template-rows:54px auto;gap:4px}.mc-story-logo{width:54px;height:54px}.mc-story-vs{margin-top:9px;width:32px;height:32px}.mc-story-name{font-size:17px;line-height:1.07}.mc-story-name.long{font-size:15.3px}.mc-story-name.xlong{font-size:13.8px}.mc-story-meta{font-size:8.6px}.mc-story-snapshot{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:4px 0}.mc-story-mini span{font-size:7.3px;margin-bottom:3px}.mc-story-mini strong{font-size:13.4px}.mc-story-ranks{font-size:10px!important;gap:2px!important}.mc-story-ranks i{padding:2px 5px}.mc-story-ranks b{font-size:10.6px}.mc-story-form-block{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mc-story-form-team{padding:5px 7px;gap:3px}.mc-story-form-caption{font-size:7px}.mc-story-pill{width:18px;height:18px;font-size:8px}.mc-story-battle{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);gap:7px;padding:7px 8px}.mc-story-battle-vs{order:0;width:32px;height:32px}.mc-story-battle-card.ulm{order:0}.mc-story-battle-name{font-size:15.2px}.mc-story-battle-stat{font-size:11px}.mc-story-battle-sub{font-size:9.4px;line-height:1.22}.mc-story-facts{gap:3.5px}.mc-story-section-title{font-size:8.7px}.mc-story-fact{font-size:9.9px;line-height:1.19;padding:4px 7px}.mc-story-focus{padding:7px 9px;gap:3px}.mc-story-focus-title{font-size:14.6px}.mc-story-focus-text{font-size:10.2px;line-height:1.23}}
@@ -20287,7 +20310,61 @@ window.downloadMatchdayStory=async(button=null)=>{
     if(button)button.textContent=oldText||'Story als PNG herunterladen';
   }
 };
+/** S1 — "Vorschauvideos"-Block (Spezifikation Abschnitt 6.1/6.2/6.3): Spieltagsauswahl, Standbild-Knopf,
+ * dauerhafter ffmpeg-Hinweis (auch ohne Video-Teil, als Ankündigung formuliert), Logo-/Schriften-Hinweise.
+ * Nur bestehende Bausteine (.mc-section/.mc-output-btn/.mc-coach-confidence/rEmptyState-Muster), kein Inline-Style. */
+function rSocialVideoBlock(){
+  ensureSocialVideoExportCapabilityChecked();
+  const exportBlocked=S.socialVideoExportPossible===false;
+  const seasonKey=matchcenterSeasonHasGames(S.matchcenterSeasonKey)?S.matchcenterSeasonKey:matchcenterDefaultSeasonKey();
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  if(!matchdays.length)return`<section class="mc-section"><div class="mc-section-title">Vorschauvideos</div>${rEmptyState('story')}</section>`;
+  const selectedKey=matchdays.some(m=>m.key===S.socialVideoMatchdayKey)?S.socialVideoMatchdayKey:matchdays[matchdays.length-1].key;
+  return`<section class="mc-section">
+    <div class="mc-section-head">
+      <div>
+        <div class="mc-section-title">Vorschauvideos</div>
+        <div class="mc-scout-note">Standbilder aus der Szenen-Spezifikation (S1): eine Story je Gegner, ein Feed-Post für den Spieltag. Die eigentliche Video-Aufnahme folgt in einer späteren Phase.</div>
+      </div>
+    </div>
+    <div class="mc-output-actions">
+      <select onchange="setState({socialVideoMatchdayKey:this.value})">
+        ${matchdays.map(m=>`<option value="${escAttr(m.key)}" ${m.key===selectedKey?'selected':''}>Spieltag ${m.number} (${escHtml(formatDateDE(m.date))})</option>`).join('')}
+      </select>
+      <button class="mc-output-btn" ${exportBlocked?'disabled':''} onclick="generateSocialVideoStandbilder(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Standbilder erzeugen</button>
+    </div>
+    ${exportBlocked?'<div class="mc-coach-confidence">PNG-Export in diesem Browser nicht möglich (Chrome-Sicherheitsrichtlinie). Kommt mit dem Canvas-Renderer in S2.</div>':''}
+    <div class="mc-coach-confidence"><strong>Für MP4-Dateien wird ffmpeg benötigt.</strong> Die App erzeugt WebM-Dateien (Video-Aufnahme folgt in S2). Instagram akzeptiert MP4, deshalb einmal im Projektordner ausführen: <code>node scripts/social-video.mjs --in &lt;ordner-mit-webm&gt; --write</code>. Ist ffmpeg nicht installiert, meldet das Skript das mit Installationshinweis. Die WebM-Dateien bleiben in jedem Fall erhalten.</div>
+    <div class="mc-coach-confidence">Fehlt ein Team-Logo lokal (<code>assets/teams/&lt;team&gt;.png</code>), erscheinen Initialen statt Logo. Einmalig laden: <code>node scripts/cache-team-logos.mjs --fetch</code>.</div>
+    ${S.socialVideoFontsFallback?'<div class="mc-coach-confidence">Hinweis: Syne/DM Mono sind in diesem Browser nicht vollständig geladen — Standbilder verwenden Ersatzschriften.</div>':''}
+  </section>`;
+}
+window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
+  const oldText=button?.textContent;
+  try{
+    if(button){button.disabled=true;button.textContent='Erzeuge Standbilder...';}
+    const fonts=await socialVideoCheckFonts();
+    if(fonts.fallback&&!S.socialVideoFontsFallback)setState({socialVideoFontsFallback:true});
+    const stories=buildSocialVideoSpec({seasonKey,matchdayKey,format:'story-9x16'});
+    const feed=buildSocialVideoSpec({seasonKey,matchdayKey,format:'feed-4x5'});
+    const names=[];
+    let attempted=0;
+    for(const spec of stories){if(!spec.matchday)continue;attempted++;const n=await downloadSocialVideoStandbild(spec,seasonKey);if(n)names.push(n);}
+    if(feed.matchday){attempted++;const n=await downloadSocialVideoStandbild(feed,seasonKey);if(n)names.push(n);}
+    if(names.length)alert(`${names.length} Standbild(er) heruntergeladen:\n${names.join('\n')}`);
+    else if(!attempted)alert('Keine Standbilder erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');
+    // else: kein Alert nötig — downloadSocialVideoStandbild hat für jeden gescheiterten Versuch bereits
+    // selbst gemeldet ("Standbild-Export ist in diesem Browser gerade nicht möglich."); eine zweite,
+    // hier fälschlich auf "kein Spiel gefunden" lautende Meldung wäre irreführend.
+  }catch(e){
+    console.warn('Social-Video-Standbild-Erzeugung fehlgeschlagen:',e);
+    alert('Standbilder konnten nicht erzeugt werden.');
+  }finally{
+    if(button){button.disabled=false;button.textContent=oldText||'Standbilder erzeugen';}
+  }
+};
 function rMatchcenterSocialMediaCenter(content){
+  ensureSocialVideoExportCapabilityChecked();
   const story=content?.matchdayStory||{};
   const hasStory=!!content?.matchdayStory;
   window.__lastMatchdayStoryData=story;
@@ -20306,6 +20383,7 @@ function rMatchcenterSocialMediaCenter(content){
         ${rMatchcenterCopyButton(storyText,'Story-Text kopieren')}
       </div>
     </div>
+    ${hasStory&&S.socialVideoExportPossible===false?'<div class="mc-coach-confidence">PNG-Export in diesem Browser nicht möglich (Chrome-Sicherheitsrichtlinie). Kommt mit dem Canvas-Renderer in S2.</div>':''}
     <div class="mc-social-grid">
       <div class="mc-social-panel">
         <div class="mc-card-title">Matchday Story</div>
@@ -20336,7 +20414,8 @@ function rMatchcenterSocialMediaCenter(content){
         <div class="mc-coach-confidence">${escHtml(content?.confidenceNote||'Datenbasis offen.')}</div>
       </div>
     </div>
-  </section>`;
+  </section>
+  ${rSocialVideoBlock()}`;
 }
 function rLineupScoreRows(analysis){
   const rows=[
@@ -20751,9 +20830,26 @@ function matchcenterStorySafeLogoUrl(url,seasonKey=''){
   if(value.startsWith('http://')||value.startsWith('https://')||value.startsWith('data:')||value.startsWith('assets/')||value.startsWith('./assets/'))return value;
   return'';
 }
+// S1 (Social-Video-Spezifikation, Abschnitt 3.3) — NEU: derselbe Teamschlüssel wie teamKeyFor() aus
+// scripts/model/normalize.mjs (Node-Skript cache-team-logos.mjs schreibt assets/teams/<key>.png genau unter
+// diesem Schlüssel). Baut auf den bereits bestehenden, drift-getesteten Funktionen getCanonicalTeamName()
+// (Kontext 'season', gleichbedeutend mit canonicalTeamName() in normalize.mjs) und normalizeTeamName() auf —
+// kein neuer Normalisierungsalgorithmus, nur deren Komposition mit Bindestrich statt Leerzeichen. Ein
+// eigener Abgleichtest (scripts/test-social-video.mjs) beweist für ALLE Teams ALLER Saisons in season-data,
+// dass diese Funktion und teamKeyFor denselben Schlüssel liefern.
+function matchcenterStoryTeamAssetKey(name,seasonKey=''){
+  const raw=cleanText(name||'').trim();
+  if(!raw)return'';
+  return normalizeTeamName(getCanonicalTeamName(raw,seasonKey,'season')).replace(/ /g,'-');
+}
 function getTeamLogoUrlForStory(teamName,seasonKey){
   const raw=cleanText(teamName||'').trim();
   if(!raw)return null;
+  // S1: lokal zwischengespeichertes Logo hat Vorrang (siehe scripts/cache-team-logos.mjs). Fehlt die Datei,
+  // greift der bestehende Initialen-Fallback am <img onerror> (rMatchcenterStoryLogo) unverändert — hier wird
+  // NICHT geprüft, ob die Datei existiert (kein Dateisystemzugriff im Browser möglich/erlaubt).
+  const localKey=matchcenterStoryTeamAssetKey(raw,seasonKey);
+  if(localKey)return`assets/teams/${localKey}.png`;
   const teamKeys=new Set([normalizeTeamName(raw),matchcenterTeamKey(raw,seasonKey)].filter(Boolean));
   const games=[...matchcenterAllGamesForSeason(seasonKey),...matchcenterAllGames()];
   const seenGames=new Set();
@@ -21517,6 +21613,578 @@ function fitMatchcenterStoryLayout(root=document){
     console.warn('Story layout fit skipped:',e.message);
   }
 }
+
+// ═════════════════════════════════════════════════════════════════════════
+// S1 — Social-Video-Spezifikation (docs/social-video-spezifikation.md), Abschnitt 5: buildSocialVideoSpec.
+// Reine Funktion: zeichnet nicht, kein DOM-Zugriff. Wiederverwendet ausschließlich bestehende Bausteine
+// (getSeasonMatchdays/buildMatchdays, getSeasonStatsAsOf, matchcenterOutcomeForTeam, matchcenterGameSideForTeam/
+// -ForOpponentKey, matchcenterEventNumber/-FindRosterPlayer/-RosterPlayers/-PlayerKey/-PlayerDisplayName,
+// matchcenterStoryPlayer/-FormLetters/-FormRecord/-ShortTeamLabel, matchcenterStoryTeamAssetKey). Abschnitt 5a/5b
+// (Vererbung, vorläufige Termine) sind für S1 NICHT umgesetzt (weder data/team-lineage.json noch
+// data/schedule-provisional.json werden gelesen) — fehlt Historie zu einem Gegner, greift bereits der normale
+// "keine Daten -> Szene/Element entfällt"-Fallback, kein Raten.
+// ═════════════════════════════════════════════════════════════════════════
+
+const SOCIAL_VIDEO_DURATION_MS=15000;
+const SOCIAL_VIDEO_FPS=30;
+const SOCIAL_VIDEO_MIN_CONTENT_MS=1500;
+const SOCIAL_VIDEO_NAME_MAX_CHARS=20;
+const SOCIAL_VIDEO_NAME_HARD_MAX_CHARS=30;
+const SOCIAL_VIDEO_FACT_MAX_CHARS=90;
+const SOCIAL_VIDEO_FACT_HARD_MAX_CHARS=130;
+
+/** Szenen-Basiswerte aus Spezifikation Abschnitt 4.1/4.2. `fixed` Szenen (Intro/Abschluss) werden nie
+ * gestreckt, nur bis zu ihrem eigenen capMs (Owner-Entscheidung: Intro höchstens 2.600 ms, Abschluss höchstens
+ * 2.400 ms bei der Story; beim Feed liegt der Basiswert bereits auf dem eigenen Cap, keine Wirkung). */
+const SOCIAL_VIDEO_STORY_SCENE_DEFS=[
+  {id:'intro',baseMs:2400,fixed:true,capMs:2600},
+  {id:'opponent',baseMs:4000},
+  {id:'lastDuel',baseMs:3000},
+  {id:'playersToWatch',baseMs:3600},
+  {id:'outro',baseMs:2000,fixed:true,capMs:2400},
+];
+const SOCIAL_VIDEO_FEED_SCENE_DEFS=[
+  {id:'intro',baseMs:2400,fixed:true,capMs:2400},
+  {id:'opponentA',baseMs:4600},
+  {id:'opponentB',baseMs:4600},
+  {id:'outro',baseMs:3400,fixed:true,capMs:3400},
+];
+
+/**
+ * Verteilt totalMs auf die gegebenen Szenen (Owner-Entscheidung, siehe docs/social-video-spezifikation.md
+ * Abschnitt 5): fixe Szenen (Intro/Abschluss) bleiben bei ihrem Basiswert (gedeckelt durch capMs); alle
+ * ANDEREN, als abwesend markierten Szenen (`present:false`) entfallen vorab. Die freie Zeit (total − Summe
+ * fixer Szenen) wird PROPORTIONAL zum jeweiligen Basiswert auf die verbleibenden Inhaltsszenen verteilt
+ * (Rundungsrest komplett der letzten Inhaltsszene, damit die Summe exakt totalMs bleibt). Fällt eine
+ * Inhaltsszene dadurch unter minContentMs, entfällt sie komplett und die Verteilung läuft mit den
+ * verbleibenden Inhaltsszenen erneut (rekursiv, hier als Schleife). Reine Funktion, exportiert für
+ * scripts/test-social-video.mjs (node:vm-Extraktion, wie bei den bestehenden P0b-Tests).
+ * @param {{id:string, baseMs:number, fixed?:boolean, capMs?:number, present?:boolean}[]} sceneDefs
+ * @returns {{id:string, ms:number, startMs:number, endMs:number}[]}
+ */
+function socialVideoDistributeSceneDurations(sceneDefs,totalMs=SOCIAL_VIDEO_DURATION_MS,minContentMs=SOCIAL_VIDEO_MIN_CONTENT_MS){
+  let defs=(sceneDefs||[]).filter(s=>s&&s.present!==false);
+  for(let guard=0;guard<10;guard++){
+    const fixed=defs.filter(s=>s.fixed);
+    const content=defs.filter(s=>!s.fixed);
+    const fixedMs=fixed.reduce((sum,s)=>sum+Math.min(s.baseMs,s.capMs??s.baseMs),0);
+    const budget=Math.max(0,totalMs-fixedMs);
+    const weightSum=content.reduce((sum,s)=>sum+s.baseMs,0);
+    if(!content.length||weightSum<=0){
+      const result=[];let cursor=0;
+      for(const s of fixed){const ms=Math.min(s.baseMs,s.capMs??s.baseMs);result.push({id:s.id,ms,startMs:cursor,endMs:cursor+ms});cursor+=ms;}
+      return result;
+    }
+    const shares=content.map(s=>Math.floor(budget*(s.baseMs/weightSum)));
+    const usedByContent=shares.reduce((a,b)=>a+b,0);
+    shares[shares.length-1]+=budget-usedByContent;
+    const tooSmallIdx=shares.findIndex(ms=>ms<minContentMs);
+    if(tooSmallIdx>=0){
+      const dropId=content[tooSmallIdx].id;
+      defs=defs.filter(s=>s.id!==dropId);
+      continue;
+    }
+    const result=[];let cursor=0;
+    for(const s of defs){
+      const ms=s.fixed?Math.min(s.baseMs,s.capMs??s.baseMs):shares[content.indexOf(s)];
+      result.push({id:s.id,ms,startMs:cursor,endMs:cursor+ms});
+      cursor+=ms;
+    }
+    return result;
+  }
+  return[];
+}
+
+/** Zeichenobergrenzen-Abstufung (Spezifikation Abschnitt 5: "dieselbe Abstufung wie in der Story-Vorschau" —
+ * vgl. matchcenterStoryNameClass/matchcenterStoryVisibleFacts, hier als generischer Text-Helfer für ein
+ * einzelnes Element). Bis maxChars unverändert ("normal"); darüber kleinere Schriftstufe ("tight", Text
+ * bleibt vollständig); darüber Kürzung mit Auslassungszeichen an einer Wortgrenze. */
+function socialVideoFitText(text,maxChars=SOCIAL_VIDEO_FACT_MAX_CHARS,hardMaxChars=SOCIAL_VIDEO_FACT_HARD_MAX_CHARS){
+  const raw=cleanText(text||'').trim();
+  if(!raw)return{text:'',stage:'normal',truncated:false};
+  if(raw.length<=maxChars)return{text:raw,stage:'normal',truncated:false};
+  if(raw.length<=hardMaxChars)return{text:raw,stage:'tight',truncated:false};
+  const cut=raw.slice(0,hardMaxChars);
+  const lastSpace=cut.lastIndexOf(' ');
+  const wordBoundary=lastSpace>hardMaxChars*0.6?cut.slice(0,lastSpace):cut;
+  return{text:wordBoundary.trim()+'…',stage:'tight',truncated:true};
+}
+
+/** Schriftenprüfung (Spezifikation Abschnitt 3.3 Punkt 2): document.fonts.ready abwarten, dann prüfen, ob
+ * Syne (900) und DM Mono (800) tatsächlich geladen sind. Fehlen sie (z. B. file:// ohne Netz), wird
+ * fallback:true zurückgegeben — der Aufrufer zeichnet dann mit den in der CSS definierten Ersatzschriften
+ * weiter (kein Abbruch) und zeigt im UI einen Hinweis. */
+async function socialVideoCheckFonts(){
+  try{
+    if(!globalThis.document?.fonts?.ready)return{ready:false,syne:false,dmMono:false,fallback:true};
+    await document.fonts.ready;
+    const syne=document.fonts.check("900 16px 'Syne'");
+    const dmMono=document.fonts.check("800 16px 'DM Mono'");
+    return{ready:true,syne,dmMono,fallback:!(syne&&dmMono)};
+  }catch(e){
+    return{ready:false,syne:false,dmMono:false,fallback:true};
+  }
+}
+
+/** Fähigkeitsprüfung für den SVG-foreignObject->Canvas->PNG-Export (siehe downloadSocialVideoStandbild
+ * und window.downloadMatchdayStory weiter unten): ein winziges, rein lokales 1x1-foreignObject-SVG ohne
+ * jeden externen Inhalt wird auf einen 1x1-Canvas gezeichnet und per toDataURL() ausgelesen. Aktuelle
+ * Chrome-Versionen "tainten" dabei JEDEN Canvas, auf den ein SVG mit <foreignObject> gezeichnet wurde —
+ * unabhängig von externen Ressourcen (siehe Kommentar bei downloadSocialVideoStandbild) —, andere Engines
+ * (z. B. Firefox) erlauben es. Das Ergebnis hängt nur von der Browser-Engine ab, nicht von den jeweiligen
+ * Spec-Daten, deshalb genügt EIN winziger, günstiger Testlauf statt einer echten Story/Feed-Auszeichnung. */
+async function probeSocialVideoExportCapability(){
+  try{
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><foreignObject width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml"></div></foreignObject></svg>';
+    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    const img=new Image();
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+    const canvas=document.createElement('canvas');
+    canvas.width=1;canvas.height=1;
+    canvas.getContext('2d').drawImage(img,0,0,1,1);
+    URL.revokeObjectURL(url);
+    canvas.toDataURL('image/png');
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+/** Löst probeSocialVideoExportCapability() genau einmal aus (Promise-Cache analog zu
+ * ensureExternalSeasonData) und schreibt das Ergebnis nach S.socialVideoExportPossible, sobald es
+ * feststeht — von rSocialVideoBlock() und rMatchcenterSocialMediaCenter() aus aufgerufen, damit die
+ * Prüfung schon beim ersten Rendern dieser Bereiche losläuft, nicht erst beim Klick auf den Knopf. */
+let _socialVideoExportCapabilityChecked=false;
+function ensureSocialVideoExportCapabilityChecked(){
+  if(_socialVideoExportCapabilityChecked)return;
+  _socialVideoExportCapabilityChecked=true;
+  probeSocialVideoExportCapability().then(possible=>setState({socialVideoExportPossible:possible}));
+}
+
+/** Ulms eigene Spiele eines Spieltags, sortiert nach Anpfiffzeit (Owner-Entscheidung Punkt 1 — NICHT über
+ * overviewOpponentLabel/matchday.teamGames, das bei einem vollen Spieltag ALLE anderen Teams listen würde,
+ * nicht nur Ulms tatsächliche Gegner; Muster analog getFurtherSameDayUlmGames). */
+function socialVideoUlmGamesForMatchday(seasonKey,matchday){
+  if(!matchday)return[];
+  return(matchday.games||[])
+    .filter(g=>matchcenterDetectUlmSide(g,seasonKey))
+    .sort((a,b)=>String(a?.start_time||'').localeCompare(String(b?.start_time||''))||compareGamesChronologically(a,b));
+}
+
+function socialVideoTableRank(standings,teamDisplayName,seasonKey){
+  const wantedKey=matchcenterTeamKey(teamDisplayName,seasonKey);
+  const row=(standings||[]).find(t=>matchcenterTeamKey(t.name||t.team||t.teamName||'',seasonKey)===wantedKey);
+  return row?Number(row.rank)||null:null;
+}
+
+/** AsOf-bewusstes Äquivalent zu matchcenterAnalyzeForm (siehe Kopfkommentar) — dieselbe matchcenterOutcomeForTeam/
+ * matchcenterSortGamesAsc-Logik, nur auf einer bereits vorgefilterten (asOf) Spielliste. */
+function socialVideoFormAsOf(asOfGames,teamKey,seasonKey){
+  const teamGames=(asOfGames||[]).map(g=>matchcenterOutcomeForTeam(g,teamKey,seasonKey)).filter(Boolean).sort((a,b)=>matchcenterSortGamesAsc(a.game,b.game));
+  const last5=teamGames.slice(-5);
+  const totals=last5.reduce((a,o)=>{a.games+=1;a.points+=o.points;a.gf+=o.gf;a.ga+=o.ga;a.diff+=o.diff;if(o.result==='W')a.w+=1;else if(o.result==='L')a.l+=1;else a.d+=1;return a;},{games:0,points:0,w:0,d:0,l:0,gf:0,ga:0,diff:0});
+  return{teamGames,last5,totals};
+}
+
+/** AsOf-bewusstes letztes direktes Duell Ulm–Gegner (siehe Kopfkommentar) — `opponentMcKey` im Format von
+ * matchcenterTeamKey (NICHT der Bindestrich-Asset-Schlüssel). */
+function socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey){
+  const direct=(asOfGames||[])
+    .filter(g=>matchcenterDetectUlmSide(g,seasonKey)&&matchcenterGameSideForOpponentKey(g,opponentMcKey,seasonKey,'season'))
+    .sort(matchcenterSortGamesAsc);
+  const last=direct[direct.length-1];
+  return last?matchcenterOutcomeForTeam(last,'ulm',seasonKey):null;
+}
+
+/** Minimaler, asOf-bewusster Punkte-Spitzenreiter (Tore+Assists) eines Teams im Fenster — wiederverwendet
+ * dieselben Event-Bausteine wie matchcenterBuildUlmPlayerScouting/-OpponentScouting (matchcenterEventNumber,
+ * matchcenterFindRosterPlayer, matchcenterPlayerKey/-DisplayName), aber ohne deren mehrdimensionales Ranking
+ * (Impact/Clutch/Direct/Form getrennt) — für "Players to watch" genügt der einfache Punkte-Spitzenreiter. */
+function socialVideoTopScorerAsOf(asOfGames,teamKey,seasonKey){
+  const tally=new Map();
+  for(const g of asOfGames||[]){
+    const side=matchcenterGameSideForTeam(g,teamKey,seasonKey);
+    if(!side)continue;
+    const gameKey=matchcenterGameKey(g);
+    for(const ev of g.events||[]){
+      if(ev?.event_team!==side||ev?.event_type!=='goal')continue;
+      const scorerNumber=matchcenterEventNumber(ev,'number');
+      const scorer=matchcenterFindRosterPlayer(g,side,scorerNumber);
+      if(scorer){
+        const key=matchcenterPlayerKey(scorer,teamKey,scorerNumber);
+        const row=tally.get(key)||{name:matchcenterPlayerDisplayName(scorer,scorerNumber),games:new Set(),goals:0,assists:0};
+        row.goals+=1;row.games.add(gameKey);tally.set(key,row);
+      }
+      const assistNumber=matchcenterEventNumber(ev,'assist');
+      if(assistNumber){
+        const assister=matchcenterFindRosterPlayer(g,side,assistNumber);
+        if(assister){
+          const key=matchcenterPlayerKey(assister,teamKey,assistNumber);
+          const row=tally.get(key)||{name:matchcenterPlayerDisplayName(assister,assistNumber),games:new Set(),goals:0,assists:0};
+          row.assists+=1;row.games.add(gameKey);tally.set(key,row);
+        }
+      }
+    }
+  }
+  const rows=[...tally.values()].map(r=>({name:r.name,games:r.games.size,goals:r.goals,assists:r.assists,points:r.goals+r.assists})).filter(r=>r.points>0);
+  rows.sort((a,b)=>b.points-a.points||b.goals-a.goals||a.name.localeCompare(b.name,'de'));
+  return rows[0]||null;
+}
+
+/** Alle Kernwerte für EINEN Ulm-Gegner eines Spieltags (asOf strikt VOR dem Spieltag, siehe Kopfkommentar). */
+function socialVideoOpponentSceneData(seasonKey,matchday,ulmGame){
+  const warnings=[];
+  const ulmSide=matchcenterDetectUlmSide(ulmGame,seasonKey);
+  const oppSide=ulmSide==='home'?'guest':'home';
+  const opponentRaw=matchcenterGameTeamName(ulmGame,oppSide);
+  const opponentDisplay=matchcenterTeamDisplay(opponentRaw,seasonKey);
+  const opponentShort=matchcenterStoryShortTeamLabel(opponentDisplay);
+  const opponentMcKey=matchcenterTeamKey(opponentRaw,seasonKey);
+  const assetKey=matchcenterStoryTeamAssetKey(opponentRaw,seasonKey);
+
+  const asOf={date:matchday.date,startTime:'00:00'};
+  const stats=getSeasonStatsAsOf(seasonKey,asOf);
+  const standings=stats?.standings||[];
+  const asOfGames=(stats?.relevantLeagueGames||[]).map(g=>({...normalizeGame(g),_mcSeasonKey:seasonKey}));
+
+  const ulmRank=socialVideoTableRank(standings,'VfB Ulm',seasonKey);
+  const oppRank=socialVideoTableRank(standings,opponentDisplay,seasonKey);
+  if(ulmRank===null||oppRank===null)warnings.push({code:'element-omitted',scene:'opponent',element:'tableRank',reason:'no-standings-before-matchday'});
+
+  const ulmForm=socialVideoFormAsOf(asOfGames,'ulm',seasonKey);
+  const oppForm=socialVideoFormAsOf(asOfGames,opponentMcKey,seasonKey);
+
+  const lastDuel=socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey);
+  if(!lastDuel)warnings.push({code:'scene-omitted',scene:'lastDuel',reason:'no-duel-before-matchday'});
+
+  const topUlmRow=socialVideoTopScorerAsOf(asOfGames,'ulm',seasonKey);
+  const topOppRow=socialVideoTopScorerAsOf(asOfGames,opponentMcKey,seasonKey);
+  if(!topUlmRow&&!topOppRow)warnings.push({code:'scene-omitted',scene:'playersToWatch',reason:'no-scorer-data'});
+  else{
+    if(!topUlmRow)warnings.push({code:'element-omitted',scene:'playersToWatch',element:'ulm',reason:'no-scorer-data'});
+    if(!topOppRow)warnings.push({code:'element-omitted',scene:'playersToWatch',element:'opponent',reason:'no-scorer-data'});
+  }
+  const topUlm=matchcenterStoryPlayer(topUlmRow,'VfB Ulm','ulm');
+  const topOpponent=matchcenterStoryPlayer(topOppRow,opponentDisplay,'opponent');
+
+  return{
+    opponentDisplay,opponentShort,opponentMcKey,assetKey,
+    logoAsset:`assets/teams/${assetKey}.png`,
+    kickoff:String(ulmGame?.start_time||''),
+    arena:cleanText(ulmGame?.arena_name||''),
+    ulmRank,oppRank,
+    ulmFormLetters:matchcenterStoryFormLetters(ulmForm),oppFormLetters:matchcenterStoryFormLetters(oppForm),
+    ulmFormRecord:matchcenterStoryFormRecord(ulmForm),oppFormRecord:matchcenterStoryFormRecord(oppForm),
+    lastDuel,lastDuelHasData:!!topUlmRow||!!topOppRow,
+    topUlm,topOpponent,hasLastDuel:!!lastDuel,hasPlayersToWatch:!!topUlmRow||!!topOppRow,
+    warnings,
+  };
+}
+
+/** Dateiname nach Spezifikation Abschnitt 6.4 — Gegner-Key nach demselben Muster wie
+ * matchcenterStoryDownloadFileName (Kleinschreibung, ohne Umlaute, Bindestriche). */
+function socialVideoFileName({matchdayNumber,date,format,opponentAssetKey},ext='webm'){
+  const md=String(matchdayNumber??'');
+  const d=String(date||'').replace(/[^0-9-]+/g,'');
+  if(format==='feed-4x5')return`vfb-ulm-md${md}-${d}-feed.${ext}`;
+  const opp=String(opponentAssetKey||'gegner').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'gegner';
+  return`vfb-ulm-md${md}-${d}-story-${opp}.${ext}`;
+}
+
+function socialVideoMatchdayLabel(matchday){
+  return matchday?`Spieltag ${matchday.number}`:'Spieltag';
+}
+
+/** EIN Story-Spec-Objekt für genau einen Ulm-Gegner dieses Spieltags (siehe buildSocialVideoSpec unten). */
+function socialVideoBuildStorySpec(seasonKey,matchday,ulmGame,warningsOut){
+  const opp=socialVideoOpponentSceneData(seasonKey,matchday,ulmGame);
+  warningsOut.push(...opp.warnings);
+  const homeName=socialVideoFitText('VfB Ulm',SOCIAL_VIDEO_NAME_MAX_CHARS,SOCIAL_VIDEO_NAME_HARD_MAX_CHARS);
+  const oppName=socialVideoFitText(opp.opponentDisplay,SOCIAL_VIDEO_NAME_MAX_CHARS,SOCIAL_VIDEO_NAME_HARD_MAX_CHARS);
+
+  const sceneDefs=SOCIAL_VIDEO_STORY_SCENE_DEFS.map(def=>({...def,present:def.id==='lastDuel'?opp.hasLastDuel:def.id==='playersToWatch'?opp.hasPlayersToWatch:true}));
+  const timing=socialVideoDistributeSceneDurations(sceneDefs);
+  const at=id=>timing.find(t=>t.id===id);
+
+  const scenes=[];
+  const introT=at('intro');
+  if(introT)scenes.push({id:'intro',startMs:introT.startMs,endMs:introT.endMs,elements:[
+    {type:'logo',team:'vfb-ulm',asset:'assets/vfb-ulm-logo-mark.png',animation:'fade',delayMs:0},
+    {type:'title',text:socialVideoMatchdayLabel(matchday),animation:'rise',delayMs:200},
+    {type:'meta',text:`${formatDateDE(matchday.date)}${opp.arena?' · '+opp.arena:''}`,animation:'rise',delayMs:320},
+    {type:'meta',text:`${matchcenterSeasonLabel(seasonKey)} · Verbandsliga BW (KF)`,animation:'rise',delayMs:420},
+  ]});
+  const oppT=at('opponent');
+  if(oppT)scenes.push({id:'opponent',startMs:oppT.startMs,endMs:oppT.endMs,elements:[
+    {type:'logo',team:opp.assetKey,asset:opp.logoAsset,animation:'fade',delayMs:0},
+    {type:'title',text:oppName.text,textStage:oppName.stage,animation:'rise',delayMs:120},
+    ...(opp.oppRank!==null?[{type:'stat',label:'Tabelle',text:`#${opp.oppRank}`,animation:'count',delayMs:240}]:[]),
+    {type:'form',label:'Form (letzte 5)',pills:opp.oppFormLetters,record:opp.oppFormRecord,animation:'stagger',delayMs:360},
+  ]});
+  const duelT=at('lastDuel');
+  if(duelT&&opp.lastDuel)scenes.push({id:'lastDuel',startMs:duelT.startMs,endMs:duelT.endMs,elements:[
+    {type:'result',text:`${opp.lastDuel.gf}:${opp.lastDuel.ga}`,sub:'Letztes Duell',animation:'count',delayMs:0},
+    {type:'meta',text:matchcenterSeasonLabel(seasonKey),animation:'fade',delayMs:200},
+  ]});
+  const watchT=at('playersToWatch');
+  if(watchT&&(opp.hasPlayersToWatch))scenes.push({id:'playersToWatch',startMs:watchT.startMs,endMs:watchT.endMs,elements:[
+    ...(opp.topUlm.stat!=='Keine Scorerdaten'?[{type:'playerCard',team:'ulm',name:opp.topUlm.name,stat:opp.topUlm.stat,note:socialVideoFitText(opp.topUlm.line,SOCIAL_VIDEO_FACT_MAX_CHARS,SOCIAL_VIDEO_FACT_HARD_MAX_CHARS).text,animation:'rise',delayMs:0}]:[]),
+    ...(opp.topOpponent.stat!=='Keine Scorerdaten'?[{type:'playerCard',team:'opponent',name:opp.topOpponent.name,stat:opp.topOpponent.stat,note:socialVideoFitText(opp.topOpponent.line,SOCIAL_VIDEO_FACT_MAX_CHARS,SOCIAL_VIDEO_FACT_HARD_MAX_CHARS).text,animation:'rise',delayMs:240}]:[]),
+  ]});
+  const outroT=at('outro');
+  if(outroT)scenes.push({id:'outro',startMs:outroT.startMs,endMs:outroT.endMs,elements:[
+    {type:'stat',label:'Anpfiff',text:opp.kickoff||'-',animation:'fade',delayMs:0},
+    {type:'meta',text:opp.arena||'',animation:'fade',delayMs:80},
+    {type:'logo',team:'vfb-ulm',asset:'assets/vfb-ulm-logo-mark.png',animation:'fade',delayMs:160},
+  ]});
+
+  return{
+    schemaVersion:1,format:'story-9x16',seasonKey,
+    matchday:{number:matchday.number,date:matchday.date,arena:opp.arena,kickoffs:[opp.kickoff].filter(Boolean)},
+    durationMs:SOCIAL_VIDEO_DURATION_MS,fps:SOCIAL_VIDEO_FPS,
+    scenes,
+    opponentAssetKey:opp.assetKey,opponentDisplay:opp.opponentDisplay,
+    dataSources:{standings:'app',form:'app',lastDuel:opp.hasLastDuel?'app':'absent',playersToWatch:opp.hasPlayersToWatch?'matchcenter':'absent',prognosis:'absent'},
+    warnings:opp.warnings,
+  };
+}
+
+/** Ein Feed-Post-Spec-Objekt für den ganzen Spieltag (beide Gegner, siehe Abschnitt 4.2). */
+function socialVideoBuildFeedSpec(seasonKey,matchday,ulmGames){
+  const warnings=[];
+  const opps=ulmGames.map(g=>socialVideoOpponentSceneData(seasonKey,matchday,g));
+  opps.forEach(o=>warnings.push(...o.warnings));
+  const [oppA,oppB]=opps;
+
+  const sceneDefs=SOCIAL_VIDEO_FEED_SCENE_DEFS.map(def=>({...def,present:def.id==='opponentA'?!!oppA:def.id==='opponentB'?!!oppB:true}));
+  const timing=socialVideoDistributeSceneDurations(sceneDefs);
+  const at=id=>timing.find(t=>t.id===id);
+
+  const scenes=[];
+  const introT=at('intro');
+  if(introT)scenes.push({id:'intro',startMs:introT.startMs,endMs:introT.endMs,elements:[
+    {type:'title',text:socialVideoMatchdayLabel(matchday),animation:'rise',delayMs:0},
+    {type:'meta',text:`${formatDateDE(matchday.date)}${oppA?.arena?' · '+oppA.arena:''}`,animation:'rise',delayMs:120},
+    ...(oppA?[{type:'logo',team:oppA.assetKey,asset:oppA.logoAsset,animation:'fade',delayMs:240}]:[]),
+    ...(oppB?[{type:'logo',team:oppB.assetKey,asset:oppB.logoAsset,animation:'fade',delayMs:320}]:[]),
+  ]});
+  const buildOppScene=(id,opp)=>{
+    const t=at(id);
+    if(!t||!opp)return null;
+    const name=socialVideoFitText(opp.opponentDisplay,SOCIAL_VIDEO_NAME_MAX_CHARS,SOCIAL_VIDEO_NAME_HARD_MAX_CHARS);
+    return{id,startMs:t.startMs,endMs:t.endMs,elements:[
+      {type:'logo',team:opp.assetKey,asset:opp.logoAsset,animation:'fade',delayMs:0},
+      {type:'title',text:name.text,textStage:name.stage,animation:'rise',delayMs:100},
+      ...(opp.oppRank!==null?[{type:'stat',label:'Tabelle',text:`#${opp.oppRank}`,animation:'count',delayMs:200}]:[]),
+      {type:'form',label:'Form',pills:opp.oppFormLetters,record:opp.oppFormRecord,animation:'stagger',delayMs:300},
+    ]};
+  };
+  const sceneA=buildOppScene('opponentA',oppA);
+  if(sceneA)scenes.push(sceneA);
+  const sceneB=buildOppScene('opponentB',oppB);
+  if(sceneB)scenes.push(sceneB);
+  const outroT=at('outro');
+  if(outroT)scenes.push({id:'outro',startMs:outroT.startMs,endMs:outroT.endMs,elements:[
+    ...(oppA?[{type:'stat',label:`vs ${oppA.opponentShort}`,text:oppA.kickoff||'-',animation:'fade',delayMs:0}]:[]),
+    ...(oppB?[{type:'stat',label:`vs ${oppB.opponentShort}`,text:oppB.kickoff||'-',animation:'fade',delayMs:100}]:[]),
+    {type:'meta',text:oppA?.arena||oppB?.arena||'',animation:'fade',delayMs:200},
+    {type:'logo',team:'vfb-ulm',asset:'assets/vfb-ulm-logo-mark.png',animation:'fade',delayMs:280},
+  ]});
+
+  return{
+    schemaVersion:1,format:'feed-4x5',seasonKey,
+    matchday:{number:matchday.number,date:matchday.date,arena:oppA?.arena||oppB?.arena||'',kickoffs:[oppA?.kickoff,oppB?.kickoff].filter(Boolean)},
+    durationMs:SOCIAL_VIDEO_DURATION_MS,fps:SOCIAL_VIDEO_FPS,
+    scenes,
+    dataSources:{standings:'app',form:'app',lastDuel:'absent',playersToWatch:'absent',prognosis:'absent'},
+    warnings,
+  };
+}
+
+/**
+ * buildSocialVideoSpec({seasonKey, matchdayKey, format}) — Spezifikation Abschnitt 5. Reine Funktion, zeichnet
+ * nicht, kein DOM-Zugriff. `matchdayKey` = matchday.key (z. B. "25/26#4") ODER die reine Spieltagsnummer.
+ * format:'story-9x16' liefert ein ARRAY (ein Spec-Objekt je Ulm-Gegner dieses Spieltags, 1–2 Einträge, nach
+ * Anpfiffzeit sortiert — Owner-Entscheidung, da die Funktion keinen Gegner-Parameter hat, ein Spieltag aber bis
+ * zu zwei Gegner). format:'feed-4x5' liefert EIN Objekt (ein Post für beide Gegner).
+ * @returns {object|object[]|{schemaVersion:1,format,seasonKey,matchday:null,scenes:[],warnings:[{code:'matchday-not-found'}]}}
+ */
+function buildSocialVideoSpec({seasonKey,matchdayKey,format}={}){
+  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
+  const matchday=matchdays.find(m=>m.key===matchdayKey)||matchdays.find(m=>String(m.number)===String(matchdayKey));
+  if(!matchday){
+    const empty={schemaVersion:1,format,seasonKey,matchday:null,durationMs:0,fps:SOCIAL_VIDEO_FPS,scenes:[],dataSources:{standings:'app',form:'app',lastDuel:'absent',playersToWatch:'absent',prognosis:'absent'},warnings:[{code:'matchday-not-found',matchdayKey}]};
+    return format==='story-9x16'?[empty]:empty;
+  }
+  const ulmGames=socialVideoUlmGamesForMatchday(seasonKey,matchday);
+  if(format==='feed-4x5')return socialVideoBuildFeedSpec(seasonKey,matchday,ulmGames);
+  if(!ulmGames.length){
+    const empty={schemaVersion:1,format:'story-9x16',seasonKey,matchday:{number:matchday.number,date:matchday.date,arena:'',kickoffs:[]},durationMs:0,fps:SOCIAL_VIDEO_FPS,scenes:[],dataSources:{standings:'app',form:'app',lastDuel:'absent',playersToWatch:'absent',prognosis:'absent'},warnings:[{code:'no-ulm-game-this-matchday'}]};
+    return[empty];
+  }
+  const warningsUnused=[];
+  return ulmGames.map(g=>socialVideoBuildStorySpec(seasonKey,matchday,g,warningsUnused));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// S1 — Standbild-Export aus der Spezifikation (Abschnitt 3.3/6, Umfangspunkt 4). Story (9:16) nutzt UNVERÄNDERT
+// rMatchcenterStoryFrame (dieselbe Darstellung wie die bestehende Story-Vorschau, Abschnitt 2 der
+// Spezifikation) — dafür wird das Szenen-Spec-Objekt auf dasselbe Datenformat wie
+// buildMatchcenterStoryPreviewData abgebildet, KEINE neue Story-Gestaltung. Feed (4:5) hat noch keine
+// bestehende Darstellung (Spezifikation Abschnitt 4.2) und bekommt deshalb einen eigenen, neuen Klassen-
+// Präfix .mc-feed-* (Owner-Entscheidung: bestehende .mc-story-*-Regeln bleiben unberührt), der dieselben
+// --story-*-Farbtokens/Schriften wiederverwendet, keine neuen Farben/Schriften definiert.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Bildet die Kernwerte eines Story-Specs (ein Gegner) auf das Datenformat ab, das rMatchcenterStoryFrame
+ * erwartet (siehe buildMatchcenterStoryPreviewData) — Wiederverwendung der bestehenden Darstellung. */
+function socialVideoStoryFrameData(seasonKey,storySpec){
+  const oppName=storySpec.opponentDisplay||'Gegner';
+  const oppScene=storySpec.scenes.find(s=>s.id==='opponent');
+  const oppLogo=oppScene?.elements.find(e=>e.type==='logo'&&e.team!=='vfb-ulm')?.asset||'';
+  const duelScene=storySpec.scenes.find(s=>s.id==='lastDuel');
+  const duelText=duelScene?.elements.find(e=>e.type==='result')?.text||null;
+  const watchScene=storySpec.scenes.find(s=>s.id==='playersToWatch');
+  const ulmCard=watchScene?.elements.find(e=>e.type==='playerCard'&&e.team==='ulm');
+  const oppCard=watchScene?.elements.find(e=>e.type==='playerCard'&&e.team==='opponent');
+  const rankStat=oppScene?.elements.find(e=>e.type==='stat'&&e.label==='Tabelle');
+  const formEl=oppScene?.elements.find(e=>e.type==='form');
+  const introScene=storySpec.scenes.find(s=>s.id==='intro');
+  const metaLine=introScene?.elements.filter(e=>e.type==='meta').map(e=>e.text).join(' · ')||storySpec.matchday?.date||'';
+  const outroScene=storySpec.scenes.find(s=>s.id==='outro');
+  const kickoffStat=outroScene?.elements.find(e=>e.type==='stat'&&e.label==='Anpfiff');
+  return{
+    opponentName:oppName,
+    opponentLogo:oppLogo,
+    opponentInitials:matchcenterStoryInitials(oppName),
+    home:{name:'VfB Ulm',logoUrl:'assets/vfb-ulm-logo-mark.png',rank:null},
+    away:{name:oppName,logoUrl:oppLogo,rank:rankStat?Number(String(rankStat.text).replace('#','')):null},
+    storyMeta:`${socialVideoMatchdayLabel({number:storySpec.matchday?.number})} · ${metaLine}`,
+    oppFormLetters:formEl?.pills||[],ulmFormLetters:(oppScene?.elements.find(e=>e.type==='form')?.pills)||[],
+    oppFormRecord:formEl?.record||'keine Spiele',ulmFormRecord:'',
+    directRecord:'-',
+    lastResult:duelText?`Ulm ${duelText}`:'Kein direktes Duell',
+    lastResultShort:duelText?`Ulm ${duelText}`:'Kein direktes Duell',
+    topOpponent:oppCard?{name:oppCard.name,stat:oppCard.stat,line:oppCard.note,note:''}:{name:'Noch offen',stat:'Keine Scorerdaten',line:'Datenbasis offen',note:''},
+    topUlm:ulmCard?{name:ulmCard.name,stat:ulmCard.stat,line:ulmCard.note,note:''}:{name:'Noch offen',stat:'Keine Scorerdaten',line:'Datenbasis offen',note:''},
+    keyFacts:[kickoffStat?`Anpfiff ${kickoffStat.text} Uhr${outroScene?.elements.find(e=>e.type==='meta')?.text?', '+outroScene.elements.find(e=>e.type==='meta').text:''}.`:null].filter(Boolean),
+    scoutingNotes:[],
+    dataQuality:'Datenbasis: App',
+  };
+}
+
+/** Feed-Post-Markup (4:5, Spezifikation Abschnitt 4.2) — eigener Klassen-Präfix .mc-feed-*, dieselben
+ * --story-*-Tokens wie die Story (siehe CSS), keine neue Farbe/Schrift. */
+function rSocialVideoFeedFrame(feedSpec){
+  const introScene=feedSpec.scenes.find(s=>s.id==='intro');
+  const metaLine=introScene?.elements.filter(e=>e.type==='meta').map(e=>e.text).join(' · ')||'';
+  const oppBlock=(sceneId)=>{
+    const scene=feedSpec.scenes.find(s=>s.id===sceneId);
+    if(!scene)return'';
+    const logo=scene.elements.find(e=>e.type==='logo');
+    const title=scene.elements.find(e=>e.type==='title');
+    const rank=scene.elements.find(e=>e.type==='stat'&&e.label==='Tabelle');
+    const form=scene.elements.find(e=>e.type==='form');
+    return`<div class="mc-feed-opponent">
+      ${rMatchcenterStoryLogo('',logo?.asset,matchcenterStoryInitials(title?.text||''),title?.text||'')}
+      <div class="mc-feed-opponent-name${title?.textStage==='tight'?' tight':''}">${escHtml(title?.text||'')}</div>
+      ${rank?`<div class="mc-feed-opponent-rank">${escHtml(rank.text)}</div>`:''}
+      <div class="mc-feed-form">${rMatchcenterStoryForm(form?.pills||[])}</div>
+    </div>`;
+  };
+  const outroScene=feedSpec.scenes.find(s=>s.id==='outro');
+  const kickoffStats=(outroScene?.elements||[]).filter(e=>e.type==='stat');
+  return`<article class="mc-feed-frame mc-feed-card" aria-label="Instagram Feed-Post Vorschau">
+    <div class="mc-feed-inner">
+      <div class="mc-feed-topline">
+        <div class="mc-story-brand"><img src="assets/vfb-ulm-logo-mark.png" alt="VfB Ulm"><span>VfB Ulm Floorball</span></div>
+        <div class="mc-story-badge">Pre-Match</div>
+      </div>
+      <div class="mc-feed-title">${escHtml(socialVideoMatchdayLabel(feedSpec.matchday))}</div>
+      <div class="mc-feed-meta">${escHtml(metaLine)}</div>
+      <div class="mc-feed-opponents">
+        ${oppBlock('opponentA')}
+        ${oppBlock('opponentB')}
+      </div>
+      <div class="mc-feed-outro">
+        ${kickoffStats.map(s=>`<div class="mc-feed-kickoff"><span>${escHtml(s.label)}</span><strong>${escHtml(s.text)}</strong></div>`).join('')}
+      </div>
+    </div>
+  </article>`;
+}
+
+/** Baut das Standbild-Markup (Story oder Feed) aus EINEM Spec-Objekt — nie aus DOM-/Matchcenter-Zustand. */
+function socialVideoStandbildFrame(seasonKey,spec){
+  if(spec.format==='feed-4x5')return rSocialVideoFeedFrame(spec);
+  return rMatchcenterStoryFrame(socialVideoStoryFrameData(seasonKey,spec));
+}
+
+/** SVG-foreignObject-Inhalt muss wohlgeformtes XML sein — die bestehenden Story-Vorlagen (rMatchcenterStoryLogo
+ * u. a.) erzeugen <img>-Tags als HTML (nicht XML-selbstschließend: `<img ...>` statt `<img .../>`), was den
+ * XML-Parser innerhalb des SVG zum Scheitern bringt (geprüft: derselbe Effekt trifft unverändert auch den
+ * bestehenden window.downloadMatchdayStory-Weg — ein vorbestehender Effekt, hier NICHT an den Story-Vorlagen
+ * selbst behoben, siehe Schutzregel "einzige erlaubte Änderung ist die Logo-Nutzung", sondern ausschließlich
+ * hier am Übergabepunkt zum SVG nachträglich XML-wohlgeformt gemacht). Reine Stringtransformation, keine
+ * DOM-Mutation. */
+function socialVideoXmlSafeHtml(html){
+  return String(html||'').replace(/<(img|br|hr|input|meta|link)((?:\s+[a-zA-Z-]+(?:="[^"]*")?)*)\s*(?<!\/)>/g,'<$1$2/>');
+}
+
+/** PNG-Export eines Standbilds aus einem Spec-Objekt (Story ODER Feed), über denselben SVG-foreignObject-Weg
+ * wie window.downloadMatchdayStory — hier aber aus buildSocialVideoSpec() statt aus der Live-Story-Vorschau,
+ * und mit der jeweils korrekten Zielauflösung (Story 1080×1920, Feed 1080×1350). Sichere Ränder (120 px oben/
+ * unten, 64 px links/rechts) kommen aus der bestehenden .mc-story-inner/.mc-feed-inner-Polsterung (CSS). */
+window.downloadSocialVideoStandbild=async(spec,seasonKey,button=null)=>{
+  const oldText=button?.textContent;
+  if(button)button.textContent='Export läuft...';
+  try{
+    const frameHtml=socialVideoXmlSafeHtml(socialVideoStandbildFrame(seasonKey,spec));
+    // CDATA: der Style-Text enthält CSS-Kommentare mit rohen "<"/"&"-Zeichen (z. B. "<button>" in einem
+    // Kommentar) — als wohlgeformtes XML (SVG-foreignObject-Inhalt) bräche ein XML-Parser dort einen neuen
+    // Tag auf. CDATA weist den Parser an, den Inhalt als reinen Text zu behandeln (Standardlösung für CSS/JS
+    // in XHTML-in-SVG). Derselbe vorbestehende Effekt beträfe unverändert auch window.downloadMatchdayStory —
+    // hier ausschließlich am neuen Übergabepunkt behoben, keine Änderung an den Style-Regeln selbst.
+    // @import auf https://fonts.googleapis.com entfernt: unnötige externe Ressource im exportierten Dokument
+    // vermeiden (Hygiene, und dieselbe in Abschnitt 3.3.2 der Spezifikation vorgesehene Ersatzschriften-
+    // Situation wie bei fehlenden Fonts im Browser). Behebt NICHT das eigentliche Export-Problem: aktuelle
+    // Chrome-Versionen "tainten" jeden Canvas, auf den ein SVG mit <foreignObject> gezeichnet wird, bereits
+    // ohne jede externe Ressource (verifiziert mit einem leeren, rein lokalen foreignObject) — eine bewusste,
+    // pauschale Sicherheitsrichtlinie, kein Bug einzelner Ressourcen. toDataURL() unten scheitert deshalb in
+    // solchen Browsern weiterhin mit SecurityError; das ist derselbe vorbestehende, browserseitige Effekt wie
+    // bei window.downloadMatchdayStory (nicht durch S1 verursacht, nicht mit CSS/Markup-Mitteln behebbar —
+    // eine echte Lösung bräuchte einen manuellen Canvas2D-Renderer statt SVG-foreignObject, siehe S2).
+    const styles=[...document.querySelectorAll('style')].map(style=>style.textContent||'').join('\n').replace(/@import\s+url\(['"]?https?:\/\/[^)]*\)\s*;?/gi,'').replace(/]]>/g,']]]]><![CDATA[>');
+    const width=1080,height=spec.format==='feed-4x5'?1350:1920;
+    const frameClass=spec.format==='feed-4x5'?'mc-feed-frame':'mc-story-frame';
+    // max-width:none nötig, weil die bestehende .mc-story-frame-Vorschau-Regel (Zeile ~567) die Breite auf
+    // 400px deckelt — ohne diese Aufhebung würde width:1080px!important oben folgenlos bleiben (max-width
+    // gewinnt im Box-Modell unabhängig von !important auf width) und das Bild auf 400px gestaucht.
+    const html=`<html xmlns="http://www.w3.org/1999/xhtml"><head><style><![CDATA[${styles}body{margin:0;background:#020617}.${frameClass}{width:${width}px!important;max-width:none!important;height:${height}px!important;border-radius:0!important}]]></style></head><body>${frameHtml}</body></html>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+    const img=new Image();
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
+    const canvas=document.createElement('canvas');
+    canvas.width=width;canvas.height=height;
+    const ctx2d=canvas.getContext('2d');
+    ctx2d.drawImage(img,0,0,width,height);
+    URL.revokeObjectURL(url);
+    const png=canvas.toDataURL('image/png');
+    const a=document.createElement('a');
+    a.href=png;
+    a.download=socialVideoFileName({matchdayNumber:spec.matchday?.number,date:spec.matchday?.date,format:spec.format,opponentAssetKey:spec.opponentAssetKey},'png');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return a.download;
+  }catch(e){
+    console.warn('Social-Video-Standbild-Export fehlgeschlagen:',e);
+    alert('Standbild-Export ist in diesem Browser gerade nicht möglich.');
+    return null;
+  }finally{
+    if(button)button.textContent=oldText||'Standbild herunterladen';
+  }
+};
+
 function rMatchcenterPage(){
   const seasonKey=matchcenterSeasonHasGames(S.matchcenterSeasonKey)?S.matchcenterSeasonKey:matchcenterDefaultSeasonKey();
   const context=S.matchcenterContext||'current';

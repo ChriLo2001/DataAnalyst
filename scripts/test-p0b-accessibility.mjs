@@ -105,8 +105,10 @@ console.log('== Unverändert: Variablen und übriges CSS ==');
   assertTrue(style.includes('--tx3:#64748b;') && style.includes('--tx2:#94a3b8;'), '--tx2/--tx3 unverändert');
   // Rückübersetzung der 14 Regeln -> Style-Block muss dem Stand vor P0b-Fix 9 entsprechen (keine weitere CSS-Änderung)
   const reverted = styleLines.map((l) => (TARGETS.some(([, s]) => l.startsWith(`${s}{`)) ? l.replace(/(^|[{;])color:var\(--text-muted\)/, '$1color:var(--text-faint)') : l)).join('\n');
-  assertEqual(sha(reverted), 'cf65d487a73ee848', 'Style-Block außerhalb der 14 Regeln byte-identisch zum Stand vor dem Fix (Fingerprint)');
-  assertEqual(style.length, 170218, 'Länge des Style-Blocks unverändert (nur gleich lange Variablennamen getauscht)');
+  // Fingerprint-Basiswert zuletzt nach S1 aktualisiert (neue .mc-feed-*-Regeln, siehe
+  // docs/social-video-spezifikation.md) — die 14 P0b-Fix-9-Regeln selbst sind davon unberührt (oben geprüft).
+  assertEqual(sha(reverted), '848d6d943f00c595', 'Style-Block außerhalb der 14 Regeln byte-identisch zum Stand vor dem Fix (Fingerprint, seit S1 aktualisiert)');
+  assertEqual(style.length, 173243, 'Länge des Style-Blocks (Fingerprint, seit S1 aktualisiert: +.mc-feed-*-Regeln)');
   const remaining = styleLines.filter((l) => /var\(--text-faint\)/.test(l));
   assertEqual(remaining.length, 4, 'verbleibende --text-faint-Verwendungen: genau 4 Zeilen (nur die bewusst unberührten Hover-Regeln)');
   assertTrue(remaining.every((l) => !/(?:^|[{;\s])color:var\(--text-faint\)/.test(l.replace(/border-color:var\(--text-faint\)/g, ''))), 'diese 4 setzen ausschließlich border-color (kein Text)');
