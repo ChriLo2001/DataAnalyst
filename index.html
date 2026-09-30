@@ -20345,9 +20345,14 @@ window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
     const stories=buildSocialVideoSpec({seasonKey,matchdayKey,format:'story-9x16'});
     const feed=buildSocialVideoSpec({seasonKey,matchdayKey,format:'feed-4x5'});
     const names=[];
-    for(const spec of stories){if(!spec.matchday)continue;const n=await downloadSocialVideoStandbild(spec,seasonKey);if(n)names.push(n);}
-    if(feed.matchday){const n=await downloadSocialVideoStandbild(feed,seasonKey);if(n)names.push(n);}
-    alert(names.length?`${names.length} Standbild(er) heruntergeladen:\n${names.join('\n')}`:'Keine Standbilder erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');
+    let attempted=0;
+    for(const spec of stories){if(!spec.matchday)continue;attempted++;const n=await downloadSocialVideoStandbild(spec,seasonKey);if(n)names.push(n);}
+    if(feed.matchday){attempted++;const n=await downloadSocialVideoStandbild(feed,seasonKey);if(n)names.push(n);}
+    if(names.length)alert(`${names.length} Standbild(er) heruntergeladen:\n${names.join('\n')}`);
+    else if(!attempted)alert('Keine Standbilder erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');
+    // else: kein Alert nötig — downloadSocialVideoStandbild hat für jeden gescheiterten Versuch bereits
+    // selbst gemeldet ("Standbild-Export ist in diesem Browser gerade nicht möglich."); eine zweite,
+    // hier fälschlich auf "kein Spiel gefunden" lautende Meldung wäre irreführend.
   }catch(e){
     console.warn('Social-Video-Standbild-Erzeugung fehlgeschlagen:',e);
     alert('Standbilder konnten nicht erzeugt werden.');
@@ -22074,6 +22079,17 @@ function socialVideoStandbildFrame(seasonKey,spec){
   return rMatchcenterStoryFrame(socialVideoStoryFrameData(seasonKey,spec));
 }
 
+/** SVG-foreignObject-Inhalt muss wohlgeformtes XML sein — die bestehenden Story-Vorlagen (rMatchcenterStoryLogo
+ * u. a.) erzeugen <img>-Tags als HTML (nicht XML-selbstschließend: `<img ...>` statt `<img .../>`), was den
+ * XML-Parser innerhalb des SVG zum Scheitern bringt (geprüft: derselbe Effekt trifft unverändert auch den
+ * bestehenden window.downloadMatchdayStory-Weg — ein vorbestehender Effekt, hier NICHT an den Story-Vorlagen
+ * selbst behoben, siehe Schutzregel "einzige erlaubte Änderung ist die Logo-Nutzung", sondern ausschließlich
+ * hier am Übergabepunkt zum SVG nachträglich XML-wohlgeformt gemacht). Reine Stringtransformation, keine
+ * DOM-Mutation. */
+function socialVideoXmlSafeHtml(html){
+  return String(html||'').replace(/<(img|br|hr|input|meta|link)((?:\s+[a-zA-Z-]+(?:="[^"]*")?)*)\s*(?<!\/)>/g,'<$1$2/>');
+}
+
 /** PNG-Export eines Standbilds aus einem Spec-Objekt (Story ODER Feed), über denselben SVG-foreignObject-Weg
  * wie window.downloadMatchdayStory — hier aber aus buildSocialVideoSpec() statt aus der Live-Story-Vorschau,
  * und mit der jeweils korrekten Zielauflösung (Story 1080×1920, Feed 1080×1350). Sichere Ränder (120 px oben/
@@ -22082,11 +22098,28 @@ window.downloadSocialVideoStandbild=async(spec,seasonKey,button=null)=>{
   const oldText=button?.textContent;
   if(button)button.textContent='Export läuft...';
   try{
-    const frameHtml=socialVideoStandbildFrame(seasonKey,spec);
-    const styles=[...document.querySelectorAll('style')].map(style=>style.textContent||'').join('\n');
+    const frameHtml=socialVideoXmlSafeHtml(socialVideoStandbildFrame(seasonKey,spec));
+    // CDATA: der Style-Text enthält CSS-Kommentare mit rohen "<"/"&"-Zeichen (z. B. "<button>" in einem
+    // Kommentar) — als wohlgeformtes XML (SVG-foreignObject-Inhalt) bräche ein XML-Parser dort einen neuen
+    // Tag auf. CDATA weist den Parser an, den Inhalt als reinen Text zu behandeln (Standardlösung für CSS/JS
+    // in XHTML-in-SVG). Derselbe vorbestehende Effekt beträfe unverändert auch window.downloadMatchdayStory —
+    // hier ausschließlich am neuen Übergabepunkt behoben, keine Änderung an den Style-Regeln selbst.
+    // @import auf https://fonts.googleapis.com entfernt: unnötige externe Ressource im exportierten Dokument
+    // vermeiden (Hygiene, und dieselbe in Abschnitt 3.3.2 der Spezifikation vorgesehene Ersatzschriften-
+    // Situation wie bei fehlenden Fonts im Browser). Behebt NICHT das eigentliche Export-Problem: aktuelle
+    // Chrome-Versionen "tainten" jeden Canvas, auf den ein SVG mit <foreignObject> gezeichnet wird, bereits
+    // ohne jede externe Ressource (verifiziert mit einem leeren, rein lokalen foreignObject) — eine bewusste,
+    // pauschale Sicherheitsrichtlinie, kein Bug einzelner Ressourcen. toDataURL() unten scheitert deshalb in
+    // solchen Browsern weiterhin mit SecurityError; das ist derselbe vorbestehende, browserseitige Effekt wie
+    // bei window.downloadMatchdayStory (nicht durch S1 verursacht, nicht mit CSS/Markup-Mitteln behebbar —
+    // eine echte Lösung bräuchte einen manuellen Canvas2D-Renderer statt SVG-foreignObject, siehe S2).
+    const styles=[...document.querySelectorAll('style')].map(style=>style.textContent||'').join('\n').replace(/@import\s+url\(['"]?https?:\/\/[^)]*\)\s*;?/gi,'').replace(/]]>/g,']]]]><![CDATA[>');
     const width=1080,height=spec.format==='feed-4x5'?1350:1920;
     const frameClass=spec.format==='feed-4x5'?'mc-feed-frame':'mc-story-frame';
-    const html=`<html xmlns="http://www.w3.org/1999/xhtml"><head><style>${styles}body{margin:0;background:#020617}.${frameClass}{width:${width}px!important;height:${height}px!important;border-radius:0!important}</style></head><body>${frameHtml}</body></html>`;
+    // max-width:none nötig, weil die bestehende .mc-story-frame-Vorschau-Regel (Zeile ~567) die Breite auf
+    // 400px deckelt — ohne diese Aufhebung würde width:1080px!important oben folgenlos bleiben (max-width
+    // gewinnt im Box-Modell unabhängig von !important auf width) und das Bild auf 400px gestaucht.
+    const html=`<html xmlns="http://www.w3.org/1999/xhtml"><head><style><![CDATA[${styles}body{margin:0;background:#020617}.${frameClass}{width:${width}px!important;max-width:none!important;height:${height}px!important;border-radius:0!important}]]></style></head><body>${frameHtml}</body></html>`;
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
     const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
     const img=new Image();
