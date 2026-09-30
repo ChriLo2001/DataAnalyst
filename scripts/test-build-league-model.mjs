@@ -453,7 +453,11 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   const snapAfter = await repoSnapshot();
   assertEqual(snapAfter, snapBefore, 'Repository unverändert (Dateiliste, Größen, Änderungszeiten) — Dry-Run schreibt nichts');
   assertEqual(await fileHashes(GUARDED), hashBefore, 'season-data, index.html, Golden-Baseline und die wiederverwendeten Module sind unverändert (SHA-256)');
-  assertTrue(!snapAfter.some((l) => l.startsWith('model-data/')), 'kein model-data/ erzeugt');
+  // Seit P4b ist model-data/ committet (siehe docs/league-model.md, Abschnitt "Modelldaten-Persistenz"); die
+  // ursprüngliche Prüfung "kein model-data/ erzeugt" ging von einem generell fehlenden Verzeichnis aus. Die
+  // eigentliche Garantie — Dry-Run verändert model-data/ nicht — ist bereits durch die volle repoSnapshot()-
+  // Gleichheit oben (Zeile 454) abgedeckt; diese Zeile macht dieselbe Garantie zusätzlich explizit für model-data/.
+  assertEqual(snapAfter.filter((l) => l.startsWith('model-data/')), snapBefore.filter((l) => l.startsWith('model-data/')), 'model-data/ (Dateiliste, Größen, Änderungszeiten) durch Dry-Run-Läufe unverändert');
   assertEqual(fetchCalls, 0, 'kein fetch-Aufruf');
   const NETWORK_RE = /\bfetch\(|node:http|node:https|node:net|node:dns|WebSocket|XMLHttpRequest/;
   const WRITE_RE = /writeFile|appendFile|createWriteStream|rename\(|mkdir/;
