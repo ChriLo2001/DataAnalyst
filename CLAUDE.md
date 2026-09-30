@@ -7,6 +7,7 @@ Das VfB Ulm Analytics Center (`index.html`) ist eine Single-File-SPA, die Floorb
 ## Leseregeln
 
 - **`index.html` nie vollständig lesen.** Die Datei hat über 23.000 Zeilen. Immer zuerst [docs/index-map.md](docs/index-map.md) konsultieren (Funktionen, `window.`-Zuweisungen, const-Pfeilfunktionen, CSS-Gruppen, große Bereiche — jeweils mit Zeilenbereich), dann gezielt nur den benötigten Zeilenbereich lesen. Ist die Karte veraltet (nach einer Änderung an `index.html`), neu erzeugen: `node scripts/build-index-map.mjs --write`.
+- **Vor gezieltem Lesen aus der Karte prüfen, ob sie noch aktuell ist:** `node scripts/build-index-map.mjs --check` (vergleicht den im Kopf der Karte gespeicherten SHA-256 von `index.html` mit dem aktuellen Stand). Nach jeder Änderung an `index.html` die Karte mit `--write` neu erzeugen und mitcommitten.
 - **Aus `docs/spec/` nur lesen, was der Auftrag nennt.** Ein Phasenauftrag nennt die betroffenen Module/Abschnitte (siehe Lesehinweis in [docs/spec/index.md](docs/spec/index.md)); nicht die ganze Spezifikation laden. Jede Datei verweist per Kopfzeile auf ihre Voraussetzungen.
 - **Rohdaten nie in den Kontext laden.** `season-data/*.json`, `lineup-data/*.json`, `model-data/*` und `scripts/p0a-baseline-golden-values.json` sind groß und nicht zum Lesen gedacht — nur per Skript verarbeiten (Node-Prozess liest/schreibt sie, nicht das Gespräch).
 

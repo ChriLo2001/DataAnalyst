@@ -229,6 +229,44 @@ async function run() {
     });
   });
 
+  console.log('== G) --check erkennt Übereinstimmung und Abweichung ==');
+  await withFixture(SAMPLE_SCRIPT, SAMPLE_STYLE, async (dir) => {
+    await mkdir(path.join(dir, 'docs'), { recursive: true });
+    let checkStdout = '';
+    const captureCheck = () => { checkStdout = ''; return { write: (s) => { checkStdout += s; } }; };
+
+    await checkAsync('--check ohne vorhandene docs/index-map.md meldet "veraltet" und schreibt nichts', async () => {
+      const code = await main(['--check'], { stdout: captureCheck(), repoRoot: dir });
+      assert.equal(code, 1);
+      assert.match(checkStdout, /veraltet/);
+      await assert.rejects(readFile(path.join(dir, 'docs', 'index-map.md'), 'utf8'));
+    });
+
+    await checkAsync('--check direkt nach --write meldet "aktuell" (Exit 0)', async () => {
+      await main(['--write'], { stdout: { write: () => {} }, repoRoot: dir });
+      const code = await main(['--check'], { stdout: captureCheck(), repoRoot: dir });
+      assert.equal(code, 0);
+      assert.match(checkStdout, /aktuell/);
+    });
+
+    await checkAsync('--check nach einer Änderung an index.html meldet "veraltet" (Exit 1)', async () => {
+      const htmlPath = path.join(dir, 'index.html');
+      const original = await readFile(htmlPath, 'utf8');
+      await writeFile(htmlPath, original.replace('simpleFn', 'simpleFnRenamed'), 'utf8');
+      const code = await main(['--check'], { stdout: captureCheck(), repoRoot: dir });
+      assert.equal(code, 1);
+      assert.match(checkStdout, /veraltet/);
+      await writeFile(htmlPath, original, 'utf8'); // Fixture für evtl. weitere Schritte zurücksetzen
+    });
+
+    await checkAsync('--check schreibt in keinem Fall docs/index-map.md', async () => {
+      const before = await readFile(path.join(dir, 'docs', 'index-map.md'), 'utf8');
+      await main(['--check'], { stdout: { write: () => {} }, repoRoot: dir });
+      const after = await readFile(path.join(dir, 'docs', 'index-map.md'), 'utf8');
+      assert.equal(before, after);
+    });
+  });
+
   console.log();
   if (failed === 0) {
     console.log('Alle Tests erfolgreich.');

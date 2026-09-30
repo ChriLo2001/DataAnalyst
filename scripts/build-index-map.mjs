@@ -33,8 +33,16 @@
 // Aufruf:
 //   node scripts/build-index-map.mjs            # Dry-Run: Bericht auf stdout, schreibt nichts
 //   node scripts/build-index-map.mjs --write     # schreibt docs/index-map.md
+//   node scripts/build-index-map.mjs --check     # prüft, ob docs/index-map.md noch zum aktuellen
+//                                                 # index.html passt (SHA-256-Vergleich); schreibt
+//                                                 # nichts; Exit 1, wenn die Karte veraltet/fehlend ist
+//
+// Die Karte selbst trägt im Kopf den SHA-256-Hash und die Zeilenzahl von index.html, aus dem sie
+// erzeugt wurde (siehe CLAUDE.md: --write nach jeder index.html-Änderung neu erzeugen und
+// mitcommitten, --check vor gezieltem Lesen).
 
 import { readFile, writeFile, rename } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -326,6 +334,7 @@ function scanStyleBlock(lines, lineOffset) {
 
 export async function buildIndexMap(repoRoot = REPO_ROOT) {
   const html = await readFile(path.join(repoRoot, 'index.html'), 'utf8');
+  const sourceHash = createHash('sha256').update(html).digest('hex');
   const lines = html.split('\n');
 
   const styleOpenIdx = lines.findIndex((l) => l.trim() === '<style>');
@@ -343,6 +352,7 @@ export async function buildIndexMap(repoRoot = REPO_ROOT) {
   const { functions, windowFns, constArrows, largeBlocks } = scanScript(scriptLines, scriptOpenIdx + 1 + 1);
 
   return {
+    sourceHash,
     totalLines: lines.length,
     styleRange: { start: styleOpenIdx + 1, end: styleCloseIdx + 1 },
     scriptRange: { start: scriptOpenIdx + 1, end: scriptCloseIdx + 1 },
@@ -361,9 +371,13 @@ function formatReport(map) {
   const lines = [];
   lines.push('# Code-Karte: index.html');
   lines.push('');
-  lines.push(`Automatisch erzeugt von \`scripts/build-index-map.mjs\`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: \`node scripts/build-index-map.mjs --write\`.`);
+  // Maschinenlesbarer Kopf für `--check`: SHA-256 + Zeilenzahl von index.html im Moment der
+  // Erzeugung. Als HTML-Kommentar, damit er in der gerenderten Markdown-Ansicht nicht stört.
+  lines.push(`<!-- index-map: source-sha256=${map.sourceHash} source-lines=${map.totalLines} -->`);
   lines.push('');
-  lines.push(`index.html: ${map.totalLines} Zeilen gesamt. Statischer \`<style>\`-Block: Zeile ${map.styleRange.start}–${map.styleRange.end}. Haupt-\`<script>\`-Block: Zeile ${map.scriptRange.start}–${map.scriptRange.end}.`);
+  lines.push(`Automatisch erzeugt von \`scripts/build-index-map.mjs\`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: \`node scripts/build-index-map.mjs --write\`. Vor gezieltem Lesen prüfen, ob die Karte noch aktuell ist: \`node scripts/build-index-map.mjs --check\`.`);
+  lines.push('');
+  lines.push(`index.html: ${map.totalLines} Zeilen gesamt (SHA-256 \`${map.sourceHash}\`). Statischer \`<style>\`-Block: Zeile ${map.styleRange.start}–${map.styleRange.end}. Haupt-\`<script>\`-Block: Zeile ${map.scriptRange.start}–${map.scriptRange.end}.`);
   lines.push('');
   lines.push(`**Leseregel (siehe CLAUDE.md):** index.html nie vollständig laden. Diese Karte nennen, den gesuchten Namen im Register unten finden, dann nur den genannten Zeilenbereich lesen.`);
   lines.push('');
@@ -435,8 +449,41 @@ async function writeFileAtomic(filePath, content) {
   await rename(tmpPath, filePath);
 }
 
+/** Liest den gespeicherten SHA-256-Hash aus einer bestehenden docs/index-map.md (Kopfzeile
+ * `<!-- index-map: source-sha256=... source-lines=... -->`), oder null, wenn die Datei fehlt oder
+ * keinen erkennbaren Hash trägt (z. B. eine Karte von vor Einführung dieser Prüfung). */
+async function readStoredHash(repoRoot) {
+  let content;
+  try {
+    content = await readFile(path.join(repoRoot, 'docs', 'index-map.md'), 'utf8');
+  } catch (e) {
+    if (e.code === 'ENOENT') return null;
+    throw e;
+  }
+  const m = /<!--\s*index-map:\s*source-sha256=([0-9a-f]{64})\s+source-lines=(\d+)\s*-->/.exec(content);
+  return m ? { hash: m[1], lines: Number(m[2]) } : null;
+}
+
 export async function main(argv = process.argv.slice(2), { stdout = process.stdout, repoRoot = REPO_ROOT } = {}) {
   const write = argv.includes('--write');
+  const check = argv.includes('--check');
+
+  if (check) {
+    const stored = await readStoredHash(repoRoot);
+    const html = await readFile(path.join(repoRoot, 'index.html'), 'utf8');
+    const currentHash = createHash('sha256').update(html).digest('hex');
+    if (!stored) {
+      stdout.write('veraltet: docs/index-map.md fehlt oder hat keinen Hash-Kopf. Neu erzeugen: node scripts/build-index-map.mjs --write\n');
+      return 1;
+    }
+    if (stored.hash !== currentHash) {
+      stdout.write(`veraltet: docs/index-map.md wurde aus einer anderen Version von index.html erzeugt (gespeichert: ${stored.hash.slice(0, 12)}…, aktuell: ${currentHash.slice(0, 12)}…). Neu erzeugen: node scripts/build-index-map.mjs --write\n`);
+      return 1;
+    }
+    stdout.write('aktuell: docs/index-map.md passt zur aktuellen index.html.\n');
+    return 0;
+  }
+
   const map = await buildIndexMap(repoRoot);
   const report = formatReport(map);
   if (!write) {

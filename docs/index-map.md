@@ -1,8 +1,10 @@
 # Code-Karte: index.html
 
-Automatisch erzeugt von `scripts/build-index-map.mjs`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: `node scripts/build-index-map.mjs --write`.
+<!-- index-map: source-sha256=f5ba9f93da3943966f6de236c34db69a8481e73ea67154aad02e49d95bac9096 source-lines=23589 -->
 
-index.html: 23589 Zeilen gesamt. Statischer `<style>`-Block: Zeile 8–1521. Haupt-`<script>`-Block: Zeile 1614–23585.
+Automatisch erzeugt von `scripts/build-index-map.mjs`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: `node scripts/build-index-map.mjs --write`. Vor gezieltem Lesen prüfen, ob die Karte noch aktuell ist: `node scripts/build-index-map.mjs --check`.
+
+index.html: 23589 Zeilen gesamt (SHA-256 `f5ba9f93da3943966f6de236c34db69a8481e73ea67154aad02e49d95bac9096`). Statischer `<style>`-Block: Zeile 8–1521. Haupt-`<script>`-Block: Zeile 1614–23585.
 
 **Leseregel (siehe CLAUDE.md):** index.html nie vollständig laden. Diese Karte nennen, den gesuchten Namen im Register unten finden, dann nur den genannten Zeilenbereich lesen.
 
