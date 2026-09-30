@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Token-Diät Teil 1 — Code-Karte für index.html.
 //
-// index.html ist eine einzelne ~3,9-MB-Datei mit ca. 1300 Top-Level-Funktionen. Ein Phasenauftrag
-// soll gezielt per Zeilenbereich lesen (siehe CLAUDE.md), statt die ganze Datei zu laden oder sich
-// per Volltextsuche durchzutasten. Dieses Skript erzeugt dafür docs/index-map.md: alle Top-Level-
-// Funktionsdeklarationen, window.-Zuweisungen von Funktionen, const-Pfeilfunktionen (jeweils mit
-// Name, Startzeile, Zeilenanzahl), die CSS-Regelgruppen des statischen <style>-Blocks (nach
-// Selektor-Präfix gruppiert), @keyframes-Animationen und die Zeilengrenzen großer Bereiche wie
-// STATIC_SEASON_DATA.
+// index.html ist eine einzelne, große Datei mit ca. 1300 Top-Level-Funktionen (~1,5 MB seit die
+// STATIC_SEASON_DATA-Rohdaten in Token-Diät Teil 2 nach season-data-embedded.js ausgelagert wurden,
+// vorher ~3,9 MB). Ein Phasenauftrag soll trotzdem gezielt per Zeilenbereich lesen (siehe
+// CLAUDE.md), statt die ganze Datei zu laden oder sich per Volltextsuche durchzutasten. Dieses
+// Skript erzeugt dafür docs/index-map.md: alle Top-Level-Funktionsdeklarationen,
+// window.-Zuweisungen von Funktionen, const-Pfeilfunktionen (jeweils mit Name, Startzeile,
+// Zeilenanzahl), die CSS-Regelgruppen des statischen <style>-Blocks (nach Selektor-Präfix
+// gruppiert), @keyframes-Animationen und die Zeilengrenzen großer Bereiche (z. B. SEASON_CONFIG).
 //
 // Erkennung ist regex-/klammertiefenbasiert (kein vollständiger JS-Parser) — für eine Navigations-
 // Karte ausreichend, aber keine Garantie auf Vollständigkeit bei ungewöhnlichen Konstrukten (siehe
@@ -390,7 +391,7 @@ function formatReport(map) {
 
   lines.push('## Große Bereiche');
   lines.push('');
-  lines.push(`Top-Level-Blöcke (Funktionen oder Daten-consts) ab ${LARGE_BLOCK_MIN_LINES} Zeilen oder ${LARGE_BLOCK_MIN_CHARS} Zeichen, u. a. \`STATIC_SEASON_DATA\`:`);
+  lines.push(`Top-Level-Blöcke (Funktionen oder Daten-consts) ab ${LARGE_BLOCK_MIN_LINES} Zeilen oder ${LARGE_BLOCK_MIN_CHARS} Zeichen (z. B. \`SEASON_CONFIG\`). Das Zeichen-Kriterium existiert wegen des früheren \`STATIC_SEASON_DATA\`-Blocks — seit Token-Diät Teil 2 in \`season-data-embedded.js\` ausgelagert, siehe docs/season-data-import.md, deshalb unten nicht mehr gelistet:`);
   lines.push('');
   lines.push('| Name | Art | Zeile | Zeilen |');
   lines.push('|---|---|---|---|');
