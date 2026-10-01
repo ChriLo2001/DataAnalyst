@@ -138,14 +138,61 @@ console.log('== 14: geplanter Matchday (synthetisch, da in den 5 realen Saisons 
   assertEqual(matchdays[0].status, 'geplant', 'kein Spiel ended:true -> Status "geplant"');
 }
 
-console.log('== 15: postponed Matchday anhand realer Daten (25/26 Matchday 1 und 2 enthalten je 2 Postponed-Spiele) ==');
+console.log('== 15: Postponed/Canceled blockieren "abgeschlossen" NICHT mehr (Abschnitt 3.6.3: "ursprünglicher Spieltag gilt ohne dieses Spiel als abgeschlossen") ==');
 {
-  const matchdays = buildMatchdays(loadedSeasons['25-26.json']);
+  // 25/26 Matchday 1 und 2: je 2 Postponed-Spiele, alle übrigen Spiele ended:true.
+  const matchdays2526 = buildMatchdays(loadedSeasons['25-26.json']);
+  const md1 = matchdays2526.find((m) => m.number === 1);
+  const md2 = matchdays2526.find((m) => m.number === 2);
+  const postponedIn = (m) => m.games.filter((g) => g.notice_type === 'Postponed').length;
+  assertTrue(postponedIn(md1) === 2 && md1.status === 'abgeschlossen', 'Matchday 1 (25/26): 2 Postponed-Spiele unter sonst beendeten Spielen -> "abgeschlossen" (Postponed blockiert nicht mehr)', { postponed: postponedIn(md1), status: md1.status });
+  assertTrue(postponedIn(md2) === 2 && md2.status === 'abgeschlossen', 'Matchday 2 (25/26): ebenso "abgeschlossen"', { postponed: postponedIn(md2), status: md2.status });
+
+  // 24/25 Matchday 1: 2 Canceled-Spiele (39118, 39120), alle übrigen Spiele ended:true.
+  const matchdays2425 = buildMatchdays(loadedSeasons['24-25.json']);
+  const md1_2425 = matchdays2425.find((m) => m.number === 1);
+  const canceledIn = (m) => m.games.filter((g) => g.notice_type === 'Canceled').length;
+  assertTrue(canceledIn(md1_2425) === 2 && md1_2425.status === 'abgeschlossen', 'Matchday 1 (24/25): 2 Canceled-Spiele unter sonst beendeten Spielen -> "abgeschlossen"', { canceled: canceledIn(md1_2425), status: md1_2425.status });
+}
+
+console.log('== 15b: Spieltag mit einem echten, noch nicht gespielten Spiel bleibt "unvollstaendig" (synthetisch, kein notice_type) ==');
+{
+  const synthetic = {
+    season: '99/00',
+    games: [
+      { id: 1, date: '2099-01-01', start_time: '11:00', game_number: '1', ended: true, result: { home_goals: 5, guest_goals: 3 }, home_team_name: 'A', guest_team_name: 'B', game_day: { game_day_number: 1 } },
+      { id: 2, date: '2099-01-01', start_time: '13:00', game_number: '2', ended: false, notice_type: null, home_team_name: 'C', guest_team_name: 'D', game_day: { game_day_number: 1 } },
+    ],
+  };
+  const matchdays = buildMatchdays(synthetic);
+  assertEqual(matchdays[0].status, 'unvollstaendig', 'ein ended:true-Spiel plus ein echtes offenes Spiel (weder beendet noch verlegt/abgesagt) -> "unvollstaendig"');
+}
+
+console.log('== 15c: verlegtes Spiel zählt am NEUEN Datum mit, sobald es dort beendet ist (synthetisch) ==');
+{
+  // Ursprünglicher Spieltag 1 (2099-01-01): ein Postponed-Spiel (altes Datum, ended:false) plus ein
+  // regulär beendetes Spiel -> nach der neuen Regel bereits "abgeschlossen" (Postponed blockiert nicht).
+  // Spieltag 2 (2099-01-08): das VERLEGTE Spiel taucht dort mit NEUEM date/game_day_number und
+  // ended:true erneut auf (so, wie ein echter Re-Import eines verschobenen Spiels aussehen würde) -
+  // buildMatchdays gruppiert es rein über date/game_day_number ganz regulär in den neuen Spieltag ein,
+  // der dadurch ebenfalls "abgeschlossen" wird. Kein Sonderfall im Code nötig (siehe Kopfkommentar).
+  const synthetic = {
+    season: '99/00',
+    games: [
+      { id: 1, date: '2099-01-01', start_time: '11:00', game_number: '1', ended: true, result: { home_goals: 5, guest_goals: 3 }, home_team_name: 'A', guest_team_name: 'B', game_day: { game_day_number: 1 } },
+      { id: 2, date: '2099-01-01', start_time: '13:00', game_number: '2', ended: false, notice_type: 'Postponed', home_team_name: 'C', guest_team_name: 'D', game_day: { game_day_number: 1 } },
+      { id: 3, date: '2099-01-08', start_time: '11:00', game_number: '3', ended: true, result: { home_goals: 2, guest_goals: 2 }, home_team_name: 'E', guest_team_name: 'F', game_day: { game_day_number: 2 } },
+      // Nachgeholtes Spiel 2 (gleiche Teams C/D), neues Datum/neue game_day_number, jetzt beendet:
+      { id: 4, date: '2099-01-08', start_time: '13:00', game_number: '4', ended: true, result: { home_goals: 1, guest_goals: 4 }, home_team_name: 'C', guest_team_name: 'D', game_day: { game_day_number: 2 } },
+    ],
+  };
+  const matchdays = buildMatchdays(synthetic);
+  assertEqual(matchdays.length, 2, 'zwei getrennte Spieltage (nach game_day_number)');
   const md1 = matchdays.find((m) => m.number === 1);
   const md2 = matchdays.find((m) => m.number === 2);
-  const postponedIn = (m) => m.games.filter((g) => g.notice_type === 'Postponed').length;
-  assertTrue(postponedIn(md1) === 2 && md1.status === 'unvollstaendig', 'Matchday 1 (25/26): 2 Postponed-Spiele (ended:false) unter sonst beendeten Spielen -> "unvollstaendig", nicht "abgeschlossen"', { postponed: postponedIn(md1), status: md1.status });
-  assertTrue(postponedIn(md2) === 2 && md2.status === 'unvollstaendig', 'Matchday 2 (25/26): ebenso "unvollstaendig" statt fälschlich "abgeschlossen"', { postponed: postponedIn(md2), status: md2.status });
+  assertEqual(md1.status, 'abgeschlossen', 'ursprünglicher Spieltag 1: Postponed-Spiel blockiert nicht -> "abgeschlossen"');
+  assertEqual(md2.games.map((g) => g.id), [3, 4], 'Spieltag 2 enthält das nachgeholte Spiel (id 4) unter dem neuen Datum');
+  assertEqual(md2.status, 'abgeschlossen', 'Spieltag 2: beide Spiele (inkl. nachgeholtes) beendet -> "abgeschlossen"');
 }
 
 console.log('== 16: Matchdays mit mehreren Spielen am selben Datum (Regelfall) ==');

@@ -48,26 +48,35 @@
 // dortigen URL-Kodierung (P0a.8) vorzugreifen.
 //
 // ── `status` ───────────────────────────────────────────────────────────
-// Ausschließlich aus dem vorhandenen rohen `game.ended`-Feld abgeleitet
-// (spiegelt exakt den Spezifikationstext "beendet"):
-//   - alle Spiele ended===true  -> "abgeschlossen"
-//   - kein Spiel ended===true   -> "geplant"
-//   - gemischt                  -> "unvollstaendig"
-// Bewusst NICHT verwendet: classifyGameForStats()/countsForStats — das ist
-// die bestehende STATISTIK-Relevanz-Logik (cancelled/postponed/played/...),
-// eine andere Fragestellung als "ist dieser Termin ausgetragen". Die
-// Spezifikation nennt für den Matchday-Status ausdrücklich nur "beendet".
-// Konsequenz (bewusst dokumentiert, nicht stillschweigend anders gelöst):
-// ein dauerhaft abgesagtes Spiel (notice_type "Canceled") hat ended:false
-// und real GENAU DAS FÜR IMMER — ein Matchday mit einem solchen Spiel
-// erreicht mit dieser Definition nie "abgeschlossen", sondern bleibt
-// "unvollstaendig". Die Spezifikation definiert für "abgeschlossen" keine
-// Ausnahme für abgesagte Spiele, daher wird hier keine erfunden.
-// "verlegt" aus der Spezifikation wird NICHT implementiert: die realen
-// Rohdaten enthalten für verschobene Spiele (notice_type "Postponed") kein
-// Feld, das ein neues Zieldatum benennt — das Spiel bleibt unter seinem
-// ursprünglichen date/game_day_number stehen. Eine Zuordnung "zum neuen
-// Datum" wäre ohne ein solches Feld erfunden, nicht abgeleitet.
+// Korrigiert (Datenqualitäts-Phase): Der frühere Stand dieses Kommentars
+// behauptete, die Spezifikation definiere "abgeschlossen" nicht und ließe
+// für abgesagte/verlegte Spiele keine Ausnahme zu. Das war falsch — Abschnitt
+// 3.6.3 sagt ausdrücklich: ein Spiel mit `notice_type` wird dem neuen Datum
+// zugeordnet, "der ursprüngliche Spieltag gilt OHNE DIESES SPIEL als
+// abgeschlossen". Ein Spieltag ist damit abgeschlossen, wenn jedes Spiel
+// entweder beendet ist ODER endgültig nicht an diesem Termin stattfindet
+// (notice_type "Postponed" oder "Canceled" — die beiden einzigen Werte, die
+// in den realen Rohdaten vorkommen, siehe scripts/test-matchday-derivation.mjs).
+// "unvollstaendig" bleibt nur für Spiele, die WEDER beendet NOCH verlegt/
+// abgesagt sind (also noch offen).
+//   - jedes Spiel beendet ODER verlegt/abgesagt -> "abgeschlossen"
+//   - kein Spiel beendet (verlegte/abgesagte zählen hier NICHT als "beendet",
+//     nur als "nicht mehr offen")                -> "geplant"
+//   - sonst (gemischt)                            -> "unvollstaendig"
+// "verlegt" selbst (ein eigener dritter Status, wie im Spezifikationstext
+// als Aufzählungspunkt genannt) wird weiterhin NICHT als eigener Rückgabewert
+// geführt: die realen Rohdaten enthalten für verschobene Spiele (notice_type
+// "Postponed") kein Feld, das ein neues Zieldatum benennt — das Spiel bleibt
+// unter seinem ursprünglichen date/game_day_number stehen. "Ein verlegtes
+// Spiel zählt am neuen Datum mit, sobald es dort beendet ist" (Auftrag)
+// erfordert daher keinen Sonderfall hier: wird ein verschobenes Spiel später
+// mit aktualisiertem date/game_day_number und ended:true neu importiert,
+// gruppiert es buildMatchdays beim nächsten Lauf ganz regulär in den dann
+// passenden neuen Spieltag ein — das leistet die bestehende Gruppierung
+// bereits, ohne dass "status" dafür ein eigenes "verlegt" bräuchte. Bewusst
+// NICHT verwendet: classifyGameForStats()/countsForStats — das ist die
+// bestehende STATISTIK-Relevanz-Logik (cancelled/postponed/played/...), eine
+// andere Fragestellung als "ist dieser Termin ausgetragen".
 //
 // ── `teamGames` ────────────────────────────────────────────────────────
 // { [teamName]: gameId[] } — jede an mindestens einem Spiel dieses Matchdays
@@ -83,6 +92,12 @@
 // unverändert auf den hier gelieferten, unveränderten Original-Teamnamen.
 
 import { compareGamesChronologically } from './game-ordering.mjs';
+
+// Notice-Type-Werte, die ein Spiel "endgültig nicht an diesem Termin" machen (Abschnitt 3.6.3).
+// Die realen Rohdaten kennen genau zwei Werte dafür: "Postponed" und "Canceled" (geprüft über alle
+// 5 Saisons, siehe scripts/test-matchday-derivation.mjs) — deutsche Varianten zusätzlich erfasst,
+// falls künftig importierte Daten sie verwenden.
+const FINAL_NOTICE_RE = /postpone|verschoben|verlegt|cancel|abgesagt/i;
 
 export function buildMatchdays(seasonData) {
   const seasonKey = seasonData?.season ?? '';
@@ -117,9 +132,10 @@ export function buildMatchdays(seasonData) {
     }
 
     const endedFlags = sortedGames.map((g) => g?.ended === true);
-    const allEnded = endedFlags.length > 0 && endedFlags.every(Boolean);
     const noneEnded = endedFlags.every((f) => !f);
-    const status = allEnded ? 'abgeschlossen' : noneEnded ? 'geplant' : 'unvollstaendig';
+    const resolvedFlags = sortedGames.map((g) => g?.ended === true || FINAL_NOTICE_RE.test(String(g?.notice_type ?? '')));
+    const allResolved = resolvedFlags.length > 0 && resolvedFlags.every(Boolean);
+    const status = allResolved ? 'abgeschlossen' : noneEnded ? 'geplant' : 'unvollstaendig';
 
     matchdays.push({
       key: `${seasonKey}#${number !== null ? number : `date:${date}`}`,
