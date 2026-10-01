@@ -1,10 +1,10 @@
 # Code-Karte: index.html
 
-<!-- index-map: source-sha256=64f0fa5a8014627d1193eb00654398f2b63036b597311796668dac2d1131f7dc source-lines=24265 -->
+<!-- index-map: source-sha256=21eea1a800378441650bbdf95848c2a56e77fc15da102028b270cc992246542c source-lines=24775 -->
 
 Automatisch erzeugt von `scripts/build-index-map.mjs`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: `node scripts/build-index-map.mjs --write`. Vor gezieltem Lesen prüfen, ob die Karte noch aktuell ist: `node scripts/build-index-map.mjs --check`.
 
-index.html: 24265 Zeilen gesamt (SHA-256 `64f0fa5a8014627d1193eb00654398f2b63036b597311796668dac2d1131f7dc`). Statischer `<style>`-Block: Zeile 8–1544. Haupt-`<script>`-Block: Zeile 1645–24261.
+index.html: 24775 Zeilen gesamt (SHA-256 `21eea1a800378441650bbdf95848c2a56e77fc15da102028b270cc992246542c`). Statischer `<style>`-Block: Zeile 8–1544. Haupt-`<script>`-Block: Zeile 1645–24771.
 
 **Leseregel (siehe CLAUDE.md):** index.html nie vollständig laden. Diese Karte nennen, den gesuchten Namen im Register unten finden, dann nur den genannten Zeilenbereich lesen.
 
@@ -180,35 +180,37 @@ Top-Level-Blöcke (Funktionen oder Daten-consts) ab 30 Zeilen oder 2000 Zeichen 
 | `rMatchcenterDigitalCoach` | function | 20117–20181 | 65 |
 | `rMatchcenterLockerRoomSheet` | function | 20199–20254 | 56 |
 | `downloadMatchdayStory` | window | 20273–20320 | 48 |
-| `rSocialVideoBlock` | function | 20324–20349 | 26 |
-| `rMatchcenterSocialMediaCenter` | function | 20374–20427 | 54 |
-| `rMatchcenterLineupBuilder` | function | 20459–20531 | 73 |
-| `rLineupBuilderAvailablePanel` | function | 20546–20593 | 48 |
-| `rLineupRecommendationMode` | function | 20609–20642 | 34 |
-| `rLineupTestLine` | function | 20656–20704 | 49 |
-| `rLineupBuilderPage` | function | 20722–20755 | 34 |
-| `rMatchcenterScoutingSummary` | function | 20756–20799 | 44 |
-| `getTeamLogoUrlForStory` | function | 20853–20882 | 30 |
-| `matchcenterStoryPlayer` | function | 20962–20994 | 33 |
-| `matchcenterStoryPickFactItems` | function | 21062–21114 | 53 |
-| `buildMatchcenterStoryPreviewData` | function | 21338–21449 | 112 |
-| `matchcenterStoryVisibleFacts` | function | 21456–21486 | 31 |
-| `rMatchcenterStoryPreview` | function | 21505–21574 | 70 |
-| `fitMatchcenterStoryLayout` | function | 21581–21623 | 43 |
-| `socialVideoDistributeSceneDurations` | function | 21673–21704 | 32 |
-| `socialVideoTopScorerAsOf` | function | 21810–21839 | 30 |
-| `socialVideoOpponentSceneData` | function | 21842–21889 | 48 |
-| `socialVideoBuildStorySpec` | function | 21906–21957 | 52 |
-| `socialVideoBuildFeedSpec` | function | 21960–22009 | 50 |
-| `socialVideoStoryFrameData` | function | 22048–22081 | 34 |
-| `rSocialVideoFeedFrame` | function | 22085–22121 | 37 |
-| `downloadSocialVideoStandbild` | window | 22144–22194 | 51 |
-| `rMatchcenterPage` | function | 22196–22343 | 148 |
-| `rTeamPage` | function | 22344–22654 | 311 |
-| `_render` | function | 22704–22868 | 165 |
-| `uiObjektseite` | function | 23186–23219 | 34 |
-| `rMatchdayDetailPage` | function | 23439–23474 | 36 |
-| `buildOverviewCards` | function | 23716–23756 | 41 |
+| `rSocialVideoBlock` | function | 20324–20353 | 30 |
+| `generateSocialVideoVideos` | window | 20363–20404 | 42 |
+| `rMatchcenterSocialMediaCenter` | function | 20450–20503 | 54 |
+| `rMatchcenterLineupBuilder` | function | 20535–20607 | 73 |
+| `rLineupBuilderAvailablePanel` | function | 20622–20669 | 48 |
+| `rLineupRecommendationMode` | function | 20685–20718 | 34 |
+| `rLineupTestLine` | function | 20732–20780 | 49 |
+| `rLineupBuilderPage` | function | 20798–20831 | 34 |
+| `rMatchcenterScoutingSummary` | function | 20832–20875 | 44 |
+| `getTeamLogoUrlForStory` | function | 20929–20958 | 30 |
+| `matchcenterStoryPlayer` | function | 21038–21070 | 33 |
+| `matchcenterStoryPickFactItems` | function | 21138–21190 | 53 |
+| `buildMatchcenterStoryPreviewData` | function | 21414–21525 | 112 |
+| `matchcenterStoryVisibleFacts` | function | 21532–21562 | 31 |
+| `rMatchcenterStoryPreview` | function | 21581–21650 | 70 |
+| `fitMatchcenterStoryLayout` | function | 21657–21699 | 43 |
+| `socialVideoDistributeSceneDurations` | function | 21749–21780 | 32 |
+| `socialVideoTopScorerAsOf` | function | 21889–21918 | 30 |
+| `socialVideoOpponentSceneData` | function | 21921–21968 | 48 |
+| `socialVideoBuildStorySpec` | function | 21985–22036 | 52 |
+| `socialVideoBuildFeedSpec` | function | 22039–22088 | 50 |
+| `socialVideoLayoutScene` | function | 22267–22331 | 65 |
+| `socialVideoBackgroundLayer` | function | 22335–22371 | 37 |
+| `socialVideoDrawCommand` | function | 22451–22511 | 61 |
+| `socialVideoCaptureVideo` | function | 22589–22641 | 53 |
+| `rMatchcenterPage` | function | 22706–22853 | 148 |
+| `rTeamPage` | function | 22854–23164 | 311 |
+| `_render` | function | 23214–23378 | 165 |
+| `uiObjektseite` | function | 23696–23729 | 34 |
+| `rMatchdayDetailPage` | function | 23949–23984 | 36 |
+| `buildOverviewCards` | function | 24226–24266 | 41 |
 
 ## CSS-Regelgruppen
 
@@ -730,7 +732,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 
 ## Funktionen, window.-Zuweisungen und const-Pfeilfunktionen (nach Zeile)
 
-1129 `function`-Deklarationen, 130 `window.`-Funktionszuweisungen, 4 `const`-Pfeilfunktionen — alle Top-Level, sortiert nach Zeile.
+1154 `function`-Deklarationen, 134 `window.`-Funktionszuweisungen, 4 `const`-Pfeilfunktionen — alle Top-Level, sortiert nach Zeile.
 
 | Name | Art | Zeile | Zeilen |
 |---|---|---|---|
@@ -1812,200 +1814,229 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rMatchcenterSocialBlock` | function | 20255–20262 | 8 |
 | `matchcenterStoryDownloadFileName` | function | 20263–20272 | 10 |
 | `downloadMatchdayStory` | window | 20273–20320 | 48 |
-| `rSocialVideoBlock` | function | 20324–20349 | 26 |
-| `generateSocialVideoStandbilder` | window | 20350–20373 | 24 |
-| `rMatchcenterSocialMediaCenter` | function | 20374–20427 | 54 |
-| `rLineupScoreRows` | function | 20428–20449 | 22 |
-| `rLineupSimpleCards` | function | 20450–20458 | 9 |
-| `rMatchcenterLineupBuilder` | function | 20459–20531 | 73 |
-| `rLineupMetricPills` | function | 20532–20545 | 14 |
-| `rLineupBuilderAvailablePanel` | function | 20546–20593 | 48 |
-| `rLineupRecommendationCards` | function | 20594–20608 | 15 |
-| `rLineupRecommendationMode` | function | 20609–20642 | 34 |
-| `rLineupComplementCards` | function | 20643–20655 | 13 |
-| `rLineupTestLine` | function | 20656–20704 | 49 |
-| `rLineupTestMode` | function | 20705–20721 | 17 |
-| `rLineupBuilderPage` | function | 20722–20755 | 34 |
-| `rMatchcenterScoutingSummary` | function | 20756–20799 | 44 |
-| `rMatchcenterMatchPlan` | function | 20800–20820 | 21 |
-| `matchcenterStoryInitials` | function | 20822–20827 | 6 |
-| `matchcenterStoryLogoBase` | function | 20828–20833 | 6 |
-| `matchcenterStorySafeLogoUrl` | function | 20834–20840 | 7 |
-| `matchcenterStoryTeamAssetKey` | function | 20848–20852 | 5 |
-| `getTeamLogoUrlForStory` | function | 20853–20882 | 30 |
-| `matchcenterStoryLogoForOpponent` | function | 20883–20897 | 15 |
-| `matchcenterStoryTableRank` | function | 20898–20908 | 11 |
-| `matchcenterStoryUlmTableRank` | function | 20909–20915 | 7 |
-| `matchcenterStoryRankText` | function | 20916–20919 | 4 |
-| `matchcenterStoryInlineStat` | function | 20920–20922 | 3 |
-| `matchcenterStoryShortTeamLabel` | function | 20923–20946 | 24 |
-| `matchcenterStoryRankRows` | function | 20947–20958 | 12 |
-| `matchcenterStoryFormLetters` | function | 20959–20961 | 3 |
-| `matchcenterStoryPlayer` | function | 20962–20994 | 33 |
-| `matchcenterStoryAddFact` | function | 20995–21001 | 7 |
-| `matchcenterStoryFactKey` | function | 21002–21004 | 3 |
-| `matchcenterStoryLooksArtificial` | function | 21005–21007 | 3 |
-| `matchcenterStoryEstimateFactWeight` | function | 21008–21013 | 6 |
-| `matchcenterStoryAddCandidate` | function | 21014–21036 | 23 |
-| `matchcenterStoryCategoryLimit` | function | 21037–21040 | 4 |
-| `matchcenterStoryNormalizePickOptions` | function | 21041–21051 | 11 |
-| `matchcenterStoryCandidateForBudget` | function | 21052–21061 | 10 |
-| `matchcenterStoryPickFactItems` | function | 21062–21114 | 53 |
-| `matchcenterStoryPickFacts` | function | 21115–21117 | 3 |
-| `matchcenterStoryFormRecord` | function | 21118–21123 | 6 |
-| `matchcenterStoryCurrentStreak` | function | 21124–21132 | 9 |
-| `matchcenterStoryWinlessStreak` | function | 21133–21141 | 9 |
-| `matchcenterStoryFormFact` | function | 21142–21152 | 11 |
-| `matchcenterStoryFormFactCandidates` | function | 21153–21172 | 20 |
-| `matchcenterStoryLateGoalsForOutcome` | function | 21173–21176 | 4 |
-| `matchcenterStoryClutchFact` | function | 21177–21191 | 15 |
-| `matchcenterStoryPlayerClutchTotal` | function | 21192–21199 | 8 |
-| `matchcenterStoryBestClutchPlayer` | function | 21200–21209 | 10 |
-| `matchcenterStoryPlayerClutchFact` | function | 21210–21235 | 26 |
-| `matchcenterStoryDuoClutchTotal` | function | 21236–21243 | 8 |
-| `matchcenterStoryBestClutchDuo` | function | 21244–21253 | 10 |
-| `matchcenterStoryDuoClutchFact` | function | 21254–21256 | 3 |
-| `matchcenterStoryDuoFact` | function | 21257–21277 | 21 |
-| `matchcenterStoryClutchPriority` | function | 21278–21280 | 3 |
-| `matchcenterStoryCompetitionLabel` | function | 21281–21284 | 4 |
-| `matchcenterStoryShortDuel` | function | 21285–21289 | 5 |
-| `matchcenterStoryLastDuelLabel` | function | 21290–21293 | 4 |
-| `matchcenterStoryDirectFactCandidates` | function | 21294–21315 | 22 |
-| `matchcenterStoryPlanFactCandidates` | function | 21316–21328 | 13 |
-| `matchcenterStoryCategoryForPlanFact` | function | 21329–21337 | 9 |
-| `buildMatchcenterStoryPreviewData` | function | 21338–21449 | 112 |
-| `matchcenterStoryNameClass` | function | 21450–21455 | 6 |
-| `matchcenterStoryVisibleFacts` | function | 21456–21486 | 31 |
-| `rMatchcenterStoryLogo` | function | 21487–21491 | 5 |
-| `rMatchcenterStoryForm` | function | 21492–21496 | 5 |
-| `rMatchcenterStoryPlayerCard` | function | 21497–21504 | 8 |
-| `rMatchcenterStoryPreview` | function | 21505–21574 | 70 |
-| `rMatchcenterStoryFrame` | function | 21575–21580 | 6 |
-| `fitMatchcenterStoryLayout` | function | 21581–21623 | 43 |
-| `socialVideoDistributeSceneDurations` | function | 21673–21704 | 32 |
-| `socialVideoFitText` | function | 21710–21719 | 10 |
-| `socialVideoCheckFonts` | function | 21725–21735 | 11 |
-| `probeSocialVideoExportCapability` | function | 21744–21759 | 16 |
-| `ensureSocialVideoExportCapabilityChecked` | function | 21765–21769 | 5 |
-| `socialVideoUlmGamesForMatchday` | function | 21774–21779 | 6 |
-| `socialVideoTableRank` | function | 21781–21785 | 5 |
-| `socialVideoFormAsOf` | function | 21789–21794 | 6 |
-| `socialVideoLastDuelAsOf` | function | 21798–21804 | 7 |
-| `socialVideoTopScorerAsOf` | function | 21810–21839 | 30 |
-| `socialVideoOpponentSceneData` | function | 21842–21889 | 48 |
-| `socialVideoFileName` | function | 21893–21899 | 7 |
-| `socialVideoMatchdayLabel` | function | 21901–21903 | 3 |
-| `socialVideoBuildStorySpec` | function | 21906–21957 | 52 |
-| `socialVideoBuildFeedSpec` | function | 21960–22009 | 50 |
-| `buildSocialVideoSpec` | function | 22019–22034 | 16 |
-| `socialVideoStoryFrameData` | function | 22048–22081 | 34 |
-| `rSocialVideoFeedFrame` | function | 22085–22121 | 37 |
-| `socialVideoStandbildFrame` | function | 22124–22127 | 4 |
-| `socialVideoXmlSafeHtml` | function | 22136–22138 | 3 |
-| `downloadSocialVideoStandbild` | window | 22144–22194 | 51 |
-| `rMatchcenterPage` | function | 22196–22343 | 148 |
-| `rTeamPage` | function | 22344–22654 | 311 |
-| `exportExcel` | function | 22659–22680 | 22 |
-| `render` | function | 22686–22703 | 18 |
-| `_render` | function | 22704–22868 | 165 |
-| `uiFormatNumber` | function | 22902–22906 | 5 |
-| `uiReliabilityDots` | function | 22915–22922 | 8 |
-| `uiDeltaIndicator` | function | 22930–22936 | 7 |
-| `uiInfoIcon` | function | 22948–22952 | 5 |
-| `uiKennzahlKachel` | function | 22960–22971 | 12 |
-| `uiKernaussage` | function | 22980–22986 | 7 |
-| `uiHinweisKarte` | function | 22994–23006 | 13 |
-| `uiRangliste` | function | 23016–23033 | 18 |
-| `uiVerlauf` | function | 23044–23063 | 20 |
-| `uiIntervallBalken` | function | 23070–23082 | 13 |
-| `uiMethodenbox` | function | 23089–23098 | 10 |
-| `uiNotiz` | function | 23106–23110 | 5 |
-| `uiPlatzhalter` | function | 23118–23123 | 6 |
-| `uiObjektseiteSortTabs` | function | 23168–23176 | 9 |
-| `uiObjektseite` | function | 23186–23219 | 34 |
-| `mainNavActiveKeyForPage` | function | 23276–23281 | 6 |
-| `goToMainNavPoint` | window | 23282–23288 | 7 |
-| `rMainNav` | function | 23289–23293 | 5 |
-| `rMainNavBottom` | function | 23311–23318 | 8 |
-| `openOverview` | window | 23328–23336 | 9 |
-| `switchOverviewSeason` | window | 23345–23351 | 7 |
-| `openMatchdayTimeline` | window | 23379–23386 | 8 |
-| `openMatchday` | window | 23387–23396 | 10 |
-| `switchMatchdaySeason` | window | 23398–23403 | 6 |
-| `matchdayUlmGames` | function | 23405–23407 | 3 |
-| `matchdayGameCardHtml` | function | 23408–23418 | 11 |
-| `rMatchdayTimelineRow` | function | 23420–23427 | 8 |
-| `rMatchdayTimelinePage` | function | 23428–23438 | 11 |
-| `rMatchdayDetailPage` | function | 23439–23474 | 36 |
-| `rMatchdayPage` | function | 23475–23481 | 7 |
-| `overviewMatchdayStartMs` | function | 23500–23505 | 6 |
-| `overviewMatchdayEndMs` | function | 23506–23511 | 6 |
-| `detectOverviewPhase` | function | 23512–23537 | 26 |
-| `getSeasonDataState` | function | 23544–23554 | 11 |
-| `parseSeasonDataState` | function | 23555–23563 | 9 |
-| `isNewSeasonDataState` | function | 23565–23567 | 3 |
-| `recordOverviewVisit` | function | 23574–23583 | 10 |
-| `overviewOpponentLabel` | function | 23584–23588 | 5 |
-| `overviewLastMatchdayText` | function | 23589–23592 | 4 |
-| `overviewNextMatchdayHtml` | function | 23593–23597 | 5 |
-| `overviewCompactTableHtml` | function | 23605–23611 | 7 |
-| `overviewFormHtml` | function | 23613–23627 | 15 |
-| `overviewSeasonBilanzHtml` | function | 23628–23634 | 7 |
-| `overviewSeasonAwardHtml` | function | 23636–23645 | 10 |
-| `overviewRecordHtml` | function | 23647–23652 | 6 |
-| `overviewCrossSeasonTrendHtml` | function | 23654–23662 | 9 |
-| `overviewOpponentPreviewHtml` | function | 23663–23667 | 5 |
-| `overviewMatchcenterLinkHtml` | function | 23668–23670 | 3 |
-| `overviewLineupLinkHtml` | function | 23671–23673 | 3 |
-| `overviewRankChangeTile` | function | 23690–23707 | 18 |
-| `buildOverviewCards` | function | 23716–23756 | 41 |
-| `rOverviewPage` | function | 23766–23777 | 12 |
-| `openLigaGegner` | window | 23778–23781 | 4 |
-| `rLigaGegnerPlaceholderPage` | function | 23782–23787 | 6 |
-| `rAsOfSelector` | function | 23799–23811 | 13 |
-| `setContextAsOf` | window | 23812–23823 | 12 |
-| `rSeasonDataPreviewContextHint` | function | 23834–23842 | 9 |
-| `rSeasonDataStateContextHint` | function | 23851–23857 | 7 |
-| `rContextBar` | function | 23882–23900 | 19 |
-| `rIaShell` | function | 23902–23904 | 3 |
-| `globalSearchTokens` | function | 23921–23924 | 4 |
-| `globalSearchEntries` | function | 23926–23939 | 14 |
-| `globalSearchPlayerScore` | function | 23940–23947 | 8 |
-| `globalSearchMatchdayScore` | function | 23949–23961 | 13 |
-| `globalSearchMatch` | function | 23963–23974 | 12 |
-| `globalSearchIsEditableTarget` | function | 23975–23979 | 5 |
-| `globalSearchKeyAction` | function | 23981–23995 | 15 |
-| `rGlobalSearchToggle` | function | 23996–23998 | 3 |
-| `rGlobalSearchResultsHtml` | function | 23999–24009 | 11 |
-| `rGlobalSearchPanelHtml` | function | 24010–24012 | 3 |
-| `paintGlobalSearchResults` | function | 24013–24020 | 8 |
-| `openGlobalSearch` | window | 24021–24045 | 25 |
-| `closeGlobalSearch` | window | 24046–24053 | 8 |
-| `onGlobalSearchInput` | window | 24054–24059 | 6 |
-| `moveGlobalSearch` | function | 24060–24065 | 6 |
-| `activateGlobalSearchResult` | window | 24066–24075 | 10 |
-| `globalSearchOnKeydown` | function | 24076–24097 | 22 |
-| `initGlobalSearch` | function | 24098–24102 | 5 |
-| `rToolMenu` | function | 24124–24127 | 4 |
-| `toolMenuElements` | function | 24128–24130 | 3 |
-| `toolMenuItemElements` | function | 24131–24133 | 3 |
-| `isToolMenuOpen` | function | 24134–24137 | 4 |
-| `openToolMenu` | window | 24138–24145 | 8 |
-| `closeToolMenu` | window | 24146–24152 | 7 |
-| `toggleToolMenu` | window | 24153–24156 | 4 |
-| `activateToolMenuItem` | window | 24157–24164 | 8 |
-| `toolMenuOnKeydown` | function | 24165–24188 | 24 |
-| `toolMenuOnClick` | function | 24189–24195 | 7 |
-| `initToolMenu` | function | 24196–24199 | 4 |
+| `rSocialVideoBlock` | function | 20324–20353 | 30 |
+| `socialVideoJobsForMatchday` | function | 20356–20362 | 7 |
+| `generateSocialVideoVideos` | window | 20363–20404 | 42 |
+| `cancelSocialVideoRecording` | window | 20405–20407 | 3 |
+| `generateSocialVideoStandbilder` | window | 20408–20431 | 24 |
+| `generateSocialVideoContactSheets` | window | 20432–20449 | 18 |
+| `rMatchcenterSocialMediaCenter` | function | 20450–20503 | 54 |
+| `rLineupScoreRows` | function | 20504–20525 | 22 |
+| `rLineupSimpleCards` | function | 20526–20534 | 9 |
+| `rMatchcenterLineupBuilder` | function | 20535–20607 | 73 |
+| `rLineupMetricPills` | function | 20608–20621 | 14 |
+| `rLineupBuilderAvailablePanel` | function | 20622–20669 | 48 |
+| `rLineupRecommendationCards` | function | 20670–20684 | 15 |
+| `rLineupRecommendationMode` | function | 20685–20718 | 34 |
+| `rLineupComplementCards` | function | 20719–20731 | 13 |
+| `rLineupTestLine` | function | 20732–20780 | 49 |
+| `rLineupTestMode` | function | 20781–20797 | 17 |
+| `rLineupBuilderPage` | function | 20798–20831 | 34 |
+| `rMatchcenterScoutingSummary` | function | 20832–20875 | 44 |
+| `rMatchcenterMatchPlan` | function | 20876–20896 | 21 |
+| `matchcenterStoryInitials` | function | 20898–20903 | 6 |
+| `matchcenterStoryLogoBase` | function | 20904–20909 | 6 |
+| `matchcenterStorySafeLogoUrl` | function | 20910–20916 | 7 |
+| `matchcenterStoryTeamAssetKey` | function | 20924–20928 | 5 |
+| `getTeamLogoUrlForStory` | function | 20929–20958 | 30 |
+| `matchcenterStoryLogoForOpponent` | function | 20959–20973 | 15 |
+| `matchcenterStoryTableRank` | function | 20974–20984 | 11 |
+| `matchcenterStoryUlmTableRank` | function | 20985–20991 | 7 |
+| `matchcenterStoryRankText` | function | 20992–20995 | 4 |
+| `matchcenterStoryInlineStat` | function | 20996–20998 | 3 |
+| `matchcenterStoryShortTeamLabel` | function | 20999–21022 | 24 |
+| `matchcenterStoryRankRows` | function | 21023–21034 | 12 |
+| `matchcenterStoryFormLetters` | function | 21035–21037 | 3 |
+| `matchcenterStoryPlayer` | function | 21038–21070 | 33 |
+| `matchcenterStoryAddFact` | function | 21071–21077 | 7 |
+| `matchcenterStoryFactKey` | function | 21078–21080 | 3 |
+| `matchcenterStoryLooksArtificial` | function | 21081–21083 | 3 |
+| `matchcenterStoryEstimateFactWeight` | function | 21084–21089 | 6 |
+| `matchcenterStoryAddCandidate` | function | 21090–21112 | 23 |
+| `matchcenterStoryCategoryLimit` | function | 21113–21116 | 4 |
+| `matchcenterStoryNormalizePickOptions` | function | 21117–21127 | 11 |
+| `matchcenterStoryCandidateForBudget` | function | 21128–21137 | 10 |
+| `matchcenterStoryPickFactItems` | function | 21138–21190 | 53 |
+| `matchcenterStoryPickFacts` | function | 21191–21193 | 3 |
+| `matchcenterStoryFormRecord` | function | 21194–21199 | 6 |
+| `matchcenterStoryCurrentStreak` | function | 21200–21208 | 9 |
+| `matchcenterStoryWinlessStreak` | function | 21209–21217 | 9 |
+| `matchcenterStoryFormFact` | function | 21218–21228 | 11 |
+| `matchcenterStoryFormFactCandidates` | function | 21229–21248 | 20 |
+| `matchcenterStoryLateGoalsForOutcome` | function | 21249–21252 | 4 |
+| `matchcenterStoryClutchFact` | function | 21253–21267 | 15 |
+| `matchcenterStoryPlayerClutchTotal` | function | 21268–21275 | 8 |
+| `matchcenterStoryBestClutchPlayer` | function | 21276–21285 | 10 |
+| `matchcenterStoryPlayerClutchFact` | function | 21286–21311 | 26 |
+| `matchcenterStoryDuoClutchTotal` | function | 21312–21319 | 8 |
+| `matchcenterStoryBestClutchDuo` | function | 21320–21329 | 10 |
+| `matchcenterStoryDuoClutchFact` | function | 21330–21332 | 3 |
+| `matchcenterStoryDuoFact` | function | 21333–21353 | 21 |
+| `matchcenterStoryClutchPriority` | function | 21354–21356 | 3 |
+| `matchcenterStoryCompetitionLabel` | function | 21357–21360 | 4 |
+| `matchcenterStoryShortDuel` | function | 21361–21365 | 5 |
+| `matchcenterStoryLastDuelLabel` | function | 21366–21369 | 4 |
+| `matchcenterStoryDirectFactCandidates` | function | 21370–21391 | 22 |
+| `matchcenterStoryPlanFactCandidates` | function | 21392–21404 | 13 |
+| `matchcenterStoryCategoryForPlanFact` | function | 21405–21413 | 9 |
+| `buildMatchcenterStoryPreviewData` | function | 21414–21525 | 112 |
+| `matchcenterStoryNameClass` | function | 21526–21531 | 6 |
+| `matchcenterStoryVisibleFacts` | function | 21532–21562 | 31 |
+| `rMatchcenterStoryLogo` | function | 21563–21567 | 5 |
+| `rMatchcenterStoryForm` | function | 21568–21572 | 5 |
+| `rMatchcenterStoryPlayerCard` | function | 21573–21580 | 8 |
+| `rMatchcenterStoryPreview` | function | 21581–21650 | 70 |
+| `rMatchcenterStoryFrame` | function | 21651–21656 | 6 |
+| `fitMatchcenterStoryLayout` | function | 21657–21699 | 43 |
+| `socialVideoDistributeSceneDurations` | function | 21749–21780 | 32 |
+| `socialVideoFitText` | function | 21786–21795 | 10 |
+| `socialVideoCheckFonts` | function | 21801–21811 | 11 |
+| `probeSocialVideoExportCapability` | function | 21822–21837 | 16 |
+| `ensureSocialVideoExportCapabilityChecked` | function | 21844–21848 | 5 |
+| `socialVideoUlmGamesForMatchday` | function | 21853–21858 | 6 |
+| `socialVideoTableRank` | function | 21860–21864 | 5 |
+| `socialVideoFormAsOf` | function | 21868–21873 | 6 |
+| `socialVideoLastDuelAsOf` | function | 21877–21883 | 7 |
+| `socialVideoTopScorerAsOf` | function | 21889–21918 | 30 |
+| `socialVideoOpponentSceneData` | function | 21921–21968 | 48 |
+| `socialVideoFileName` | function | 21972–21978 | 7 |
+| `socialVideoMatchdayLabel` | function | 21980–21982 | 3 |
+| `socialVideoBuildStorySpec` | function | 21985–22036 | 52 |
+| `socialVideoBuildFeedSpec` | function | 22039–22088 | 50 |
+| `buildSocialVideoSpec` | function | 22098–22113 | 16 |
+| `socialVideoHeightForFormat` | function | 22126–22128 | 3 |
+| `socialVideoContentWidth` | function | 22129–22131 | 3 |
+| `socialVideoEaseOutCubic` | function | 22142–22145 | 4 |
+| `socialVideoEstimateFontSize` | function | 22151–22155 | 5 |
+| `socialVideoSceneAt` | function | 22161–22168 | 8 |
+| `socialVideoElementProgress` | function | 22173–22179 | 7 |
+| `socialVideoFlagPhase` | function | 22185–22187 | 3 |
+| `socialVideoFlagColumnOffset` | function | 22190–22194 | 5 |
+| `socialVideoSkylineTransform` | function | 22198–22202 | 5 |
+| `socialVideoSparrowPositions` | function | 22208–22219 | 12 |
+| `socialVideoPushText` | function | 22221–22227 | 7 |
+| `socialVideoPushLogo` | function | 22234–22239 | 6 |
+| `socialVideoPushForm` | function | 22248–22262 | 15 |
+| `socialVideoLayoutScene` | function | 22267–22331 | 65 |
+| `socialVideoBackgroundLayer` | function | 22335–22371 | 37 |
+| `socialVideoDrawList` | function | 22380–22390 | 11 |
+| `socialVideoSceneTimeMs` | function | 22394–22398 | 5 |
+| `socialVideoStandbildTimeMs` | function | 22401–22407 | 7 |
+| `socialVideoApplyFillStyle` | function | 22422–22443 | 22 |
+| `socialVideoFontString` | function | 22444–22447 | 4 |
+| `socialVideoDrawCommand` | function | 22451–22511 | 61 |
+| `socialVideoBuildStaticLayer` | function | 22516–22522 | 7 |
+| `socialVideoRenderFrame` | function | 22527–22536 | 10 |
+| `socialVideoLoadAssets` | function | 22542–22553 | 12 |
+| `socialVideoCreateCanvas` | function | 22555–22563 | 9 |
+| `socialVideoPickMimeType` | function | 22566–22570 | 5 |
+| `socialVideoRenderStandbildDataUrl` | function | 22575–22583 | 9 |
+| `socialVideoCaptureVideo` | function | 22589–22641 | 53 |
+| `downloadSocialVideoStandbild` | window | 22655–22674 | 20 |
+| `downloadSocialVideoContactSheet` | window | 22679–22704 | 26 |
+| `rMatchcenterPage` | function | 22706–22853 | 148 |
+| `rTeamPage` | function | 22854–23164 | 311 |
+| `exportExcel` | function | 23169–23190 | 22 |
+| `render` | function | 23196–23213 | 18 |
+| `_render` | function | 23214–23378 | 165 |
+| `uiFormatNumber` | function | 23412–23416 | 5 |
+| `uiReliabilityDots` | function | 23425–23432 | 8 |
+| `uiDeltaIndicator` | function | 23440–23446 | 7 |
+| `uiInfoIcon` | function | 23458–23462 | 5 |
+| `uiKennzahlKachel` | function | 23470–23481 | 12 |
+| `uiKernaussage` | function | 23490–23496 | 7 |
+| `uiHinweisKarte` | function | 23504–23516 | 13 |
+| `uiRangliste` | function | 23526–23543 | 18 |
+| `uiVerlauf` | function | 23554–23573 | 20 |
+| `uiIntervallBalken` | function | 23580–23592 | 13 |
+| `uiMethodenbox` | function | 23599–23608 | 10 |
+| `uiNotiz` | function | 23616–23620 | 5 |
+| `uiPlatzhalter` | function | 23628–23633 | 6 |
+| `uiObjektseiteSortTabs` | function | 23678–23686 | 9 |
+| `uiObjektseite` | function | 23696–23729 | 34 |
+| `mainNavActiveKeyForPage` | function | 23786–23791 | 6 |
+| `goToMainNavPoint` | window | 23792–23798 | 7 |
+| `rMainNav` | function | 23799–23803 | 5 |
+| `rMainNavBottom` | function | 23821–23828 | 8 |
+| `openOverview` | window | 23838–23846 | 9 |
+| `switchOverviewSeason` | window | 23855–23861 | 7 |
+| `openMatchdayTimeline` | window | 23889–23896 | 8 |
+| `openMatchday` | window | 23897–23906 | 10 |
+| `switchMatchdaySeason` | window | 23908–23913 | 6 |
+| `matchdayUlmGames` | function | 23915–23917 | 3 |
+| `matchdayGameCardHtml` | function | 23918–23928 | 11 |
+| `rMatchdayTimelineRow` | function | 23930–23937 | 8 |
+| `rMatchdayTimelinePage` | function | 23938–23948 | 11 |
+| `rMatchdayDetailPage` | function | 23949–23984 | 36 |
+| `rMatchdayPage` | function | 23985–23991 | 7 |
+| `overviewMatchdayStartMs` | function | 24010–24015 | 6 |
+| `overviewMatchdayEndMs` | function | 24016–24021 | 6 |
+| `detectOverviewPhase` | function | 24022–24047 | 26 |
+| `getSeasonDataState` | function | 24054–24064 | 11 |
+| `parseSeasonDataState` | function | 24065–24073 | 9 |
+| `isNewSeasonDataState` | function | 24075–24077 | 3 |
+| `recordOverviewVisit` | function | 24084–24093 | 10 |
+| `overviewOpponentLabel` | function | 24094–24098 | 5 |
+| `overviewLastMatchdayText` | function | 24099–24102 | 4 |
+| `overviewNextMatchdayHtml` | function | 24103–24107 | 5 |
+| `overviewCompactTableHtml` | function | 24115–24121 | 7 |
+| `overviewFormHtml` | function | 24123–24137 | 15 |
+| `overviewSeasonBilanzHtml` | function | 24138–24144 | 7 |
+| `overviewSeasonAwardHtml` | function | 24146–24155 | 10 |
+| `overviewRecordHtml` | function | 24157–24162 | 6 |
+| `overviewCrossSeasonTrendHtml` | function | 24164–24172 | 9 |
+| `overviewOpponentPreviewHtml` | function | 24173–24177 | 5 |
+| `overviewMatchcenterLinkHtml` | function | 24178–24180 | 3 |
+| `overviewLineupLinkHtml` | function | 24181–24183 | 3 |
+| `overviewRankChangeTile` | function | 24200–24217 | 18 |
+| `buildOverviewCards` | function | 24226–24266 | 41 |
+| `rOverviewPage` | function | 24276–24287 | 12 |
+| `openLigaGegner` | window | 24288–24291 | 4 |
+| `rLigaGegnerPlaceholderPage` | function | 24292–24297 | 6 |
+| `rAsOfSelector` | function | 24309–24321 | 13 |
+| `setContextAsOf` | window | 24322–24333 | 12 |
+| `rSeasonDataPreviewContextHint` | function | 24344–24352 | 9 |
+| `rSeasonDataStateContextHint` | function | 24361–24367 | 7 |
+| `rContextBar` | function | 24392–24410 | 19 |
+| `rIaShell` | function | 24412–24414 | 3 |
+| `globalSearchTokens` | function | 24431–24434 | 4 |
+| `globalSearchEntries` | function | 24436–24449 | 14 |
+| `globalSearchPlayerScore` | function | 24450–24457 | 8 |
+| `globalSearchMatchdayScore` | function | 24459–24471 | 13 |
+| `globalSearchMatch` | function | 24473–24484 | 12 |
+| `globalSearchIsEditableTarget` | function | 24485–24489 | 5 |
+| `globalSearchKeyAction` | function | 24491–24505 | 15 |
+| `rGlobalSearchToggle` | function | 24506–24508 | 3 |
+| `rGlobalSearchResultsHtml` | function | 24509–24519 | 11 |
+| `rGlobalSearchPanelHtml` | function | 24520–24522 | 3 |
+| `paintGlobalSearchResults` | function | 24523–24530 | 8 |
+| `openGlobalSearch` | window | 24531–24555 | 25 |
+| `closeGlobalSearch` | window | 24556–24563 | 8 |
+| `onGlobalSearchInput` | window | 24564–24569 | 6 |
+| `moveGlobalSearch` | function | 24570–24575 | 6 |
+| `activateGlobalSearchResult` | window | 24576–24585 | 10 |
+| `globalSearchOnKeydown` | function | 24586–24607 | 22 |
+| `initGlobalSearch` | function | 24608–24612 | 5 |
+| `rToolMenu` | function | 24634–24637 | 4 |
+| `toolMenuElements` | function | 24638–24640 | 3 |
+| `toolMenuItemElements` | function | 24641–24643 | 3 |
+| `isToolMenuOpen` | function | 24644–24647 | 4 |
+| `openToolMenu` | window | 24648–24655 | 8 |
+| `closeToolMenu` | window | 24656–24662 | 7 |
+| `toggleToolMenu` | window | 24663–24666 | 4 |
+| `activateToolMenuItem` | window | 24667–24674 | 8 |
+| `toolMenuOnKeydown` | function | 24675–24698 | 24 |
+| `toolMenuOnClick` | function | 24699–24705 | 7 |
+| `initToolMenu` | function | 24706–24709 | 4 |
 
 ## Alphabetisches Register
 
 | Name | Art | Zeile |
 |---|---|---|
-| `_render` | function | 22704 |
+| `_render` | function | 23214 |
 | `acceptEinsatzCenterRosterSuggestion` | window | 7959 |
-| `activateGlobalSearchResult` | window | 24066 |
-| `activateToolMenuItem` | window | 24157 |
+| `activateGlobalSearchResult` | window | 24576 |
+| `activateToolMenuItem` | window | 24667 |
 | `addComparisonDuo` | window | 13472 |
 | `addComparisonDuoFromSelection` | window | 13464 |
 | `addComparisonItem` | window | 13372 |
@@ -2093,7 +2124,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `buildLineupRecommendations` | function | 19688 |
 | `buildLineupScoreBreakdowns` | function | 19401 |
 | `buildLockerRoomSheet` | function | 18779 |
-| `buildMatchcenterStoryPreviewData` | function | 21338 |
+| `buildMatchcenterStoryPreviewData` | function | 21414 |
 | `buildMatchdayCaptionBlocks` | function | 18850 |
 | `buildMatchdays` | function | 3326 |
 | `buildMatchIntelligence` | function | 18598 |
@@ -2102,7 +2133,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `buildMomentumSwingStats` | function | 11365 |
 | `buildMomentumSwingStatsRaw` | function | 11294 |
 | `buildOpponentIntelligence` | function | 10775 |
-| `buildOverviewCards` | function | 23716 |
+| `buildOverviewCards` | function | 24226 |
 | `buildPlayerDataFoundation` | function | 5192 |
 | `buildPlayerEvents` | function | 5246 |
 | `buildPlayerExplanation` | function | 15293 |
@@ -2117,7 +2148,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `buildSeasonDuos` | function | 5119 |
 | `buildSeasonPlayerDashModel` | function | 14488 |
 | `buildSocialMediaContent` | function | 18880 |
-| `buildSocialVideoSpec` | function | 22019 |
+| `buildSocialVideoSpec` | function | 22098 |
 | `buildSoloDuoProfile` | function | 5504 |
 | `buildSpecialTeamsForGame` | function | 4567 |
 | `buildSpecialTeamsForSeason` | function | 4761 |
@@ -2128,6 +2159,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `cancelDuoProPicker` | window | 11851 |
 | `cancelEinsatzCenterEdit` | window | 7906 |
 | `cancelHallOfFameIntro` | function | 8893 |
+| `cancelSocialVideoRecording` | window | 20405 |
 | `clampScore` | function | 15730 |
 | `classicTagLabel` | function | 9047 |
 | `classifyGameForStats` | function | 3167 |
@@ -2142,9 +2174,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `clearLineupPlayers` | window | 2261 |
 | `clearlyAboveAverage` | function | 5692 |
 | `clonePlain` | function | 4409 |
-| `closeGlobalSearch` | window | 24046 |
+| `closeGlobalSearch` | window | 24556 |
 | `closeMatchcenterStoryPreview` | window | 2226 |
-| `closeToolMenu` | window | 24146 |
+| `closeToolMenu` | window | 24656 |
 | `clutchText` | function | 5576 |
 | `collectAssistEventRefs` | function | 2975 |
 | `compareGamesChronologically` | function | 3305 |
@@ -2183,7 +2215,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `deriveLineupUlmPlayerIds` | function | 7616 |
 | `deriveLineupValidPlayerIds` | function | 7592 |
 | `derivePlayerStatus` | function | 4047 |
-| `detectOverviewPhase` | function | 23512 |
+| `detectOverviewPhase` | function | 24022 |
 | `detectSide` | const-arrow | 2604 |
 | `detectTypes` | function | 5484 |
 | `detectUlmSide` | function | 2597 |
@@ -2195,7 +2227,8 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `discardSeasonDataPreview` | function | 6857 |
 | `dismissEinsatzCenterRosterSuggestion` | window | 7948 |
 | `downloadMatchdayStory` | window | 20273 |
-| `downloadSocialVideoStandbild` | window | 22144 |
+| `downloadSocialVideoContactSheet` | window | 22679 |
+| `downloadSocialVideoStandbild` | window | 22655 |
 | `duoProContextSeasonKey` | function | 11435 |
 | `duoProDomId` | function | 11812 |
 | `duoProPairKey` | function | 11432 |
@@ -2242,13 +2275,13 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `ensureLineupGroupsRegistryLoaded` | function | 6990 |
 | `ensureRmDuo` | function | 11213 |
 | `ensureRmPlayer` | function | 11207 |
-| `ensureSocialVideoExportCapabilityChecked` | function | 21765 |
+| `ensureSocialVideoExportCapabilityChecked` | function | 21844 |
 | `escAttr` | function | 9020 |
 | `escHtml` | function | 12794 |
 | `eventMatchesTeams` | function | 5570 |
 | `explainScore` | function | 15793 |
 | `exportEinsatzCenterDraft` | window | 8119 |
-| `exportExcel` | function | 22659 |
+| `exportExcel` | function | 23169 |
 | `fallbackIdentityProfile` | function | 9055 |
 | `fetchJson` | function | 6272 |
 | `fetchJsonLegacy` | function | 6204 |
@@ -2274,7 +2307,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `findLoadedSeasonPlayer` | function | 9656 |
 | `finishHallOfFameIntro` | function | 8860 |
 | `finiteNumbers` | function | 4309 |
-| `fitMatchcenterStoryLayout` | function | 21581 |
+| `fitMatchcenterStoryLayout` | function | 21657 |
 | `fixKnownUiTransliterations` | function | 2514 |
 | `fixMojibakeText` | function | 2522 |
 | `formatDateDE` | function | 3399 |
@@ -2288,7 +2321,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `gameStableId` | function | 2646 |
 | `gameStatusText` | function | 3130 |
 | `generatePlayerInsights` | function | 9518 |
-| `generateSocialVideoStandbilder` | window | 20350 |
+| `generateSocialVideoContactSheets` | window | 20432 |
+| `generateSocialVideoStandbilder` | window | 20408 |
+| `generateSocialVideoVideos` | window | 20363 |
 | `getActiveAlltimeSeasonKeys` | function | 10694 |
 | `getActiveSeasonKey` | function | 2383 |
 | `getAllLoadedSeasonGames` | function | 10887 |
@@ -2412,7 +2447,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `getSeasonApiBaseUrl` | function | 1807 |
 | `getSeasonData` | function | 2386 |
 | `getSeasonDataPreview` | function | 6863 |
-| `getSeasonDataState` | function | 23544 |
+| `getSeasonDataState` | function | 24054 |
 | `getSeasonIdentityProfile` | function | 10665 |
 | `getSeasonmanagerRosterSuggestion` | function | 7646 |
 | `getSeasonMatchdays` | function | 3376 |
@@ -2431,17 +2466,17 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `getSyntheticLineupRow` | function | 18940 |
 | `getSyntheticLineupRows` | function | 18957 |
 | `getTeamAllTimeRecords` | function | 12541 |
-| `getTeamLogoUrlForStory` | function | 20853 |
+| `getTeamLogoUrlForStory` | function | 20929 |
 | `getUlmTeamStatus` | function | 2592 |
 | `getUniqueAllTimeOpponentNames` | function | 2582 |
-| `globalSearchEntries` | function | 23926 |
-| `globalSearchIsEditableTarget` | function | 23975 |
-| `globalSearchKeyAction` | function | 23981 |
-| `globalSearchMatch` | function | 23963 |
-| `globalSearchMatchdayScore` | function | 23949 |
-| `globalSearchOnKeydown` | function | 24076 |
-| `globalSearchPlayerScore` | function | 23940 |
-| `globalSearchTokens` | function | 23921 |
+| `globalSearchEntries` | function | 24436 |
+| `globalSearchIsEditableTarget` | function | 24485 |
+| `globalSearchKeyAction` | function | 24491 |
+| `globalSearchMatch` | function | 24473 |
+| `globalSearchMatchdayScore` | function | 24459 |
+| `globalSearchOnKeydown` | function | 24586 |
+| `globalSearchPlayerScore` | function | 24450 |
+| `globalSearchTokens` | function | 24431 |
 | `goalieApplySampleConfidence` | function | 9882 |
 | `goalieBucketLooseSum` | function | 9890 |
 | `goalieBucketRows` | function | 9802 |
@@ -2466,7 +2501,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `goalieTime` | function | 9794 |
 | `goalieTopRow` | function | 9808 |
 | `goalieWeightedScore` | function | 9876 |
-| `goToMainNavPoint` | window | 23282 |
+| `goToMainNavPoint` | window | 23792 |
 | `hallGoalieExplainForLabel` | function | 12994 |
 | `hallGoalieNameHtml` | function | 12973 |
 | `hallGoalieNum` | function | 12859 |
@@ -2493,9 +2528,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `identityPointsVsTeams` | function | 5594 |
 | `incGoalieBucket` | function | 4322 |
 | `incrementUniqueCounter` | function | 4011 |
-| `initGlobalSearch` | function | 24098 |
+| `initGlobalSearch` | function | 24608 |
 | `initHashRouting` | function | 3853 |
-| `initToolMenu` | function | 24196 |
+| `initToolMenu` | function | 24706 |
 | `invalidateGlobalIdentityCache` | function | 2212 |
 | `isActiveAlltimeSeasonStats` | function | 10680 |
 | `isComebackRelevantGoal` | function | 5590 |
@@ -2514,7 +2549,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `isLateGoal` | function | 5585 |
 | `isMannheimLudwigshafenSgName` | function | 2571 |
 | `isMatchPenaltyEvent` | function | 4457 |
-| `isNewSeasonDataState` | function | 23565 |
+| `isNewSeasonDataState` | function | 24075 |
 | `isOwnTeam` | function | 15934 |
 | `isPenaltyGoalEvent` | function | 4540 |
 | `isPreClubHistoryPlayerName` | function | 2641 |
@@ -2525,7 +2560,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `isSgOnlyAlltimePlayer` | function | 9681 |
 | `isSgOnlyHallOfFameExcluded` | function | 10487 |
 | `isSyntheticLineupPlayerId` | function | 18934 |
-| `isToolMenuOpen` | function | 24134 |
+| `isToolMenuOpen` | function | 24644 |
 | `isTwoPlusTwoPenaltyEvent` | function | 4461 |
 | `isUlmTeamName` | function | 2586 |
 | `isUsableExternalSeasonData` | function | 6446 |
@@ -2566,7 +2601,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `loadSeasonData` | function | 8146 |
 | `loadSeasonForGlobal` | function | 8644 |
 | `loadSeasonManifest` | function | 6377 |
-| `mainNavActiveKeyForPage` | function | 23276 |
+| `mainNavActiveKeyForPage` | function | 23786 |
 | `markFieldRoleAppearance` | function | 4118 |
 | `matchcenterAddDuoConnection` | function | 16799 |
 | `matchcenterAddPlanItem` | function | 18015 |
@@ -2693,53 +2728,53 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `matchcenterSocialCaption` | function | 18807 |
 | `matchcenterSortGamesAsc` | function | 15896 |
 | `matchcenterSpecialTeamsForGame` | function | 17064 |
-| `matchcenterStoryAddCandidate` | function | 21014 |
-| `matchcenterStoryAddFact` | function | 20995 |
-| `matchcenterStoryBestClutchDuo` | function | 21244 |
-| `matchcenterStoryBestClutchPlayer` | function | 21200 |
-| `matchcenterStoryCandidateForBudget` | function | 21052 |
-| `matchcenterStoryCategoryForPlanFact` | function | 21329 |
-| `matchcenterStoryCategoryLimit` | function | 21037 |
-| `matchcenterStoryClutchFact` | function | 21177 |
-| `matchcenterStoryClutchPriority` | function | 21278 |
-| `matchcenterStoryCompetitionLabel` | function | 21281 |
-| `matchcenterStoryCurrentStreak` | function | 21124 |
-| `matchcenterStoryDirectFactCandidates` | function | 21294 |
+| `matchcenterStoryAddCandidate` | function | 21090 |
+| `matchcenterStoryAddFact` | function | 21071 |
+| `matchcenterStoryBestClutchDuo` | function | 21320 |
+| `matchcenterStoryBestClutchPlayer` | function | 21276 |
+| `matchcenterStoryCandidateForBudget` | function | 21128 |
+| `matchcenterStoryCategoryForPlanFact` | function | 21405 |
+| `matchcenterStoryCategoryLimit` | function | 21113 |
+| `matchcenterStoryClutchFact` | function | 21253 |
+| `matchcenterStoryClutchPriority` | function | 21354 |
+| `matchcenterStoryCompetitionLabel` | function | 21357 |
+| `matchcenterStoryCurrentStreak` | function | 21200 |
+| `matchcenterStoryDirectFactCandidates` | function | 21370 |
 | `matchcenterStoryDownloadFileName` | function | 20263 |
-| `matchcenterStoryDuoClutchFact` | function | 21254 |
-| `matchcenterStoryDuoClutchTotal` | function | 21236 |
-| `matchcenterStoryDuoFact` | function | 21257 |
-| `matchcenterStoryEstimateFactWeight` | function | 21008 |
-| `matchcenterStoryFactKey` | function | 21002 |
-| `matchcenterStoryFormFact` | function | 21142 |
-| `matchcenterStoryFormFactCandidates` | function | 21153 |
-| `matchcenterStoryFormLetters` | function | 20959 |
-| `matchcenterStoryFormRecord` | function | 21118 |
-| `matchcenterStoryInitials` | function | 20822 |
-| `matchcenterStoryInlineStat` | function | 20920 |
-| `matchcenterStoryLastDuelLabel` | function | 21290 |
-| `matchcenterStoryLateGoalsForOutcome` | function | 21173 |
-| `matchcenterStoryLogoBase` | function | 20828 |
-| `matchcenterStoryLogoForOpponent` | function | 20883 |
-| `matchcenterStoryLooksArtificial` | function | 21005 |
-| `matchcenterStoryNameClass` | function | 21450 |
-| `matchcenterStoryNormalizePickOptions` | function | 21041 |
-| `matchcenterStoryPickFactItems` | function | 21062 |
-| `matchcenterStoryPickFacts` | function | 21115 |
-| `matchcenterStoryPlanFactCandidates` | function | 21316 |
-| `matchcenterStoryPlayer` | function | 20962 |
-| `matchcenterStoryPlayerClutchFact` | function | 21210 |
-| `matchcenterStoryPlayerClutchTotal` | function | 21192 |
-| `matchcenterStoryRankRows` | function | 20947 |
-| `matchcenterStoryRankText` | function | 20916 |
-| `matchcenterStorySafeLogoUrl` | function | 20834 |
-| `matchcenterStoryShortDuel` | function | 21285 |
-| `matchcenterStoryShortTeamLabel` | function | 20923 |
-| `matchcenterStoryTableRank` | function | 20898 |
-| `matchcenterStoryTeamAssetKey` | function | 20848 |
-| `matchcenterStoryUlmTableRank` | function | 20909 |
-| `matchcenterStoryVisibleFacts` | function | 21456 |
-| `matchcenterStoryWinlessStreak` | function | 21133 |
+| `matchcenterStoryDuoClutchFact` | function | 21330 |
+| `matchcenterStoryDuoClutchTotal` | function | 21312 |
+| `matchcenterStoryDuoFact` | function | 21333 |
+| `matchcenterStoryEstimateFactWeight` | function | 21084 |
+| `matchcenterStoryFactKey` | function | 21078 |
+| `matchcenterStoryFormFact` | function | 21218 |
+| `matchcenterStoryFormFactCandidates` | function | 21229 |
+| `matchcenterStoryFormLetters` | function | 21035 |
+| `matchcenterStoryFormRecord` | function | 21194 |
+| `matchcenterStoryInitials` | function | 20898 |
+| `matchcenterStoryInlineStat` | function | 20996 |
+| `matchcenterStoryLastDuelLabel` | function | 21366 |
+| `matchcenterStoryLateGoalsForOutcome` | function | 21249 |
+| `matchcenterStoryLogoBase` | function | 20904 |
+| `matchcenterStoryLogoForOpponent` | function | 20959 |
+| `matchcenterStoryLooksArtificial` | function | 21081 |
+| `matchcenterStoryNameClass` | function | 21526 |
+| `matchcenterStoryNormalizePickOptions` | function | 21117 |
+| `matchcenterStoryPickFactItems` | function | 21138 |
+| `matchcenterStoryPickFacts` | function | 21191 |
+| `matchcenterStoryPlanFactCandidates` | function | 21392 |
+| `matchcenterStoryPlayer` | function | 21038 |
+| `matchcenterStoryPlayerClutchFact` | function | 21286 |
+| `matchcenterStoryPlayerClutchTotal` | function | 21268 |
+| `matchcenterStoryRankRows` | function | 21023 |
+| `matchcenterStoryRankText` | function | 20992 |
+| `matchcenterStorySafeLogoUrl` | function | 20910 |
+| `matchcenterStoryShortDuel` | function | 21361 |
+| `matchcenterStoryShortTeamLabel` | function | 20999 |
+| `matchcenterStoryTableRank` | function | 20974 |
+| `matchcenterStoryTeamAssetKey` | function | 20924 |
+| `matchcenterStoryUlmTableRank` | function | 20985 |
+| `matchcenterStoryVisibleFacts` | function | 21532 |
+| `matchcenterStoryWinlessStreak` | function | 21209 |
 | `matchcenterTeamDisplay` | function | 16012 |
 | `matchcenterTeamKey` | function | 16015 |
 | `matchcenterTimeValue` | function | 17202 |
@@ -2749,14 +2784,14 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `matchcenterUpdateUlmSeasonRow` | function | 16562 |
 | `matchcenterWindowForSecond` | function | 17219 |
 | `matchdayAsOfCutoff` | function | 3389 |
-| `matchdayGameCardHtml` | function | 23408 |
-| `matchdayUlmGames` | function | 23405 |
+| `matchdayGameCardHtml` | function | 23918 |
+| `matchdayUlmGames` | function | 23915 |
 | `medianOrNull` | function | 4316 |
 | `mergeDuoSet` | function | 5146 |
 | `mergeGoalieSpecialTeamsStats` | function | 4778 |
 | `mergeSpecialTeamsStats` | function | 4422 |
 | `mojibakeScore` | function | 2459 |
-| `moveGlobalSearch` | function | 24060 |
+| `moveGlobalSearch` | function | 24570 |
 | `normalizeAssistPlayerName` | function | 2972 |
 | `normalizeComparisonItem` | function | 13157 |
 | `normalizeDuoComparisonItem` | function | 13401 |
@@ -2770,46 +2805,46 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `normalizeTeamKey` | function | 15926 |
 | `normalizeTeamName` | function | 2547 |
 | `normalizeTeamNameForMatchcenter` | function | 15991 |
-| `onGlobalSearchInput` | window | 24054 |
+| `onGlobalSearchInput` | window | 24564 |
 | `openAllTimePlayers` | window | 8760 |
 | `openComparisonCenter` | window | 8930 |
 | `openDuoProPicker` | window | 11850 |
 | `openEinsatzCenter` | window | 7101 |
-| `openGlobalSearch` | window | 24021 |
+| `openGlobalSearch` | window | 24531 |
 | `openHallOfFame` | window | 8906 |
 | `openLexicon` | window | 9003 |
-| `openLigaGegner` | window | 23778 |
+| `openLigaGegner` | window | 24288 |
 | `openLineupBuilder` | window | 8981 |
 | `openMatchcenter` | window | 8959 |
 | `openMatchcenterStoryPreview` | window | 2225 |
-| `openMatchday` | window | 23387 |
-| `openMatchdayTimeline` | window | 23379 |
-| `openOverview` | window | 23328 |
+| `openMatchday` | window | 23897 |
+| `openMatchdayTimeline` | window | 23889 |
+| `openOverview` | window | 23838 |
 | `openSeason` | window | 8757 |
-| `openToolMenu` | window | 24138 |
-| `overviewCompactTableHtml` | function | 23605 |
-| `overviewCrossSeasonTrendHtml` | function | 23654 |
-| `overviewFormHtml` | function | 23613 |
-| `overviewLastMatchdayText` | function | 23589 |
-| `overviewLineupLinkHtml` | function | 23671 |
-| `overviewMatchcenterLinkHtml` | function | 23668 |
-| `overviewMatchdayEndMs` | function | 23506 |
-| `overviewMatchdayStartMs` | function | 23500 |
-| `overviewNextMatchdayHtml` | function | 23593 |
-| `overviewOpponentLabel` | function | 23584 |
-| `overviewOpponentPreviewHtml` | function | 23663 |
-| `overviewRankChangeTile` | function | 23690 |
-| `overviewRecordHtml` | function | 23647 |
-| `overviewSeasonAwardHtml` | function | 23636 |
-| `overviewSeasonBilanzHtml` | function | 23628 |
+| `openToolMenu` | window | 24648 |
+| `overviewCompactTableHtml` | function | 24115 |
+| `overviewCrossSeasonTrendHtml` | function | 24164 |
+| `overviewFormHtml` | function | 24123 |
+| `overviewLastMatchdayText` | function | 24099 |
+| `overviewLineupLinkHtml` | function | 24181 |
+| `overviewMatchcenterLinkHtml` | function | 24178 |
+| `overviewMatchdayEndMs` | function | 24016 |
+| `overviewMatchdayStartMs` | function | 24010 |
+| `overviewNextMatchdayHtml` | function | 24103 |
+| `overviewOpponentLabel` | function | 24094 |
+| `overviewOpponentPreviewHtml` | function | 24173 |
+| `overviewRankChangeTile` | function | 24200 |
+| `overviewRecordHtml` | function | 24157 |
+| `overviewSeasonAwardHtml` | function | 24146 |
+| `overviewSeasonBilanzHtml` | function | 24138 |
 | `p1NarrativeKey` | function | 15808 |
-| `paintGlobalSearchResults` | function | 24013 |
+| `paintGlobalSearchResults` | function | 24523 |
 | `parseAppHash` | function | 3536 |
 | `parseAsOfQueryValue` | function | 3575 |
 | `parseComparisonVariant` | function | 13322 |
 | `parseGameClock` | function | 3024 |
 | `parseLastViewState` | function | 3710 |
-| `parseSeasonDataState` | function | 23555 |
+| `parseSeasonDataState` | function | 24065 |
 | `pct` | function | 5501 |
 | `pctValue` | function | 12797 |
 | `pdashBestPhase` | function | 14435 |
@@ -2834,7 +2869,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `playerExplainHeadline` | function | 15135 |
 | `playerExplainRolePhrase` | function | 15126 |
 | `playerExplainStyleSignature` | function | 15114 |
-| `probeSocialVideoExportCapability` | function | 21744 |
+| `probeSocialVideoExportCapability` | function | 21822 |
 | `processGame` | function | 3056 |
 | `rAlltimeKpis` | function | 13113 |
 | `rAlltimePlayerDashboard` | function | 14628 |
@@ -2844,7 +2879,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rAntiSynergyDelta` | function | 12161 |
 | `rAntiSynergyMainDelta` | function | 12202 |
 | `rAntiSynergyMetricRow` | function | 12185 |
-| `rAsOfSelector` | function | 23799 |
+| `rAsOfSelector` | function | 24309 |
 | `ratio01` | function | 5502 |
 | `rCarryPerformanceRows` | function | 10607 |
 | `rClassicRoleTags` | function | 9112 |
@@ -2859,7 +2894,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rComparisonModeSelect` | function | 13652 |
 | `rComparisonRoles` | function | 14241 |
 | `rComparisonStyles` | function | 14260 |
-| `rContextBar` | function | 23882 |
+| `rContextBar` | function | 24392 |
 | `rDifficultConnectionList` | function | 12212 |
 | `rDifficultConnectionListCompact` | function | 12279 |
 | `rDifficultConnectionListCompactLegacy` | function | 12237 |
@@ -2878,7 +2913,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rDuoResponseMomentumCard` | function | 12475 |
 | `rDuoRows` | function | 10866 |
 | `recommendLineComplements` | function | 19767 |
-| `recordOverviewVisit` | function | 23574 |
+| `recordOverviewVisit` | function | 24084 |
 | `registerPlayerIdentity` | function | 4090 |
 | `registerSeasonRosters` | function | 4123 |
 | `rEinsatzCenterAutosaveBanner` | function | 7523 |
@@ -2906,7 +2941,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `removeLineupPlayer` | window | 2260 |
 | `rEmptyState` | function | 15856 |
 | `renameEinsatzCenterGroup` | window | 8024 |
-| `render` | function | 22686 |
+| `render` | function | 23196 |
 | `renderComparisonDuoSuggestions` | function | 13428 |
 | `renderTags` | function | 9120 |
 | `repairMojibake` | function | 2478 |
@@ -2942,9 +2977,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rGlobalOverview` | function | 14683 |
 | `rGlobalPartnerOpponentPanel` | function | 14631 |
 | `rGlobalProfileTags` | function | 12788 |
-| `rGlobalSearchPanelHtml` | function | 24010 |
-| `rGlobalSearchResultsHtml` | function | 23999 |
-| `rGlobalSearchToggle` | function | 23996 |
+| `rGlobalSearchPanelHtml` | function | 24520 |
+| `rGlobalSearchResultsHtml` | function | 24509 |
+| `rGlobalSearchToggle` | function | 24506 |
 | `rGoalieAnalysis` | function | 10399 |
 | `rGoalieBars` | function | 10056 |
 | `rGoalieDnaBars` | function | 10202 |
@@ -2969,7 +3004,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rHallOfFamePage` | function | 15432 |
 | `rHallPodiumList` | function | 12827 |
 | `rHallSGBadge` | function | 12882 |
-| `rIaShell` | function | 23902 |
+| `rIaShell` | function | 24412 |
 | `rIdentityCards` | function | 9086 |
 | `rIdentityTags` | function | 9066 |
 | `rInsights` | function | 9579 |
@@ -2988,19 +3023,19 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rKPIVergleich` | function | 14223 |
 | `rLexiconPage` | function | 15547 |
 | `rLexiconRows` | function | 15543 |
-| `rLigaGegnerPlaceholderPage` | function | 23782 |
-| `rLineupBuilderAvailablePanel` | function | 20546 |
-| `rLineupBuilderPage` | function | 20722 |
-| `rLineupComplementCards` | function | 20643 |
-| `rLineupMetricPills` | function | 20532 |
-| `rLineupRecommendationCards` | function | 20594 |
-| `rLineupRecommendationMode` | function | 20609 |
-| `rLineupScoreRows` | function | 20428 |
-| `rLineupSimpleCards` | function | 20450 |
-| `rLineupTestLine` | function | 20656 |
-| `rLineupTestMode` | function | 20705 |
-| `rMainNav` | function | 23289 |
-| `rMainNavBottom` | function | 23311 |
+| `rLigaGegnerPlaceholderPage` | function | 24292 |
+| `rLineupBuilderAvailablePanel` | function | 20622 |
+| `rLineupBuilderPage` | function | 20798 |
+| `rLineupComplementCards` | function | 20719 |
+| `rLineupMetricPills` | function | 20608 |
+| `rLineupRecommendationCards` | function | 20670 |
+| `rLineupRecommendationMode` | function | 20685 |
+| `rLineupScoreRows` | function | 20504 |
+| `rLineupSimpleCards` | function | 20526 |
+| `rLineupTestLine` | function | 20732 |
+| `rLineupTestMode` | function | 20781 |
+| `rMainNav` | function | 23799 |
+| `rMainNavBottom` | function | 23821 |
 | `rMatchcenterCoachCardList` | function | 20090 |
 | `rMatchcenterCoachIfThen` | function | 20104 |
 | `rMatchcenterCoachSimpleList` | function | 20112 |
@@ -3019,15 +3054,15 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rMatchcenterIntelCoachHints` | function | 20076 |
 | `rMatchcenterIntelOverview` | function | 20030 |
 | `rMatchcenterKpi` | function | 17458 |
-| `rMatchcenterLineupBuilder` | function | 20459 |
+| `rMatchcenterLineupBuilder` | function | 20535 |
 | `rMatchcenterLockerList` | function | 20187 |
 | `rMatchcenterLockerRoomSheet` | function | 20199 |
-| `rMatchcenterMatchPlan` | function | 20800 |
+| `rMatchcenterMatchPlan` | function | 20876 |
 | `rMatchcenterOpponentAlarm` | function | 20008 |
 | `rMatchcenterOpponentDNA` | function | 19975 |
 | `rMatchcenterOpponentDuos` | function | 17832 |
 | `rMatchcenterOpponentScouting` | function | 17645 |
-| `rMatchcenterPage` | function | 22196 |
+| `rMatchcenterPage` | function | 22706 |
 | `rMatchcenterPlanItems` | function | 19941 |
 | `rMatchcenterPlanWatch` | function | 19959 |
 | `rMatchcenterPlayerRow` | function | 17519 |
@@ -3035,16 +3070,16 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rMatchcenterProfileSection` | function | 17361 |
 | `rMatchcenterRankCard` | function | 17543 |
 | `rMatchcenterResponseMomentum` | function | 12502 |
-| `rMatchcenterScoutingSummary` | function | 20756 |
+| `rMatchcenterScoutingSummary` | function | 20832 |
 | `rMatchcenterSocialBlock` | function | 20255 |
-| `rMatchcenterSocialMediaCenter` | function | 20374 |
+| `rMatchcenterSocialMediaCenter` | function | 20450 |
 | `rMatchcenterSpecialCard` | function | 17878 |
 | `rMatchcenterSpecialTeams` | function | 17887 |
-| `rMatchcenterStoryForm` | function | 21492 |
-| `rMatchcenterStoryFrame` | function | 21575 |
-| `rMatchcenterStoryLogo` | function | 21487 |
-| `rMatchcenterStoryPlayerCard` | function | 21497 |
-| `rMatchcenterStoryPreview` | function | 21505 |
+| `rMatchcenterStoryForm` | function | 21568 |
+| `rMatchcenterStoryFrame` | function | 21651 |
+| `rMatchcenterStoryLogo` | function | 21563 |
+| `rMatchcenterStoryPlayerCard` | function | 21573 |
+| `rMatchcenterStoryPreview` | function | 21581 |
 | `rMatchcenterTabs` | function | 17358 |
 | `rMatchcenterTimeBars` | function | 17285 |
 | `rMatchcenterTiming` | function | 17319 |
@@ -3058,10 +3093,10 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rMatchcenterUlmRankCard` | function | 17602 |
 | `rMatchcenterUlmScouting` | function | 17608 |
 | `rMatchcenterWatchCard` | function | 17498 |
-| `rMatchdayDetailPage` | function | 23439 |
-| `rMatchdayPage` | function | 23475 |
-| `rMatchdayTimelinePage` | function | 23428 |
-| `rMatchdayTimelineRow` | function | 23420 |
+| `rMatchdayDetailPage` | function | 23949 |
+| `rMatchdayPage` | function | 23985 |
+| `rMatchdayTimelinePage` | function | 23938 |
+| `rMatchdayTimelineRow` | function | 23930 |
 | `rMatrix` | function | 9191 |
 | `rmTerm` | function | 12406 |
 | `roleGameStableKey` | function | 2826 |
@@ -3072,7 +3107,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rosterImpactConfidence` | function | 12073 |
 | `rosterImpactConfidenceWeight` | function | 12079 |
 | `rosterPlayerMatches` | function | 2730 |
-| `rOverviewPage` | function | 23766 |
+| `rOverviewPage` | function | 24276 |
 | `rPdashLabel` | function | 14580 |
 | `rPdashStat` | function | 14583 |
 | `rPenalties` | function | 9464 |
@@ -3093,10 +3128,10 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rRosterStatusBadge` | function | 9039 |
 | `rScoreBreakdown` | function | 15860 |
 | `rSeasonDataPreviewCard` | function | 6890 |
-| `rSeasonDataPreviewContextHint` | function | 23834 |
+| `rSeasonDataPreviewContextHint` | function | 24344 |
 | `rSeasonDataPreviewRows` | function | 6880 |
 | `rSeasonDataPreviewStatus` | function | 6877 |
-| `rSeasonDataStateContextHint` | function | 23851 |
+| `rSeasonDataStateContextHint` | function | 24361 |
 | `rSeasonDuoCenterPro` | function | 11942 |
 | `rSeasonDuoSummary` | function | 9238 |
 | `rSeasonInsightsTab` | function | 9564 |
@@ -3106,15 +3141,14 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rSeasonProfileTagStrip` | function | 9184 |
 | `rSeasonTrendRows` | function | 14349 |
 | `rSocialVideoBlock` | function | 20324 |
-| `rSocialVideoFeedFrame` | function | 22085 |
 | `rSparkline` | function | 13127 |
 | `rStyleMetricTip` | function | 9035 |
 | `rStyleProfileBars` | function | 9075 |
 | `rTable` | function | 9633 |
-| `rTeamPage` | function | 22344 |
+| `rTeamPage` | function | 22854 |
 | `rTeamResponseMomentumCard` | function | 12495 |
 | `rTimeline` | function | 9353 |
-| `rToolMenu` | function | 24124 |
+| `rToolMenu` | function | 24634 |
 | `runComparison` | window | 13392 |
 | `runDuoComparison` | window | 13480 |
 | `saveLastView` | function | 3727 |
@@ -3151,7 +3185,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `setComparisonDuoSeasonKey` | window | 13410 |
 | `setComparisonRoleMode` | window | 13362 |
 | `setComparisonVariant` | window | 13367 |
-| `setContextAsOf` | window | 23812 |
+| `setContextAsOf` | window | 24322 |
 | `setDuoProPickerState` | function | 11821 |
 | `setDuoProSelection` | window | 11871 |
 | `setEinsatzCenterGameNote` | window | 8095 |
@@ -3187,22 +3221,48 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `socialOpponentLine` | function | 18836 |
 | `socialPlayerFocusLine` | function | 18823 |
 | `socialSentence` | function | 18813 |
-| `socialVideoBuildFeedSpec` | function | 21960 |
-| `socialVideoBuildStorySpec` | function | 21906 |
-| `socialVideoCheckFonts` | function | 21725 |
-| `socialVideoDistributeSceneDurations` | function | 21673 |
-| `socialVideoFileName` | function | 21893 |
-| `socialVideoFitText` | function | 21710 |
-| `socialVideoFormAsOf` | function | 21789 |
-| `socialVideoLastDuelAsOf` | function | 21798 |
-| `socialVideoMatchdayLabel` | function | 21901 |
-| `socialVideoOpponentSceneData` | function | 21842 |
-| `socialVideoStandbildFrame` | function | 22124 |
-| `socialVideoStoryFrameData` | function | 22048 |
-| `socialVideoTableRank` | function | 21781 |
-| `socialVideoTopScorerAsOf` | function | 21810 |
-| `socialVideoUlmGamesForMatchday` | function | 21774 |
-| `socialVideoXmlSafeHtml` | function | 22136 |
+| `socialVideoApplyFillStyle` | function | 22422 |
+| `socialVideoBackgroundLayer` | function | 22335 |
+| `socialVideoBuildFeedSpec` | function | 22039 |
+| `socialVideoBuildStaticLayer` | function | 22516 |
+| `socialVideoBuildStorySpec` | function | 21985 |
+| `socialVideoCaptureVideo` | function | 22589 |
+| `socialVideoCheckFonts` | function | 21801 |
+| `socialVideoContentWidth` | function | 22129 |
+| `socialVideoCreateCanvas` | function | 22555 |
+| `socialVideoDistributeSceneDurations` | function | 21749 |
+| `socialVideoDrawCommand` | function | 22451 |
+| `socialVideoDrawList` | function | 22380 |
+| `socialVideoEaseOutCubic` | function | 22142 |
+| `socialVideoElementProgress` | function | 22173 |
+| `socialVideoEstimateFontSize` | function | 22151 |
+| `socialVideoFileName` | function | 21972 |
+| `socialVideoFitText` | function | 21786 |
+| `socialVideoFlagColumnOffset` | function | 22190 |
+| `socialVideoFlagPhase` | function | 22185 |
+| `socialVideoFontString` | function | 22444 |
+| `socialVideoFormAsOf` | function | 21868 |
+| `socialVideoHeightForFormat` | function | 22126 |
+| `socialVideoJobsForMatchday` | function | 20356 |
+| `socialVideoLastDuelAsOf` | function | 21877 |
+| `socialVideoLayoutScene` | function | 22267 |
+| `socialVideoLoadAssets` | function | 22542 |
+| `socialVideoMatchdayLabel` | function | 21980 |
+| `socialVideoOpponentSceneData` | function | 21921 |
+| `socialVideoPickMimeType` | function | 22566 |
+| `socialVideoPushForm` | function | 22248 |
+| `socialVideoPushLogo` | function | 22234 |
+| `socialVideoPushText` | function | 22221 |
+| `socialVideoRenderFrame` | function | 22527 |
+| `socialVideoRenderStandbildDataUrl` | function | 22575 |
+| `socialVideoSceneAt` | function | 22161 |
+| `socialVideoSceneTimeMs` | function | 22394 |
+| `socialVideoSkylineTransform` | function | 22198 |
+| `socialVideoSparrowPositions` | function | 22208 |
+| `socialVideoStandbildTimeMs` | function | 22401 |
+| `socialVideoTableRank` | function | 21860 |
+| `socialVideoTopScorerAsOf` | function | 21889 |
+| `socialVideoUlmGamesForMatchday` | function | 21853 |
 | `specialTeamsStateFromActive` | function | 4545 |
 | `stageSeasonDataPreview` | function | 6786 |
 | `stageSeasonDataPreviewFromFile` | function | 6838 |
@@ -3211,8 +3271,8 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `startEinsatzCenterDraftMode` | window | 7901 |
 | `startHallOfFameIntro` | function | 8868 |
 | `sumRoleGames` | function | 9753 |
-| `switchMatchdaySeason` | window | 23398 |
-| `switchOverviewSeason` | window | 23345 |
+| `switchMatchdaySeason` | window | 23908 |
+| `switchOverviewSeason` | window | 23855 |
 | `syncHashFromState` | function | 3669 |
 | `t2s` | const-arrow | 3034 |
 | `teamAliasRuleMatches` | function | 15929 |
@@ -3232,27 +3292,27 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `toggleMatchcenterSpecialTeamsGames` | window | 2221 |
 | `toggleSgOnlyAlltime` | window | 2381 |
 | `toggleSpecialTeamsGameDetails` | window | 2220 |
-| `toggleToolMenu` | window | 24153 |
-| `toolMenuElements` | function | 24128 |
-| `toolMenuItemElements` | function | 24131 |
-| `toolMenuOnClick` | function | 24189 |
-| `toolMenuOnKeydown` | function | 24165 |
+| `toggleToolMenu` | window | 24663 |
+| `toolMenuElements` | function | 24638 |
+| `toolMenuItemElements` | function | 24641 |
+| `toolMenuOnClick` | function | 24699 |
+| `toolMenuOnKeydown` | function | 24675 |
 | `toPublicPlayerRegistry` | function | 4243 |
-| `uiDeltaIndicator` | function | 22930 |
-| `uiFormatNumber` | function | 22902 |
-| `uiHinweisKarte` | function | 22994 |
-| `uiInfoIcon` | function | 22948 |
-| `uiIntervallBalken` | function | 23070 |
-| `uiKennzahlKachel` | function | 22960 |
-| `uiKernaussage` | function | 22980 |
-| `uiMethodenbox` | function | 23089 |
-| `uiNotiz` | function | 23106 |
-| `uiObjektseite` | function | 23186 |
-| `uiObjektseiteSortTabs` | function | 23168 |
-| `uiPlatzhalter` | function | 23118 |
-| `uiRangliste` | function | 23016 |
-| `uiReliabilityDots` | function | 22915 |
-| `uiVerlauf` | function | 23044 |
+| `uiDeltaIndicator` | function | 23440 |
+| `uiFormatNumber` | function | 23412 |
+| `uiHinweisKarte` | function | 23504 |
+| `uiInfoIcon` | function | 23458 |
+| `uiIntervallBalken` | function | 23580 |
+| `uiKennzahlKachel` | function | 23470 |
+| `uiKernaussage` | function | 23490 |
+| `uiMethodenbox` | function | 23599 |
+| `uiNotiz` | function | 23616 |
+| `uiObjektseite` | function | 23696 |
+| `uiObjektseiteSortTabs` | function | 23678 |
+| `uiPlatzhalter` | function | 23628 |
+| `uiRangliste` | function | 23526 |
+| `uiReliabilityDots` | function | 23425 |
+| `uiVerlauf` | function | 23554 |
 | `uniqueList` | function | 1839 |
 | `updateCoverAllTimeStats` | function | 8634 |
 | `updatePlayerRoleAvailability` | function | 5039 |

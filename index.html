@@ -22274,7 +22274,12 @@ function socialVideoLayoutScene(spec,scene,sceneMs,height){
   // Grobe Schlitzhöhe je Elementtyp, nur für die vertikale Verteilung (keine Schriftmessung).
   const slotH={logo:220,title:110,meta:56,stat:84,form:76,result:170,playerCard:210};
   const totalH=els.reduce((sum,el)=>sum+(slotH[el.type]||80),0);
-  let y=Math.max(topY,topY+((bottomY-topY)-totalH)/2);
+  const available=bottomY-topY;
+  // Lücken statt reiner Zentrierung (sonst klemmen wenige Elemente mittig mit riesigem Leerraum oben/unten
+  // zusammen, siehe Build-Bericht): verteilt den übrigen Platz als Abstand VOR/ZWISCHEN den Elementen,
+  // gedeckelt auf 100px je Lücke, damit auch sehr kurze Szenen (z. B. nur Logo) nicht grotesk auseinanderreißen.
+  const gap=Math.min(100,Math.max(24,(available-totalH)/(els.length+1)));
+  let y=topY+gap;
   for(const el of els){
     const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
     const riseOffset=(el.animation==='rise'||el.animation==='stagger')?(1-p.eased)*SOCIAL_VIDEO_RISE_PX:0;
@@ -22320,7 +22325,7 @@ function socialVideoLayoutScene(spec,scene,sceneMs,height){
         break;
       }
     }
-    y+=slot;
+    y+=slot+gap;
   }
   return cmds;
 }
@@ -22354,7 +22359,10 @@ function socialVideoBackgroundLayer(spec,timeMs,height,sceneId){
       const crestFactor=Math.cos((sx/(flagW*0.5))*2*Math.PI+socialVideoFlagPhase(timeMs));
       const squeeze=1-Math.max(0,crestFactor)*0.04;
       const brightness=1+crestFactor*0.12;
-      cmds.push({type:'image',assetKey:'assets/vfb-ulm-logo-mark.png',srcRect:{x:sx,y:0,w:stripW,h:flagH},x:flagX+sx*squeeze,y:flagY+dy,w:stripW*squeeze,h:flagH,opacity:1,brightness});
+      // srcRect als Anteile (0..1) der tatsächlichen Quellbild-Größe, NICHT als Pixel: Schicht A kennt die
+      // natürlichen Maße von assets/vfb-ulm-logo-mark.png nicht (rein, lädt kein Bild) — Schicht B rechnet
+      // beim Zeichnen mit img.naturalWidth/-Height um (siehe socialVideoDrawCommand, Fall 'image').
+      cmds.push({type:'image',assetKey:'assets/vfb-ulm-logo-mark.png',srcRect:{xFrac:sx/flagW,yFrac:0,wFrac:stripW/flagW,hFrac:1},x:flagX+sx*squeeze,y:flagY+dy,w:stripW*squeeze,h:flagH,opacity:1,brightness});
     }
     cmds.push({type:'rect',x:flagX-6,y:flagY-20,w:6,h:flagH+40,fill:'#8a7a52',opacity:1});
     cmds.push({type:'rect',x:flagX,y:flagY+flagH+4,w:flagW,h:18,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,0)']]},opacity:0.6});
@@ -22405,21 +22413,33 @@ function socialVideoStandbildTimeMs(spec){
 // deshalb bewusst von Schicht A getrennt).
 // ═════════════════════════════════════════════════════════════════════════
 
+// Gradient-Cache (Performance, Rechenbudget 4.4): dieselbe Form/Position erzeugt bei jedem Frame denselben
+// CanvasGradient — ohne Cache wird bei jedem Frame für jedes gradientgefüllte Element (Pillen, Logokreise,
+// Karten, Verlauf) ein neues Gradient-Objekt angelegt, was messbar GC-Druck erzeugt (vereinzelte
+// Frame-Ausreißer deutlich über 25ms wurden in echten Browser-Messungen beobachtet, siehe Build-Bericht).
+// Pro Canvas-Kontext ein Cache (WeakMap, räumt sich mit dem Context selbst auf).
+const _socialVideoGradientCache=new WeakMap();
 function socialVideoApplyFillStyle(ctx,fill,x,y,w,h){
   if(!fill)return null;
   if(typeof fill==='string')return fill;
+  let cache=_socialVideoGradientCache.get(ctx);
+  if(!cache){cache=new Map();_socialVideoGradientCache.set(ctx,cache);}
+  const key=`${fill.type}|${x}|${y}|${w}|${h}|${JSON.stringify(fill.stops)}|${fill.x0}|${fill.y0}|${fill.x1}|${fill.y1}|${fill.cx}|${fill.cy}`;
+  const cached=cache.get(key);
+  if(cached)return cached;
+  let g;
   if(fill.type==='linear'){
-    const g=ctx.createLinearGradient(x+fill.x0*w,y+fill.y0*h,x+fill.x1*w,y+fill.y1*h);
+    g=ctx.createLinearGradient(x+fill.x0*w,y+fill.y0*h,x+fill.x1*w,y+fill.y1*h);
     for(const[off,c]of fill.stops)g.addColorStop(off,c);
-    return g;
-  }
-  if(fill.type==='radial'){
+  }else if(fill.type==='radial'){
     const cx=x+fill.cx*w,cy=y+fill.cy*h,r=Math.max(w,h)/2;
-    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+    g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
     for(const[off,c]of fill.stops)g.addColorStop(off,c);
-    return g;
+  }else{
+    g='#000';
   }
-  return'#000';
+  cache.set(key,g);
+  return g;
 }
 function socialVideoFontString(cmd){
   const family=cmd.font==='mono'?"'DM Mono'":cmd.font==='inter'?"'Inter'":"'Syne'";
@@ -22476,8 +22496,14 @@ function socialVideoDrawCommand(ctx,cmd,assets){
       if(!img)break;
       if(cmd.brightness&&cmd.brightness!==1)ctx.filter=`brightness(${cmd.brightness})`;
       if(cmd.clip==='circle'){ctx.beginPath();ctx.arc(cmd.cx,cmd.cy,cmd.cr,0,Math.PI*2);ctx.clip();}
-      if(cmd.srcRect)ctx.drawImage(img,cmd.srcRect.x,cmd.srcRect.y,cmd.srcRect.w,cmd.srcRect.h,cmd.x,cmd.y,cmd.w,cmd.h);
-      else ctx.drawImage(img,cmd.x,cmd.y,cmd.w,cmd.h);
+      if(cmd.srcRect){
+        // srcRect ist in Anteilen (0..1) der tatsächlichen Quellbild-Größe angegeben (siehe
+        // socialVideoBackgroundLayer/Fahne) — erst hier in Pixel umgerechnet, da nur Schicht B das geladene
+        // Image-Objekt (und damit naturalWidth/-Height) kennt.
+        const nw=img.naturalWidth||img.width,nh=img.naturalHeight||img.height;
+        const sr=cmd.srcRect;
+        ctx.drawImage(img,sr.xFrac*nw,sr.yFrac*nh,sr.wFrac*nw,sr.hFrac*nh,cmd.x,cmd.y,cmd.w,cmd.h);
+      }else ctx.drawImage(img,cmd.x,cmd.y,cmd.w,cmd.h);
       break;
     }
   }
@@ -22582,7 +22608,15 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
     let aborted=false;
     const onAbort=()=>{aborted=true;};
     signal?.addEventListener('abort',onAbort);
+    // setTimeout statt requestAnimationFrame: rAF wird von Browsern in nicht sichtbaren/fokussierten Tabs
+    // gedrosselt oder ganz ausgesetzt (beobachtet: eine Aufnahme blieb in einem hintergründigen Tab
+    // vollständig stehen, siehe Build-Bericht) — für eine zeitgetreue Aufnahme, die unabhängig vom
+    // Tab-Fokus weiterlaufen soll, ist setTimeout robuster. Zielintervall ~33ms (30fps); die tatsächliche
+    // Zeitbasis bleibt performance.now()-elapsed, nicht die Anzahl der Schritte, damit die Gesamtdauer auch
+    // bei Timer-Drift exakt stimmt.
+    const frameIntervalMs=1000/SOCIAL_VIDEO_FPS;
     await new Promise(resolve=>{
+      let nextAt=startedAt;
       const step=()=>{
         if(aborted){resolve();return;}
         const elapsed=performance.now()-startedAt;
@@ -22590,9 +22624,10 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
         socialVideoRenderFrame(ctx,socialVideoDrawList(spec,t),assets,staticLayer);
         onProgress?.({elapsedMs:t,durationMs});
         if(t>=durationMs){resolve();return;}
-        requestAnimationFrame(step);
+        nextAt+=frameIntervalMs;
+        setTimeout(step,Math.max(0,nextAt-performance.now()));
       };
-      requestAnimationFrame(step);
+      setTimeout(step,0);
     });
     signal?.removeEventListener('abort',onAbort);
     recorder.stop();
