@@ -363,11 +363,11 @@ const realModel = await buildLeagueModel();
 const realRows = realModel.seasons.flatMap((s) => s.teamGames);
 {
   const fit = M.fitTeamStrength(realRows);
-  assertEqual(fit.quality.hostDistribution, { true: 24, false: 88, null: 312 }, 'Host-Verteilung im Fit: true 24, false 88, null 312');
-  assertEqual([fit.games, fit.quality.rows.input, fit.quality.rows.excludedOrderNull], [424, 428, 4], '424 Zeilen im Fit (428 M0-Zeilen, 4 mit gameOrderOfDay = null)');
-  assertEqual(fit.quality.orderNullBySeason, { '21/22': 2, '24/25': 2 }, 'ausgeschlossene Zeilen nach Saison: 21/22 ×2, 24/25 ×2');
-  assertEqual(fit.warnings.filter((w) => w.code === 'order-null-excluded').map((w) => [w.seasonKey, w.count]), [['21/22', 2], ['24/25', 2]], 'Warnungen order-null-excluded mit Saison und Anzahl');
-  assertEqual(fit.stage2.rows, { host: 24, notHost: 88, unknownExcluded: 312 }, 'Stufe 2 verwendet alle 112 bekannten Host-Zeilen (24 Ausrichter + 88 kein Ausrichter)');
+  assertEqual(fit.quality.hostDistribution, { true: 24, false: 88, null: 330 }, 'Host-Verteilung im Fit: true 24, false 88, null 330');
+  assertEqual([fit.games, fit.quality.rows.input, fit.quality.rows.excludedOrderNull], [442, 444, 2], '442 Zeilen im Fit (444 M0-Zeilen, 2 mit gameOrderOfDay = null)');
+  assertEqual(fit.quality.orderNullBySeason, { '24/25': 2 }, 'ausgeschlossene Zeilen nach Saison: 24/25 ×2 (21/22 hat nach der Datenqualitäts-Ausnahme keine gameOrderOfDay=null-Zeilen mehr)');
+  assertEqual(fit.warnings.filter((w) => w.code === 'order-null-excluded').map((w) => [w.seasonKey, w.count]), [['24/25', 2]], 'Warnungen order-null-excluded mit Saison und Anzahl');
+  assertEqual(fit.stage2.rows, { host: 24, notHost: 88, unknownExcluded: 330 }, 'Stufe 2 verwendet alle 112 bekannten Host-Zeilen (24 Ausrichter + 88 kein Ausrichter)');
   assertEqual(fit.stage2.rows.host + fit.stage2.rows.notHost, 112, 'Stufe 2: 112 Zeilen (nicht „24 Zeilen“)');
   assertTrue(fit.stage2.estimable && fit.stage1.converged, 'Stufe 1 und Stufe 2 schätzbar');
   const bySeason = {};
@@ -381,7 +381,13 @@ const realRows = realModel.seasons.flatMap((s) => s.teamGames);
   const f26 = M.fitTeamStrength(realRows, { asOf: endOf('25/26') });
   assertEqual(f26, fit, 'Stand Ende 25/26 = Vollfit');
   const ids = new Set(realRows.map((r) => r.gameId));
-  for (const excluded of [26644, 25677, 26613, 25679, 25681, 25682, 25683, 26478, 40512, 40514]) assertTrue(!ids.has(excluded), `21 M0-ausgeschlossenes Spiel ${excluded} ist keine Eingabezeile und fließt nicht ein`);
+  // 25677/25679/25681/25682/25683/26478/26613/26644 (21/22) waren vor der
+  // Datenqualitäts-Ausnahme (ended:false trotz vollständigem Ergebnis+Events,
+  // siehe M0/normalize.mjs) ausgeschlossen — sie fließen jetzt bewusst ein,
+  // siehe die positive Prüfung direkt darunter. Nur noch 40512/40514 (24/25,
+  // echte Forfait-Spiele) bleiben weiterhin ausgeschlossen.
+  for (const excluded of [40512, 40514]) assertTrue(!ids.has(excluded), `21 M0-ausgeschlossenes Spiel ${excluded} ist keine Eingabezeile und fließt nicht ein`);
+  for (const included of [25677, 25679, 25681, 25682, 25683, 26478, 26613, 26644]) assertTrue(ids.has(included), `21/22-Datenqualitäts-Ausnahme: Spiel ${included} (ended:false, vollständiges Ergebnis+Events) ist jetzt Eingabezeile`);
   assertTrue(!fit.stage1.teams.some((t) => t.teamKey === 'sg-freiburg-tuebingen'), 'keine zusätzliche Identitätslogik: nur M0-teamKeys');
   assertEqual(fit.stage1.teams.map((t) => t.teamKey), [...new Set(realRows.map((r) => r.teamKey))].sort(), 'Teams = M0-teamKeys (sortiert), keine Fusion und keine Vererbung');
   assertTrue(finiteEverywhere(fit) && finiteEverywhere(M.fitTeamStrength(realRows, { asOf: endOf('22/23') })), '24 keine NaN/Infinity im gültigen Output (echte Daten)');
