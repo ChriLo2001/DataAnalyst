@@ -388,8 +388,8 @@ console.log('== N. Reale M0-Daten: Rauchtest gegen erwartete Plausibilitätswert
   const r = G.fitGoalieRating(data);
   assertEqual(r.status, 'ok', 'echte Daten: M1 schätzbar, Status ok');
   assertEqual(r.players.length, 43, '43 Goalies');
-  assertEqual(r.quality.teamGames.total, 428, '428 Team-Spiel-Zeilen im Fenster');
-  assertEqual(r.quality.teamGames.solo, 365, '365 Solo-Goalie-Zeilen');
+  assertEqual(r.quality.teamGames.total, 444, '444 Team-Spiel-Zeilen im Fenster');
+  assertEqual(r.quality.teamGames.solo, 381, '381 Solo-Goalie-Zeilen');
   assertEqual(r.quality.teamGames.shared, 61, '61 Shared-Goalie-Zeilen');
   assertEqual(r.quality.teamGames.none, 2, '2 Team-Spiele ohne Goalie');
   assertEqual(r.players.filter((p) => p.games > 0).length, 39, '39 Goalies mit mindestens einem Solo-Spiel');

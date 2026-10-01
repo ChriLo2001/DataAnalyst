@@ -52,6 +52,7 @@
 
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   findDuplicateGameIds,
@@ -661,7 +662,14 @@ export async function main(argv = process.argv.slice(2)) {
   process.exitCode = 0;
 }
 
-if (process.argv[1]?.replace(/\\/g, '/').endsWith('import-season-data.mjs')) {
+// CLI-Startguard: EXAKTER Pfadvergleich, nicht mehr endsWith() (siehe ausführliche Begründung im
+// identischen Guard in scripts/update-season-data.mjs). Hier betraf die alte Fassung konkret
+// scripts/test-import-season-data.mjs, dessen eigener Dateiname zufällig auf "import-season-data.mjs"
+// endet — jeder Lauf des Tests löste dadurch beim bloßen Import dieses Moduls main() im Hintergrund
+// aus (ohne Argumente -> Nutzungshinweis + process.exitCode = 1), unabhängig vom eigentlichen
+// Testergebnis. Erklärt das zuvor beobachtete Exit-Code-Artefakt ("Alle Tests erfolgreich", aber
+// Exit-Code 1).
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((e) => {
     console.error('Unerwarteter Fehler:', e.message);
     process.exitCode = 1;

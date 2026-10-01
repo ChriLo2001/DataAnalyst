@@ -13,6 +13,7 @@
 
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const API_BASE = 'https://saisonmanager.de/api/v2';
 const SEASON_DATA_DIR = path.resolve(process.cwd(), 'season-data');
@@ -459,6 +460,20 @@ async function updateTeamDirectory(apiKey, { key, gameOperationId }) {
 
 export async function updateSeason(apiKey, manifest, { key, label, leagueId, gameOperationId }) {
   const file = manifest.seasons.find((s) => s.key === key)?.file || fileNameForKey(key);
+
+  // Eigenständige Absicherung GENAU an der Stelle, die tatsächlich die
+  // API aufruft (nicht nur bei den Aufrufern): beide bisherigen Aufrufer
+  // (main() über resolveLeagueForCurrentSeason, backfillMissingSeasonFiles)
+  // prüfen leagueId zwar bereits selbst, aber updateSeason() ist exportiert
+  // und reine Aufrufer-Disziplin ist kein verlässlicher Schutz. Ohne diese
+  // Prüfung würde eine fehlende leagueId zu einem sinnlosen, an die echte API
+  // gestellten Request `leagues/undefined/schedule` führen, statt sauber
+  // abzubrechen.
+  if (!leagueId) {
+    console.error(`[${key}] Keine leagueId übergeben — Spielplan kann nicht sicher abgerufen werden, season-data/${file} bleibt unverändert.`);
+    return { changed: false };
+  }
+
   const existingFile = await loadSeasonFile(file);
   const fileExistedBefore = existingFile !== null;
   const existingData = existingFile ?? { season: key, label, games: [] };
@@ -654,7 +669,20 @@ export async function main() {
   console.log(result.changed ? 'Fertig: Daten wurden aktualisiert.' : 'Fertig: keine Änderungen.');
 }
 
-if (process.argv[1]?.replace(/\\/g, '/').endsWith('update-season-data.mjs')) {
+// CLI-Startguard: EXAKTER Pfadvergleich (import.meta.url vs. dem tatsächlich gestarteten Skript),
+// NICHT mehr ein endsWith()-Suffix-Vergleich. Der frühere `process.argv[1]…endsWith('update-season-data.mjs')`
+// feuerte fälschlich auch dann, wenn scripts/test-update-season-data.mjs läuft — dessen eigener Dateiname
+// endet rein zufällig GENAUSO auf "update-season-data.mjs" ("test-" ist nur ein Präfix). Jeder Import
+// dieses Moduls aus dem Testlauf heraus (statisch oder per dynamischem import() einer Sandbox-Kopie)
+// startete dadurch main() ein zusätzliches Mal im Hintergrund (main().catch(...) wird nicht awaited) —
+// zeitgleich mit dem vom Test selbst bewusst aufgerufenen mod.main(). Das erklärt den zuvor beobachteten
+// "ENOENT beim rename()": zwei nebenläufige main()-Läufe schrieben dieselbe Zieldatei über denselben
+// PID-basierten Temp-Dateinamen (siehe writeJsonAtomic) — ein echter Nebenläufigkeits-Fehler im
+// TESTGERÜST (ausgelöst durch diesen zu groben Guard), nicht in writeJsonAtomic selbst: isolierte
+// Stresstests von writeJsonAtomic (200 verschiedene Zieldateien, 200 Wiederholungen derselben Datei)
+// zeigten 0 Fehlschläge. Derselbe Guard-Fehler erklärt zugleich das unabhängig beobachtete
+// Exit-Code-Artefakt in test-import-lineup-data.mjs/test-import-season-data.mjs (siehe dort).
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((e) => {
     console.error('Unerwarteter Fehler:', e.message);
     process.exitCode = 1;

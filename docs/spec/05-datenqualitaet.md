@@ -18,4 +18,13 @@ Unabhängig von den Modulen, als eigene kleine Aufgaben:
 
 ---
 
+## Datenqualitäts-Phase (Spieltagsstatus und M0-Spielfilter)
+
+Ergänzung aus der Datenqualitäts- und Spieltagsstatus-Phase (nicht Teil der ursprünglichen Spezifikation, siehe [10-architektur.md](10-architektur.md) Abschnitt 3.6.3 und [module/M0.md](module/M0.md)):
+
+1. **Spieltagsstatus spezifikationskonform:** Ein Spieltag gilt als `abgeschlossen`, wenn jedes Spiel entweder beendet ist ODER endgültig nicht an diesem Termin stattfindet (`notice_type` passt auf `Postponed`/`Canceled`, real beobachtete Rohwerte über alle fünf Saisons). `unvollständig` gilt nur noch für Spiele, die weder beendet noch verlegt/abgesagt sind (`scripts/matchday-derivation.mjs`). Ein verlegtes Spiel zählt automatisch am neuen Termin, sobald es dort beendet ist — ohne Sonderlogik, da `buildMatchdays()` ohnehin nach Datum/Spieltagnummer gruppiert. Effekt an echten Daten: 24/25 steigt von 3 auf 7 abgeschlossene Spieltage (von 7 insgesamt); 25/26 von 6 auf 8 (von 8 insgesamt).
+2. **M0-Datenqualitäts-Ausnahme `ended !== true`:** Ein Spiel mit `ended !== true`, aber vollständigem Ergebnis UND mindestens einem Event, gilt im Modell (M0) trotzdem als beendet (`hasCompleteResultAndEvents`, siehe [module/M0.md](module/M0.md)). Betrifft acht Spiele in 21/22 (25677, 25679, 25681, 25682, 25683, 26478, 26613, 26644) — allgemein formulierte Regel, keine hartverdrahtete ID-Liste im Code.
+
+---
+
 **Weiter:** [20-ui.md](20-ui.md) · **Zurück:** [module/M0.md](module/M0.md)

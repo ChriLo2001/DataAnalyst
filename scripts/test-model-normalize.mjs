@@ -295,6 +295,11 @@ console.log('== Spielfilter: Reihenfolge, mehrere Gründe, Rohmarker ==');
   const pn = N.classifyModelGame({ ...game({ notice: 'Postponed' }), result: null });
   assertEqual([pn.reason, pn.reasons], ['postponed', ['postponed', 'no_result']], 'verschoben + ohne Endstand: Hauptgrund postponed');
 
+  // 501: ended:false, ABER vollständiges Ergebnis + 1 Event -> erfüllt die Datenqualitäts-Ausnahme
+  // (hasCompleteResultAndEvents) UND ist Postponed. Zeigt gezielt: die Ausnahme hebt nur "not_ended"
+  // auf, "postponed" bleibt unabhängig davon ein eigener, weiterhin zutreffender Ausschlussgrund -
+  // das Spiel bleibt ausgeschlossen, aber jetzt mit Hauptgrund "postponed" statt "not_ended" und zählt
+  // für die Qualitätszählung bereits als "ended" (siehe endedFalseIncludedByException unten).
   const r = run([
     game({ id: 501, ended: false, hg: 2, gg: 17, notice: 'Postponed', events: [goal('home', 1, '1:00', 11, { home_goals: 1, guest_goals: 0 })] }),
     game({ id: 502, forfait: true, hg: 8, gg: 0 }),
@@ -306,10 +311,10 @@ console.log('== Spielfilter: Reihenfolge, mehrere Gründe, Rohmarker ==');
     game({ id: 508, notice: 'Canceled', hg: 3, gg: 1 }),
   ]);
   const q = r.quality;
-  assertEqual([q.games, q.ended, q.notEnded, q.modelGames], [8, 5, 3, 1], 'Zählung Spiele / beendet / nicht beendet / Modell');
-  assertEqual(q.excluded, { forfeit: 1, postponed: 1, youth: 1, noResult: 1 }, 'Ausschlüsse beendeter Spiele getrennt nach Hauptgrund gezählt');
+  assertEqual([q.games, q.ended, q.notEnded, q.modelGames], [8, 6, 2, 1], 'Zählung Spiele / beendet / nicht beendet / Modell (501 zählt dank Ausnahme jetzt als "ended")');
+  assertEqual(q.excluded, { forfeit: 1, postponed: 2, youth: 1, noResult: 1 }, 'Ausschlüsse beendeter Spiele getrennt nach Hauptgrund gezählt (postponed jetzt 2: 501 per Ausnahme + 504)');
   assertEqual(q.excludedGames.map((e) => [e.gameId, e.seasonKey, e.reason, e.ended, e.noticeType, e.resultForfait, e.score, e.events]), [
-    [501, '25/26', 'not_ended', false, 'Postponed', false, '2:17', 1],
+    [501, '25/26', 'postponed', false, 'Postponed', false, '2:17', 1],
     [502, '25/26', 'forfeit', true, null, true, '8:0', 0],
     [503, '25/26', 'youth', true, null, false, '0:0', 0],
     [504, '25/26', 'postponed', true, 'verlegt', false, '0:0', 0],
@@ -317,14 +322,42 @@ console.log('== Spielfilter: Reihenfolge, mehrere Gründe, Rohmarker ==');
     [506, '25/26', 'not_ended', null, null, null, null, 0],
     [507, '25/26', 'not_ended', 'true', null, null, null, 0],
   ], 'Ausschlussbericht: ID, Saison, Grund und Rohmarker (ended, notice_type, result.forfait), Endstand, Eventzahl');
-  assertEqual(q.excludedGames.map((e) => e.reasons), [['not_ended', 'postponed'], ['forfeit'], ['youth'], ['postponed'], ['no_result'], ['not_ended', 'no_result'], ['not_ended', 'no_result']], 'Ausschlussbericht: alle zutreffenden Gründe je Spiel');
+  assertEqual(q.excludedGames.map((e) => e.reasons), [['postponed'], ['forfeit'], ['youth'], ['postponed'], ['no_result'], ['not_ended', 'no_result'], ['not_ended', 'no_result']], 'Ausschlussbericht: alle zutreffenden Gründe je Spiel (501 nur noch "postponed", "not_ended" per Ausnahme aufgehoben)');
   assertTrue(q.excludedGames.every((e) => e.ulmInvolved === true), 'Ausschlussbericht: Ulm-Beteiligung markiert (VfB Ulm im Test)');
-  assertEqual(q.endedFalseWithEvidence.map((e) => e.gameId), [501], 'ended ≠ true mit Events/Endstand: nur 501 (Untermenge der Ausschlüsse)');
+  assertEqual(q.endedFalseWithEvidence, [], 'ended ≠ true mit Events/Endstand, die NICHT die Ausnahme erfüllen: keine (506/507 haben weder Events noch Endstand)');
+  assertEqual(q.endedFalseIncludedByException.map((e) => e.gameId), [501], 'ended ≠ true, aber per Ausnahme als "ended" gezählt: 501 (bleibt trotzdem wegen "postponed" ausgeschlossen)');
   assertEqual(r.teamGames.length, 2, 'nur das beendete Modell-Spiel (508, Canceled) erzeugt Team-Spiele');
   assertEqual(r.teamGames[0].noticeType, 'Canceled', 'Canceled-Rohwert bleibt am Team-Spiel erhalten (keine Interpretation)');
   assertEqual(r.goalEvents.length, 0, 'Tore aus ausgeschlossenen Spielen fließen nicht ein');
   const codes = r.warnings.map((w) => w.code);
-  assertEqual([codes.filter((c) => c === 'ended_false_with_evidence').length, codes.filter((c) => c === 'game_excluded').length], [1, 3 + 1], 'Warnungen: ended_false_with_evidence für 501, game_excluded für die 4 beendeten Ausschlüsse');
+  assertEqual(
+    [codes.filter((c) => c === 'ended_false_with_evidence').length, codes.filter((c) => c === 'ended_false_included_by_exception').length, codes.filter((c) => c === 'game_excluded').length],
+    [0, 1, 5],
+    'Warnungen: kein ended_false_with_evidence mehr, ended_false_included_by_exception für 501, game_excluded für die 5 beendeten Ausschlüsse (501/502/503/504/505)',
+  );
+}
+
+console.log('== Datenqualitäts-Ausnahme: ended:false trotz vollständiger Daten (hasCompleteResultAndEvents) ==');
+{
+  // Einbezogen: vollständiges Ergebnis UND mindestens ein Event, trotz ended:false.
+  const included = N.classifyModelGame({ ...game({ ended: false, hg: 4, gg: 3 }), events: [goal('home', 1, '5:00', 7)] });
+  assertEqual(included, { included: true, reason: null, reasons: [] }, 'ended:false + vollständiges Ergebnis + Events -> einbezogen (Ausnahme greift)');
+
+  // NICHT einbezogen: ended:false, Ergebnis vorhanden, aber KEINE Events.
+  const noEvents = N.classifyModelGame({ ...game({ ended: false, hg: 4, gg: 3 }), events: [] });
+  assertEqual(noEvents.reason, 'not_ended', 'ended:false + Ergebnis, aber keine Events -> weiterhin ausgeschlossen (Ausnahme greift nicht)');
+
+  // NICHT einbezogen: ended:false, Events vorhanden, aber KEIN vollständiges Ergebnis.
+  const noResult = N.classifyModelGame({ ...game({ ended: false, result: null }), events: [goal('home', 1, '5:00', 7)] });
+  assertEqual(noResult.reason, 'not_ended', 'ended:false + Events, aber kein Ergebnis -> weiterhin ausgeschlossen (Ausnahme greift nicht)');
+
+  // Regressionstest für die 8 realen 21/22-Spiele: vollständige Einbeziehung in normalizeSeason.
+  const r = run([
+    game({ id: 901, ended: false, hg: 9, gg: 10, events: [goal('home', 1, '1:00', 1), goal('guest', 1, '2:00', 2)] }),
+    game({ id: 902, ended: true, hg: 1, gg: 1, events: [goal('home', 1, '1:00', 1)] }),
+  ]);
+  assertEqual(r.quality.modelGames, 2, 'ein ended:true- und ein ended:false-mit-Ausnahme-Spiel: beide im Modell');
+  assertEqual(r.teamGames.filter((tg) => tg.gameId === 901).length, 2, 'Spiel 901 (ended:false, Ausnahme) erzeugt Team-Spiele wie ein normales beendetes Spiel');
 }
 
 console.log('== Fehlende Anstoßzeit und Reihenfolge am Spieltag (abgeleitet) ==');

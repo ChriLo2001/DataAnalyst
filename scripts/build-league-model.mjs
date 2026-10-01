@@ -89,6 +89,10 @@ export function formatReport(model) {
     lines.push(`Ausgeschlossene Spiele: ${q.excludedGames.length} (beendet, aber ausgeschlossen: ${q.excluded.forfeit + q.excluded.postponed + q.excluded.youth + q.excluded.noResult}; ended ≠ true mit Events/Endstand: ${q.endedFalseWithEvidence.length}; ended ≠ true ohne Events/Endstand: ${quiet}${quiet ? ' — notice_type ' + Object.entries(quietNotices).map(([k, n]) => `${k}×${n}`).join(', ') : ''})`);
     if (q.endedFalseWithEvidence.length) lines.push('   Hinweis: Das Dashboard (isGamePlayed) zählt Spiele mit Tor-Events als gespielt, das Modell strikt nur ended === true.');
     for (const e of relevant) lines.push(`   · Spiel ${e.gameId} (${e.seasonKey}, ${e.date}${e.ulmInvolved ? ', Ulm' : ''}) ${e.home} – ${e.guest}: Grund ${e.reasons.join('+')} · ended=${JSON.stringify(e.ended)}, notice_type=${JSON.stringify(e.noticeType)}, result.forfait=${JSON.stringify(e.resultForfait)} · Endstand ${e.score ?? '–'}, ${e.events} Events`);
+    if (q.endedFalseIncludedByException.length) {
+      lines.push(`Datenqualitäts-Ausnahme (ended ≠ true, aber vollständiges Ergebnis + Events vorhanden): ${q.endedFalseIncludedByException.length} Spiel(e) trotzdem ins Modell einbezogen.`);
+      for (const e of q.endedFalseIncludedByException) lines.push(`   · Spiel ${e.gameId} (${e.seasonKey}, ${e.date}${e.ulmInvolved ? ', Ulm' : ''}) ${e.home} – ${e.guest}: ended=${JSON.stringify(e.ended)}, notice_type=${JSON.stringify(e.noticeType)}, result.forfait=${JSON.stringify(e.resultForfait)} · Endstand ${e.score ?? '–'}, ${e.events} Events`);
+    }
     lines.push(`Warnungen: ${s.warnings.length}`);
   }
   return lines.join('\n') + '\n';

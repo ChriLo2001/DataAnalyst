@@ -7,7 +7,7 @@
 //
 // Aufruf: node scripts/test-update-season-data.mjs
 
-import { mkdtemp, cp, readFile, writeFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, cp, readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -22,6 +22,8 @@ import {
   fileNameForKey,
   deriveLabelFromKey,
   extractTeamDirectory,
+  writeJsonAtomic,
+  updateSeason,
 } from './update-season-data.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
@@ -186,6 +188,52 @@ assertTrue(!('squad' in directory[1]), 'kein squad/Mannschaftsnummer-Feld erfund
 assertEqual(extractTeamDirectory([{ teams: [{ id: 1 }, { id: undefined }] }]).length, 1, 'Team ohne id wird übersprungen statt geraten');
 
 // ─────────────────────────────────────────────────────────────────────────
+// Teil 1.5: writeJsonAtomic (reines Dateisystem, kein Saison-Sandbox nötig)
+// ─────────────────────────────────────────────────────────────────────────
+
+console.log('== writeJsonAtomic ==');
+await (async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'write-json-atomic-test-'));
+  try {
+    // Zielverzeichnis fehlt zu Beginn vollständig (nicht nur die Datei).
+    const nestedPath = path.join(dir, 'nested', 'deep', 'file.json');
+    await writeJsonAtomic(nestedPath, { a: 1 });
+    assertEqual(JSON.parse(await readFile(nestedPath, 'utf8')), { a: 1 }, 'fehlendes Zielverzeichnis wird angelegt, Datei korrekt geschrieben');
+
+    // Wiederholter Schreibvorgang auf denselben Pfad (Produktionsmuster:
+    // jeder main()-Lauf schreibt sequenziell, nie parallel, auf dieselbe
+    // Zieldatei — siehe Bericht zur ENOENT-Diagnose).
+    const repeatPath = path.join(dir, 'repeat.json');
+    await writeJsonAtomic(repeatPath, { v: 1 });
+    await writeJsonAtomic(repeatPath, { v: 2 });
+    await writeJsonAtomic(repeatPath, { v: 3 });
+    assertEqual(JSON.parse(await readFile(repeatPath, 'utf8')), { v: 3 }, 'wiederholtes sequenzielles Schreiben auf denselben Pfad überschreibt sauber');
+
+    // Paralleler Schreibvorgang auf VERSCHIEDENE Dateien (realistische
+    // Nebenläufigkeit, z.B. mehrere Saisondateien kurz hintereinander):
+    // die PID-basierte Temp-Datei kollidiert nicht, da jeder Zielpfad einen
+    // eigenen Temp-Namen bekommt.
+    const parallelTargets = Array.from({ length: 20 }, (_, i) => path.join(dir, `parallel-${i}.json`));
+    await Promise.all(parallelTargets.map((p, i) => writeJsonAtomic(p, { i })));
+    const parallelResults = await Promise.all(parallelTargets.map((p) => readFile(p, 'utf8').then(JSON.parse)));
+    assertTrue(
+      parallelResults.every((r, i) => r.i === i),
+      'paralleles Schreiben verschiedener Dateien liefert für jede Datei den korrekten, eigenen Inhalt',
+    );
+    // Hinweis (siehe Bericht): ein echter, UNGEWOLLTER paralleler Schreibvorgang
+    // auf DIESELBE Datei (zwei gleichzeitige writeJsonAtomic-Aufrufe auf
+    // denselben Pfad im selben Prozess, die sich denselben PID-Temp-Namen
+    // teilen) ist die exakte Ursache, die die ENOENT-Diagnose aufgedeckt hat —
+    // production-seitig kommt das nicht vor, weil jeder main()-Lauf jede
+    // Zieldatei sequenziell (await) schreibt; der frühere Fehler kam
+    // ausschließlich vom zu groben CLI-Startguard (siehe dort), nicht von
+    // writeJsonAtomic selbst.
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+})();
+
+// ─────────────────────────────────────────────────────────────────────────
 // Teil 2: End-to-End-Dry-Run in einer Sandbox mit gemocktem fetch
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -241,9 +289,38 @@ function makeMockFetch(routes) {
   return fn;
 }
 
+// Synthetische, minimale Fixture statt eines Abzugs des echten season-data/-
+// Ordners (siehe Bericht): ein wörtlicher `cp()` der echten, stetig
+// wachsenden season-data/*.json machte die Szenarien unten abhängig vom
+// jeweils aktuellen Datenstand im Repo — mehrere Assertions (z.B. "25-26.json
+// enthält genau [501,502]") gingen stillschweigend kaputt, sobald die reale
+// 25/26-Saison mehr echte Spiele bekam. Die Fixture bildet nur die Form nach,
+// die updateSeason()/backfillMissingSeasonFiles() tatsächlich auswerten
+// (Manifest-Einträge inkl. leagueId/gameOperationId für 25/26, vier leere
+// archivierte Saisondateien) und bleibt unabhängig von echten Daten.
+const SYNTHETIC_MANIFEST = {
+  seasons: [
+    { key: '21/22', label: '2021/22', file: '21-22.json', status: 'archived' },
+    { key: '22/23', label: '2022/23', file: '22-23.json', status: 'archived' },
+    { key: '23/24', label: '2023/24', file: '23-24.json', status: 'archived' },
+    { key: '24/25', label: '2024/25', file: '24-25.json', status: 'archived' },
+    { key: '25/26', label: '2025/26', file: '25-26.json', status: 'current', leagueId: 1897, gameOperationId: 4 },
+  ],
+};
+
+function syntheticSeasonFile(key, label) {
+  return { season: key, label, games: [] };
+}
+
 async function withSandbox(fn) {
   const dir = await mkdtemp(path.join(tmpdir(), 'season-data-test-'));
-  await cp(path.join(REPO_ROOT, 'season-data'), path.join(dir, 'season-data'), { recursive: true });
+  const seasonDataDir = path.join(dir, 'season-data');
+  await mkdir(seasonDataDir, { recursive: true });
+  await writeFile(path.join(seasonDataDir, 'seasons.json'), JSON.stringify(SYNTHETIC_MANIFEST));
+  for (const entry of SYNTHETIC_MANIFEST.seasons) {
+    if (entry.key === '25/26') continue; // bewusst ohne Datei: mehrere Szenarien prüfen genau diesen "noch nicht angelegt"-Fall
+    await writeFile(path.join(seasonDataDir, entry.file), JSON.stringify(syntheticSeasonFile(entry.key, entry.label)));
+  }
   await cp(path.join(REPO_ROOT, 'scripts', 'update-season-data.mjs'), path.join(dir, 'update-season-data.mjs'));
   const prevCwd = process.cwd();
   const prevFetch = globalThis.fetch;
@@ -316,6 +393,7 @@ async function scenarioNewSeasonDetected() {
       path.join(dir, 'season-data', '25-26.json'),
       JSON.stringify({ season: '25/26', label: '2025/26', games: [sampleGame(501)] }),
     );
+    const before2425 = await readFile(path.join(dir, 'season-data', '24-25.json'), 'utf8');
 
     globalThis.fetch = makeMockFetch([
       [/\/init$/, { current_season_id: 43, seasons: [{ id: 43, name: '2026/2027', current: true }] }],
@@ -338,9 +416,8 @@ async function scenarioNewSeasonDetected() {
     const newSeasonFile = await readJson(dir, 'season-data', '26-27.json');
     assertEqual(newSeasonFile.games.map((g) => g.id), [601], '26-27.json wurde mit dem neuen Spiel angelegt');
 
-    const untouched2425 = await readFile(path.join(REPO_ROOT, 'season-data', '24-25.json'), 'utf8');
-    const sandbox2425 = await readFile(path.join(dir, 'season-data', '24-25.json'), 'utf8');
-    assertEqual(sandbox2425, untouched2425, '24-25.json wurde durch die Aktion nicht verändert');
+    const after2425 = await readFile(path.join(dir, 'season-data', '24-25.json'), 'utf8');
+    assertEqual(after2425, before2425, '24-25.json wurde durch die Aktion nicht verändert');
   });
 }
 
@@ -435,10 +512,11 @@ async function scenarioBackfillMissingCurrentFileAndAdvanceSeason() {
   console.log('== Szenario A+C+D+E: 25/26 fehlt als Datei (Manifest kennt sie aber mit leagueId), Saisonmanager meldet inzwischen 26/27 als aktuell ==');
   await withSandbox(async ({ dir, mod }) => {
     process.env.SAISONMANAGER_API_KEY = 'test-key';
-    // Sandbox entspricht exakt dem realen Repo-Zustand: season-data/25-26.json
-    // existiert NICHT, das Manifest kennt 25/26 aber bereits inkl. leagueId
-    // 1897 / gameOperationId 4 (siehe season-data/seasons.json im Repo) — kein
-    // zusätzliches Seeding nötig.
+    // Fixture entspricht dem Repo-Zustand, den dieses Szenario prüfen soll:
+    // season-data/25-26.json existiert NICHT, das Manifest kennt 25/26 aber
+    // bereits inkl. leagueId 1897 / gameOperationId 4 — kein zusätzliches
+    // Seeding nötig (siehe SYNTHETIC_MANIFEST/withSandbox()).
+    const before2425 = await readFile(path.join(dir, 'season-data', '24-25.json'), 'utf8');
 
     globalThis.fetch = makeMockFetch([
       [/\/init$/, { current_season_id: 43, seasons: [{ id: 43, name: '2026/2027', current: true }] }],
@@ -471,9 +549,8 @@ async function scenarioBackfillMissingCurrentFileAndAdvanceSeason() {
     assertEqual(manifest.seasons.find((s) => s.key === '26/27')?.status, 'current', 'Test D: 26/27 ist jetzt current');
     assertEqual(manifest.seasons.find((s) => s.key === '25/26')?.leagueId, 1897, '25/26 behält seine bekannte leagueId im Manifest');
 
-    const untouched2425 = await readFile(path.join(REPO_ROOT, 'season-data', '24-25.json'), 'utf8');
-    const sandbox2425 = await readFile(path.join(dir, 'season-data', '24-25.json'), 'utf8');
-    assertEqual(sandbox2425, untouched2425, '24-25.json wurde durch den Lauf nicht verändert');
+    const after2425 = await readFile(path.join(dir, 'season-data', '24-25.json'), 'utf8');
+    assertEqual(after2425, before2425, '24-25.json wurde durch den Lauf nicht verändert');
   });
 }
 
@@ -519,6 +596,14 @@ async function scenarioBackfillSkipsMissingLeagueIdWithoutGuessing() {
     // Eintrag ohne je gelaufene League-Discovery vorkommen könnte.
     manifest.seasons = manifest.seasons.map((s) => (s.key === '25/26' ? { key: s.key, label: s.label, file: s.file, status: s.status } : s));
     await writeFile(manifestPath, JSON.stringify(manifest));
+    // Eine andere, archivierte Saison liefert den game_operation_id, über den
+    // 26/27 trotz der fehlenden 25/26-leagueId regulär neu erkannt werden
+    // kann (siehe resolveLeagueForCurrentSeason: sammelt game_operation_id
+    // aus ALLEN lokal vorhandenen Saisondateien, nicht nur der aktuellen).
+    await writeFile(
+      path.join(dir, 'season-data', '24-25.json'),
+      JSON.stringify({ season: '24/25', label: '2024/25', games: [sampleGame(401)] }),
+    );
 
     globalThis.fetch = makeMockFetch([
       [/\/init$/, { current_season_id: 43, seasons: [{ id: 43, name: '2026/2027', current: true }] }],
@@ -542,6 +627,27 @@ async function scenarioBackfillSkipsMissingLeagueIdWithoutGuessing() {
   });
 }
 
+async function scenarioUpdateSeasonRefusesWithoutLeagueId() {
+  console.log('== updateSeason() ohne leagueId: kein Spielplan-Abruf, keine Änderung (TESTS-Vorgabe: decideRefetchIds/Spielplan-Pfad ohne leagueId) ==');
+  await withSandbox(async ({ dir, mod }) => {
+    process.env.SAISONMANAGER_API_KEY = 'test-key';
+    globalThis.fetch = makeMockFetch([]); // darf gar nicht erst aufgerufen werden
+
+    const result = await mod.updateSeason('test-key', SYNTHETIC_MANIFEST, { key: '25/26', label: '2025/26', leagueId: undefined, gameOperationId: 4 });
+
+    assertEqual(result, { changed: false }, 'updateSeason() ohne leagueId meldet changed:false statt einen Spielplan abzurufen');
+    assertEqual(globalThis.fetch.calls.length, 0, 'ohne leagueId wird kein einziger API-Aufruf ausgelöst (kein "leagues/undefined/schedule")');
+
+    let fileWasCreated = true;
+    try {
+      await readFile(path.join(dir, 'season-data', '25-26.json'), 'utf8');
+    } catch (e) {
+      fileWasCreated = e.code !== 'ENOENT';
+    }
+    assertEqual(fileWasCreated, false, 'season-data/25-26.json wird ohne leagueId nicht angelegt');
+  });
+}
+
 async function scenarioMissingApiKeyAbortsCleanly() {
   console.log('== Szenario: fehlender API-Key bricht sauber ab ==');
   await withSandbox(async ({ dir, mod }) => {
@@ -562,6 +668,7 @@ await scenarioFullApiFailureLeavesFilesUntouched();
 await scenarioBackfillMissingCurrentFileAndAdvanceSeason();
 await scenarioBackfillSkipsAlreadyCompleteFile();
 await scenarioBackfillSkipsMissingLeagueIdWithoutGuessing();
+await scenarioUpdateSeasonRefusesWithoutLeagueId();
 await scenarioMissingApiKeyAbortsCleanly();
 
 console.log('');
@@ -570,4 +677,12 @@ if (failures > 0) {
   process.exitCode = 1;
 } else {
   console.log('Alle Tests erfolgreich.');
+  // Mehrere Szenarien rufen absichtlich main()-Pfade auf, die PRODUKTIV
+  // korrekt process.exitCode = 1 setzen (z.B. fehlender API-Key, nicht
+  // bestimmbare Liga) — das sind die zu testenden Erfolgsfälle, keine
+  // Testfehlschläge. Da main() im selben Prozess läuft (dynamischer Import
+  // in withSandbox()), bleibt dieser Exit-Code sonst am gesamten Testlauf
+  // hängen, obwohl `failures` hier nachweislich 0 ist. Deshalb explizit
+  // zurücksetzen statt den zufälligen letzten main()-Exit-Code zu erben.
+  process.exitCode = 0;
 }

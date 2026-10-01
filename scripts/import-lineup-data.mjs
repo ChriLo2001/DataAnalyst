@@ -18,19 +18,15 @@
 // bzw. importiert daraus — keine dieser Dateien wird von diesem Skript
 // verändert (siehe Auftrag Phase 3).
 //
-// Bekannter, nicht behobener Altbestand-Fund (außerhalb des Scopes dieser
-// Phase, deshalb bewusst NICHT repariert): scripts/update-season-data.mjs
-// exportiert writeJsonAtomic NICHT (kein "export" vor der Funktion, Zeile
-// ~87), obwohl scripts/import-season-data.mjs genau das per
-// `import { writeJsonAtomic } from './update-season-data.mjs'` versucht
-// (Zeile 63) — das würde unter echtem Node.js beim Laden des Moduls mit
-// einem SyntaxError fehlschlagen ("does not provide an export named
-// 'writeJsonAtomic'"), wurde aber bisher nie bemerkt, weil dieses Projekt
-// bislang nie mit echtem Node.js ausgeführt wurde. Dieses neue Importer-
-// Skript hängt deshalb bewusst NICHT von diesem Import ab, sondern bringt
-// eine eigene, kleine, lokale writeJsonAtomic()-Implementierung mit (siehe
-// unten) — unabhängig von diesem vorbestehenden, nicht in Scope liegenden
-// Bug.
+// Korrektur (Datenqualitäts-Phase): scripts/update-season-data.mjs
+// exportiert writeJsonAtomic sehr wohl (export async function writeJsonAtomic),
+// und scripts/import-season-data.mjs importiert es erfolgreich von dort —
+// der frühere Verdacht eines SyntaxErrors beim Laden war unzutreffend
+// (mittlerweile unter echtem Node.js wiederholt verifiziert, siehe
+// scripts/test-import-season-data.mjs/test-update-season-data.mjs). Dieser
+// Importer bringt trotzdem eine eigene, kleine, lokale writeJsonAtomic()-
+// Implementierung mit (siehe unten) statt sie zu importieren — eine kleine,
+// unproblematische Redundanz, keine Umgehung eines Bugs.
 //
 // Kernlogik (validateDraftShape, mergeGames, mergeRegistryGroups,
 // buildImportPlan, formatImportReport) ist bewusst als reine, exportierte
@@ -38,6 +34,7 @@
 
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   LINEUP_SCHEMA_VERSION,
@@ -541,7 +538,14 @@ export async function main(argv = process.argv.slice(2)) {
   process.exitCode = 0;
 }
 
-if (process.argv[1]?.replace(/\\/g, '/').endsWith('import-lineup-data.mjs')) {
+// CLI-Startguard: EXAKTER Pfadvergleich, nicht mehr endsWith() (siehe ausführliche Begründung im
+// identischen Guard in scripts/update-season-data.mjs). Hier betraf die alte Fassung konkret
+// scripts/test-import-lineup-data.mjs, dessen eigener Dateiname zufällig auf "import-lineup-data.mjs"
+// endet — jeder Lauf des Tests löste dadurch beim bloßen Import dieses Moduls main() im Hintergrund
+// aus (ohne Argumente -> Nutzungshinweis + process.exitCode = 1), unabhängig vom eigentlichen
+// Testergebnis. Erklärt das zuvor beobachtete Exit-Code-Artefakt ("Alle Tests erfolgreich", aber
+// Exit-Code 1).
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((e) => {
     console.error('Unerwarteter Fehler:', e.message);
     process.exitCode = 1;
