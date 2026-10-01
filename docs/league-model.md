@@ -81,7 +81,7 @@ Ein Spiel wird aus dem Modell ausgeschlossen, wenn mindestens eine dieser Beding
 
 | Reihenfolge | Grund | Bedingung | Quelle |
 |---|---|---|---|
-| 1 | `not_ended` | `ended !== true` (strikt; fehlend oder `"true"` als Text zählt nicht) | Spezifikation M0.1 und P1a-Entscheidung |
+| 1 | `not_ended` | `ended !== true` **und keine Datenqualitäts-Ausnahme greift** (siehe unten) — strikt; fehlend oder `"true"` als Text zählt nicht | Spezifikation M0.1 und P1a-Entscheidung |
 | 2 | `youth` | `isYouthGame`-Regel aus `index.html` | Spezifikation M0.1 |
 | 3 | `forfeit` | `result.forfait === true` | Spezifikation M0.1 |
 | 4 | `postponed` | `notice_type` passt auf `postpone`, `verschoben` oder `verlegt` | Spezifikation M0.1 (verschobene Spiele), 3.6.3 (verlegt) |
@@ -89,13 +89,15 @@ Ein Spiel wird aus dem Modell ausgeschlossen, wenn mindestens eine dieser Beding
 
 Es gibt keine weitere Interpretation von Statusfeldern: Zum Beispiel wird `notice_type "Canceled"` nicht als Ausschlussgrund gewertet. „Fremdliga"-Spiele werden nicht gesondert behandelt (die Saisondateien enthalten nur Ligaspiele).
 
+**Datenqualitäts-Ausnahme zu `not_ended`** (`hasCompleteResultAndEvents`, `scripts/model/normalize.mjs`): Ein Spiel mit `ended !== true`, aber einem vollständigen numerischen `result` UND mindestens einem Event, gilt trotzdem als beendet und bleibt im Modell. Grund: In der Praxis haben unvollständige Spiele weder ein vollständiges Ergebnis noch Events — `ended: false` ist hier erkennbar nur ein Datenfehler, kein echter Hinweis auf ein noch laufendes/nicht gespieltes Spiel. Die Regel ist bewusst allgemein formuliert (kein hartverdrahteter ID-Filter) und greift automatisch, falls künftig importierte Daten denselben Fehler zeigen. Betroffen sind aktuell acht Spiele in 21/22: 25677, 25679, 25681, 25682, 25683, 26478, 26613, 26644 (siehe `quality.endedFalseIncludedByException`, Abschnitt unten, und den Build-Bericht der Datenqualitäts-Phase). Diese acht Spiele zählen seither auch für `buildMatchdays()` (3.6.3) als beendet.
+
 **Abweichung zum Dashboard:** `isGamePlayed()` in `index.html` zählt Spiele mit Tor-Events als gespielt, auch wenn `ended` nicht `true` ist. Das Modell tut das nicht. `isGamePlayed` ist unverändert.
 
 Die Qualitätskennzahlen beziehen sich auf **alle beendeten Spiele** (auch später ausgeschlossene Forfait-Spiele); `modelGames` und die Arrays enthalten nur Modell-Spiele.
 
 ### Ausgeschlossene Spiele im Bericht
 
-`quality.excludedGames[]` führt **jedes** ausgeschlossene Spiel: `seasonKey`, `gameId`, `date`, `home`, `guest`, `ulmInvolved`, `reason`, `reasons`, die Rohmarker `ended`, `noticeType` (`notice_type`) und `resultForfait` (`result.forfait`), `score` (Endstand, falls vorhanden) und `events` (Anzahl). `quality.endedFalseWithEvidence` ist die Untermenge der nicht beendeten Spiele mit Events oder Endstand. Der Terminal-Bericht listet alle beendeten Ausschlüsse und alle nicht beendeten Spiele mit Events/Endstand einzeln; nicht beendete Spiele ohne Events/Endstand erscheinen als Zahl mit der Verteilung der `notice_type`-Rohwerte.
+`quality.excludedGames[]` führt **jedes** ausgeschlossene Spiel: `seasonKey`, `gameId`, `date`, `home`, `guest`, `ulmInvolved`, `reason`, `reasons`, die Rohmarker `ended`, `noticeType` (`notice_type`) und `resultForfait` (`result.forfait`), `score` (Endstand, falls vorhanden) und `events` (Anzahl). `quality.endedFalseWithEvidence` ist die Untermenge der weiterhin nicht beendeten Spiele mit Events oder Endstand, die NICHT unter die Datenqualitäts-Ausnahme fallen (z. B. nur ein Event ohne vollständiges Ergebnis, oder umgekehrt). `quality.endedFalseIncludedByException` führt dieselben Felder für Spiele, die über die Ausnahme (siehe oben) trotz `ended !== true` einbezogen wurden — diese stehen NICHT in `excludedGames`. Der Terminal-Bericht listet alle beendeten Ausschlüsse und alle nicht beendeten Spiele mit Events/Endstand einzeln, gefolgt von einem eigenen Abschnitt „Datenqualitäts-Ausnahme“ für die einbezogenen Spiele; nicht beendete Spiele ohne Events/Endstand erscheinen als Zahl mit der Verteilung der `notice_type`-Rohwerte.
 
 ### Teams
 
@@ -170,14 +172,14 @@ log λ_i = μ + attack[a] − defense[b] + β_order·O_i + β_le6·K6_i + β_ge9
 
 - Zeilen mit `isHostingTeam = null` bleiben in Stufe 1 und werden in Stufe 2 **nicht verwendet**. Sie werden **nicht als `false` gelesen**, es gibt **keinen `hostUnknown`-Term**. Bei unbekanntem Host bleibt die Erwartung exakt `λ_Stufe1`.
 - **O2 ist bewusst nicht mathematisch identisch mit einer gemeinsamen Regression** (Formel der Spezifikation: `β_host·isHostingTeam` im selben Fit). Das ist die fachliche Konsequenz der nur teilweise beobachteten Host-Information: `hosting_club` fehlt in 21/22–24/25 bei den beendeten Spielen vollständig (`null` ist damit exakt „Saison vor 25/26“), in 25/26 ist er vorhanden. Ein `hostUnknown`-Term wäre deshalb faktisch ein Saison-Indikator gewesen.
-- Datenbefund (alle Saisons, nach dem `gameOrderOfDay`-Filter): 424 Team-Spiel-Zeilen, davon 312 `null`, 24 `true`, 88 `false`. Die 24 `true` sind 24 Spiele mit teilnehmendem Ausrichter; die 88 `false` enthalten die Gegenzeilen dieser 24 Spiele und die Spiele, in denen der Ausrichter nicht selbst beteiligt ist. Stufe 2 nimmt alle 112 bekannten Host-Zeilen als Input (24 `true` + 88 `false`); die 312 `null`-Zeilen gehen nicht in Stufe 2 ein.
+- Datenbefund (alle Saisons, nach dem `gameOrderOfDay`-Filter, Stand nach der Datenqualitäts-Ausnahme): 442 Team-Spiel-Zeilen, davon 330 `null`, 24 `true`, 88 `false` (vormals 424/312/24/88 — die Differenz sind ausschließlich die acht neu einbezogenen 21/22-Spiele, deren `hosting_club` wie der Rest von 21/22–24/25 fehlt und daher `null` bleibt). Die 24 `true` sind 24 Spiele mit teilnehmendem Ausrichter; die 88 `false` enthalten die Gegenzeilen dieser 24 Spiele und die Spiele, in denen der Ausrichter nicht selbst beteiligt ist. Stufe 2 nimmt alle 112 bekannten Host-Zeilen als Input (24 `true` + 88 `false`); die 330 `null`-Zeilen gehen nicht in Stufe 2 ein.
 - **Eigenschaft von Stufe 2 (direkte Konsequenz der O2-Formel, kein Implementierungsfehler):** Stufe 2 verarbeitet alle 112 bekannten Host-Zeilen (`stage2.rows.host` = 24, `stage2.rows.notHost` = 88). Für die Schätzung von `β_host` tragen mathematisch aber nur die `true`-Zeilen bei: Bei `false` ist H = 0 und damit `exp(β_host·0) = 1`, die Zeile hängt nicht von `β_host` ab. Die 88 `false`-Zeilen werden weder als unbekannt behandelt noch entfernt; sie gehören zum Datensatz mit bekanntem Host, liefern in diesem einparametrigen Offset-Modell aber keine β-Information. Ohne Stufe-2-Achsenabschnitt gilt `β_host = ln(Σ w·y / Σ w·μ_Stufe1)`, die Summen laufen nur über die Ausrichter-Zeilen. `β_host` ist also nicht „aus 112 Zeilen geschätzt“; es wird durch die 24 Ausrichter-Zeilen bestimmt, während Stufe 2 insgesamt 112 bekannte Zeilen als Input verarbeitet.
 - Nicht schätzbar (`stage2.estimable = false`, Warnung `stage2-not-estimable`, `betaHost = null`) bei: keine bekannten Host-Zeilen (`no-known-host-rows`), keine Ausrichter-Zeile (`no-host-true-rows`), Ausrichter-Zeilen ohne Tore (`host-rows-zero-goals`). Kein Absturz.
 
 ### Ausschlüsse und dünne Daten
 
-- `gameOrderOfDay === null` (oder nicht 1/2) → die **ganze Zeile** ist aus dem M1-Fit ausgeschlossen, nie als „1. Spiel“ gelesen. Warnung `order-null-excluded` mit Saison und Anzahl (aktuell 21/22 ×2, 24/25 ×2). Nicht endliche Werte in `goalsFor`/`fieldPlayerCount` → `invalid-rows-excluded`.
-- Spiele, die M0 nicht aufnimmt (z. B. `ended !== true`, Forfait), sind keine Eingabezeilen und fließen nicht ein.
+- `gameOrderOfDay === null` (oder nicht 1/2) → die **ganze Zeile** ist aus dem M1-Fit ausgeschlossen, nie als „1. Spiel“ gelesen. Warnung `order-null-excluded` mit Saison und Anzahl (aktuell 24/25 ×2; 21/22 hat seit der M0-Datenqualitäts-Ausnahme keine solchen Zeilen mehr). Nicht endliche Werte in `goalsFor`/`fieldPlayerCount` → `invalid-rows-excluded`.
+- Spiele, die M0 nicht aufnimmt (z. B. `ended !== true` ohne Datenqualitäts-Ausnahme, Forfait), sind keine Eingabezeilen und fließen nicht ein.
 - Dünne Daten: kein harter Null-Schwellenwert. Jedes Team mit Daten wird ausgegeben, mit `games` (Team-Spiel-Zeilen im Fit) und `weightedGames`. Liegt `games` unter `minGamesWarning` (Standard 6, konfigurierbar; 0 schaltet ab), gibt es die Warnung `thin-data`.
 - Teamidentität: der M0-`teamKey` (keine zusätzliche Fusions-, Alias- oder SG-Logik in M1, keine Vererbung zwischen Teams). Neue Teams haben keinen Prior außer der Ridge-Schrumpfung Richtung 0.
 
@@ -297,7 +299,7 @@ Nur `goalEvents` liefern Tore und Assists; jedes Ereignis wird genau einmal gele
 - **Tor:** `derived.scorerMatch === 'roster'` mit gültiger `scorerPlayerId`, sofern der Schütze in diesem Spiel einen Feldspieler-Kaderplatz hat. Ein Tor ohne Spielerzeile (z. B. Kaderzeile ohne `playerId`) wird gezählt und gewarnt, nicht zugerechnet.
 - **Strafschuss-Tore** sind normale Tore (genau einmal); `isPenaltyShot` wird nur als Zähler (`quality.goals.penaltyShot`) ausgewiesen, es gibt keine separate Strafschussquote.
 - **Eigentore** (`isOwnGoal`) und **`not_assigned`** haben keinen Spieler und keinen Assist und zählen nicht als Spielertor. Das ist weder Fehler noch Warnung.
-- **Assists:** `assistKind === 'player'` → 1 Assist für den Assistgeber, wenn er in diesem Spiel einen Feldspieler-Kaderplatz hat; `'none'` → 0; `'placeholder'` und `'unmatched'` → kein zugeordneter Assist (gezählt und gewarnt). Assists von Goalies werden keinem Feldspieler zugerechnet (gezählt und gewarnt). Es wird nichts imputiert; die Assist-Lücken der Quelldaten (in 21/22 fehlt der Schlüssel `assist` bei 138 Toren, M0 liest das als „kein Assist“) sind Datenqualitätsgrenzen, keine Korrektur.
+- **Assists:** `assistKind === 'player'` → 1 Assist für den Assistgeber, wenn er in diesem Spiel einen Feldspieler-Kaderplatz hat; `'none'` → 0; `'placeholder'` und `'unmatched'` → kein zugeordneter Assist (gezählt und gewarnt). Assists von Goalies werden keinem Feldspieler zugerechnet (gezählt und gewarnt). Es wird nichts imputiert; die Assist-Lücken der Quelldaten (in 21/22 fehlt der Schlüssel `assist` bei 172 Toren, M0 liest das als „kein Assist“) sind Datenqualitätsgrenzen, keine Korrektur.
 - **Scorerpunkte** = Tore + Assists je Spieler-Spiel, eigene Zielvariable.
 
 ### Zeitachse und Gewichtung (wie M1)
@@ -335,11 +337,11 @@ Je Zielvariable getrennt auf der **ungerundeten** geschrumpften Quote aller sch�
 
 `empty-asof` (`reason`: `no-rows-in-cutoff` | `no-eligible-rows`), `roster-missing-date`, `roster-invalid-date`, `roster-invalid-goalie-flag`, `roster-missing-player-id`, `roster-duplicate-row`, `goals-without-player-row`, `goals-unmatched`, `assists-by-goalies-not-attributed`, `assists-without-player-row`, `assists-placeholder`, `assists-unmatched`, `assists-unknown-kind`, `prior-not-estimable` (`target`, `reason`), `player-not-estimable` (`target`, `count`). Kein Warnfall: Eigentore, `not_assigned`, Strafschuss-Tore, Assistart `none`, kleine oder einelementige Stufen-Population (`tiers.<ziel>.status` ist informativ, siehe „Stufen“).
 
-**Assist-Rohkategorien im Detail** (Abgleich mit der M0-Auswertung, Stand aller fünf Saisons): M0 zählt `assistKind` über **alle** 3127 Tor-Ereignisse: `player` 2177, `none` 930, `placeholder` 17, `unmatched` 3. M2 liest `assistKind` nur für Ereignisse, die **weder Eigentor noch `not_assigned`** sind (bei beiden gibt es laut M0 „keinen Schützen, keinen Assist“ — das Ereignis wird komplett übersprungen, bevor die Assist-Art überhaupt geprüft wird). Die Differenz erklärt sich vollständig darüber:
-- `none`: 930 − 21 (auf Eigentoren) = **909** bei M2.
+**Assist-Rohkategorien im Detail** (Abgleich mit der M0-Auswertung, Stand aller fünf Saisons nach der Datenqualitäts-Ausnahme): M0 zählt `assistKind` über **alle** 3251 Tor-Ereignisse (vormals 3127, +124 durch die acht neu einbezogenen 21/22-Spiele): `player` 2267, `none` 964, `placeholder` 17, `unmatched` 3. M2 liest `assistKind` nur für Ereignisse, die **weder Eigentor noch `not_assigned`** sind (bei beiden gibt es laut M0 „keinen Schützen, keinen Assist“ — das Ereignis wird komplett übersprungen, bevor die Assist-Art überhaupt geprüft wird). Die Differenz erklärt sich vollständig darüber:
+- `none`: 964 − 21 (auf Eigentoren) = **943** bei M2.
 - `placeholder`: 17 − 1 (ein Eigentor mit Platzhalter-Assistnummer 2000) = **16** bei M2.
 - `unmatched`: 3 − 3 (alle 3 liegen auf `not_assigned`-Ereignissen) = **0** bei M2.
-- `player`: 2177, unverändert (kein `player`-Assist liegt auf einem Eigentor oder `not_assigned`, das erzwingt M0 bereits selbst). Davon zerfällt M2 weiter in `attributed` 2102 (Feldspieler mit Kaderplatz im Spiel), `assists-by-goalies-not-attributed` 74 (Assistgeber ist Torhüter) und `assists-without-player-row` 1 — ein Kaderspieler ohne `playerId` (21/22, Spiel 25691), dessen `assistPlayerId` deshalb `null` ist, obwohl `assistKind` `player` lautet.
+- `player`: 2267, unverändert gegenüber M0 (kein `player`-Assist liegt auf einem Eigentor oder `not_assigned`, das erzwingt M0 bereits selbst). Davon zerfällt M2 weiter in `attributed` 2190 (Feldspieler mit Kaderplatz im Spiel), `assists-by-goalies-not-attributed` 76 (Assistgeber ist Torhüter) und `assists-without-player-row` 1 — ein Kaderspieler ohne `playerId` (21/22, Spiel 25691), dessen `assistPlayerId` deshalb `null` ist, obwohl `assistKind` `player` lautet.
 
 Es gibt keine Überschneidung zwischen `placeholder`, `unmatched` und „Spieler ohne `playerId`“: Das sind drei unabhängige Fälle (Rohnummer im Platzhalterbereich; Rohnummer passt zu keinem Kaderspieler; Rohnummer passt zu einem Kaderspieler, dessen `player_id` in den Quelldaten fehlt).
 
@@ -354,7 +356,7 @@ Die Rundung passiert erst an dieser Ausgabegrenze (`roundOutput`). Im JSON steht
 
 ### Datenqualitätsgrenzen (echte Daten, Stand aller fünf Saisons)
 
-268 Feldspieler, 3547 Kaderplätze; 487 Goalie-Zeilen und 2 Kaderzeilen ohne `playerId` ausgeschlossen. 3127 Tor-Ereignisse: 3101 Spielern zugeordnet (davon 23 Strafschüsse), 22 Eigentore, 3 `not_assigned`, 1 Tor eines Kaderspielers ohne `playerId` (keine Spielerzeile; 3101 + 1 = 3102 Tore mit Kaderschütze). Assists: 2102 Feldspielern zugeordnet, 74 von Goalies, 1 vom Spieler ohne `playerId`, 16 Platzhalter. Das sind Beobachtungen, keine Pins der Modellwerte.
+270 Feldspieler, 3674 Kaderplätze; 503 Goalie-Zeilen und 2 Kaderzeilen ohne `playerId` ausgeschlossen. 3251 Tor-Ereignisse: 3225 Spielern zugeordnet (davon 24 Strafschüsse), 22 Eigentore, 3 `not_assigned`, 1 Tor eines Kaderspielers ohne `playerId` (keine Spielerzeile; 3225 + 1 = 3226 Tore mit Kaderschütze). Assists: 2190 Feldspielern zugeordnet, 76 von Goalies, 1 vom Spieler ohne `playerId`, 16 Platzhalter. Das sind Beobachtungen, keine Pins der Modellwerte.
 
 ### Bewusst nicht enthalten
 
@@ -447,7 +449,7 @@ Im JSON stehen `players[]`/`rankList[]` nur im Hauptstand (`snapshots[0]`, `labe
 
 ### Datenlage (echte Daten, Stand aller fünf Saisons)
 
-43 Goalies, 428 Team-Spiel-Zeilen im Fenster: 365 Solo, 61 Shared, 2 ohne Goalie im Kader. 39 Goalies mit mindestens einem Solo-Spiel, davon 16 mit weniger als 4 Solo-Spielen; 4 Goalies ganz ohne Solo-Spiel. Das sind Beobachtungen, keine Pins der Modellwerte.
+43 Goalies, 444 Team-Spiel-Zeilen im Fenster: 381 Solo, 61 Shared, 2 ohne Goalie im Kader. 39 Goalies mit mindestens einem Solo-Spiel, davon 16 mit weniger als 4 Solo-Spielen; 4 Goalies ganz ohne Solo-Spiel. Das sind Beobachtungen, keine Pins der Modellwerte.
 
 ### Bewusst nicht enthalten
 
@@ -530,7 +532,7 @@ Anders als M1/M2/M3 gibt es für `--only M4` **keine** Saisonende-Schnappschüss
 
 ### Datenlage (echte Daten, Stand aller fünf Saisons, Bootstrap 20 Replikate Seed 1)
 
-424 Team-Spiel-Zeilen mit bekannter Reihenfolge (11 Teams über alle Saisons), 266 Feldspieler (108 mit 6+6 Eligibilität für den game1-vs-game2-Vergleich), 38 gerichtete Fresh-vs-Tired-Beobachtungen (19 fresh + 19 tired, 19 mit bekanntem `opponentPrevGameGoalDiff`). Das sind Beobachtungen, keine Pins der Modellwerte.
+442 Team-Spiel-Zeilen mit bekannter Reihenfolge (11 Teams über alle Saisons), 269 Feldspieler (114 mit 6+6 Eligibilität für den game1-vs-game2-Vergleich), 40 gerichtete Fresh-vs-Tired-Beobachtungen (20 fresh + 20 tired, 20 mit bekanntem `opponentPrevGameGoalDiff`). Das sind Beobachtungen, keine Pins der Modellwerte.
 
 ### Bewusst nicht enthalten
 
@@ -591,7 +593,7 @@ Regel: in den Snapshot nur, was eine Verlaufskurve über Spieltage speisen kann,
 
 ### Laufzeit und Größe (echte Daten, alle fünf Saisons, 20 Replikate Alltime + Snapshots, Seed 1)
 
-Vollständiger `--write`-Lauf: **≈ 25 Sekunden** (gemessen, weit unter dem 2-Minuten-Ziel). 12 Dateien insgesamt; `<season>.json`/`alltime.json` zwischen 138 KB (21/22, wenigste Saisons-Teams) und 353 KB (`alltime.json`); `snapshots/<season>.json` zwischen 14 KB (24/25, nur 3 abgeschlossene Spieltage) und 40 KB (23/24) — alle weit unter dem 2-MB-Grenzwert je Datei. Höhere Alltime-Replikatzahlen (z. B. 200) verlängern nur den Alltime-/Saisonende-Teil messbar (M4 allein ≈ 7,5 s bei 200 Replikaten auf dem vollen Datensatz), nicht den Snapshot-Teil (fest bei `SNAPSHOT_REPLICATES`).
+Vollständiger `--write`-Lauf: **≈ 25 Sekunden** (gemessen, weit unter dem 2-Minuten-Ziel). 12 Dateien insgesamt; `<season>.json`/`alltime.json` zwischen 141 KB (21/22, wenigste Saisons-Teams) und 348 KB (`alltime.json`); `snapshots/<season>.json` zwischen 22 KB (21/22) und 42 KB (25/26) — alle weit unter dem 2-MB-Grenzwert je Datei. Nach der Spieltagsstatus-Korrektur (3.6.3, Postponed/Canceled blockieren „abgeschlossen“ nicht mehr) hat 24/25 statt 3 jetzt 7 abgeschlossene Spieltage, entsprechend größere Snapshot-Datei (≈ 33 KB statt vormals ≈ 14 KB). Höhere Alltime-Replikatzahlen (z. B. 200) verlängern nur den Alltime-/Saisonende-Teil messbar (M4 allein ≈ 7,5 s bei 200 Replikaten auf dem vollen Datensatz), nicht den Snapshot-Teil (fest bei `SNAPSHOT_REPLICATES`).
 
 ### Bewusst nicht enthalten
 
@@ -603,41 +605,43 @@ Dashboard-Anbindung (`fetch('model-data/…')`, Spezifikation 3.4), Veraltet-Hin
 |---|---|
 | **Eigentor-Gutschrift** | Nicht entschieden. `teamSide`/`teamKey` = Rohwert `event_team`, `goalType`/`isOwnGoal` und Roh-Spielstände bleiben erhalten; `derived.scoreDeltaSide` zeigt nur, welche Seite im Spielstand steigt. In den Daten gibt es 2 Fälle (21/22, Spiele 25663 und 25696), in denen der Spielstand für die Gegenseite von `event_team` steigt; sie stehen als Qualitätswarnung. Die Gutschrift folgt in einem späteren Analysemodul. |
 | **Strafminuten** | Keine Umrechnung, keine Klassifikation. Nur Rohdaten (siehe oben). |
-| **Fehlende/unklare Zeiten** | `absSec = null`, keine Rekonstruktion oder Schätzung; Rohzeit bleibt (4 nicht lesbare Tore in 21/22, 5 widersprüchliche Events in 21/22 und 22/23). |
+| **Fehlende/unklare Zeiten** | `absSec = null`, keine Rekonstruktion oder Schätzung; Rohzeit bleibt (4 nicht lesbare Tore in 21/22, 14 widersprüchliche Events in 21/22 und 22/23 — davon 12 in 21/22 seit der Datenqualitäts-Ausnahme, zuvor 3, da die acht neu einbezogenen Spiele weitere Fälle beitragen). |
 | **Hosting ohne Rohwert** | `isHostingTeam = null` (21/22 bis 24/25). Keine Ableitung. |
 | **Platzhalter und Spielerzuordnung** | Platzhalternummern (1000, 2000) werden keinem Spieler zugeordnet; Rohnummer bleibt. Die Erkennung ist eine Quellformat-Regel, keine fachliche. |
-| **Ausgeschlossene 21/22-Spiele** | Acht Spiele mit `ended = false`, aber Endstand und Events (25677, 25679, 25681, 25682, 25683, 26478, 26613, 26644) sind nicht im Modell. Darunter drei Ulm-Spiele: 25677 (VBC Olympia Ludwigshafen – SG Sparks Tübingen-Ulm 9:10), 26613 (Sportvg Feuerbach – SG Sparks Tübingen-Ulm 17:3), 26644 (SG Sparks Tübingen-Ulm – TV Schriesheim 2:17). Ulm hat dadurch für 21/22 nur 9 statt 12 Team-Spiele im Modell. |
+| **21/22-Spiele mit `ended = false`, aber Endstand und Events** | Seit der Datenqualitäts-Ausnahme (siehe Abschnitt „Spielfilter (Modell-Spiele)“ oben) NICHT mehr ausgeschlossen: 25677, 25679, 25681, 25682, 25683, 26478, 26613, 26644 sind jetzt im Modell (`quality.endedFalseIncludedByException`). Darunter drei Ulm-Spiele: 25677 (VBC Olympia Ludwigshafen – SG Sparks Tübingen-Ulm 9:10), 26613 (Sportvg Feuerbach – SG Sparks Tübingen-Ulm 17:3), 26644 (SG Sparks Tübingen-Ulm – TV Schriesheim 2:17). Ulm hat dadurch für 21/22 jetzt 12 statt vormals 9 Team-Spiele im Modell. |
 | **Statusfelder** | `notice_type` wird nur für „verschoben/verlegt“ ausgewertet; andere Werte (z. B. `Canceled`) bleiben Rohwert ohne Wirkung. |
 
 ## Datenqualitätsbericht (`quality`)
 
-Je Saison u. a.: Spiele, beendet, nicht beendet, Modell-Spiele, Ausschlüsse (Forfait, verschoben, Jugend, ohne Endstand), `excludedGames`, `endedFalseWithEvidence`; Tore und Torarten; Eigentore (Events, Spiele, davon mit Ulm-Beteiligung); Penalty-Schüsse, Strafen, Timeouts; Zeitformate (kumuliert, gemischt, HZ1 > 20:00, nicht lesbar); Assist-Rohformen; Torschützen-Zuordnung und Platzhalternummern; Torsumme ≠ Endstand; Spielstandketten (`scoreChainBreaks`, `scoreMissing`, `scoreDeltaSideConflicts`); `hosting_club` fehlend/vorhanden; Goalies (ohne Goalie, ohne Kader, zwei Goalies, Flag-Widersprüche); Team-Spieltage mit ≠ 2 beendeten Spielen.
+Je Saison u. a.: Spiele, beendet, nicht beendet, Modell-Spiele, Ausschlüsse (Forfait, verschoben, Jugend, ohne Endstand), `excludedGames`, `endedFalseWithEvidence`, `endedFalseIncludedByException`; Tore und Torarten; Eigentore (Events, Spiele, davon mit Ulm-Beteiligung); Penalty-Schüsse, Strafen, Timeouts; Zeitformate (kumuliert, gemischt, HZ1 > 20:00, nicht lesbar); Assist-Rohformen; Torschützen-Zuordnung und Platzhalternummern; Torsumme ≠ Endstand; Spielstandketten (`scoreChainBreaks`, `scoreMissing`, `scoreDeltaSideConflicts`); `hosting_club` fehlend/vorhanden; Goalies (ohne Goalie, ohne Kader, zwei Goalies, Flag-Widersprüche); Team-Spieltage mit ≠ 2 beendeten Spielen.
 
 ## Bekannte Datenqualitätsbefunde
 
 | | 21/22 | 22/23 | 23/24 | 24/25 | 25/26 |
 |---|---|---|---|---|---|
-| Spiele / beendet / Modell | 42 / 34 / 34 | 42 / 42 / 42 | 42 / 42 / 42 | 51 / 42 / 40 | 60 / 56 / 56 |
-| Ausgeschlossene Spiele | 8 | 0 | 0 | 11 | 4 |
-| Tore | 495 | 613 | 583 | 576 | 860 |
-| Spiele mit kumulierter HZ2-Zeit (davon gemischt) | 11 (2) | 13 (1) | 6 | 13 | 7 |
+| Spiele / beendet / Modell | 42 / 42 / 42 | 42 / 42 / 42 | 42 / 42 / 42 | 51 / 42 / 40 | 60 / 56 / 56 |
+| Ausgeschlossene Spiele | 0 | 0 | 0 | 11 | 4 |
+| Tore | 619 | 613 | 583 | 576 | 860 |
+| Spiele mit kumulierter HZ2-Zeit (davon gemischt) | 14 (3) | 13 (1) | 6 | 13 | 7 |
 | Eigentore (Spiele, davon Ulm) | 6 (1) | 4 (2) | 5 (0) | 3 (1) | 4 (1) |
 | `not_assigned` | 2 | 1 | – | – | – |
-| Assist-Rohform | 138 × Schlüssel fehlt | 183 × `0` | 167 × `0` | 193 × `0` | 249 × `0` |
+| Assist-Rohform | 172 × Schlüssel fehlt | 183 × `0` | 167 × `0` | 193 × `0` | 249 × `0` |
 | `hosting_club` | fehlt | fehlt | fehlt | fehlt | vorhanden |
 | Team-Spiele ohne Goalie (ohne Kader) | 0 | 1 | 0 | 5 (4) | 0 |
 | Team-Spiele mit zwei Goalies | 5 | 14 | 18 | 17 | 7 |
-| Team-Spieltage mit ≠ 2 Spielen | 2 (MD11) | 0 | 0 | 0 | 0 |
-| Timeouts | 13 | 19 | 24 | 29 | 36 |
-| Penalty-Schüsse | 3 | 5 | 5 | 4 | 6 |
+| Team-Spieltage mit ≠ 2 Spielen | 0 | 0 | 0 | 0 | 0 |
+| Timeouts | 22 | 19 | 24 | 29 | 36 |
+| Penalty-Schüsse | 4 | 5 | 5 | 4 | 6 |
 | Torsumme ≠ Endstand | Spiel 25663 (15 Events, Endstand 14) | – | – | 40512, 40514 (Forfait, keine Events) | – |
-| Spielstandketten-Brüche / `scoreDeltaSide` ≠ `event_team` | 4 / 2 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Spielstandketten-Brüche / `scoreDeltaSide` ≠ `event_team` | 6 / 2 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+Stand nach der Datenqualitäts-Ausnahme (siehe „Spielfilter (Modell-Spiele)“ oben); 21/22 hatte vorher 34 beendete/Modell-Spiele, 8 ausgeschlossene Spiele, 495 Tore, 11 (2) kumulierte HZ2-Spiele, 138 × fehlenden Assist-Schlüssel, 2 Team-Spieltage mit ≠ 2 Spielen (MD11), 13 Timeouts, 3 Penalty-Schüsse und 4 Spielstandketten-Brüche — die Differenz sind ausschließlich die acht neu einbezogenen Spiele.
 
 Weitere Befunde:
 
 - **Ausgeschlossene Spiele 24/25 und 25/26:** In 24/25 zwei beendete Forfait-Spiele (40512, 40514) und 9 nicht beendete Spiele ohne Events (`notice_type` `Postponed` ×7, `Canceled` ×2); in 25/26 vier nicht beendete Spiele (`Postponed` ×4).
-- **Assists:** In 21/22 fehlt der Schlüssel `assist` bei 138 Toren (nicht `null`, nicht `0`); in den späteren Saisons steht bei Toren ohne Assist `0`. Zusätzlich 17 Assists mit Platzhalter 2000 in 21/22.
+- **Assists:** In 21/22 fehlt der Schlüssel `assist` bei 172 Toren (nicht `null`, nicht `0`); in den späteren Saisons steht bei Toren ohne Assist `0`. Zusätzlich 17 Assists mit Platzhalter 2000 in 21/22.
 - **Zeit:** In 3 Spielen (21/22: 25661, 25693; 22/23: 29268) enthalten kumulierte Spiele auch Halbzeit-2-Zeiten ≤ 20:00. Halbzeit 1 über 20:00 kommt in keiner Saison vor.
-- **Spielstandketten (21/22):** In Spiel 25663 hat ein Tor-Event keine Spielstandänderung (das erklärt „15 Events ≠ Endstand 14“), in Spiel 25693 folgen drei Spielstände nicht mit genau einem Tor. Die zwei Konflikte `event_team` ↔ `scoreDeltaSide` sind Eigentore in 25663 und 25696. In den anderen Saisons steigt der Spielstand bei Eigentoren für `event_team`.
+- **Spielstandketten (21/22):** In Spiel 25663 hat ein Tor-Event keine Spielstandänderung (das erklärt „15 Events ≠ Endstand 14“), in Spiel 25693 folgen drei Spielstände nicht mit genau einem Tor, in Spiel 25682 (seit der Datenqualitäts-Ausnahme einbezogen) zwei weitere. Die zwei Konflikte `event_team` ↔ `scoreDeltaSide` sind Eigentore in 25663 und 25696 (unverändert). In den anderen Saisons steigt der Spielstand bei Eigentoren für `event_team`.
 - **Team-Zuordnung 24/25:** `SG Freiburg-Tübingen` wird nach der bestehenden Regel (`getCanonicalTeamName`) als `Breisgau Bandits` geführt.
 - **Trikotnummern-Platzhalter:** 1000 (Eigentor), 2000 (`not_assigned`, Assist).
