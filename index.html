@@ -22250,15 +22250,19 @@ function socialVideoLayoutScene(spec,scene,sceneMs,height){
  * von zwei animierten Elementen pro Szene", Deckkraft der Hintergrundebene höchstens 0,35 hinter Textbereichen. */
 function socialVideoBackgroundLayer(spec,timeMs,height,sceneId){
   const cmds=[];
-  cmds.push({type:'background',x:0,y:0,w:SOCIAL_VIDEO_WIDTH,h:height,fill:'#0E0306'});
-  cmds.push({type:'circle',x:SOCIAL_VIDEO_WIDTH*0.72,y:height*0.06,r:SOCIAL_VIDEO_WIDTH*0.5,fill:{type:'radial',cx:0.5,cy:0.5,stops:[[0,'rgba(204,26,39,.5)'],[1,'rgba(204,26,39,0)']]},opacity:1});
+  // cacheable:true (Rechenbudget Abschnitt 4.4): Hintergrund, Glow und die Skyline-BASIS ändern sich zwischen
+  // Frames nur durch die kleine Parallaxe (x) — Schicht B rendert sie einmal in ein Offscreen-Canvas und
+  // kopiert/verschiebt sie danach nur noch (billige drawImage-Operation statt erneutem Pfad-/Verlaufsaufbau).
+  // Der Sweep-Highlight-Pfad und alles danach (Spatzen, Fahne) ist NICHT cacheable (ändert sich jeden Frame).
+  cmds.push({type:'background',x:0,y:0,w:SOCIAL_VIDEO_WIDTH,h:height,fill:'#0E0306',cacheable:true});
+  cmds.push({type:'circle',x:SOCIAL_VIDEO_WIDTH*0.72,y:height*0.06,r:SOCIAL_VIDEO_WIDTH*0.5,fill:{type:'radial',cx:0.5,cy:0.5,stops:[[0,'rgba(204,26,39,.5)'],[1,'rgba(204,26,39,0)']]},opacity:1,cacheable:true});
   const introMs=(spec.scenes?.[0]?.endMs)||2400;
   const skyline=socialVideoSkylineTransform(timeMs,spec.durationMs||15000,introMs);
   const scale=SOCIAL_VIDEO_WIDTH/SOCIAL_VIDEO_SKYLINE_VIEWBOX.w;
   const skylineY=height-SOCIAL_VIDEO_SKYLINE_VIEWBOX.h*scale*0.62;
-  cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'rgba(148,163,184,.3)',strokeWidth:2.4/scale,opacity:0.9});
+  cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'rgba(148,163,184,.3)',strokeWidth:2.4/scale,opacity:0.9,cacheable:true,cacheOffsetX:skyline.parallaxX});
   if(skyline.sweepProgress<1){
-    cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'#ff304d',strokeWidth:3/scale,opacity:1,clipSweep:skyline.sweepProgress,clipWidthPx:SOCIAL_VIDEO_SKYLINE_VIEWBOX.w*scale});
+    cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'#ff304d',strokeWidth:3/scale,opacity:1,clipSweepFrac:skyline.sweepProgress});
   }
   for(const s of socialVideoSparrowPositions(timeMs,SOCIAL_VIDEO_WIDTH,height)){
     cmds.push({type:'image',assetKey:'assets/spatz.svg',x:s.x,y:s.y,w:24,h:20,opacity:Math.min(0.48,s.opacity)});
@@ -22298,152 +22302,249 @@ function socialVideoDrawList(spec,timeMs){
   return cmds;
 }
 
+/** timeMs innerhalb einer Szene (Standardmäßig 85% hinein: alle Fade-/Count-Animationen sind dann sicher
+ * abgeschlossen, siehe socialVideoElementProgress — höchste delayMs+Dauer in dieser Spezifikation ist 600ms). */
+function socialVideoSceneTimeMs(spec,sceneId,fraction=0.85){
+  const scene=(spec?.scenes||[]).find(s=>s.id===sceneId);
+  if(!scene)return 0;
+  return scene.startMs+(scene.endMs-scene.startMs)*fraction;
+}
+/** Zeitpunkt für den EINEN Standbild-Export (Umfangspunkt 3 dieser Phase): die informationsdichteste Szene,
+ * settled (85% hinein) — Story: Gegner-Szene (Matchup+Form), Feed: letzte vorhandene Gegner-Szene. */
+function socialVideoStandbildTimeMs(spec){
+  const scenes=spec?.scenes||[];
+  if(!scenes.length)return 0;
+  const preferredIds=spec.format==='feed-4x5'?['opponentB','opponentA']:['opponent'];
+  for(const id of preferredIds)if(scenes.some(s=>s.id===id))return socialVideoSceneTimeMs(spec,id);
+  return socialVideoSceneTimeMs(spec,scenes[scenes.length-1].id);
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// S2 — Canvas2D-Renderer, SCHICHT B (docs/social-video-spezifikation.md Abschnitt 3.2): browserseitig, dünn.
+// Kein Layout, keine Animationslogik hier — nur Übersetzung der von Schicht A gelieferten Befehle in
+// Canvas2D-Aufrufe, plus Asset-Laden/MediaRecorder-Orchestrierung (reines I/O, nicht testbar ohne Browser,
+// deshalb bewusst von Schicht A getrennt).
+// ═════════════════════════════════════════════════════════════════════════
+
+function socialVideoApplyFillStyle(ctx,fill,x,y,w,h){
+  if(!fill)return null;
+  if(typeof fill==='string')return fill;
+  if(fill.type==='linear'){
+    const g=ctx.createLinearGradient(x+fill.x0*w,y+fill.y0*h,x+fill.x1*w,y+fill.y1*h);
+    for(const[off,c]of fill.stops)g.addColorStop(off,c);
+    return g;
+  }
+  if(fill.type==='radial'){
+    const cx=x+fill.cx*w,cy=y+fill.cy*h,r=Math.max(w,h)/2;
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+    for(const[off,c]of fill.stops)g.addColorStop(off,c);
+    return g;
+  }
+  return'#000';
+}
+function socialVideoFontString(cmd){
+  const family=cmd.font==='mono'?"'DM Mono'":cmd.font==='inter'?"'Inter'":"'Syne'";
+  return`${cmd.weight||900} ${Math.round(cmd.size)}px ${family}`;
+}
+/** Führt EINEN Zeichenbefehl aus (reine Übersetzung, kein Layout). assets = {assetKey: HTMLImageElement}, nur
+ * erfolgreich geladene Bilder enthalten — fehlt ein Schlüssel, wird der image-Befehl übersprungen, der von
+ * Schicht A darunter bereits gezeichnete Fallback (Ring/Initialen) bleibt sichtbar. */
+function socialVideoDrawCommand(ctx,cmd,assets){
+  ctx.save();
+  ctx.globalAlpha=cmd.opacity??1;
+  switch(cmd.type){
+    case'background':
+      ctx.fillStyle=cmd.fill;
+      ctx.fillRect(cmd.x,cmd.y,cmd.w,cmd.h);
+      break;
+    case'rect':{
+      ctx.fillStyle=socialVideoApplyFillStyle(ctx,cmd.fill,cmd.x,cmd.y,cmd.w,cmd.h);
+      if(cmd.rx&&ctx.roundRect){ctx.beginPath();ctx.roundRect(cmd.x,cmd.y,cmd.w,cmd.h,cmd.rx);ctx.fill();}
+      else ctx.fillRect(cmd.x,cmd.y,cmd.w,cmd.h);
+      break;
+    }
+    case'circle':{
+      ctx.beginPath();
+      ctx.arc(cmd.x,cmd.y,cmd.r,0,Math.PI*2);
+      if(cmd.fill){ctx.fillStyle=socialVideoApplyFillStyle(ctx,cmd.fill,cmd.x-cmd.r,cmd.y-cmd.r,cmd.r*2,cmd.r*2);ctx.fill();}
+      if(cmd.stroke){ctx.strokeStyle=cmd.stroke;ctx.lineWidth=cmd.strokeWidth||2;ctx.stroke();}
+      break;
+    }
+    case'path':{
+      const p=new Path2D(cmd.d);
+      ctx.translate(cmd.x,cmd.y);
+      ctx.scale(cmd.scale||1,cmd.scale||1);
+      if(cmd.clipSweepFrac!==undefined){
+        ctx.beginPath();
+        ctx.rect(0,0,SOCIAL_VIDEO_SKYLINE_VIEWBOX.w*cmd.clipSweepFrac,SOCIAL_VIDEO_SKYLINE_VIEWBOX.h);
+        ctx.clip();
+      }
+      if(cmd.fill){ctx.fillStyle=cmd.fill;ctx.fill(p);}
+      if(cmd.stroke){ctx.strokeStyle=cmd.stroke;ctx.lineWidth=cmd.strokeWidth||1;ctx.stroke(p);}
+      break;
+    }
+    case'text':{
+      ctx.font=socialVideoFontString(cmd);
+      ctx.fillStyle=cmd.color;
+      ctx.textAlign=cmd.align||'center';
+      ctx.textBaseline='middle';
+      if(cmd.letterSpacing&&'letterSpacing'in ctx)ctx.letterSpacing=`${cmd.letterSpacing}px`;
+      ctx.fillText(cmd.text,cmd.x,cmd.y);
+      break;
+    }
+    case'image':{
+      const img=assets?.[cmd.assetKey];
+      if(!img)break;
+      if(cmd.brightness&&cmd.brightness!==1)ctx.filter=`brightness(${cmd.brightness})`;
+      if(cmd.clip==='circle'){ctx.beginPath();ctx.arc(cmd.cx,cmd.cy,cmd.cr,0,Math.PI*2);ctx.clip();}
+      if(cmd.srcRect)ctx.drawImage(img,cmd.srcRect.x,cmd.srcRect.y,cmd.srcRect.w,cmd.srcRect.h,cmd.x,cmd.y,cmd.w,cmd.h);
+      else ctx.drawImage(img,cmd.x,cmd.y,cmd.w,cmd.h);
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+/** Rechenbudget (Abschnitt 4.4): Hintergrund/Glow/Skyline-Basis (cacheable:true, siehe socialVideoBackgroundLayer)
+ * werden EINMAL in ein Offscreen-Canvas gerendert; socialVideoRenderFrame kopiert sie danach nur noch (ein
+ * drawImage, um die kleine Parallaxe verschoben) statt Pfad/Verläufe erneut aufzubauen. */
+function socialVideoBuildStaticLayer(baselineDrawList,width,height){
+  const canvas=document.createElement('canvas');
+  canvas.width=width;canvas.height=height;
+  const ctx=canvas.getContext('2d');
+  for(const cmd of baselineDrawList)if(cmd.cacheable)socialVideoDrawCommand(ctx,{...cmd,x:(cmd.x||0)-(cmd.cacheOffsetX||0)},{});
+  return canvas;
+}
+
+/** Führt eine vollständige Zeichenliste aus. staticLayer (optional) ersetzt alle cacheable-Befehle durch
+ * einen einzigen verschobenen Blit (siehe socialVideoBuildStaticLayer); ohne staticLayer werden sie regulär
+ * (einzeln) gezeichnet — Fallback für den Standbild-/Kontaktbogen-Export, wo sich Prerendering nicht lohnt. */
+function socialVideoRenderFrame(ctx,drawList,assets,staticLayer){
+  let staticBlitted=false;
+  for(const cmd of drawList){
+    if(cmd.cacheable&&staticLayer){
+      if(!staticBlitted){ctx.drawImage(staticLayer,cmd.cacheOffsetX||0,0);staticBlitted=true;}
+      continue;
+    }
+    socialVideoDrawCommand(ctx,cmd,assets);
+  }
+}
+
+/** Lädt alle in einer Story-/Feed-Spec referenzierten Bild-Assets einmal (lokale, same-origin Dateien —
+ * assets/teams/*.png, assets/vfb-ulm-logo-mark.png, assets/spatz.svg). Fehlschläge werden NICHT geworfen:
+ * das Ergebnis enthält einfach keinen Eintrag für diesen Schlüssel, der Initialen-Fallback greift (siehe
+ * socialVideoDrawCommand, Fall 'image'). */
+async function socialVideoLoadAssets(spec){
+  const keys=new Set(['assets/spatz.svg','assets/vfb-ulm-logo-mark.png']);
+  for(const scene of spec?.scenes||[])for(const el of scene.elements||[])if(el.type==='logo'&&el.asset)keys.add(el.asset);
+  const assets={};
+  await Promise.all([...keys].map(key=>new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{assets[key]=img;resolve();};
+    img.onerror=()=>resolve();
+    img.src=key;
+  })));
+  return assets;
+}
+
+function socialVideoCreateCanvas(width,height){
+  const canvas=document.createElement('canvas');
+  canvas.width=width;canvas.height=height;
+  canvas.style.position='fixed';
+  canvas.style.left='-99999px';
+  canvas.style.top='0';
+  document.body.appendChild(canvas);
+  return canvas;
+}
+
+/** Erster unterstützter WebM-MimeType (VP9 bevorzugt, sonst VP8, sonst generisches WebM — Spezifikation 3.2). */
+function socialVideoPickMimeType(){
+  const candidates=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  for(const c of candidates)if(globalThis.MediaRecorder?.isTypeSupported?.(c))return c;
+  return globalThis.MediaRecorder?'video/webm':null;
+}
+
+/** Zeichnet EIN Standbild aus spec bei timeMs auf einen frischen Canvas und liefert eine PNG-Data-URL.
+ * Ersetzt den SVG-foreignObject-Weg für die S1-Standbildausgabe (Spezifikation Umfangspunkt 3 dieser Phase) —
+ * kein getaintetes Canvas, da ausschließlich lokale, same-origin Assets gezeichnet werden. */
+async function socialVideoRenderStandbildDataUrl(spec,timeMs){
+  const width=SOCIAL_VIDEO_WIDTH,height=socialVideoHeightForFormat(spec.format);
+  const canvas=document.createElement('canvas');
+  canvas.width=width;canvas.height=height;
+  const ctx=canvas.getContext('2d');
+  const assets=await socialVideoLoadAssets(spec);
+  socialVideoRenderFrame(ctx,socialVideoDrawList(spec,timeMs),assets,null);
+  return canvas.toDataURL('image/png');
+}
+
+/** Orchestriert eine komplette Aufnahme (Spezifikation 3.2/4, Umfangspunkt 4): captureStream(30)+MediaRecorder,
+ * Frame-Schleife über die reale Spielzeit (performance.now()-basiert, nicht framegezählt — damit die
+ * tatsächliche Dauer auch bei schwankender Bildrate exakt 15000ms trifft), Fortschritt pro Frame über
+ * onProgress, Abbruch über AbortSignal. Gibt {blob, mimeType} zurück oder null bei Abbruch/Fehler. */
+async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
+  if(!globalThis.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return null;
+  const mimeType=socialVideoPickMimeType();
+  if(!mimeType)return null;
+  const width=SOCIAL_VIDEO_WIDTH,height=socialVideoHeightForFormat(spec.format);
+  const canvas=socialVideoCreateCanvas(width,height);
+  try{
+    const ctx=canvas.getContext('2d');
+    const assets=await socialVideoLoadAssets(spec);
+    const staticLayer=socialVideoBuildStaticLayer(socialVideoDrawList(spec,0),width,height);
+    socialVideoRenderFrame(ctx,socialVideoDrawList(spec,0),assets,staticLayer);
+    const stream=canvas.captureStream(SOCIAL_VIDEO_FPS);
+    const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:6_000_000});
+    const chunks=[];
+    recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+    const stopped=new Promise(resolve=>{recorder.onstop=resolve;});
+    recorder.start();
+    const durationMs=spec.durationMs||15000;
+    const startedAt=performance.now();
+    let aborted=false;
+    const onAbort=()=>{aborted=true;};
+    signal?.addEventListener('abort',onAbort);
+    await new Promise(resolve=>{
+      const step=()=>{
+        if(aborted){resolve();return;}
+        const elapsed=performance.now()-startedAt;
+        const t=Math.min(elapsed,durationMs);
+        socialVideoRenderFrame(ctx,socialVideoDrawList(spec,t),assets,staticLayer);
+        onProgress?.({elapsedMs:t,durationMs});
+        if(t>=durationMs){resolve();return;}
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+    signal?.removeEventListener('abort',onAbort);
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach(track=>track.stop());
+    if(aborted)return null;
+    return{blob:new Blob(chunks,{type:mimeType}),mimeType};
+  }finally{
+    canvas.remove();
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────
-// S1 — Standbild-Export aus der Spezifikation (Abschnitt 3.3/6, Umfangspunkt 4). Story (9:16) nutzt UNVERÄNDERT
-// rMatchcenterStoryFrame (dieselbe Darstellung wie die bestehende Story-Vorschau, Abschnitt 2 der
-// Spezifikation) — dafür wird das Szenen-Spec-Objekt auf dasselbe Datenformat wie
-// buildMatchcenterStoryPreviewData abgebildet, KEINE neue Story-Gestaltung. Feed (4:5) hat noch keine
-// bestehende Darstellung (Spezifikation Abschnitt 4.2) und bekommt deshalb einen eigenen, neuen Klassen-
-// Präfix .mc-feed-* (Owner-Entscheidung: bestehende .mc-story-*-Regeln bleiben unberührt), der dieselben
-// --story-*-Farbtokens/Schriften wiederverwendet, keine neuen Farben/Schriften definiert.
+// S2 — Standbild-Export auf den Canvas2D-Renderer umgestellt (Umfangspunkt 3 dieser Phase). Der SVG-
+// foreignObject-Weg (socialVideoStoryFrameData/rSocialVideoFeedFrame/socialVideoStandbildFrame/
+// socialVideoXmlSafeHtml, S1) entfällt hier ersatzlos — kein Fremdbild, kein foreignObject mehr, das Canvas
+// bleibt unverändert "untainted" und toDataURL() funktioniert deshalb auch in Chrome (siehe Build-Bericht).
+// Rendert die Zeichenliste bei EINEM festen Zeitpunkt (socialVideoStandbildTimeMs: die informationsdichteste
+// Szene, settled) statt — wie bisher — alle Szenen zu einem einzigen All-in-one-Layout zusammenzuführen; das
+// ist ein sachlicher Unterschied zu S1 (die Szenen sind jetzt zeitlich getrennt), der Kontaktbogen
+// (downloadSocialVideoContactSheet) deckt die Gesamtschau über alle Szenen ab.
 // ─────────────────────────────────────────────────────────────────────────
 
-/** Bildet die Kernwerte eines Story-Specs (ein Gegner) auf das Datenformat ab, das rMatchcenterStoryFrame
- * erwartet (siehe buildMatchcenterStoryPreviewData) — Wiederverwendung der bestehenden Darstellung. */
-function socialVideoStoryFrameData(seasonKey,storySpec){
-  const oppName=storySpec.opponentDisplay||'Gegner';
-  const oppScene=storySpec.scenes.find(s=>s.id==='opponent');
-  const oppLogo=oppScene?.elements.find(e=>e.type==='logo'&&e.team!=='vfb-ulm')?.asset||'';
-  const duelScene=storySpec.scenes.find(s=>s.id==='lastDuel');
-  const duelText=duelScene?.elements.find(e=>e.type==='result')?.text||null;
-  const watchScene=storySpec.scenes.find(s=>s.id==='playersToWatch');
-  const ulmCard=watchScene?.elements.find(e=>e.type==='playerCard'&&e.team==='ulm');
-  const oppCard=watchScene?.elements.find(e=>e.type==='playerCard'&&e.team==='opponent');
-  const rankStat=oppScene?.elements.find(e=>e.type==='stat'&&e.label==='Tabelle');
-  const formEl=oppScene?.elements.find(e=>e.type==='form');
-  const introScene=storySpec.scenes.find(s=>s.id==='intro');
-  const metaLine=introScene?.elements.filter(e=>e.type==='meta').map(e=>e.text).join(' · ')||storySpec.matchday?.date||'';
-  const outroScene=storySpec.scenes.find(s=>s.id==='outro');
-  const kickoffStat=outroScene?.elements.find(e=>e.type==='stat'&&e.label==='Anpfiff');
-  return{
-    opponentName:oppName,
-    opponentLogo:oppLogo,
-    opponentInitials:matchcenterStoryInitials(oppName),
-    home:{name:'VfB Ulm',logoUrl:'assets/vfb-ulm-logo-mark.png',rank:null},
-    away:{name:oppName,logoUrl:oppLogo,rank:rankStat?Number(String(rankStat.text).replace('#','')):null},
-    storyMeta:`${socialVideoMatchdayLabel({number:storySpec.matchday?.number})} · ${metaLine}`,
-    oppFormLetters:formEl?.pills||[],ulmFormLetters:(oppScene?.elements.find(e=>e.type==='form')?.pills)||[],
-    oppFormRecord:formEl?.record||'keine Spiele',ulmFormRecord:'',
-    directRecord:'-',
-    lastResult:duelText?`Ulm ${duelText}`:'Kein direktes Duell',
-    lastResultShort:duelText?`Ulm ${duelText}`:'Kein direktes Duell',
-    topOpponent:oppCard?{name:oppCard.name,stat:oppCard.stat,line:oppCard.note,note:''}:{name:'Noch offen',stat:'Keine Scorerdaten',line:'Datenbasis offen',note:''},
-    topUlm:ulmCard?{name:ulmCard.name,stat:ulmCard.stat,line:ulmCard.note,note:''}:{name:'Noch offen',stat:'Keine Scorerdaten',line:'Datenbasis offen',note:''},
-    keyFacts:[kickoffStat?`Anpfiff ${kickoffStat.text} Uhr${outroScene?.elements.find(e=>e.type==='meta')?.text?', '+outroScene.elements.find(e=>e.type==='meta').text:''}.`:null].filter(Boolean),
-    scoutingNotes:[],
-    dataQuality:'Datenbasis: App',
-  };
-}
-
-/** Feed-Post-Markup (4:5, Spezifikation Abschnitt 4.2) — eigener Klassen-Präfix .mc-feed-*, dieselben
- * --story-*-Tokens wie die Story (siehe CSS), keine neue Farbe/Schrift. */
-function rSocialVideoFeedFrame(feedSpec){
-  const introScene=feedSpec.scenes.find(s=>s.id==='intro');
-  const metaLine=introScene?.elements.filter(e=>e.type==='meta').map(e=>e.text).join(' · ')||'';
-  const oppBlock=(sceneId)=>{
-    const scene=feedSpec.scenes.find(s=>s.id===sceneId);
-    if(!scene)return'';
-    const logo=scene.elements.find(e=>e.type==='logo');
-    const title=scene.elements.find(e=>e.type==='title');
-    const rank=scene.elements.find(e=>e.type==='stat'&&e.label==='Tabelle');
-    const form=scene.elements.find(e=>e.type==='form');
-    return`<div class="mc-feed-opponent">
-      ${rMatchcenterStoryLogo('',logo?.asset,matchcenterStoryInitials(title?.text||''),title?.text||'')}
-      <div class="mc-feed-opponent-name${title?.textStage==='tight'?' tight':''}">${escHtml(title?.text||'')}</div>
-      ${rank?`<div class="mc-feed-opponent-rank">${escHtml(rank.text)}</div>`:''}
-      <div class="mc-feed-form">${rMatchcenterStoryForm(form?.pills||[])}</div>
-    </div>`;
-  };
-  const outroScene=feedSpec.scenes.find(s=>s.id==='outro');
-  const kickoffStats=(outroScene?.elements||[]).filter(e=>e.type==='stat');
-  return`<article class="mc-feed-frame mc-feed-card" aria-label="Instagram Feed-Post Vorschau">
-    <div class="mc-feed-inner">
-      <div class="mc-feed-topline">
-        <div class="mc-story-brand"><img src="assets/vfb-ulm-logo-mark.png" alt="VfB Ulm"><span>VfB Ulm Floorball</span></div>
-        <div class="mc-story-badge">Pre-Match</div>
-      </div>
-      <div class="mc-feed-title">${escHtml(socialVideoMatchdayLabel(feedSpec.matchday))}</div>
-      <div class="mc-feed-meta">${escHtml(metaLine)}</div>
-      <div class="mc-feed-opponents">
-        ${oppBlock('opponentA')}
-        ${oppBlock('opponentB')}
-      </div>
-      <div class="mc-feed-outro">
-        ${kickoffStats.map(s=>`<div class="mc-feed-kickoff"><span>${escHtml(s.label)}</span><strong>${escHtml(s.text)}</strong></div>`).join('')}
-      </div>
-    </div>
-  </article>`;
-}
-
-/** Baut das Standbild-Markup (Story oder Feed) aus EINEM Spec-Objekt — nie aus DOM-/Matchcenter-Zustand. */
-function socialVideoStandbildFrame(seasonKey,spec){
-  if(spec.format==='feed-4x5')return rSocialVideoFeedFrame(spec);
-  return rMatchcenterStoryFrame(socialVideoStoryFrameData(seasonKey,spec));
-}
-
-/** SVG-foreignObject-Inhalt muss wohlgeformtes XML sein — die bestehenden Story-Vorlagen (rMatchcenterStoryLogo
- * u. a.) erzeugen <img>-Tags als HTML (nicht XML-selbstschließend: `<img ...>` statt `<img .../>`), was den
- * XML-Parser innerhalb des SVG zum Scheitern bringt (geprüft: derselbe Effekt trifft unverändert auch den
- * bestehenden window.downloadMatchdayStory-Weg — ein vorbestehender Effekt, hier NICHT an den Story-Vorlagen
- * selbst behoben, siehe Schutzregel "einzige erlaubte Änderung ist die Logo-Nutzung", sondern ausschließlich
- * hier am Übergabepunkt zum SVG nachträglich XML-wohlgeformt gemacht). Reine Stringtransformation, keine
- * DOM-Mutation. */
-function socialVideoXmlSafeHtml(html){
-  return String(html||'').replace(/<(img|br|hr|input|meta|link)((?:\s+[a-zA-Z-]+(?:="[^"]*")?)*)\s*(?<!\/)>/g,'<$1$2/>');
-}
-
-/** PNG-Export eines Standbilds aus einem Spec-Objekt (Story ODER Feed), über denselben SVG-foreignObject-Weg
- * wie window.downloadMatchdayStory — hier aber aus buildSocialVideoSpec() statt aus der Live-Story-Vorschau,
- * und mit der jeweils korrekten Zielauflösung (Story 1080×1920, Feed 1080×1350). Sichere Ränder (120 px oben/
- * unten, 64 px links/rechts) kommen aus der bestehenden .mc-story-inner/.mc-feed-inner-Polsterung (CSS). */
+/** PNG-Export EINES Standbilds aus einem Spec-Objekt (Story ODER Feed) über den Canvas2D-Renderer. */
 window.downloadSocialVideoStandbild=async(spec,seasonKey,button=null)=>{
   const oldText=button?.textContent;
   if(button)button.textContent='Export läuft...';
   try{
-    const frameHtml=socialVideoXmlSafeHtml(socialVideoStandbildFrame(seasonKey,spec));
-    // CDATA: der Style-Text enthält CSS-Kommentare mit rohen "<"/"&"-Zeichen (z. B. "<button>" in einem
-    // Kommentar) — als wohlgeformtes XML (SVG-foreignObject-Inhalt) bräche ein XML-Parser dort einen neuen
-    // Tag auf. CDATA weist den Parser an, den Inhalt als reinen Text zu behandeln (Standardlösung für CSS/JS
-    // in XHTML-in-SVG). Derselbe vorbestehende Effekt beträfe unverändert auch window.downloadMatchdayStory —
-    // hier ausschließlich am neuen Übergabepunkt behoben, keine Änderung an den Style-Regeln selbst.
-    // @import auf https://fonts.googleapis.com entfernt: unnötige externe Ressource im exportierten Dokument
-    // vermeiden (Hygiene, und dieselbe in Abschnitt 3.3.2 der Spezifikation vorgesehene Ersatzschriften-
-    // Situation wie bei fehlenden Fonts im Browser). Behebt NICHT das eigentliche Export-Problem: aktuelle
-    // Chrome-Versionen "tainten" jeden Canvas, auf den ein SVG mit <foreignObject> gezeichnet wird, bereits
-    // ohne jede externe Ressource (verifiziert mit einem leeren, rein lokalen foreignObject) — eine bewusste,
-    // pauschale Sicherheitsrichtlinie, kein Bug einzelner Ressourcen. toDataURL() unten scheitert deshalb in
-    // solchen Browsern weiterhin mit SecurityError; das ist derselbe vorbestehende, browserseitige Effekt wie
-    // bei window.downloadMatchdayStory (nicht durch S1 verursacht, nicht mit CSS/Markup-Mitteln behebbar —
-    // eine echte Lösung bräuchte einen manuellen Canvas2D-Renderer statt SVG-foreignObject, siehe S2).
-    const styles=[...document.querySelectorAll('style')].map(style=>style.textContent||'').join('\n').replace(/@import\s+url\(['"]?https?:\/\/[^)]*\)\s*;?/gi,'').replace(/]]>/g,']]]]><![CDATA[>');
-    const width=1080,height=spec.format==='feed-4x5'?1350:1920;
-    const frameClass=spec.format==='feed-4x5'?'mc-feed-frame':'mc-story-frame';
-    // max-width:none nötig, weil die bestehende .mc-story-frame-Vorschau-Regel (Zeile ~567) die Breite auf
-    // 400px deckelt — ohne diese Aufhebung würde width:1080px!important oben folgenlos bleiben (max-width
-    // gewinnt im Box-Modell unabhängig von !important auf width) und das Bild auf 400px gestaucht.
-    const html=`<html xmlns="http://www.w3.org/1999/xhtml"><head><style><![CDATA[${styles}body{margin:0;background:#020617}.${frameClass}{width:${width}px!important;max-width:none!important;height:${height}px!important;border-radius:0!important}]]></style></head><body>${frameHtml}</body></html>`;
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
-    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
-    const img=new Image();
-    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
-    const canvas=document.createElement('canvas');
-    canvas.width=width;canvas.height=height;
-    const ctx2d=canvas.getContext('2d');
-    ctx2d.drawImage(img,0,0,width,height);
-    URL.revokeObjectURL(url);
-    const png=canvas.toDataURL('image/png');
+    const dataUrl=await socialVideoRenderStandbildDataUrl(spec,socialVideoStandbildTimeMs(spec));
     const a=document.createElement('a');
-    a.href=png;
+    a.href=dataUrl;
     a.download=socialVideoFileName({matchdayNumber:spec.matchday?.number,date:spec.matchday?.date,format:spec.format,opponentAssetKey:spec.opponentAssetKey},'png');
     document.body.appendChild(a);
     a.click();
@@ -22455,6 +22556,36 @@ window.downloadSocialVideoStandbild=async(spec,seasonKey,button=null)=>{
     return null;
   }finally{
     if(button)button.textContent=oldText||'Standbild herunterladen';
+  }
+};
+
+/** Kontaktbogen (Abschnitt 5 der Abnahme dieser Phase): je Szene EIN Einzelbild (settled, 50% hinein) als
+ * eigene PNG-Datei — zur Gestaltungsprüfung ohne Abspielen. Dateiname wie der Standbild-Export, zusätzlich
+ * mit der Szenen-id als Suffix. */
+window.downloadSocialVideoContactSheet=async(spec,seasonKey,button=null)=>{
+  const oldText=button?.textContent;
+  if(button)button.textContent='Kontaktbogen läuft...';
+  const names=[];
+  try{
+    for(const scene of spec.scenes||[]){
+      const dataUrl=await socialVideoRenderStandbildDataUrl(spec,socialVideoSceneTimeMs(spec,scene.id,0.5));
+      const base=socialVideoFileName({matchdayNumber:spec.matchday?.number,date:spec.matchday?.date,format:spec.format,opponentAssetKey:spec.opponentAssetKey},'png');
+      const name=base.replace(/\.png$/,`-${scene.id}.png`);
+      const a=document.createElement('a');
+      a.href=dataUrl;
+      a.download=name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      names.push(name);
+    }
+    return names;
+  }catch(e){
+    console.warn('Social-Video-Kontaktbogen fehlgeschlagen:',e);
+    alert('Kontaktbogen-Export ist in diesem Browser gerade nicht möglich.');
+    return names;
+  }finally{
+    if(button)button.textContent=oldText||'Kontaktbogen (PNG je Szene)';
   }
 };
 
