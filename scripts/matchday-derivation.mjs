@@ -63,6 +63,15 @@
 //   - kein Spiel beendet (verlegte/abgesagte zählen hier NICHT als "beendet",
 //     nur als "nicht mehr offen")                -> "geplant"
 //   - sonst (gemischt)                            -> "unvollstaendig"
+// "beendet" bedeutet hier (ended-Vereinheitlichungs-Phase) isEffectivelyEnded()
+// aus game-status.mjs — dieselbe Funktion, die auch M0 (scripts/model/normalize.mjs)
+// für den Modell-Spielfilter nutzt: `ended === true`, ODER die Datenqualitäts-
+// Ausnahme greift (vollständiges `result` + mindestens ein Event, obwohl `ended`
+// fälschlich `false` ist). Vorher las dieser Block nur das rohe `ended`-Feld, was
+// dazu führte, dass derselbe Spieltag in 21/22 für M0 als gespielt, aber hier
+// gleichzeitig als "unvollstaendig" galt (siehe Build-Bericht der
+// ended-Vereinheitlichungs-Phase). Das rohe `ended`-Feld selbst wird nirgends
+// überschrieben, nur zusätzlich über isEffectivelyEnded() interpretiert.
 // "verlegt" selbst (ein eigener dritter Status, wie im Spezifikationstext
 // als Aufzählungspunkt genannt) wird weiterhin NICHT als eigener Rückgabewert
 // geführt: die realen Rohdaten enthalten für verschobene Spiele (notice_type
@@ -92,6 +101,7 @@
 // unverändert auf den hier gelieferten, unveränderten Original-Teamnamen.
 
 import { compareGamesChronologically } from './game-ordering.mjs';
+import { isEffectivelyEnded } from './game-status.mjs';
 
 // Notice-Type-Werte, die ein Spiel "endgültig nicht an diesem Termin" machen (Abschnitt 3.6.3).
 // Die realen Rohdaten kennen genau zwei Werte dafür: "Postponed" und "Canceled" (geprüft über alle
@@ -131,9 +141,13 @@ export function buildMatchdays(seasonData) {
       }
     }
 
-    const endedFlags = sortedGames.map((g) => g?.ended === true);
+    // isEffectivelyEnded (game-status.mjs, auch von scripts/model/normalize.mjs/M0 genutzt):
+    // ended-Vereinheitlichungs-Phase — vorher las dieser Block nur das rohe ended-Feld, wodurch
+    // ein Spieltag mit einem der acht 21/22-Datenqualitäts-Ausnahme-Spiele hier als
+    // "unvollstaendig" galt, obwohl M0 dasselbe Spiel längst als beendet einbezog.
+    const endedFlags = sortedGames.map((g) => isEffectivelyEnded(g));
     const noneEnded = endedFlags.every((f) => !f);
-    const resolvedFlags = sortedGames.map((g) => g?.ended === true || FINAL_NOTICE_RE.test(String(g?.notice_type ?? '')));
+    const resolvedFlags = sortedGames.map((g) => isEffectivelyEnded(g) || FINAL_NOTICE_RE.test(String(g?.notice_type ?? '')));
     const allResolved = resolvedFlags.length > 0 && resolvedFlags.every(Boolean);
     const status = allResolved ? 'abgeschlossen' : noneEnded ? 'geplant' : 'unvollstaendig';
 
