@@ -72,6 +72,8 @@ const FUNCTIONS = [
   'socialVideoSkylineTransform', 'socialVideoSparrowPositions', 'socialVideoPushText', 'socialVideoPushLogo',
   'socialVideoPushForm', 'socialVideoLayoutScene', 'socialVideoBackgroundLayer', 'socialVideoDrawList',
   'socialVideoSceneTimeMs', 'socialVideoStandbildTimeMs',
+  // S2-Nachtrag (Canvas-Taint unter file:// behoben): reine Hinweistext-Funktion
+  'socialVideoCanvasExportHint',
 ];
 const functionSource = FUNCTIONS.map(fnSource).join('\n');
 const constSourceAll = [
@@ -297,6 +299,27 @@ console.log('== F) Fehlende Daten: gültige Zeichenliste ohne leere Elemente =='
     const list = drawList(ctxReal, spec, socialVideoMidOf(spec));
     for (const cmd of list.filter((c) => c.type === 'text')) assertTrue(knownFonts.has(cmd.font), `Textbefehl "${cmd.text}" nutzt einen bekannten, in Schicht B immer ersetzbaren Font-Bezeichner (${cmd.font})`);
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+console.log('== G) S2-Nachtrag (Canvas-Taint unter file:// behoben): Asset-Quelle und Vorprüfungs-Hinweis ==');
+{
+  // Statisch geprüft (Quelltext, nicht ausgeführt — socialVideoLoadAssets ist DOM-abhängig: Image/window,
+  // in node:vm ohne DOM nicht sinnvoll aufrufbar): der Renderer lädt Bilder ausschließlich aus
+  // window.SOCIAL_VIDEO_ASSETS, nie mehr direkt aus einem assets/…-Dateipfad (der frühere, unter file://
+  // Canvas-taintende Weg).
+  const loadAssetsSource = fnSource('socialVideoLoadAssets');
+  assertTrue(loadAssetsSource.includes('SOCIAL_VIDEO_ASSETS'), 'socialVideoLoadAssets bezieht Bilder aus window.SOCIAL_VIDEO_ASSETS');
+  assertTrue(!/\.src\s*=\s*key\b/.test(loadAssetsSource), 'socialVideoLoadAssets setzt img.src NICHT mehr direkt auf den rohen assets/…-Schlüssel (alter Taint-Weg)');
+
+  // Vorprüfungs-Hinweis (socialVideoCanvasExportHint): im file://-Fall der konkrete Ausweg samt Befehlszeile,
+  // sonst ein allgemeiner Hinweis — beide ohne Canvas/DOM testbar, reine Funktion von isFileProtocol.
+  const hintFile = call(ctxReal, `socialVideoCanvasExportHint(true)`);
+  const hintOther = call(ctxReal, `socialVideoCanvasExportHint(false)`);
+  assertTrue(hintFile.includes('file://'), 'file://-Fall: Hinweis nennt file:// als Ursache');
+  assertTrue(hintFile.includes('scripts/serve.mjs'), 'file://-Fall: Hinweis nennt den konkreten Server-Befehl');
+  assertTrue(!hintOther.includes('file://'), 'anderer Fall: Hinweis nennt NICHT file:// (wäre irreführend, wenn die Ursache eine andere ist)');
+  assertTrue(hintFile !== hintOther, 'file://-Fall und anderer Fall liefern unterschiedliche Hinweise');
 }
 
 console.log('');
