@@ -1,22 +1,42 @@
 #!/usr/bin/env node
 // Offline-Testharness für scripts/import-season-data.mjs — kein Netzwerk,
 // kein API-Key. Deckt die reine Dry-Run/--write-Kernlogik (buildDryRunReport,
-// Fälle A-G), --update-embedded (embedSeasonInHtml, Fall H) und die
+// Fälle A-G), --update-embedded (embedSeasonInEmbeddedFile, Fall H) und die
 // Schritt-9-Manifest-Pflege (buildManifestEntryUpdate, Fälle J-L) ab.
 //
+// Seit Token-Diät Teil 2 schreibt --update-embedded season-data-embedded.js
+// statt index.html (siehe scripts/test-embedded-season-data.mjs für die dort
+// zusätzlich geprüften migrationsspezifischen Aspekte: Wertgleichheit zum
+// alten Stand, dass index.html den Datenblock nicht mehr enthält, den vollen
+// CLI-Pfad in einer Sandbox, und das Verhalten bei fehlender Datei). Fall H
+// hier bleibt bewusst bestehen und deckt embedSeasonInEmbeddedFile() als Teil
+// der allgemeinen import-season-data.mjs-Testsuite ab.
+//
 // Alle Fälle nutzen die ECHTEN Inhalte von season-data/25-26.json,
-// season-data/seasons.json bzw. index.html als Ausgangsbasis (nur lesend
-// eingelesen, per JSON.parse/String tief kopiert bzw. rein im Speicher
-// weiterverarbeitet — KEINE der echten Dateien wird jemals beschrieben;
-// embedSeasonInHtml()/buildManifestEntryUpdate() werden nur gegen In-Memory-
-// Kopien ausgeführt, das Ergebnis wird nirgends gespeichert).
+// season-data/seasons.json bzw. season-data-embedded.js als Ausgangsbasis
+// (nur lesend eingelesen, per JSON.parse/String tief kopiert bzw. rein im
+// Speicher weiterverarbeitet — KEINE der echten Dateien wird jemals
+// beschrieben; embedSeasonInEmbeddedFile()/buildManifestEntryUpdate() werden
+// nur gegen In-Memory-Kopien ausgeführt, das Ergebnis wird nirgends
+// gespeichert).
 //
 // Aufruf: node scripts/test-import-season-data.mjs
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import vm from 'node:vm';
 
-import { buildDryRunReport, validateSeasonKey, validateWrapperFormat, embedSeasonInHtml, buildManifestEntryUpdate } from './import-season-data.mjs';
+import { buildDryRunReport, validateSeasonKey, validateWrapperFormat, embedSeasonInEmbeddedFile, buildManifestEntryUpdate } from './import-season-data.mjs';
+
+/** Führt season-data-embedded.js als klassisches Skript aus (kein
+ * regex/Textparsing) und gibt das gesetzte window.STATIC_SEASON_DATA zurück —
+ * analog zum realen Laufzeitverhalten im Browser. */
+function loadEmbeddedStaticSeasonData(jsText) {
+  const sandbox = { window: {} };
+  vm.createContext(sandbox);
+  vm.runInContext(jsText, sandbox);
+  return sandbox.window.STATIC_SEASON_DATA;
+}
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 let failures = 0;
@@ -223,16 +243,20 @@ assertTrue(validateWrapperFormat({ season: '25/26', label: '2025/26', games: [] 
 assertTrue(!validateWrapperFormat({ season: '25/26', label: '2025/26' }).ok, 'Wrapper ohne games[] wird abgelehnt');
 
 // ─────────────────────────────────────────────────────────────────────────
-// Fall H: --update-embedded (embedSeasonInHtml) — rein im Speicher.
-// Liest die ECHTE index.html nur LESEND; das Ergebnis von embedSeasonInHtml()
-// wird an keiner Stelle auf die Platte geschrieben (weder als Überschreiben
-// der echten Datei noch als neue Testkopie-Datei im Repo) — Prüfung erfolgt
-// ausschließlich am zurückgegebenen String im Speicher.
+// Fall H: --update-embedded (embedSeasonInEmbeddedFile) — rein im Speicher.
+// Liest das ECHTE season-data-embedded.js nur LESEND; das Ergebnis von
+// embedSeasonInEmbeddedFile() wird an keiner Stelle auf die Platte
+// geschrieben (weder als Überschreiben der echten Datei noch als neue
+// Testkopie-Datei im Repo) — Prüfung erfolgt ausschließlich am
+// zurückgegebenen String im Speicher. index.html wird in diesem Fall H gar
+// nicht mehr gelesen — seit Token-Diät Teil 2 hat --update-embedded keinen
+// Bezug mehr zu index.html (siehe scripts/test-embedded-season-data.mjs für
+// den expliziten Beweis "index.html bleibt unberührt").
 // ─────────────────────────────────────────────────────────────────────────
 console.log('');
 console.log('== Fall H: --update-embedded ersetzt NUR den 25/26-Block, Rest bleibt byte-identisch ==');
 {
-  const originalHtml = await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8');
+  const originalText = await readFile(path.join(REPO_ROOT, 'season-data-embedded.js'), 'utf8');
 
   // Kandidat: exakt die reale 25/26-Datei plus ein zusätzliches Spiel, damit
   // sichtbar geprüft werden kann, dass wirklich NEU eingebettet wurde (nicht
@@ -240,51 +264,24 @@ console.log('== Fall H: --update-embedded ersetzt NUR den 25/26-Block, Rest blei
   const candidate = clone(real2526);
   candidate.games.push(samplePostponedGame(999003));
 
-  const { html: newHtml, mode } = embedSeasonInHtml(originalHtml, '25/26', candidate);
+  const { text: newText, mode } = embedSeasonInEmbeddedFile(originalText, '25/26', candidate);
   assertEqual(mode, 'replaced', '25/26 war bereits eingebettet -> Modus "replaced"');
 
-  // 1) Alles außerhalb des STATIC_SEASON_DATA-Objekts bleibt byte-identisch:
-  //    Wir vergleichen Länge der Datei vor/nach dem "25/26"-Objektblock, indem
-  //    wir den Text vor "const STATIC_SEASON_DATA=" und nach dem bekannten
-  //    Folge-Statement "window.STATIC_SEASON_DATA=STATIC_SEASON_DATA;" separat
-  //    vergleichen.
-  const marker = 'const STATIC_SEASON_DATA=';
-  const tailMarker = 'window.STATIC_SEASON_DATA=STATIC_SEASON_DATA;';
-  const prefixOld = originalHtml.slice(0, originalHtml.indexOf(marker));
-  const prefixNew = newHtml.slice(0, newHtml.indexOf(marker));
-  assertEqual(prefixNew, prefixOld, 'Alles VOR der STATIC_SEASON_DATA-Deklaration ist byte-identisch');
-  const suffixOld = originalHtml.slice(originalHtml.indexOf(tailMarker));
-  const suffixNew = newHtml.slice(newHtml.indexOf(tailMarker));
-  assertEqual(suffixNew, suffixOld, 'Alles AB "window.STATIC_SEASON_DATA=..." (inkl. SEASON_CONFIG, restlicher App-Code) ist byte-identisch');
+  // 1) Alles außerhalb des window.STATIC_SEASON_DATA-Objekts bleibt
+  //    byte-identisch: Text vor der Zuweisung und nach dem schließenden ";"
+  //    separat vergleichen.
+  const marker = 'window.STATIC_SEASON_DATA=';
+  const prefixOld = originalText.slice(0, originalText.indexOf(marker));
+  const prefixNew = newText.slice(0, newText.indexOf(marker));
+  assertEqual(prefixNew, prefixOld, 'Alles VOR der window.STATIC_SEASON_DATA-Zuweisung (Kopfkommentar) ist byte-identisch');
 
   // 2) Andere Saison-Blöcke (21/22-24/25) unverändert, nur 25/26 neu.
-  // Eigener, lokaler (stringbewusster) Klammer-Balancer, um den vollständigen
-  // STATIC_SEASON_DATA-Objekttext zu isolieren — bewusst unabhängig von der
-  // internen (nicht exportierten) findMatchingBrace() aus import-season-data.mjs
-  // nachgebaut, damit dieser Test die Funktion embedSeasonInHtml() nicht
-  // indirekt "mit sich selbst" prüft.
-  function localFindMatchingBrace(text, startIdx) {
-    let depth = 0, inString = false, escaped = false;
-    for (let i = startIdx; i < text.length; i++) {
-      const c = text[i];
-      if (inString) {
-        if (escaped) escaped = false;
-        else if (c === '\\') escaped = true;
-        else if (c === '"') inString = false;
-        continue;
-      }
-      if (c === '"') { inString = true; continue; }
-      if (c === '{') depth++;
-      else if (c === '}') { depth--; if (depth === 0) return i; }
-    }
-    return -1;
-  }
-  const objStartOld = originalHtml.indexOf('{', originalHtml.indexOf(marker));
-  const objStartNew = newHtml.indexOf('{', newHtml.indexOf(marker));
-  const objEndOld = localFindMatchingBrace(originalHtml, objStartOld);
-  const objEndNew = localFindMatchingBrace(newHtml, objStartNew);
-  const parsedOld = JSON.parse(originalHtml.slice(objStartOld, objEndOld + 1));
-  const parsedNew = JSON.parse(newHtml.slice(objStartNew, objEndNew + 1));
+  // Ausführung als klassisches Skript statt Textparsing — bewusst unabhängig
+  // von der internen (nicht exportierten) findMatchingBrace() aus
+  // import-season-data.mjs, damit dieser Test embedSeasonInEmbeddedFile()
+  // nicht indirekt "mit sich selbst" prüft.
+  const parsedOld = loadEmbeddedStaticSeasonData(originalText);
+  const parsedNew = loadEmbeddedStaticSeasonData(newText);
 
   for (const key of ['21/22', '22/23', '23/24', '24/25']) {
     assertEqual(JSON.stringify(parsedNew[key]), JSON.stringify(parsedOld[key]), `Saison-Block "${key}" bleibt unverändert`);
@@ -296,27 +293,25 @@ console.log('== Fall H: --update-embedded ersetzt NUR den 25/26-Block, Rest blei
     'die ursprünglichen 60 Spiele bleiben in Reihenfolge/Inhalt erhalten',
   );
 
-  // 3) HTML bleibt insgesamt "lesbar" (Länge > 0, enthält weiterhin die
-  //    erwarteten Strukturmarker davor/danach) — eine vollständige HTML-
-  //    Grammatikprüfung ist ohne Browser/DOM-Parser hier nicht möglich, aber
-  //    genau das wird zusätzlich in Test I (echte App im Browser) geprüft.
-  assertTrue(newHtml.length > originalHtml.length, 'resultierende Datei ist (durch das zusätzliche Spiel) länger, nicht leer/kaputt');
-  assertTrue(newHtml.includes('<!DOCTYPE html>') || newHtml.startsWith('<!DOCTYPE'), 'HTML-Dokument-Kopf bleibt vorhanden');
+  // 3) Datei bleibt insgesamt "lesbar" (Länge > 0, gültiges klassisches
+  //    Skript, setzt weiterhin window.STATIC_SEASON_DATA).
+  assertTrue(newText.length > originalText.length, 'resultierende Datei ist (durch das zusätzliche Spiel) länger, nicht leer/kaputt');
+  assertTrue(newText.includes('window.STATIC_SEASON_DATA='), 'window.STATIC_SEASON_DATA-Zuweisung bleibt vorhanden');
 }
 
 console.log('');
 console.log('== Fall H (Gegenprobe): mehrdeutiger Treffer -> harter Abbruch, kein Ergebnis ==');
 {
-  const originalHtml = await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8');
+  const originalText = await readFile(path.join(REPO_ROOT, 'season-data-embedded.js'), 'utf8');
   // Künstlich einen zweiten Treffer für "25/26":{ erzeugen, um die
   // "bei >1 Treffern hart abbrechen"-Regel zu testen, OHNE die echte Datei
   // zu verändern (nur ein In-Memory-String für diesen einen Testfall).
-  const marker = 'const STATIC_SEASON_DATA=';
-  const objStart = originalHtml.indexOf('{', originalHtml.indexOf(marker));
-  const injected = originalHtml.slice(0, objStart + 1) + '"25/26":{"season":"25/26","label":"dup","games":[]},' + originalHtml.slice(objStart + 1);
+  const marker = 'window.STATIC_SEASON_DATA=';
+  const objStart = originalText.indexOf('{', originalText.indexOf(marker));
+  const injected = originalText.slice(0, objStart + 1) + '"25/26":{"season":"25/26","label":"dup","games":[]},' + originalText.slice(objStart + 1);
   let threw = false;
   try {
-    embedSeasonInHtml(injected, '25/26', clone(real2526));
+    embedSeasonInEmbeddedFile(injected, '25/26', clone(real2526));
   } catch (e) {
     threw = true;
   }
@@ -404,7 +399,7 @@ console.log('== Fall L: Sicherheitsabbruch -> report.ok bleibt false (Vorbedingu
   const incoming = clone(real2526);
   incoming.games.pop(); // verschwundene ID, wie Fall C
   const report = buildDryRunReport('25/26', incoming, existing);
-  assertTrue(!report.ok, 'Validierung schlägt fehl -> in main() wird weder season-data/25-26.json noch seasons.json noch index.html erreicht');
+  assertTrue(!report.ok, 'Validierung schlägt fehl -> in main() wird weder season-data/25-26.json noch seasons.json noch season-data-embedded.js erreicht');
 }
 {
   const existing = clone(real2526);

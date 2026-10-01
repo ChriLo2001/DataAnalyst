@@ -12,10 +12,15 @@
 //                                                                        ↓ (nur mit --write)
 //                                       season-data/<key>.json + season-data/seasons.json
 //                                                                        ↓ (nur mit --update-embedded)
-//                                                    STATIC_SEASON_DATA-Block in index.html
+//                                        window.STATIC_SEASON_DATA-Block in season-data-embedded.js
 //
-// Die Kernlogik (buildDryRunReport, buildManifestEntryUpdate, embedSeasonInHtml)
+// Die Kernlogik (buildDryRunReport, buildManifestEntryUpdate, embedSeasonInEmbeddedFile)
 // ist bewusst als reine, exportierte Funktionen von der I/O (main()) getrennt.
+//
+// Token-Diät Teil 2: season-data-embedded.js (klassisches Skript, setzt
+// window.STATIC_SEASON_DATA) ersetzt den früher in index.html eingebetteten
+// STATIC_SEASON_DATA-Block. --update-embedded schreibt seitdem AUSSCHLIESSLICH
+// diese Datei — index.html bleibt von --update-embedded unberührt.
 //
 // CLI-Formen (siehe docs/season-data-import.md für den vollständigen Workflow):
 //   node scripts/import-season-data.mjs <seasonKey> <inputFile>
@@ -32,7 +37,8 @@
 //   node scripts/import-season-data.mjs <seasonKey> --update-embedded
 //     -> liest die BEREITS AUF DER PLATTE liegende season-data/<key>.json
 //        (kein <inputFile>!) und aktualisiert nur den betroffenen
-//        STATIC_SEASON_DATA-Block in index.html (file://-Fallback).
+//        window.STATIC_SEASON_DATA-Block in season-data-embedded.js
+//        (file://-Fallback; index.html bleibt unberührt).
 //   node scripts/import-season-data.mjs <seasonKey> <inputFile> --write --update-embedded
 //     -> beides in einem Lauf: erst schreiben (wie oben), danach exakt die
 //        soeben geschriebenen Daten einbetten.
@@ -63,8 +69,20 @@ import {
 import { validateMergedSeason, fileNameForKey, writeJsonAtomic } from './update-season-data.mjs';
 
 const SEASON_DATA_DIR = path.resolve(process.cwd(), 'season-data');
-const INDEX_HTML_PATH = path.resolve(process.cwd(), 'index.html');
+const EMBEDDED_JS_PATH = path.resolve(process.cwd(), 'season-data-embedded.js');
 const MANIFEST_PATH = path.join(SEASON_DATA_DIR, 'seasons.json');
+
+// Kopf von season-data-embedded.js, falls die Datei neu angelegt werden muss
+// (siehe runUpdateEmbedded weiter unten) — bewusst als reiner String, nicht
+// als eigene .js-Vorlagendatei, analog zum bisherigen einzeiligen
+// STATIC_SEASON_DATA-Muster in index.html. Klassisches Skript (kein
+// import/export), damit es auch unter file:// per <script src="…"> lädt.
+const EMBEDDED_JS_HEADER =
+  '// Automatisch erzeugt/gepflegt von scripts/import-season-data.mjs --update-embedded.\n' +
+  '// file://-Fallback: setzt window.STATIC_SEASON_DATA, bevor der Anwendungscode läuft\n' +
+  '// (siehe <script src="season-data-embedded.js"> vor dem Haupt-<script> in index.html).\n' +
+  '// Nicht von Hand bearbeiten — siehe docs/season-data-import.md.\n';
+const EMPTY_EMBEDDED_JS = `${EMBEDDED_JS_HEADER}window.STATIC_SEASON_DATA={};\n`;
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reine Prüf-/Berichtsfunktionen (kein fetch/fs) — direkt testbar
@@ -283,8 +301,9 @@ export function formatReport(report, { seasonKey, inputFile, existingFile, mode 
 
 // ─────────────────────────────────────────────────────────────────────────
 // Schritt 6: --update-embedded — robustes, klammerbalanciertes Ersetzen/
-// Einfügen EINES Saison-Blocks in STATIC_SEASON_DATA (index.html). Reine
-// String-Funktion, kein fetch/fs, direkt testbar.
+// Einfügen EINES Saison-Blocks in window.STATIC_SEASON_DATA
+// (season-data-embedded.js, NICHT mehr index.html — siehe Token-Diät Teil 2).
+// Reine String-Funktion, kein fetch/fs, direkt testbar.
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
@@ -329,56 +348,59 @@ function countOccurrences(text, substr) {
 }
 
 /**
- * Ersetzt (oder fügt neu ein) den STATIC_SEASON_DATA-Block für EINE Saison
- * innerhalb des vollständigen index.html-Texts. Ersetzt/berührt NICHTS
- * außerhalb dieses einen Blocks — kein string.replace() auf einen geratenen
- * Textausschnitt, sondern Klammer-balanciertes Parsen, exakt wie bereits
- * manuell für 25/26 in dieser Session durchgeführt.
+ * Ersetzt (oder fügt neu ein) den Saison-Block für EINE Saison innerhalb des
+ * vollständigen Texts von season-data-embedded.js (`window.STATIC_SEASON_DATA=
+ * {...};`). Ersetzt/berührt NICHTS außerhalb dieses einen Blocks — kein
+ * string.replace() auf einen geratenen Textausschnitt, sondern
+ * Klammer-balanciertes Parsen (identische Technik wie die vormalige
+ * index.html-Variante dieser Funktion, nur auf die neue Zieldatei/den neuen
+ * Marker übertragen — index.html wird von dieser Funktion nicht mehr
+ * angefasst).
  *
  * Verhalten bei den Trefferzahlen für den Schlüssel `"<seasonKey>":{`
- * innerhalb von STATIC_SEASON_DATA:
+ * innerhalb von window.STATIC_SEASON_DATA:
  *   genau 1 Treffer -> bestehender Block wird ERSETZT
  *   0 Treffer       -> Saison ist noch nie eingebettet worden -> Block wird
  *                      NEU EINGEFÜGT (z.B. für eine künftige neue Saison wie
  *                      26/27) — das ist kein Fehlerfall, sondern der
  *                      erwartete Weg, eine neue Saison erstmals einzubetten,
  *                      und wird explizit geloggt, nicht still ausgeführt.
- *   >1 Treffer      -> mehrdeutig -> HARTER ABBRUCH, index.html bleibt
+ *   >1 Treffer      -> mehrdeutig -> HARTER ABBRUCH, die Datei bleibt
  *                      unverändert (genau die vom Auftrag geforderte Regel
  *                      "bei 0 oder >1 Treffern hart abbrechen" — 0 Treffer
  *                      wird hier bewusst als "neu einfügen" statt als Fehler
  *                      behandelt, siehe Begründung im Bericht/Doku).
  *
- * @param {string} html vollständiger index.html-Inhalt
+ * @param {string} fileText vollständiger Inhalt von season-data-embedded.js
  * @param {string} seasonKey z.B. "25/26"
  * @param {{season:string,label:string,games:object[]}} seasonData exakt der
  *   Inhalt, der eingebettet werden soll (unverändert, keine Normalisierung)
- * @returns {{html:string, mode:'replaced'|'inserted'}} neuer HTML-Text
+ * @returns {{text:string, mode:'replaced'|'inserted'}} neuer Dateiinhalt
  * @throws {Error} bei jeder Unsicherheit (Marker fehlt/mehrfach, unbalanciert,
  *   Ergebnis kein valides JSON, andere Season-Keys verändert)
  */
-export function embedSeasonInHtml(html, seasonKey, seasonData) {
-  const marker = 'const STATIC_SEASON_DATA=';
-  const markerIdx = html.indexOf(marker);
+export function embedSeasonInEmbeddedFile(fileText, seasonKey, seasonData) {
+  const marker = 'window.STATIC_SEASON_DATA=';
+  const markerIdx = fileText.indexOf(marker);
   if (markerIdx === -1) {
-    throw new Error('STATIC_SEASON_DATA-Deklaration nicht gefunden — Abbruch, index.html bleibt unverändert.');
+    throw new Error('window.STATIC_SEASON_DATA-Zuweisung nicht gefunden — Abbruch, season-data-embedded.js bleibt unverändert.');
   }
-  if (html.indexOf(marker, markerIdx + 1) !== -1) {
-    throw new Error('STATIC_SEASON_DATA-Deklaration kommt mehrfach vor — nicht eindeutig, Abbruch.');
+  if (fileText.indexOf(marker, markerIdx + 1) !== -1) {
+    throw new Error('window.STATIC_SEASON_DATA-Zuweisung kommt mehrfach vor — nicht eindeutig, Abbruch.');
   }
 
   const objStart = markerIdx + marker.length;
-  if (html[objStart] !== '{') {
-    throw new Error('Erwartetes "{" direkt nach "const STATIC_SEASON_DATA=" nicht gefunden — Abbruch.');
+  if (fileText[objStart] !== '{') {
+    throw new Error('Erwartetes "{" direkt nach "window.STATIC_SEASON_DATA=" nicht gefunden — Abbruch.');
   }
-  const objEnd = findMatchingBrace(html, objStart);
+  const objEnd = findMatchingBrace(fileText, objStart);
   if (objEnd === -1) {
-    throw new Error('Kein balanciertes Ende für das STATIC_SEASON_DATA-Objekt gefunden — Abbruch.');
+    throw new Error('Kein balanciertes Ende für das window.STATIC_SEASON_DATA-Objekt gefunden — Abbruch.');
   }
 
-  const before = html.slice(0, objStart);
-  const objText = html.slice(objStart, objEnd + 1);
-  const after = html.slice(objEnd + 1);
+  const before = fileText.slice(0, objStart);
+  const objText = fileText.slice(objStart, objEnd + 1);
+  const after = fileText.slice(objEnd + 1);
 
   // Sanity-Check: das bestehende Objekt muss bereits gültiges JSON sein,
   // bevor irgendetwas daran verändert wird.
@@ -386,14 +408,14 @@ export function embedSeasonInHtml(html, seasonKey, seasonData) {
   try {
     oldParsed = JSON.parse(objText);
   } catch (e) {
-    throw new Error(`Bestehendes STATIC_SEASON_DATA ist kein gültiges JSON (${e.message}) — Abbruch, nichts wird verändert.`);
+    throw new Error(`Bestehendes window.STATIC_SEASON_DATA ist kein gültiges JSON (${e.message}) — Abbruch, nichts wird verändert.`);
   }
   const oldKeys = Object.keys(oldParsed).sort();
 
   const keyPattern = `"${seasonKey}":{`;
   const occurrences = countOccurrences(objText, keyPattern);
   if (occurrences > 1) {
-    throw new Error(`Mehrdeutig: "${keyPattern}" kommt ${occurrences}× im STATIC_SEASON_DATA-Block vor — Abbruch, nichts geändert.`);
+    throw new Error(`Mehrdeutig: "${keyPattern}" kommt ${occurrences}× im window.STATIC_SEASON_DATA-Block vor — Abbruch, nichts geändert.`);
   }
 
   const newEntryJson = JSON.stringify({ season: seasonData.season, label: seasonData.label, games: seasonData.games });
@@ -411,7 +433,12 @@ export function embedSeasonInHtml(html, seasonKey, seasonData) {
     mode = 'replaced';
   } else {
     const innerEnd = objText.length - 1; // Position der äußeren schließenden '}'
-    newObjText = `${objText.slice(0, innerEnd)},"${seasonKey}":${newEntryJson}${objText.slice(innerEnd)}`;
+    // Kein führendes Komma, wenn das Objekt bisher komplett leer war ("{}",
+    // z.B. beim Neuanlegen von season-data-embedded.js) — sonst entstünde
+    // "{,"key":…}", kein gültiges JSON. Bei mindestens einem bestehenden
+    // Eintrag bleibt das Komma nötig.
+    const separator = oldKeys.length === 0 ? '' : ',';
+    newObjText = `${objText.slice(0, innerEnd)}${separator}"${seasonKey}":${newEntryJson}${objText.slice(innerEnd)}`;
     mode = 'inserted';
   }
 
@@ -421,26 +448,26 @@ export function embedSeasonInHtml(html, seasonKey, seasonData) {
   try {
     newParsed = JSON.parse(newObjText);
   } catch (e) {
-    throw new Error(`Ergebnis nach dem Einbetten ist kein gültiges JSON (${e.message}) — Abbruch, index.html bleibt unverändert.`);
+    throw new Error(`Ergebnis nach dem Einbetten ist kein gültiges JSON (${e.message}) — Abbruch, season-data-embedded.js bleibt unverändert.`);
   }
   const newKeys = Object.keys(newParsed).sort();
   const expectedKeys = mode === 'inserted' ? [...oldKeys, seasonKey].sort() : oldKeys;
   if (JSON.stringify(newKeys) !== JSON.stringify(expectedKeys)) {
     throw new Error(
-      `Unerwartete Änderung der Season-Keys (vorher: ${oldKeys.join(', ')}; nachher: ${newKeys.join(', ')}) — Abbruch, index.html bleibt unverändert.`,
+      `Unerwartete Änderung der Season-Keys (vorher: ${oldKeys.join(', ')}; nachher: ${newKeys.join(', ')}) — Abbruch, season-data-embedded.js bleibt unverändert.`,
     );
   }
   for (const key of oldKeys) {
     if (key === seasonKey) continue;
     if (JSON.stringify(newParsed[key]) !== JSON.stringify(oldParsed[key])) {
-      throw new Error(`Saison "${key}" hätte sich unerwartet mitverändert — Abbruch, index.html bleibt unverändert.`);
+      throw new Error(`Saison "${key}" hätte sich unerwartet mitverändert — Abbruch, season-data-embedded.js bleibt unverändert.`);
     }
   }
   if (newParsed[seasonKey].games.length !== seasonData.games.length) {
     throw new Error('Eingebettete Spielanzahl stimmt nach dem Schreiben nicht mit der Quelle überein — Abbruch.');
   }
 
-  return { html: before + newObjText + after, mode };
+  return { text: before + newObjText + after, mode };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -485,40 +512,48 @@ async function runUpdateEmbedded(seasonKey) {
   }
   const duplicates = findDuplicateGameIds(seasonResult.data.games);
   if (duplicates.length > 0) {
-    console.error(`--update-embedded: season-data/${file} enthält doppelte Game-IDs (${duplicates.map((d) => d.id).join(', ')}) — Abbruch, index.html bleibt unverändert.`);
+    console.error(`--update-embedded: season-data/${file} enthält doppelte Game-IDs (${duplicates.map((d) => d.id).join(', ')}) — Abbruch, season-data-embedded.js bleibt unverändert.`);
     process.exitCode = 1;
     return;
   }
   const structure = validateSeasonGames(seasonResult.data.games);
   if (!structure.ok) {
-    console.error(`--update-embedded: season-data/${file} enthält strukturell ungültige Spiele — Abbruch, index.html bleibt unverändert.`);
+    console.error(`--update-embedded: season-data/${file} enthält strukturell ungültige Spiele — Abbruch, season-data-embedded.js bleibt unverändert.`);
     for (const bad of structure.invalidGames) console.error(`  - Index ${bad.index} (id=${bad.id}): ${bad.problems.join('; ')}`);
     process.exitCode = 1;
     return;
   }
 
-  let html;
+  // Fehlt season-data-embedded.js (z.B. frisch geklonter Checkout ohne jede
+  // eingebettete Saison, oder die Datei wurde versehentlich gelöscht): NICHT
+  // fataler Fehler, sondern Start von einem leeren, aber validen Objekt aus —
+  // embedSeasonInEmbeddedFile() fügt die erste Saison dann per "inserted" ein.
+  let fileText;
   try {
-    html = await readFile(INDEX_HTML_PATH, 'utf8');
+    fileText = await readFile(EMBEDDED_JS_PATH, 'utf8');
   } catch (e) {
-    console.error(`--update-embedded: index.html konnte nicht gelesen werden: ${e.message}`);
-    process.exitCode = 1;
-    return;
+    if (e.code !== 'ENOENT') {
+      console.error(`--update-embedded: season-data-embedded.js konnte nicht gelesen werden: ${e.message}`);
+      process.exitCode = 1;
+      return;
+    }
+    fileText = EMPTY_EMBEDDED_JS;
+    console.log('--update-embedded: season-data-embedded.js existierte noch nicht — wird neu angelegt.');
   }
 
   let embedResult;
   try {
-    embedResult = embedSeasonInHtml(html, seasonKey, seasonResult.data);
+    embedResult = embedSeasonInEmbeddedFile(fileText, seasonKey, seasonResult.data);
   } catch (e) {
     console.error(`--update-embedded: ${e.message}`);
     process.exitCode = 1;
     return;
   }
 
-  await writeTextAtomic(INDEX_HTML_PATH, embedResult.html);
+  await writeTextAtomic(EMBEDDED_JS_PATH, embedResult.text);
   console.log(
-    `--update-embedded: STATIC_SEASON_DATA['${seasonKey}'] in index.html ${embedResult.mode === 'inserted' ? 'neu eingefügt' : 'ersetzt'} ` +
-      `(${seasonResult.data.games.length} Spiele). Alle anderen Saison-Blöcke wurden geprüft und blieben unverändert.`,
+    `--update-embedded: window.STATIC_SEASON_DATA['${seasonKey}'] in season-data-embedded.js ${embedResult.mode === 'inserted' ? 'neu eingefügt' : 'ersetzt'} ` +
+      `(${seasonResult.data.games.length} Spiele). Alle anderen Saison-Blöcke wurden geprüft und blieben unverändert. index.html wurde nicht angefasst.`,
   );
   process.exitCode = 0;
 }

@@ -138,6 +138,8 @@ node scripts/spieltag.mjs 25/26 --games ./entwurf/spieltag-7.json --lineup ./ent
 - **Berechnung nur für sichtbare Bereiche:** Tabs und eingeklappte Abschnitte berechnen erst beim Öffnen; Karten zeigen bis dahin Platzhalter.
 - Die eingebetteten `STATIC_SEASON_DATA` bleiben als `file://`-Fallback, werden aber unter HTTP nicht mehr geparst, wenn externe Daten erfolgreich geladen wurden (prüfen, ob das heute schon so ist).
 
+**Ergänzung (Token-Diät Teil 2):** `STATIC_SEASON_DATA` liegt nicht mehr direkt in `index.html`, sondern in einer eigenen Datei `season-data-embedded.js` im Projektwurzelverzeichnis — ein klassisches Skript (kein `type="module"`, kein `import`/`export`), das `window.STATIC_SEASON_DATA` setzt und per `<script src="season-data-embedded.js">` vor dem Anwendungscode geladen wird. Klassische Skripte laden auch unter `file://`, `fetch()` dagegen nicht — genau das war der ursprüngliche Grund für die Einbettung, und er bleibt mit der Auslagerung unverändert erfüllt. `index.html` selbst schrumpft dadurch von rund 3,9 MB auf rund 1,5 MB. Fehlt `season-data-embedded.js`, bleibt `window.STATIC_SEASON_DATA` ungesetzt; `index.html` fängt das mit `const STATIC_SEASON_DATA=window.STATIC_SEASON_DATA||{}` ab und verhält sich dann wie bisher ganz ohne eingebettete Daten. `scripts/import-season-data.mjs --update-embedded` schreibt seitdem ausschließlich `season-data-embedded.js`, nie mehr `index.html` (siehe [docs/season-data-import.md](../season-data-import.md)).
+
 ---
 
 **Weiter:** [module/index in docs/spec/index.md](index.md#module) · **Zurück:** [00-grundlagen.md](00-grundlagen.md)

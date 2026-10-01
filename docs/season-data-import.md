@@ -24,10 +24,18 @@ GitHub Actions.
 - **Kein automatischer Commit, kein automatischer Push.** Das Tool schreibt
   ausschließlich lokale Dateien. Commit/Push bleiben immer ein bewusster,
   manueller Schritt.
-- **`file://`-Fallback bleibt erhalten.** `index.html` enthält für jede
-  archivierte Saison eine eingebettete Kopie in `STATIC_SEASON_DATA`, die
-  greift, sobald `fetch()` auf `season-data/*.json` fehlschlägt (z. B. beim
-  direkten Öffnen der Datei per Doppelklick).
+- **`file://`-Fallback bleibt erhalten.** `season-data-embedded.js` (ein
+  klassisches Skript im Projektwurzelverzeichnis, per `<script src="season-data-embedded.js">`
+  vor dem Anwendungscode in `index.html` eingebunden) enthält für jede
+  archivierte Saison eine eingebettete Kopie in `window.STATIC_SEASON_DATA`,
+  die greift, sobald `fetch()` auf `season-data/*.json` fehlschlägt (z. B. beim
+  direkten Öffnen von `index.html` per Doppelklick). Seit Token-Diät Teil 2
+  steht dieser Block **nicht mehr** in `index.html` selbst — dadurch bleibt
+  `index.html` rund 1,5 MB statt vormals rund 3,9 MB, was jede Suche und
+  Änderung an der Datei günstiger macht. Fehlt `season-data-embedded.js`
+  (z. B. gelöscht oder noch nie erzeugt), verhält sich die App unter `file://`
+  genau wie zuvor ganz ohne eingebettete Daten: ein Hinweis statt eines
+  Fehlers, kein leerer Zustand.
 - **Unter HTTP werden die externen JSON-Dateien automatisch bevorzugt.**
   `index.html` lädt `season-data/*.json` per `fetch()` und überschreibt damit
   bei Erfolg den eingebetteten Fallback zur Laufzeit — das ist bereits
@@ -71,9 +79,12 @@ GitHub Actions.
    ```
    Liest die soeben geschriebene `season-data/26-27.json` und ersetzt (oder
    fügt bei einer erstmals eingebetteten Saison neu ein) ausschließlich den
-   `STATIC_SEASON_DATA['26/27']`-Block in `index.html`. Alle anderen
-   Saison-Blöcke sowie der gesamte übrige HTML-/CSS-/JS-Code bleiben
-   byte-identisch.
+   `window.STATIC_SEASON_DATA['26/27']`-Block in `season-data-embedded.js`.
+   Alle anderen Saison-Blöcke in dieser Datei bleiben byte-identisch.
+   **`index.html` wird von `--update-embedded` nicht mehr angefasst** (seit
+   Token-Diät Teil 2). Fehlt `season-data-embedded.js` (z. B. neu geklonter
+   Checkout), wird sie mit genau der einen eingebetteten Saison neu angelegt —
+   kein Fehler, das wird im Bericht als "existierte noch nicht" genannt.
 
    Schritt 5 und 6 lassen sich auch in einem Lauf kombinieren:
    ```bash
@@ -83,9 +94,11 @@ GitHub Actions.
    ```bash
    node scripts/test-season-data-validators.mjs
    node scripts/test-import-season-data.mjs
+   node scripts/test-embedded-season-data.mjs
    ```
-8. **`git diff` prüfen** — insbesondere, dass in `index.html` wirklich nur
-   der eine betroffene `STATIC_SEASON_DATA`-Block verändert wurde, dass
+8. **`git diff` prüfen** — insbesondere, dass in `season-data-embedded.js`
+   wirklich nur der eine betroffene Saison-Block verändert wurde, dass
+   `index.html` dabei **gar nicht** in der Änderungsliste auftaucht, dass
    `season-data/<key>.json` die erwarteten Spiele enthält, und (8b) **falls
    die neu importierte Saison jetzt die aktuelle ist**: in
    `season-data/seasons.json` von Hand `status` der neuen Saison auf
@@ -134,8 +147,8 @@ Schlägt auch nur eine dieser Prüfungen fehl, bricht das Tool **hart** ab —
 es gibt kein automatisches Entfernen und kein `--allow-removals` (bewusst
 nicht implementiert). In diesem Fall wird **nichts** geschrieben: weder
 `season-data/<key>.json`, noch `season-data/seasons.json`, noch (bei
-zusätzlichem `--update-embedded`) der `STATIC_SEASON_DATA`-Block in
-`index.html`.
+zusätzlichem `--update-embedded`) der `window.STATIC_SEASON_DATA`-Block in
+`season-data-embedded.js`.
 
 ## Vorgehen für eine neue Saison (Beispiel `26/27`)
 
@@ -143,9 +156,12 @@ Sobald `26/27` echte Spiele hat, ist der Ablauf identisch zum obigen Workflow.
 Da `season-data/26-27.json` anfangs noch nicht existiert, behandelt der
 Dry-Run das als "bisherige Spielanzahl: 0" — jede eingereichte ID gilt dann
 automatisch als neu, es gibt nichts, was verschwinden könnte. `--update-embedded`
-erkennt in diesem Fall, dass `26/27` noch keinen `STATIC_SEASON_DATA`-Block
-hat, und **fügt** ihn neu ein, statt einen bestehenden zu ersetzen — auch das
-wird im Bericht klar benannt ("neu eingefügt" statt "ersetzt").
+erkennt in diesem Fall, dass `26/27` noch keinen `window.STATIC_SEASON_DATA`-Block
+in `season-data-embedded.js` hat, und **fügt** ihn neu ein, statt einen
+bestehenden zu ersetzen — auch das wird im Bericht klar benannt ("neu
+eingefügt" statt "ersetzt"). Fehlt `season-data-embedded.js` als Ganzes (z. B.
+allererster Lauf in einem frischen Checkout ohne die Datei), gilt dasselbe:
+die Datei wird neu angelegt, kein Fehler.
 
 ## Was dieses Tool bewusst NICHT tut
 
