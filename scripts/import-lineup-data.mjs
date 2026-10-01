@@ -18,19 +18,15 @@
 // bzw. importiert daraus — keine dieser Dateien wird von diesem Skript
 // verändert (siehe Auftrag Phase 3).
 //
-// Bekannter, nicht behobener Altbestand-Fund (außerhalb des Scopes dieser
-// Phase, deshalb bewusst NICHT repariert): scripts/update-season-data.mjs
-// exportiert writeJsonAtomic NICHT (kein "export" vor der Funktion, Zeile
-// ~87), obwohl scripts/import-season-data.mjs genau das per
-// `import { writeJsonAtomic } from './update-season-data.mjs'` versucht
-// (Zeile 63) — das würde unter echtem Node.js beim Laden des Moduls mit
-// einem SyntaxError fehlschlagen ("does not provide an export named
-// 'writeJsonAtomic'"), wurde aber bisher nie bemerkt, weil dieses Projekt
-// bislang nie mit echtem Node.js ausgeführt wurde. Dieses neue Importer-
-// Skript hängt deshalb bewusst NICHT von diesem Import ab, sondern bringt
-// eine eigene, kleine, lokale writeJsonAtomic()-Implementierung mit (siehe
-// unten) — unabhängig von diesem vorbestehenden, nicht in Scope liegenden
-// Bug.
+// Korrektur (Datenqualitäts-Phase): scripts/update-season-data.mjs
+// exportiert writeJsonAtomic sehr wohl (export async function writeJsonAtomic),
+// und scripts/import-season-data.mjs importiert es erfolgreich von dort —
+// der frühere Verdacht eines SyntaxErrors beim Laden war unzutreffend
+// (mittlerweile unter echtem Node.js wiederholt verifiziert, siehe
+// scripts/test-import-season-data.mjs/test-update-season-data.mjs). Dieser
+// Importer bringt trotzdem eine eigene, kleine, lokale writeJsonAtomic()-
+// Implementierung mit (siehe unten) statt sie zu importieren — eine kleine,
+// unproblematische Redundanz, keine Umgehung eines Bugs.
 //
 // Kernlogik (validateDraftShape, mergeGames, mergeRegistryGroups,
 // buildImportPlan, formatImportReport) ist bewusst als reine, exportierte
