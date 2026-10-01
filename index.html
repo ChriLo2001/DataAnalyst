@@ -22033,6 +22033,271 @@ function buildSocialVideoSpec({seasonKey,matchdayKey,format}={}){
   return ulmGames.map(g=>socialVideoBuildStorySpec(seasonKey,matchday,g,warningsUnused));
 }
 
+// ═════════════════════════════════════════════════════════════════════════
+// S2 — Canvas2D-Renderer, SCHICHT A (docs/social-video-spezifikation.md Abschnitt 3.2/4): rein, kein
+// Canvas/DOM, keine Schriftmessung (Schicht B hat die Schriftmetriken; hier wird die Textgröße stattdessen
+// über eine Zeichen-pro-Pixel-Schätzung konservativ begrenzt, siehe socialVideoEstimateFontSize — dieselbe
+// Zeichenliste ist dadurch deterministisch testbar, ohne dass ein Browser läuft). socialVideoDrawList(spec,
+// timeMs) ist der einzige Einstiegspunkt. Schicht B (weiter unten, nach dem S1-Standbild-Abschnitt) führt die
+// Liste nur noch aus — kein Layout, keine Animation dort.
+// ═════════════════════════════════════════════════════════════════════════
+
+const SOCIAL_VIDEO_SAFE_TOP=120,SOCIAL_VIDEO_SAFE_BOTTOM=120,SOCIAL_VIDEO_SAFE_LEFT=64,SOCIAL_VIDEO_SAFE_RIGHT=64;
+const SOCIAL_VIDEO_WIDTH=1080;
+function socialVideoHeightForFormat(format){
+  return format==='feed-4x5'?1350:1920;
+}
+function socialVideoContentWidth(){
+  return SOCIAL_VIDEO_WIDTH-SOCIAL_VIDEO_SAFE_LEFT-SOCIAL_VIDEO_SAFE_RIGHT;
+}
+
+// Wiederverwendete Skyline-Silhouette aus der Cover-Animation (index.html, Klassen cv-skyline-*, ~Zeile 1563):
+// KEIN Raster-Asset, ein inline-SVG-Pfad — wortgleich als Konstante übernommen (Geometrie), per Path2D direkt
+// in Canvas2D zeichenbar. Die BEWEGUNG ist für Video eigens nach Abschnitt 4.4 berechnet
+// (socialVideoSkylineTransform): einmaliger Sweep im Intro statt des 4,8s-Loops der Cover-Seite, höchstens
+// 8px Parallaxe über die volle Dauer statt 1080px-Sweep — die Cover-Keyframes (cv-skyline-sweep/-pulse-
+// opacity) werden NICHT wiederverwendet, weil 4.4 für Video andere Werte vorschreibt.
+const SOCIAL_VIDEO_SKYLINE_PATH_D='M28 184 L86 118 L150 184 L150 134 C150 126 158 123 159 106 C160 124 171 127 172 134 L172 181 L204 151 L225 151 L238 89 L249 151 L316 151 L339 151 L341 95 L348 87 L358 32 L368 87 L376 96 L380 197 L394 197 L397 153 L406 153 L409 129 L412 153 L526 153 L526 192 L543 180 L546 118 L553 118 L560 50 L567 118 L577 118 L579 190 L588 176 L596 190 L610 173 L624 195 L662 195 L662 214 L812 214';
+const SOCIAL_VIDEO_SKYLINE_VIEWBOX={w:900,h:260};
+
+function socialVideoEaseOutCubic(t){
+  const c=Math.min(1,Math.max(0,t));
+  return 1-Math.pow(1-c,3);
+}
+
+/** Konservative Zeichenbreiten-Schätzung (keine echte Schriftmessung, siehe Kopfkommentar): wählt die größte
+ * Schriftgröße bis baseSize, bei der text (Zeichenzahl * charFactor * Größe) noch in maxWidth passt. Syne
+ * (fett, breit) bekommt einen größeren Faktor als DM Mono. Garantiert dadurch KONSTRUKTIV, nicht erst durch
+ * Messung, dass kein Textelement die sicheren Ränder überschreitet — auch bei sehr langen Vereinsnamen. */
+function socialVideoEstimateFontSize(text,baseSize,maxWidth,charFactor,minSize=11){
+  const len=Math.max(1,String(text||'').length);
+  const fits=maxWidth/(len*charFactor);
+  return Math.max(minSize,Math.min(baseSize,fits));
+}
+
+/** Findet die aktive Szene bei timeMs. Szenen sind lückenlos [startMs,endMs); am Dauerende bzw. vor
+ * Szenenbeginn wird auf die letzte/erste Szene geklemmt. null nur, wenn spec.scenes leer ist (z. B. kein
+ * Ulm-Spiel an diesem Spieltag gefunden — Spezifikation 5: "keine leeren Elemente", keine leere Zeichenliste
+ * nötig, der Aufrufer zeigt in diesem Fall ohnehin nur den Hintergrund). */
+function socialVideoSceneAt(spec,timeMs){
+  const scenes=spec?.scenes||[];
+  if(!scenes.length)return null;
+  const t=Math.min(Math.max(0,timeMs),spec.durationMs??15000);
+  let scene=scenes.find(s=>t>=s.startMs&&t<s.endMs);
+  if(!scene)scene=t>=scenes[scenes.length-1].endMs?scenes[scenes.length-1]:scenes[0];
+  return{scene,sceneMs:t-scene.startMs,sceneIndex:scenes.indexOf(scene)};
+}
+
+/** Animationsfortschritt (Spezifikation 4.3): fade/rise 300ms, count (Hochzählen) 600ms easeOutCubic, stagger
+ * wie fade (Item-Abstand wird vom Aufrufer über zusätzliche delayMs pro Pille gebildet). Vor delayMs:
+ * unsichtbar. */
+function socialVideoElementProgress(animation,delayMs,sceneMs){
+  const elapsed=sceneMs-(delayMs||0);
+  const dur=animation==='count'?600:300;
+  if(elapsed<=0)return{opacity:0,raw:0,eased:0};
+  const raw=Math.min(1,elapsed/dur);
+  return{opacity:raw,raw,eased:socialVideoEaseOutCubic(raw)};
+}
+const SOCIAL_VIDEO_RISE_PX=24;
+
+/** Reine Phasenfunktion der Fahne (Spezifikation 4.4): Periode ca. 2,5s, Phase AUSSCHLIESSLICH von timeMs
+ * abhängig (kein Zufall, keine Physik, kein Reset pro Szene — zwei Aufrufe mit demselben timeMs liefern
+ * denselben Wert, siehe Test). */
+function socialVideoFlagPhase(timeMs){
+  return(timeMs/2500)*2*Math.PI;
+}
+/** Vertikaler Höhenversatz einer Fahnen-Spalte bei x (0..flagWidth), höchstens 1,5% von flagHeight
+ * (Spezifikation 4.4), Wellenlänge ca. halbe Fahnenbreite. */
+function socialVideoFlagColumnOffset(x,flagWidth,flagHeight,timeMs){
+  const amplitude=flagHeight*0.015;
+  const wavelength=Math.max(1,flagWidth*0.5);
+  return Math.sin((x/wavelength)*2*Math.PI+socialVideoFlagPhase(timeMs))*amplitude;
+}
+
+/** Langsame Parallaxe (höchstens 8px über die volle Dauer) plus Fortschritt des einmaligen Intro-Sweeps
+ * (0..1, nur während der ersten introMs). */
+function socialVideoSkylineTransform(timeMs,durationMs,introMs){
+  const parallaxX=durationMs>0?(Math.min(timeMs,durationMs)/durationMs)*8:0;
+  const sweepProgress=introMs>0?Math.min(1,Math.max(0,timeMs/introMs)):1;
+  return{parallaxX,sweepProgress};
+}
+
+/** Deterministische Spatzen-Positionen (höchstens 12, Spezifikation 4.4: "langsam, unregelmäßig verteilt,
+ * Deckkraft unter 0,5"). Kein Math.random() (Determinismus-Pflicht, Abschnitt 5/8) — Startposition und
+ * Geschwindigkeit je Spatz kommen aus einer festen, unregelmäßig wirkenden Zahlenfolge (Indexabhängig). */
+const SOCIAL_VIDEO_SPARROW_COUNT=12;
+function socialVideoSparrowPositions(timeMs,width,height){
+  const out=[];
+  for(let i=0;i<SOCIAL_VIDEO_SPARROW_COUNT;i++){
+    const seed=(i*0.6180339887)%1; // golden-ratio-Streuung statt Zufall: wirkt unregelmäßig, ist aber fix
+    const speed=6+((i*37)%17); // px/s, 6..22, je Spatz konstant
+    const baseY=height*0.58+((i*53)%180);
+    const x=((seed*width)+(timeMs/1000)*speed)%(width+80)-40;
+    const y=baseY+Math.sin((timeMs/1000)*0.4+i)*10;
+    out.push({x,y,opacity:0.14+((i*7)%10)/40});
+  }
+  return out;
+}
+
+function socialVideoPushText(cmds,{text,x,y,baseSize,maxWidth,font='syne',weight=900,color='#fff',align='center',letterSpacing=0,opacity=1,charFactor}){
+  const t=String(text||'');
+  if(!t)return;
+  const factor=charFactor??(font==='mono'?0.6:0.66);
+  const size=socialVideoEstimateFontSize(t,baseSize,maxWidth,factor);
+  cmds.push({type:'text',text:t,x,y,size,maxWidth,font,weight,color,align,letterSpacing,opacity});
+}
+
+/** Logokreis (Spezifikation Abschnitt 2: Goldrand, roter Verlauf, Initialen-Fallback). Schicht A kennt den
+ * Ladezustand der Bilddatei nicht (rein, kein Netzwerk/Dateisystem) — deshalb werden IMMER Ring+Initialen UND
+ * ein image-Befehl erzeugt; Schicht B zeichnet den image-Befehl nur, wenn das Asset tatsächlich geladen
+ * werden konnte, sonst bleiben die darunterliegenden Initialen sichtbar (derselbe Fallback-Effekt wie das
+ * bestehende <img onerror> in rMatchcenterStoryLogo). */
+function socialVideoPushLogo(cmds,{cx,cy,r,assetKey,initials,isUlm,opacity}){
+  const ringColor='#E8A020';
+  cmds.push({type:'circle',x:cx,y:cy,r,fill:{type:'radial',cx:0.5,cy:0.42,stops:[[0,'#fdfaf2'],[0.58,'#f8f2e6'],[1,'#e8d8b8']]},stroke:ringColor,strokeWidth:3,opacity});
+  socialVideoPushText(cmds,{text:initials,x:cx,y:cy,baseSize:r*0.62,maxWidth:r*1.5,font:'syne',color:'#1f0b0f',align:'center',opacity});
+  cmds.push({type:'image',assetKey,x:cx-r*0.74,y:cy-r*0.74,w:r*1.48,h:r*1.48,clip:'circle',cx,cy,cr:r,opacity});
+}
+
+const SOCIAL_VIDEO_PILL_COLORS={
+  S:{from:'#F09020',to:'#CC1A27',text:'#fff'},
+  U:{from:'#6b7280',to:'#2f3542',text:'#fde68a'},
+  N:{from:'#5e111b',to:'#120508',text:'#f8b4b4'},
+  '-':{from:'rgba(148,163,184,.14)',to:'rgba(148,163,184,.14)',text:'#94a3b8'},
+};
+/** Formpillen-Reihe (Spezifikation 4.1: "Formpillen erscheinen nacheinander im Abstand von 80ms"). */
+function socialVideoPushForm(cmds,{letters,cx,topY,delayMs,sceneMs,size=34}){
+  const pills=(letters&&letters.length?letters:['-']).slice(-5);
+  const gap=10;
+  const totalW=pills.length*size+(pills.length-1)*gap;
+  let x=cx-totalW/2+size/2;
+  pills.forEach((letter,i)=>{
+    const p=socialVideoElementProgress('stagger',delayMs+i*80,sceneMs);
+    if(p.opacity<=0)return;
+    const colors=SOCIAL_VIDEO_PILL_COLORS[letter]||SOCIAL_VIDEO_PILL_COLORS['-'];
+    const y=topY-(1-p.eased)*SOCIAL_VIDEO_RISE_PX;
+    cmds.push({type:'circle',x,y,r:size/2,fill:{type:'linear',x0:0,y0:-1,x1:0,y1:1,stops:[[0,colors.from],[1,colors.to]]},opacity:p.opacity});
+    socialVideoPushText(cmds,{text:letter,x,y,baseSize:size*0.5,maxWidth:size*0.9,font:'mono',color:colors.text,align:'center',opacity:p.opacity});
+    x+=size+gap;
+  });
+}
+
+/** Ein-Szeilen-Elemente (title/meta/stat/result) nacheinander senkrecht gestapelt, zentriert im verfügbaren
+ * Bereich der Szene — reicht für die hier vorkommenden Elementzahlen (höchstens 4-5 je Szene) und hält sich
+ * an die sicheren Ränder, da jede Textgröße bereits auf maxWidth=Inhaltsbreite begrenzt ist. */
+function socialVideoLayoutScene(spec,scene,sceneMs,height){
+  const cmds=[];
+  const cx=SOCIAL_VIDEO_WIDTH/2;
+  const contentW=socialVideoContentWidth();
+  const topY=SOCIAL_VIDEO_SAFE_TOP;
+  const bottomY=height-SOCIAL_VIDEO_SAFE_BOTTOM;
+  const els=scene.elements||[];
+  // Grobe Schlitzhöhe je Elementtyp, nur für die vertikale Verteilung (keine Schriftmessung).
+  const slotH={logo:220,title:110,meta:56,stat:84,form:76,result:170,playerCard:210};
+  const totalH=els.reduce((sum,el)=>sum+(slotH[el.type]||80),0);
+  let y=Math.max(topY,topY+((bottomY-topY)-totalH)/2);
+  for(const el of els){
+    const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
+    const riseOffset=(el.animation==='rise'||el.animation==='stagger')?(1-p.eased)*SOCIAL_VIDEO_RISE_PX:0;
+    const slot=slotH[el.type]||80;
+    const centerY=y+slot/2-riseOffset;
+    if(p.opacity>0)switch(el.type){
+      case'logo':{
+        socialVideoPushLogo(cmds,{cx,cy:centerY,r:90,assetKey:el.asset,initials:matchcenterStoryInitials(el.team==='vfb-ulm'?'VfB Ulm':el.team),isUlm:el.team==='vfb-ulm',opacity:p.opacity});
+        break;
+      }
+      case'title':{
+        socialVideoPushText(cmds,{text:el.text,x:cx,y:centerY,baseSize:el.textStage==='tight'?42:56,maxWidth:contentW,font:'syne',color:'#fff',align:'center',opacity:p.opacity});
+        break;
+      }
+      case'meta':{
+        socialVideoPushText(cmds,{text:el.text,x:cx,y:centerY,baseSize:22,maxWidth:contentW,font:'mono',color:'rgba(255,255,255,.7)',align:'center',opacity:p.opacity,letterSpacing:1});
+        break;
+      }
+      case'stat':{
+        socialVideoPushText(cmds,{text:el.label,x:cx,y:centerY-20,baseSize:18,maxWidth:contentW,font:'mono',color:'#ffb1b8',align:'center',opacity:p.opacity});
+        const countP=el.animation==='count'?p.eased:1;
+        const displayText=/^#\d+$/.test(el.text)?`#${Math.max(1,Math.round(parseInt(el.text.slice(1),10)*countP))}`:el.text;
+        socialVideoPushText(cmds,{text:displayText,x:cx,y:centerY+22,baseSize:44,maxWidth:contentW,font:'syne',color:'#fff',align:'center',opacity:p.opacity});
+        break;
+      }
+      case'form':{
+        socialVideoPushText(cmds,{text:el.label,x:cx,y:centerY-24,baseSize:16,maxWidth:contentW,font:'mono',color:'#ffb1b8',align:'center',opacity:p.opacity});
+        socialVideoPushForm(cmds,{letters:el.pills,cx,topY:centerY+16,delayMs:el.delayMs,sceneMs,size:34});
+        break;
+      }
+      case'result':{
+        socialVideoPushText(cmds,{text:el.sub,x:cx,y:centerY-50,baseSize:20,maxWidth:contentW,font:'mono',color:'#ffb1b8',align:'center',opacity:p.opacity});
+        socialVideoPushText(cmds,{text:el.text,x:cx,y:centerY+30,baseSize:96,maxWidth:contentW,font:'syne',color:'#fff',align:'center',opacity:p.opacity*(el.animation==='count'?Math.max(0.01,p.eased):1)});
+        break;
+      }
+      case'playerCard':{
+        const cardY=centerY;
+        cmds.push({type:'rect',x:SOCIAL_VIDEO_SAFE_LEFT,y:cardY-85,w:contentW,h:170,rx:22,fill:{type:'linear',x0:0,y0:0,x1:1,y1:1,stops:[[0,'rgba(204,26,39,.30)'],[1,'rgba(14,3,6,.85)']]},opacity:p.opacity});
+        socialVideoPushText(cmds,{text:el.team==='ulm'?'Ulm-Fokus':'Gegner-Fokus',x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY-50,baseSize:16,maxWidth:contentW-56,font:'mono',color:'#fff0bd',align:'left',opacity:p.opacity});
+        socialVideoPushText(cmds,{text:el.name,x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY-14,baseSize:34,maxWidth:contentW-56,font:'syne',color:'#fff',align:'left',opacity:p.opacity});
+        socialVideoPushText(cmds,{text:el.stat,x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY+22,baseSize:22,maxWidth:contentW-56,font:'mono',color:'#ffd38a',align:'left',opacity:p.opacity});
+        socialVideoPushText(cmds,{text:el.note,x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY+54,baseSize:18,maxWidth:contentW-56,font:'inter',color:'rgba(255,255,255,.7)',align:'left',opacity:p.opacity});
+        break;
+      }
+    }
+    y+=slot;
+  }
+  return cmds;
+}
+
+/** Hintergrund + Skyline + Spatzen + (nur Intro/Abschluss) Fahne — Abschnitt 4.4: "zählen nicht in die Grenze
+ * von zwei animierten Elementen pro Szene", Deckkraft der Hintergrundebene höchstens 0,35 hinter Textbereichen. */
+function socialVideoBackgroundLayer(spec,timeMs,height,sceneId){
+  const cmds=[];
+  cmds.push({type:'background',x:0,y:0,w:SOCIAL_VIDEO_WIDTH,h:height,fill:'#0E0306'});
+  cmds.push({type:'circle',x:SOCIAL_VIDEO_WIDTH*0.72,y:height*0.06,r:SOCIAL_VIDEO_WIDTH*0.5,fill:{type:'radial',cx:0.5,cy:0.5,stops:[[0,'rgba(204,26,39,.5)'],[1,'rgba(204,26,39,0)']]},opacity:1});
+  const introMs=(spec.scenes?.[0]?.endMs)||2400;
+  const skyline=socialVideoSkylineTransform(timeMs,spec.durationMs||15000,introMs);
+  const scale=SOCIAL_VIDEO_WIDTH/SOCIAL_VIDEO_SKYLINE_VIEWBOX.w;
+  const skylineY=height-SOCIAL_VIDEO_SKYLINE_VIEWBOX.h*scale*0.62;
+  cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'rgba(148,163,184,.3)',strokeWidth:2.4/scale,opacity:0.9});
+  if(skyline.sweepProgress<1){
+    cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'#ff304d',strokeWidth:3/scale,opacity:1,clipSweep:skyline.sweepProgress,clipWidthPx:SOCIAL_VIDEO_SKYLINE_VIEWBOX.w*scale});
+  }
+  for(const s of socialVideoSparrowPositions(timeMs,SOCIAL_VIDEO_WIDTH,height)){
+    cmds.push({type:'image',assetKey:'assets/spatz.svg',x:s.x,y:s.y,w:24,h:20,opacity:Math.min(0.48,s.opacity)});
+  }
+  if(sceneId==='intro'||sceneId==='outro'){
+    const flagW=360,flagH=240,flagX=SOCIAL_VIDEO_WIDTH/2-flagW/2,flagY=height*0.5-flagH/2;
+    const stripW=4;
+    for(let sx=0;sx<flagW;sx+=stripW){
+      const dy=socialVideoFlagColumnOffset(sx,flagW,flagH,timeMs);
+      const crestFactor=Math.cos((sx/(flagW*0.5))*2*Math.PI+socialVideoFlagPhase(timeMs));
+      const squeeze=1-Math.max(0,crestFactor)*0.04;
+      const brightness=1+crestFactor*0.12;
+      cmds.push({type:'image',assetKey:'assets/vfb-ulm-logo-mark.png',srcRect:{x:sx,y:0,w:stripW,h:flagH},x:flagX+sx*squeeze,y:flagY+dy,w:stripW*squeeze,h:flagH,opacity:1,brightness});
+    }
+    cmds.push({type:'rect',x:flagX-6,y:flagY-20,w:6,h:flagH+40,fill:'#8a7a52',opacity:1});
+    cmds.push({type:'rect',x:flagX,y:flagY+flagH+4,w:flagW,h:18,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,0)']]},opacity:0.6});
+  }
+  return cmds;
+}
+
+/**
+ * socialVideoDrawList(spec, timeMs) — SCHICHT A, Hauptfunktion (Spezifikation Abschnitt 3.2). Reine Funktion:
+ * dieselbe spec + dasselbe timeMs liefern immer dieselbe (deep-equal) Liste. Zeichnet nichts selbst.
+ * @param {object} spec Ergebnis von buildSocialVideoSpec() (EIN Objekt, nicht das Array bei 'story-9x16')
+ * @param {number} timeMs 0..spec.durationMs
+ * @returns {Array<object>} Zeichenbefehle in Zeichenreihenfolge (Hintergrund zuerst, Inhalt zuletzt)
+ */
+function socialVideoDrawList(spec,timeMs){
+  const height=socialVideoHeightForFormat(spec?.format);
+  const at=socialVideoSceneAt(spec,timeMs);
+  const sceneId=at?.scene?.id||null;
+  const cmds=[...socialVideoBackgroundLayer(spec,timeMs,height,sceneId)];
+  // Abdunkelnder Verlauf unter dem Inhaltsbereich (Lesbarkeit hat Vorrang, Abschnitt 4.4) — zusammen mit der
+  // Hintergrundebene oben höchstens 0,35 Deckkraft hinter Textbereichen.
+  cmds.push({type:'rect',x:0,y:SOCIAL_VIDEO_SAFE_TOP-40,w:SOCIAL_VIDEO_WIDTH,h:height-SOCIAL_VIDEO_SAFE_TOP-SOCIAL_VIDEO_SAFE_BOTTOM+80,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.1)'],[0.5,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,.1)']]},opacity:0.35});
+  if(at)cmds.push(...socialVideoLayoutScene(spec,at.scene,at.sceneMs,height));
+  return cmds;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // S1 — Standbild-Export aus der Spezifikation (Abschnitt 3.3/6, Umfangspunkt 4). Story (9:16) nutzt UNVERÄNDERT
 // rMatchcenterStoryFrame (dieselbe Darstellung wie die bestehende Story-Vorschau, Abschnitt 2 der
