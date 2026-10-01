@@ -42,6 +42,38 @@ Die Videos übernehmen das Erscheinungsbild der heutigen Story-Vorschau. Verbind
 
 Die bestehende Klassenlogik (`.mc-story-frame`, `.mc-story-inner`, `.mc-story-fact`, `mc-story-fit-tight`, `mc-story-fit-ultra`) bleibt für die **Standbilder** in Gebrauch. Für das Video wird eine **vereinfachte Szenenfolge** gebaut, die dieselben Tokens verwendet (Abschnitt 4).
 
+## 2a. Gestaltungskanon (verbindlich) — „edel" statt Dashboard
+
+Die Videos übernehmen **Farben, Schriften und Inhalte** der Story-Vorschau, **nicht deren Formensprache**. Die Story-Vorschau ist ein dichtes Bedien-Layout; das Video ist ein Markenauftritt. Maßstab ist eine Broadcast-Grafik vor dem Anpfiff, nicht ein Statistik-Panel.
+
+### Verboten (das macht den billigen Eindruck)
+
+- Abgerundete Pillen und Kapseln als Container, Badges mit Rahmen, Kärtchen mit Hintergrundfläche
+- Farbverläufe auf Flächen hinter Text, Verläufe auf Schrift, farbige Schlagschatten, Leuchtkanten („glow")
+- Goldringe oder helle Kreisflächen um Logos
+- Rote Versal-Labels; Labels sind nie Signalfarbe
+- Mehr als eine Akzentfarbe gleichzeitig; Rot und Orange nebeneinander
+- Alles mittig gesetzt
+- Mehr als zwei Schriftgrade in einem Block
+
+### Vorgegeben
+
+- **Farbbudget pro Bild:** fast schwarzer Grund, gebrochenes Weiß für Inhalt, ein gedämpftes Grau für Labels, **eine** Akzentfarbe (Vereinsrot) auf höchstens 5 Prozent der Fläche. Gold ausschließlich als Haarlinie, nie als Fläche.
+- **Trennung durch Haarlinien**, 1 px, 15 bis 25 Prozent Deckkraft, statt durch Kästen. Weißraum trennt, nicht Rahmen.
+- **Typografie trägt die Gestaltung:** Display-Größen mit enger Laufweite (Teamname, Zahlen), Labels klein, in Versalien, weit gesperrt, gedämpftes Grau. Zahlen in Tabellenziffern mit gleicher Breite, damit sie beim Hochzählen nicht springen.
+- **Satzkante statt Mitte:** Inhalt an einer linken Satzkante ausgerichtet, nur Matchup und Abschluss zentriert. Grundlinienraster für alle Textzeilen.
+- **Logos ohne Dekoration:** frei auf dunklem Grund, kein Ring, keine Fläche. Gegnerlogo leicht entsättigt, Ulm in voller Farbe — das ordnet die Hierarchie ohne zusätzliche Elemente.
+- **Tiefe statt Effekte:** feines Korn über dem gesamten Bild, weiche Vignette, Hintergrundebenen mit unterschiedlicher Schärfe. Keine Effekte an einzelnen Elementen.
+- **Höchstens fünf sichtbare Gruppen** je Szene, inklusive Kopfzeile und Fortschrittsbalken.
+- **Bewegung in langen Kurven:** Ein- und Ausblenden über 500 bis 700 ms mit weicher Beschleunigung, kein Federn, kein Überschwingen, keine Skalierungssprünge.
+
+### Prüfbar
+
+- Akzentfläche je Bild höchstens 5 Prozent (messbar an der Zeichenliste).
+- Keine Zeichenbefehle mit Verlaufsfüllung hinter Text, keine farbigen Schatten, kein Rahmen-Rechteck mit Eckradius als Container.
+- Höchstens fünf Gruppen je Szene.
+- Zahlen verwenden Tabellenziffern.
+
 ## 3. Technischer Weg
 
 ### 3.1 Warum nicht der PNG-Weg
