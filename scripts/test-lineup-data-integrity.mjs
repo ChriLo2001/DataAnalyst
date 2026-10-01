@@ -15,6 +15,7 @@
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { checkLineupDataIntegrity, seasonKeyFromFileName, fileNameFromSeasonKey, normalizeSeasonArg } from './check-lineup-data-integrity.mjs';
 
@@ -345,6 +346,40 @@ console.log('== O) echter Smoke-Test gegen die tatsächlich vorhandenen Dateien 
   assertTrue(report.errors.some((e) => e.code === 'REGISTRY_UNKNOWN_CREATED_GAME'), 'Checker erkennt, dass die Registry ebenfalls auf die Platzhalter-gameId verweist (REGISTRY_UNKNOWN_CREATED_GAME)');
   assertTrue(report.summary.gamesChecked >= 1, 'Checker hat die echte Datei tatsächlich geladen und mindestens 1 Spiel geprüft');
   assertEqual(report.summary.seasonsChecked, 1, 'genau 1 Saison geprüft (25/26)');
+}
+
+console.log('== P. CLI-Startguard: Namens-Kollision mit einer hypothetischen test-check-lineup-data-integrity.mjs ==');
+{
+  // Regressionstest für dieselbe Fehlerklasse, die in update-season-data.mjs /
+  // import-season-data.mjs / import-lineup-data.mjs gefunden und behoben wurde
+  // (siehe Build-Bericht der Datenqualitäts-Phase): ein zu grober
+  // `process.argv[1]?.endsWith('<skript>.mjs')`-Guard feuert main() fälschlich
+  // auch dann, wenn ein TESTDATEINAME zufällig auf denselben Suffix endet.
+  // check-lineup-data-integrity.mjs verwendet seit diesem Fix den exakten
+  // Pfadvergleich (path.resolve(argv[1]) === fileURLToPath(import.meta.url)).
+  // Dieser Test simuliert exakt die Namenskollision (ein Testdateiname, der
+  // auf "check-lineup-data-integrity.mjs" endet) und prüft, dass main() beim
+  // bloßen Import NICHT ausgelöst wird — unabhängig davon, ob ein Testfile mit
+  // genau diesem Namen aktuell existiert.
+  const prevArgv1 = process.argv[1];
+  const prevLog = console.log;
+  const prevError = console.error;
+  let printed = '';
+  console.log = (...args) => { printed += args.join(' ') + '\n'; };
+  console.error = (...args) => { printed += args.join(' ') + '\n'; };
+  try {
+    process.argv[1] = path.join(REPO_ROOT, 'scripts', 'test-check-lineup-data-integrity.mjs');
+    const url = pathToFileURL(path.join(REPO_ROOT, 'scripts', 'check-lineup-data-integrity.mjs')).href + `?regression-check=${Date.now()}`;
+    await import(url);
+    // main().catch(...) wird nicht awaited — kurze Wartezeit, falls der Guard
+    // doch fälschlich feuert, damit die Nebenwirkung sichtbar würde.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  } finally {
+    process.argv[1] = prevArgv1;
+    console.log = prevLog;
+    console.error = prevError;
+  }
+  assertEqual(printed, '', 'Import unter einem Namens-Kollisions-Pfad (endet wie das Skript selbst) löst main() NICHT aus — kein Report-Output als Nebenwirkung');
 }
 
 // ─────────────────────────────────────────────────────────────────────────

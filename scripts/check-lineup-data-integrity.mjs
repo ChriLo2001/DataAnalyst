@@ -20,6 +20,7 @@
 
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   isValidSeasonKeyFormat,
@@ -350,7 +351,12 @@ export async function main(argv = process.argv.slice(2)) {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-if (process.argv[1]?.replace(/\\/g, '/').endsWith('check-lineup-data-integrity.mjs')) {
+// CLI-Startguard: EXAKTER Pfadvergleich (import.meta.url vs. dem tatsächlich gestarteten Skript),
+// NICHT ein endsWith()-Suffix-Vergleich (siehe update-season-data.mjs/import-season-data.mjs/
+// import-lineup-data.mjs für die dort bereits behobene, baugleiche Fehlerklasse: ein künftiges
+// test-check-lineup-data-integrity.mjs würde sonst denselben Namens-Suffix tragen und main()
+// beim bloßen Import ein zweites Mal im Hintergrund auslösen).
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((e) => {
     console.error('Unerwarteter Fehler:', e.message);
     process.exitCode = 1;
