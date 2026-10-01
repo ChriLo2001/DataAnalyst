@@ -1642,6 +1642,13 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
      ersetzt den früher hier direkt eingebetteten STATIC_SEASON_DATA-Block, siehe
      scripts/import-season-data.mjs --update-embedded und docs/season-data-import.md. -->
 <script src="season-data-embedded.js"></script>
+<!-- file://-Fallback für den Social-Video-Renderer (S2-Nachtrag, Canvas-Taint unter file:// behoben): stellt
+     window.SOCIAL_VIDEO_ASSETS bereit (Team-Logos, VfB-Logo, Spatz als data:-URIs). Grund: unter file://
+     behandelt Chrome jede lokale Datei als eigene fremde Herkunft — auch ein per <img src="assets/…"> von
+     derselben Festplatte geladenes Bild verunreinigt das Canvas (captureStream()/toDataURL() schlagen dann
+     fehl). data:-URIs haben dieses Problem nicht. Siehe scripts/cache-team-logos.mjs --embed --write und
+     docs/social-video-spezifikation.md Abschnitt 3.3. Klassisches Skript, lädt auch per Doppelklick. -->
+<script src="social-video-assets.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════
 //  CONFIG
@@ -20346,7 +20353,9 @@ function rSocialVideoBlock(){
     </div>
     ${busy?`<div class="mc-coach-confidence">${escHtml(rec.label)} — Video ${rec.index+1} von ${rec.total}, Sekunde ${Math.min(rec.durationMs,rec.elapsedMs)/1000|0} von ${(rec.durationMs/1000)|0}</div>`:''}
     <div class="mc-coach-confidence"><strong>Für MP4-Dateien wird ffmpeg benötigt.</strong> Die App erzeugt WebM-Dateien. MP4-Umwandlung kommt in S3, deshalb dann einmal im Projektordner ausführen: <code>node scripts/social-video.mjs --in &lt;ordner-mit-webm&gt; --write</code>. Ist ffmpeg nicht installiert, meldet das Skript das mit Installationshinweis. Die WebM-Dateien bleiben in jedem Fall erhalten.</div>
-    <div class="mc-coach-confidence">Fehlt ein Team-Logo lokal (<code>assets/teams/&lt;team&gt;.png</code>), erscheinen Initialen statt Logo. Einmalig laden: <code>node scripts/cache-team-logos.mjs --fetch</code>.</div>
+    <div class="mc-coach-confidence">Fehlt ein Team-Logo lokal (<code>assets/teams/&lt;team&gt;.png</code>), erscheinen Initialen statt Logo. Einmalig laden: <code>node scripts/cache-team-logos.mjs --fetch</code>, danach <code>node scripts/cache-team-logos.mjs --embed --write</code> (bettet die Bilder für den Renderer ein).</div>
+    <div class="mc-coach-confidence">Läuft die App per Doppelklick (<code>file://</code>), startet Chrome die Videoerzeugung trotzdem erfolgreich — die Bilder kommen eingebettet aus <code>social-video-assets.js</code>. Schlägt es dennoch fehl, meldet die App den genauen Grund und den Befehl für einen lokalen Server (<code>node scripts/serve.mjs</code>).</div>
+    <div class="mc-coach-confidence">Während der Aufnahme bitte diesen Browser-Tab im Vordergrund lassen: in einem in den Hintergrund gewechselten Tab drosselt Chrome das Zeichnen, was zu stockenden Videos führen kann.</div>
     ${S.socialVideoFontsFallback?'<div class="mc-coach-confidence">Hinweis: Syne/DM Mono sind in diesem Browser nicht vollständig geladen — Video/Standbilder verwenden Ersatzschriften.</div>':''}
     ${S.socialVideoCaptureUnsupported?'<div class="mc-coach-confidence">Video-Aufnahme (MediaRecorder/captureStream) ist in diesem Browser nicht verfügbar — Standbilder und Kontaktbogen funktionieren unabhängig davon.</div>':''}
   </section>`;
@@ -20396,8 +20405,8 @@ window.generateSocialVideoVideos=async(button,seasonKey,matchdayKey)=>{
     if(controller.signal.aborted)alert(`Abgebrochen nach ${downloaded.length} Datei(en).`);
     else if(downloaded.length)alert(`${downloaded.length} Datei(en) heruntergeladen:\n${downloaded.join('\n')}`);
   }catch(e){
-    console.warn('Social-Video-Aufnahme fehlgeschlagen:',e);
-    alert('Videos konnten nicht erzeugt werden.');
+    console.error('Social-Video-Aufnahme fehlgeschlagen:',e);
+    alert(socialVideoFormatErrorAlert('Videos konnten nicht erzeugt werden',e));
   }finally{
     setState({socialVideoRecording:null});
   }
@@ -20423,8 +20432,8 @@ window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
     // selbst gemeldet ("Standbild-Export ist in diesem Browser gerade nicht möglich."); eine zweite,
     // hier fälschlich auf "kein Spiel gefunden" lautende Meldung wäre irreführend.
   }catch(e){
-    console.warn('Social-Video-Standbild-Erzeugung fehlgeschlagen:',e);
-    alert('Standbilder konnten nicht erzeugt werden.');
+    console.error('Social-Video-Standbild-Erzeugung fehlgeschlagen:',e);
+    alert(socialVideoFormatErrorAlert('Standbilder konnten nicht erzeugt werden',e));
   }finally{
     if(button){button.disabled=false;button.textContent=oldText||'Nur Standbilder erzeugen';}
   }
@@ -20441,8 +20450,8 @@ window.generateSocialVideoContactSheets=async(button,seasonKey,matchdayKey)=>{
     if(names.length)alert(`${names.length} Kontaktbogen-Bild(er) heruntergeladen.`);
     else alert('Kein Kontaktbogen erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');
   }catch(e){
-    console.warn('Social-Video-Kontaktbogen fehlgeschlagen:',e);
-    alert('Kontaktbogen konnte nicht erzeugt werden.');
+    console.error('Social-Video-Kontaktbogen fehlgeschlagen:',e);
+    alert(socialVideoFormatErrorAlert('Kontaktbogen konnte nicht erzeugt werden',e));
   }finally{
     if(button){button.disabled=false;button.textContent=oldText||'Kontaktbogen (PNG je Szene)';}
   }
@@ -22535,19 +22544,26 @@ function socialVideoRenderFrame(ctx,drawList,assets,staticLayer){
   }
 }
 
-/** Lädt alle in einer Story-/Feed-Spec referenzierten Bild-Assets einmal (lokale, same-origin Dateien —
- * assets/teams/*.png, assets/vfb-ulm-logo-mark.png, assets/spatz.svg). Fehlschläge werden NICHT geworfen:
- * das Ergebnis enthält einfach keinen Eintrag für diesen Schlüssel, der Initialen-Fallback greift (siehe
- * socialVideoDrawCommand, Fall 'image'). */
+/** Lädt alle in einer Story-/Feed-Spec referenzierten Bild-Assets einmal — AUSSCHLIESSLICH aus
+ * window.SOCIAL_VIDEO_ASSETS (data:-URIs, siehe social-video-assets.js/scripts/cache-team-logos.mjs --embed),
+ * NIE aus einem assets/…-Dateipfad: unter file:// behandelt Chrome jede lokale Datei als eigene fremde
+ * Herkunft, auch ein per <img src="assets/…"> von derselben Festplatte geladenes Bild verunreinigt das
+ * Canvas (captureStream()/toDataURL() schlagen danach fehl) — data:-URIs haben dieses Problem nicht. Fehlt
+ * ein Schlüssel in SOCIAL_VIDEO_ASSETS (z. B. social-video-assets.js nie erzeugt, oder Team-Logo nicht
+ * gecacht), enthält das Ergebnis einfach keinen Eintrag dafür; der Initialen-Fallback greift (siehe
+ * socialVideoDrawCommand, Fall 'image'). Fehlschläge werden NICHT geworfen. */
 async function socialVideoLoadAssets(spec){
   const keys=new Set(['assets/spatz.svg','assets/vfb-ulm-logo-mark.png']);
   for(const scene of spec?.scenes||[])for(const el of scene.elements||[])if(el.type==='logo'&&el.asset)keys.add(el.asset);
+  const source=window.SOCIAL_VIDEO_ASSETS||{};
   const assets={};
   await Promise.all([...keys].map(key=>new Promise(resolve=>{
+    const dataUri=source[key];
+    if(!dataUri){resolve();return;}
     const img=new Image();
     img.onload=()=>{assets[key]=img;resolve();};
     img.onerror=()=>resolve();
-    img.src=key;
+    img.src=dataUri;
   })));
   return assets;
 }
@@ -22569,9 +22585,42 @@ function socialVideoPickMimeType(){
   return globalThis.MediaRecorder?'video/webm':null;
 }
 
+/** Reiner Hinweistext bei gescheitertem Canvas-Export (S2-Nachtrag, Umfangspunkt 2: ehrliche Vorprüfung statt
+ * Sammelmeldung nach voller Aufnahmedauer) — ohne Canvas/DOM testbar. isFileProtocol kommt von
+ * location.protocol==='file:' (einziger DOM-Bezug, bewusst beim Aufrufer belassen). */
+function socialVideoCanvasExportHint(isFileProtocol){
+  if(isFileProtocol){
+    return'Videoerzeugung über file:// nicht möglich, weil der Browser lokale Bilder als fremde Herkunft behandelt. '
+      +'Bitte die App über einen lokalen Server öffnen: node scripts/serve.mjs, dann http://localhost:5173 aufrufen.';
+  }
+  return'Videoerzeugung in diesem Browser nicht möglich (Canvas-Export fehlgeschlagen). Bitte einen aktuellen Chromium-basierten Browser verwenden.';
+}
+
+/** Markiert einen Fehler mit dem Schritt, in dem er auftrat (Umfangspunkt 4: keine Sammelmeldung mehr,
+ * sondern Schritt/Fehlername/Fehlermeldung) und, falls es ein Canvas-Taint-Fehler ist (SecurityError), mit
+ * dem passenden Hinweistext aus socialVideoCanvasExportHint. Loggt zusätzlich das volle Fehlerobjekt. */
+function socialVideoTagStepError(step,cause){
+  const err=new Error(cause?.message||String(cause));
+  err.name=cause?.name||'Error';
+  err.step=step;
+  err.cause=cause;
+  if(err.name==='SecurityError')err.hint=socialVideoCanvasExportHint(location.protocol==='file:');
+  console.error(`[Social-Video] Schritt "${step}" fehlgeschlagen:`,cause);
+  return err;
+}
+
+/** Baut die Nutzermeldung für einen fehlgeschlagenen Schritt (Umfangspunkt 4: kein Sammel-Alert mehr, der nur
+ * "X konnte nicht erzeugt werden" sagt) — nutzt e.hint, falls vorhanden (Canvas-Taint, s.
+ * socialVideoTagStepError), sonst Schritt, Fehlername und Fehlermeldung. */
+function socialVideoFormatErrorAlert(prefix,e){
+  if(e?.hint)return e.hint;
+  return`${prefix} (Schritt: ${e?.step||'unbekannt'}, ${e?.name||'Error'}: ${e?.message||e}).`;
+}
+
 /** Zeichnet EIN Standbild aus spec bei timeMs auf einen frischen Canvas und liefert eine PNG-Data-URL.
- * Ersetzt den SVG-foreignObject-Weg für die S1-Standbildausgabe (Spezifikation Umfangspunkt 3 dieser Phase) —
- * kein getaintetes Canvas, da ausschließlich lokale, same-origin Assets gezeichnet werden. */
+ * Ersetzt den SVG-foreignObject-Weg für die S1-Standbildausgabe (Spezifikation Umfangspunkt 3 dieser Phase).
+ * toDataURL() ist zugleich die ehrliche Vorprüfung (Umfangspunkt 2): schlägt sie fehl (getaintetes Canvas),
+ * trägt der geworfene Fehler den passenden Hinweis (.hint, siehe socialVideoTagStepError). */
 async function socialVideoRenderStandbildDataUrl(spec,timeMs){
   const width=SOCIAL_VIDEO_WIDTH,height=socialVideoHeightForFormat(spec.format);
   const canvas=document.createElement('canvas');
@@ -22579,13 +22628,25 @@ async function socialVideoRenderStandbildDataUrl(spec,timeMs){
   const ctx=canvas.getContext('2d');
   const assets=await socialVideoLoadAssets(spec);
   socialVideoRenderFrame(ctx,socialVideoDrawList(spec,timeMs),assets,null);
-  return canvas.toDataURL('image/png');
+  try{
+    return canvas.toDataURL('image/png');
+  }catch(e){
+    throw socialVideoTagStepError('toDataURL',e);
+  }
 }
 
-/** Orchestriert eine komplette Aufnahme (Spezifikation 3.2/4, Umfangspunkt 4): captureStream(30)+MediaRecorder,
+/** Orchestriert eine komplette Aufnahme (Spezifikation 3.2/4, Umfangspunkt 4): captureStream(0)+MediaRecorder,
  * Frame-Schleife über die reale Spielzeit (performance.now()-basiert, nicht framegezählt — damit die
  * tatsächliche Dauer auch bei schwankender Bildrate exakt 15000ms trifft), Fortschritt pro Frame über
- * onProgress, Abbruch über AbortSignal. Gibt {blob, mimeType} zurück oder null bei Abbruch/Fehler. */
+ * onProgress, Abbruch über AbortSignal. Gibt {blob, mimeType} zurück oder null bei fehlendem MediaRecorder/
+ * Abbruch; schlägt der Export fehl (Canvas-Taint), wirft sie einen Fehler mit .step/.hint (siehe
+ * socialVideoTagStepError), den die UI-Schicht auswertet.
+ *
+ * captureStream(0) statt captureStream(30): captureStream(0) liefert KEINE automatischen Frames nach einem
+ * internen Timer, sondern ausschließlich auf expliziten track.requestFrame()-Aufruf — ein Frame pro
+ * tatsächlich gezeichnetem Bild, exakt an die eigene setTimeout-Schleife gekoppelt statt an einen zweiten,
+ * unabhängigen Browser-Timer. Das vermeidet die Möglichkeit, dass der interne Erfassungstimer in einem
+ * gedrosselten/hintergründigen Tab anders (oder gar nicht) läuft als die Zeichenschleife selbst. */
 async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
   if(!globalThis.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return null;
   const mimeType=socialVideoPickMimeType();
@@ -22597,12 +22658,19 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
     const assets=await socialVideoLoadAssets(spec);
     const staticLayer=socialVideoBuildStaticLayer(socialVideoDrawList(spec,0),width,height);
     socialVideoRenderFrame(ctx,socialVideoDrawList(spec,0),assets,staticLayer);
-    const stream=canvas.captureStream(SOCIAL_VIDEO_FPS);
+    let stream;
+    try{
+      stream=canvas.captureStream(0);
+    }catch(e){
+      throw socialVideoTagStepError('captureStream',e);
+    }
+    const track=stream.getVideoTracks()[0];
     const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:6_000_000});
     const chunks=[];
     recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
     const stopped=new Promise(resolve=>{recorder.onstop=resolve;});
     recorder.start();
+    track.requestFrame?.();
     const durationMs=spec.durationMs||15000;
     const startedAt=performance.now();
     let aborted=false;
@@ -22613,7 +22681,9 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
     // vollständig stehen, siehe Build-Bericht) — für eine zeitgetreue Aufnahme, die unabhängig vom
     // Tab-Fokus weiterlaufen soll, ist setTimeout robuster. Zielintervall ~33ms (30fps); die tatsächliche
     // Zeitbasis bleibt performance.now()-elapsed, nicht die Anzahl der Schritte, damit die Gesamtdauer auch
-    // bei Timer-Drift exakt stimmt.
+    // bei Timer-Drift exakt stimmt. Hinweis: Chrome kann rendering/Compositing in einem nicht fokussierten
+    // Tab dennoch drosseln (siehe Build-Bericht/UI-Hinweis "Aufnahme läuft") — setTimeout hält nur die
+    // Zeitbasis korrekt, nicht die Bildwiederholrate des Compositors.
     const frameIntervalMs=1000/SOCIAL_VIDEO_FPS;
     await new Promise(resolve=>{
       let nextAt=startedAt;
@@ -22622,6 +22692,7 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
         const elapsed=performance.now()-startedAt;
         const t=Math.min(elapsed,durationMs);
         socialVideoRenderFrame(ctx,socialVideoDrawList(spec,t),assets,staticLayer);
+        track.requestFrame?.();
         onProgress?.({elapsedMs:t,durationMs});
         if(t>=durationMs){resolve();return;}
         nextAt+=frameIntervalMs;
@@ -22632,7 +22703,7 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
     signal?.removeEventListener('abort',onAbort);
     recorder.stop();
     await stopped;
-    stream.getTracks().forEach(track=>track.stop());
+    stream.getTracks().forEach(t=>t.stop());
     if(aborted)return null;
     return{blob:new Blob(chunks,{type:mimeType}),mimeType};
   }finally{
@@ -22665,8 +22736,8 @@ window.downloadSocialVideoStandbild=async(spec,seasonKey,button=null)=>{
     a.remove();
     return a.download;
   }catch(e){
-    console.warn('Social-Video-Standbild-Export fehlgeschlagen:',e);
-    alert('Standbild-Export ist in diesem Browser gerade nicht möglich.');
+    console.error('Social-Video-Standbild-Export fehlgeschlagen:',e);
+    alert(socialVideoFormatErrorAlert('Standbild-Export fehlgeschlagen',e));
     return null;
   }finally{
     if(button)button.textContent=oldText||'Standbild herunterladen';
@@ -22695,8 +22766,8 @@ window.downloadSocialVideoContactSheet=async(spec,seasonKey,button=null)=>{
     }
     return names;
   }catch(e){
-    console.warn('Social-Video-Kontaktbogen fehlgeschlagen:',e);
-    alert('Kontaktbogen-Export ist in diesem Browser gerade nicht möglich.');
+    console.error('Social-Video-Kontaktbogen fehlgeschlagen:',e);
+    alert(socialVideoFormatErrorAlert('Kontaktbogen-Export fehlgeschlagen',e));
     return names;
   }finally{
     if(button)button.textContent=oldText||'Kontaktbogen (PNG je Szene)';
