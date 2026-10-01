@@ -20322,31 +20322,89 @@ window.downloadMatchdayStory=async(button=null)=>{
  * dauerhafter ffmpeg-Hinweis (auch ohne Video-Teil, als Ankündigung formuliert), Logo-/Schriften-Hinweise.
  * Nur bestehende Bausteine (.mc-section/.mc-output-btn/.mc-coach-confidence/rEmptyState-Muster), kein Inline-Style. */
 function rSocialVideoBlock(){
-  ensureSocialVideoExportCapabilityChecked();
-  const exportBlocked=S.socialVideoExportPossible===false;
   const seasonKey=matchcenterSeasonHasGames(S.matchcenterSeasonKey)?S.matchcenterSeasonKey:matchcenterDefaultSeasonKey();
   const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
   if(!matchdays.length)return`<section class="mc-section"><div class="mc-section-title">Vorschauvideos</div>${rEmptyState('story')}</section>`;
   const selectedKey=matchdays.some(m=>m.key===S.socialVideoMatchdayKey)?S.socialVideoMatchdayKey:matchdays[matchdays.length-1].key;
+  const rec=S.socialVideoRecording;
+  const busy=!!rec?.active;
   return`<section class="mc-section">
     <div class="mc-section-head">
       <div>
         <div class="mc-section-title">Vorschauvideos</div>
-        <div class="mc-scout-note">Standbilder aus der Szenen-Spezifikation (S1): eine Story je Gegner, ein Feed-Post für den Spieltag. Die eigentliche Video-Aufnahme folgt in einer späteren Phase.</div>
+        <div class="mc-scout-note">Canvas2D-Renderer (S2): Story je Gegner, Feed-Post für den Spieltag — als WebM-Video, Kontroll-Standbild und Kontaktbogen.</div>
       </div>
     </div>
     <div class="mc-output-actions">
-      <select onchange="setState({socialVideoMatchdayKey:this.value})">
+      <select ${busy?'disabled':''} onchange="setState({socialVideoMatchdayKey:this.value})">
         ${matchdays.map(m=>`<option value="${escAttr(m.key)}" ${m.key===selectedKey?'selected':''}>Spieltag ${m.number} (${escHtml(formatDateDE(m.date))})</option>`).join('')}
       </select>
-      <button class="mc-output-btn" ${exportBlocked?'disabled':''} onclick="generateSocialVideoStandbilder(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Standbilder erzeugen</button>
+      <button class="mc-output-btn" ${busy?'disabled':''} onclick="generateSocialVideoVideos(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Spieltagsvorschau erzeugen</button>
+      <button class="mc-output-btn" ${busy?'disabled':''} onclick="generateSocialVideoStandbilder(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Nur Standbilder erzeugen</button>
+      <button class="mc-output-btn" ${busy?'disabled':''} onclick="generateSocialVideoContactSheets(this,'${escAttr(seasonKey)}','${escAttr(selectedKey)}')">Kontaktbogen (PNG je Szene)</button>
+      ${busy?'<button class="mc-output-btn" onclick="cancelSocialVideoRecording()">Abbrechen</button>':''}
     </div>
-    ${exportBlocked?'<div class="mc-coach-confidence">PNG-Export in diesem Browser nicht möglich (Chrome-Sicherheitsrichtlinie). Kommt mit dem Canvas-Renderer in S2.</div>':''}
-    <div class="mc-coach-confidence"><strong>Für MP4-Dateien wird ffmpeg benötigt.</strong> Die App erzeugt WebM-Dateien (Video-Aufnahme folgt in S2). Instagram akzeptiert MP4, deshalb einmal im Projektordner ausführen: <code>node scripts/social-video.mjs --in &lt;ordner-mit-webm&gt; --write</code>. Ist ffmpeg nicht installiert, meldet das Skript das mit Installationshinweis. Die WebM-Dateien bleiben in jedem Fall erhalten.</div>
+    ${busy?`<div class="mc-coach-confidence">${escHtml(rec.label)} — Video ${rec.index+1} von ${rec.total}, Sekunde ${Math.min(rec.durationMs,rec.elapsedMs)/1000|0} von ${(rec.durationMs/1000)|0}</div>`:''}
+    <div class="mc-coach-confidence"><strong>Für MP4-Dateien wird ffmpeg benötigt.</strong> Die App erzeugt WebM-Dateien. MP4-Umwandlung kommt in S3, deshalb dann einmal im Projektordner ausführen: <code>node scripts/social-video.mjs --in &lt;ordner-mit-webm&gt; --write</code>. Ist ffmpeg nicht installiert, meldet das Skript das mit Installationshinweis. Die WebM-Dateien bleiben in jedem Fall erhalten.</div>
     <div class="mc-coach-confidence">Fehlt ein Team-Logo lokal (<code>assets/teams/&lt;team&gt;.png</code>), erscheinen Initialen statt Logo. Einmalig laden: <code>node scripts/cache-team-logos.mjs --fetch</code>.</div>
-    ${S.socialVideoFontsFallback?'<div class="mc-coach-confidence">Hinweis: Syne/DM Mono sind in diesem Browser nicht vollständig geladen — Standbilder verwenden Ersatzschriften.</div>':''}
+    ${S.socialVideoFontsFallback?'<div class="mc-coach-confidence">Hinweis: Syne/DM Mono sind in diesem Browser nicht vollständig geladen — Video/Standbilder verwenden Ersatzschriften.</div>':''}
+    ${S.socialVideoCaptureUnsupported?'<div class="mc-coach-confidence">Video-Aufnahme (MediaRecorder/captureStream) ist in diesem Browser nicht verfügbar — Standbilder und Kontaktbogen funktionieren unabhängig davon.</div>':''}
   </section>`;
 }
+/** Baut die Aufnahme-Jobliste für einen Spieltag: Story je Ulm-Gegner (nach Anpfiffzeit, siehe
+ * buildSocialVideoSpec), dann der Feed-Post — bei nur einem Gegner entsprechend weniger, keine Sonderlogik. */
+function socialVideoJobsForMatchday(seasonKey,matchdayKey){
+  const stories=buildSocialVideoSpec({seasonKey,matchdayKey,format:'story-9x16'}).filter(s=>s.matchday);
+  const feed=buildSocialVideoSpec({seasonKey,matchdayKey,format:'feed-4x5'});
+  const jobs=stories.map(s=>({spec:s,label:`Story ${s.opponentDisplay||'Gegner'}`}));
+  if(feed.matchday)jobs.push({spec:feed,label:'Feed-Post'});
+  return jobs;
+}
+window.generateSocialVideoVideos=async(button,seasonKey,matchdayKey)=>{
+  const jobs=socialVideoJobsForMatchday(seasonKey,matchdayKey);
+  if(!jobs.length){alert('Keine Videos erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');return;}
+  const fonts=await socialVideoCheckFonts();
+  if(fonts.fallback&&!S.socialVideoFontsFallback)setState({socialVideoFontsFallback:true});
+  const controller=new AbortController();
+  let lastUiUpdate=0;
+  const downloaded=[];
+  setState({socialVideoRecording:{active:true,index:0,total:jobs.length,label:jobs[0].label,elapsedMs:0,durationMs:jobs[0].spec.durationMs,controller}});
+  try{
+    for(let i=0;i<jobs.length;i++){
+      if(controller.signal.aborted)break;
+      setState({socialVideoRecording:{active:true,index:i,total:jobs.length,label:jobs[i].label,elapsedMs:0,durationMs:jobs[i].spec.durationMs,controller}});
+      const result=await socialVideoCaptureVideo(jobs[i].spec,{
+        signal:controller.signal,
+        onProgress:({elapsedMs,durationMs})=>{
+          const now=performance.now();
+          if(now-lastUiUpdate<250)return;
+          lastUiUpdate=now;
+          setState({socialVideoRecording:{active:true,index:i,total:jobs.length,label:jobs[i].label,elapsedMs,durationMs,controller}});
+        },
+      });
+      if(result===null&&!controller.signal.aborted){setState({socialVideoCaptureUnsupported:true});break;}
+      if(result){
+        const name=socialVideoFileName({matchdayNumber:jobs[i].spec.matchday?.number,date:jobs[i].spec.matchday?.date,format:jobs[i].spec.format,opponentAssetKey:jobs[i].spec.opponentAssetKey},'webm');
+        const url=URL.createObjectURL(result.blob);
+        const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+        URL.revokeObjectURL(url);
+        downloaded.push(name);
+        const pngName=await downloadSocialVideoStandbild(jobs[i].spec,seasonKey);
+        if(pngName)downloaded.push(pngName);
+      }
+    }
+    if(controller.signal.aborted)alert(`Abgebrochen nach ${downloaded.length} Datei(en).`);
+    else if(downloaded.length)alert(`${downloaded.length} Datei(en) heruntergeladen:\n${downloaded.join('\n')}`);
+  }catch(e){
+    console.warn('Social-Video-Aufnahme fehlgeschlagen:',e);
+    alert('Videos konnten nicht erzeugt werden.');
+  }finally{
+    setState({socialVideoRecording:null});
+  }
+};
+window.cancelSocialVideoRecording=()=>{
+  S.socialVideoRecording?.controller?.abort();
+};
 window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
   const oldText=button?.textContent;
   try{
@@ -20368,7 +20426,25 @@ window.generateSocialVideoStandbilder=async(button,seasonKey,matchdayKey)=>{
     console.warn('Social-Video-Standbild-Erzeugung fehlgeschlagen:',e);
     alert('Standbilder konnten nicht erzeugt werden.');
   }finally{
-    if(button){button.disabled=false;button.textContent=oldText||'Standbilder erzeugen';}
+    if(button){button.disabled=false;button.textContent=oldText||'Nur Standbilder erzeugen';}
+  }
+};
+window.generateSocialVideoContactSheets=async(button,seasonKey,matchdayKey)=>{
+  const oldText=button?.textContent;
+  try{
+    if(button){button.disabled=true;button.textContent='Erzeuge Kontaktbogen...';}
+    const stories=buildSocialVideoSpec({seasonKey,matchdayKey,format:'story-9x16'});
+    const feed=buildSocialVideoSpec({seasonKey,matchdayKey,format:'feed-4x5'});
+    const names=[];
+    for(const spec of stories){if(!spec.matchday)continue;names.push(...await downloadSocialVideoContactSheet(spec,seasonKey));}
+    if(feed.matchday)names.push(...await downloadSocialVideoContactSheet(feed,seasonKey));
+    if(names.length)alert(`${names.length} Kontaktbogen-Bild(er) heruntergeladen.`);
+    else alert('Kein Kontaktbogen erzeugt (kein Ulm-Spiel an diesem Spieltag gefunden).');
+  }catch(e){
+    console.warn('Social-Video-Kontaktbogen fehlgeschlagen:',e);
+    alert('Kontaktbogen konnte nicht erzeugt werden.');
+  }finally{
+    if(button){button.disabled=false;button.textContent=oldText||'Kontaktbogen (PNG je Szene)';}
   }
 };
 function rMatchcenterSocialMediaCenter(content){
@@ -20391,7 +20467,7 @@ function rMatchcenterSocialMediaCenter(content){
         ${rMatchcenterCopyButton(storyText,'Story-Text kopieren')}
       </div>
     </div>
-    ${hasStory&&S.socialVideoExportPossible===false?'<div class="mc-coach-confidence">PNG-Export in diesem Browser nicht möglich (Chrome-Sicherheitsrichtlinie). Kommt mit dem Canvas-Renderer in S2.</div>':''}
+    ${hasStory&&S.socialVideoExportPossible===false?'<div class="mc-coach-confidence">Der Knopf „Story als PNG herunterladen" kann in diesem Browser fehlschlagen (Chrome-Sicherheitsrichtlinie, SVG-Export der Live-Vorschau hier oben). Die Spieltagsvorschau im Block „Vorschauvideos" weiter unten nutzt bereits den neuen Canvas2D-Renderer (S2) und ist davon nicht betroffen.</div>':''}
     <div class="mc-social-grid">
       <div class="mc-social-panel">
         <div class="mc-card-title">Matchday Story</div>
@@ -21734,13 +21810,15 @@ async function socialVideoCheckFonts(){
   }
 }
 
-/** Fähigkeitsprüfung für den SVG-foreignObject->Canvas->PNG-Export (siehe downloadSocialVideoStandbild
- * und window.downloadMatchdayStory weiter unten): ein winziges, rein lokales 1x1-foreignObject-SVG ohne
- * jeden externen Inhalt wird auf einen 1x1-Canvas gezeichnet und per toDataURL() ausgelesen. Aktuelle
- * Chrome-Versionen "tainten" dabei JEDEN Canvas, auf den ein SVG mit <foreignObject> gezeichnet wurde —
- * unabhängig von externen Ressourcen (siehe Kommentar bei downloadSocialVideoStandbild) —, andere Engines
- * (z. B. Firefox) erlauben es. Das Ergebnis hängt nur von der Browser-Engine ab, nicht von den jeweiligen
- * Spec-Daten, deshalb genügt EIN winziger, günstiger Testlauf statt einer echten Story/Feed-Auszeichnung. */
+/** Fähigkeitsprüfung für den SVG-foreignObject->Canvas->PNG-Export. Seit S2 betrifft das NUR noch
+ * window.downloadMatchdayStory (Live-Vorschau-Export im Social Media Center) — downloadSocialVideoStandbild
+ * nutzt seit der Canvas2D-Umstellung keinen foreignObject-Weg mehr und ist von diesem Befund unabhängig
+ * (siehe rMatchcenterSocialMediaCenter-Hinweistext). Prinzip: ein winziges, rein lokales 1x1-foreignObject-
+ * SVG ohne jeden externen Inhalt wird auf einen 1x1-Canvas gezeichnet und per toDataURL() ausgelesen.
+ * Aktuelle Chrome-Versionen "tainten" dabei JEDEN Canvas, auf den ein SVG mit <foreignObject> gezeichnet
+ * wurde — unabhängig von externen Ressourcen —, andere Engines (z. B. Firefox) erlauben es. Das Ergebnis
+ * hängt nur von der Browser-Engine ab, nicht von den jeweiligen Spec-Daten, deshalb genügt EIN winziger,
+ * günstiger Testlauf statt einer echten Story/Feed-Auszeichnung. */
 async function probeSocialVideoExportCapability(){
   try{
     const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><foreignObject width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml"></div></foreignObject></svg>';
@@ -21759,8 +21837,9 @@ async function probeSocialVideoExportCapability(){
 }
 /** Löst probeSocialVideoExportCapability() genau einmal aus (Promise-Cache analog zu
  * ensureExternalSeasonData) und schreibt das Ergebnis nach S.socialVideoExportPossible, sobald es
- * feststeht — von rSocialVideoBlock() und rMatchcenterSocialMediaCenter() aus aufgerufen, damit die
- * Prüfung schon beim ersten Rendern dieser Bereiche losläuft, nicht erst beim Klick auf den Knopf. */
+ * feststeht — von rMatchcenterSocialMediaCenter() aus aufgerufen (dem einzigen verbleibenden Konsumenten
+ * seit der Canvas2D-Umstellung in S2, siehe dortiger Hinweistext), damit die Prüfung schon beim ersten
+ * Rendern dieses Bereichs losläuft, nicht erst beim Klick auf den Knopf. */
 let _socialVideoExportCapabilityChecked=false;
 function ensureSocialVideoExportCapabilityChecked(){
   if(_socialVideoExportCapabilityChecked)return;
