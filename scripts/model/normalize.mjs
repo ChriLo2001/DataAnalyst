@@ -39,6 +39,7 @@
 
 import { compareGamesChronologically } from '../game-ordering.mjs';
 import { buildMatchdays } from '../matchday-derivation.mjs';
+import { resultScore, isEffectivelyEnded } from '../game-status.mjs';
 
 export const MODEL_SCHEMA_VERSION = 2;
 /** Länge einer Halbzeit in Sekunden (Kleinfeld: 2 × 20 Minuten). */
@@ -231,36 +232,19 @@ export function isYouthGame(g) {
 // Keine weitere Interpretation von Statusfeldern (z. B. wird "Canceled" NICHT als Ausschlussgrund gewertet).
 const NOTICE_EXCLUDE_RE = /postpone|verschoben|verlegt/i;
 
-function resultScore(game) {
-  const h = game?.result?.home_goals;
-  const g = game?.result?.guest_goals;
-  const home = h === null || h === undefined || h === '' ? NaN : Number(h);
-  const guest = g === null || g === undefined || g === '' ? NaN : Number(g);
-  return Number.isFinite(home) && Number.isFinite(guest) ? { home, guest } : null;
-}
-
-/**
- * Ausnahme zu `ended !== true` (Datenqualitäts-Phase): ein Spiel mit vorhandenem, numerisch
- * vollständigem `result` UND mindestens einem Event gilt als beendet, auch wenn das rohe `ended`-Feld
- * fälschlich `false` ist. Betrifft nachweislich 8 Spiele in 21/22 (25677, 25679, 25681, 25682, 25683,
- * 26478, 26613, 26644 — siehe Build-Bericht für den aktuellen Nachweis, bewusst NICHT hart im Code
- * verdrahtet: die Regel ist allgemein formuliert und greift automatisch, falls künftig importierte
- * Daten denselben Fehler zeigen). Allgemein, weil `ended` hier erkennbar nur ein Datenfehler ist
- * (unvollständige Spiele haben in der Praxis weder ein vollständiges Ergebnis noch Events) — kein
- * Rateschritt, sondern eine Lücke zwischen zwei bereits vorhandenen, widersprüchlichen Rohfeldern.
- * Ändert `season-data/*.json` nicht; wirkt ausschließlich auf die Modell-Einbeziehung (M0).
- */
-function hasCompleteResultAndEvents(game) {
-  return resultScore(game) !== null && Array.isArray(game?.events) && game.events.length > 0;
-}
+// resultScore/isEffectivelyEnded sind aus game-status.mjs importiert (ended-
+// Vereinheitlichungs-Phase): dieselbe Funktion entscheidet hier UND in
+// matchday-derivation.mjs, ob ein Spiel "effektiv beendet" ist — siehe dort
+// für die Begründung der Datenqualitäts-Ausnahme (Spiel mit ended!==true,
+// aber vollständigem result + Events, gilt trotzdem als beendet).
 
 /** Ausschlussgründe in fester Reihenfolge; der erste zutreffende ist der Hauptgrund (`reason`). */
 export const EXCLUSION_REASON_ORDER = ['not_ended', 'youth', 'forfeit', 'postponed', 'no_result'];
 
 /**
  * Modell-Spielfilter (Spezifikation M0.1 und Entscheidung zu P1a):
- *   not_ended  `ended !== true`, AUSSER vollständiges `result` + mindestens ein Event vorhanden
- *              (siehe hasCompleteResultAndEvents — Datenqualitäts-Ausnahme, kein Raten)
+ *   not_ended  `!isEffectivelyEnded(game)` (game-status.mjs): `ended !== true`, AUSSER vollständiges
+ *              `result` + mindestens ein Event vorhanden (Datenqualitäts-Ausnahme, kein Raten)
  *   youth      isYouthGame()-Regel
  *   forfeit    `result.forfait === true`
  *   postponed  `notice_type` verschoben/verlegt
@@ -270,7 +254,7 @@ export const EXCLUSION_REASON_ORDER = ['not_ended', 'youth', 'forfeit', 'postpon
  */
 export function classifyModelGame(game) {
   const hits = {
-    not_ended: game?.ended !== true && !hasCompleteResultAndEvents(game),
+    not_ended: !isEffectivelyEnded(game),
     youth: isYouthGame(game),
     forfeit: game?.result?.forfait === true,
     postponed: NOTICE_EXCLUDE_RE.test(String(game?.notice_type ?? '')),
@@ -396,11 +380,12 @@ export function normalizeSeason(seasonData) {
       };
     };
 
-    // Ausnahme (siehe hasCompleteResultAndEvents): ein Spiel mit vollständigem result UND
-    // mindestens einem Event gilt als beendet, auch wenn das rohe ended-Feld false ist — betrifft
-    // nachweislich 8 Spiele in 21/22 (siehe Build-Bericht), keine ID-Liste im Code.
-    const endedException = g?.ended !== true && hasCompleteResultAndEvents(g);
-    if (g?.ended !== true && !endedException) {
+    // isEffectivelyEnded (game-status.mjs, auch von matchday-derivation.mjs genutzt): ein Spiel
+    // mit vollständigem result UND mindestens einem Event gilt als beendet, auch wenn das rohe
+    // ended-Feld false ist — betrifft nachweislich 8 Spiele in 21/22 (siehe Build-Bericht), keine
+    // ID-Liste im Code.
+    const endedException = g?.ended !== true && isEffectivelyEnded(g);
+    if (!isEffectivelyEnded(g)) {
       q.notEnded++;
       const entry = exclusionEntry();
       q.excludedGames.push(entry);
