@@ -20,10 +20,24 @@
 // ein Abgleichtest (scripts/test-social-video.mjs) beweist für ALLE Teams ALLER Saisons, dass beide denselben
 // Schlüssel liefern.
 //
+// S2-NACHTRAG (Canvas-Taint unter file://, bestätigt): eine lokale Kopie unter assets/teams/ allein reicht
+// NICHT aus. Chrome behandelt unter file:// jede lokale Datei als eigene, fremde Herkunft — auch ein per
+// <img src="assets/teams/…"> geladenes Bild von derselben Festplatte verunreinigt das Canvas genauso wie ein
+// externes. Einzig data:-URIs vergiften das Canvas nicht, auch nicht unter file://. Deshalb zusätzlich:
+//   --embed: erzeugt social-video-assets.js (window.SOCIAL_VIDEO_ASSETS, klassisches Skript wie
+//   season-data-embedded.js) mit allen vom Social-Video-Renderer benötigten Bildern als data:-URIs
+//   (assets/teams/*.png der bereits lokal vorhandenen Teams, assets/vfb-ulm-logo-mark.png, assets/spatz.svg).
+//   Der Renderer (index.html) liest ausschließlich aus window.SOCIAL_VIDEO_ASSETS; fehlt ein Eintrag, greift
+//   der bestehende Initialen-Fallback. Die Story-VORSCHAU im Dashboard bleibt unverändert und nutzt weiter
+//   die Dateipfade (sie läuft nie durch ein Canvas, das exportiert wird, und ist über HTTP ohnehin niemals
+//   betroffen — s. docs/social-video-spezifikation.md Abschnitt 3.3).
+//
 // Aufruf:
 //   node scripts/cache-team-logos.mjs            # Dry-Run: listet vorhandene/fehlende Logos, schreibt nichts
 //   node scripts/cache-team-logos.mjs --fetch     # lädt fehlende Logos herunter (einziger Netzwerkzugriff)
 //   node scripts/cache-team-logos.mjs --fetch --force  # überschreibt auch bereits vorhandene Dateien
+//   node scripts/cache-team-logos.mjs --embed            # Dry-Run: zeigt, was in social-video-assets.js eingebettet würde
+//   node scripts/cache-team-logos.mjs --embed --write     # schreibt social-video-assets.js (kein Netzwerkzugriff)
 
 import { readFile, mkdir, writeFile, rename, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -118,7 +132,77 @@ async function fetchLogo(url) {
 }
 
 function parseArgs(argv) {
-  return { fetch: argv.includes('--fetch'), force: argv.includes('--force') };
+  return { fetch: argv.includes('--fetch'), force: argv.includes('--force'), embed: argv.includes('--embed'), write: argv.includes('--write') };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// --embed: social-video-assets.js (data:-URIs für den Social-Video-Renderer)
+// ─────────────────────────────────────────────────────────────────────────
+
+const EMBED_MIME_BY_EXT = { '.png': 'image/png', '.svg': 'image/svg+xml' };
+const EMBED_FIXED_PATHS = ['assets/vfb-ulm-logo-mark.png', 'assets/spatz.svg'];
+const EMBED_JS_HEADER =
+  '// Automatisch erzeugt von scripts/cache-team-logos.mjs --embed --write. Nicht von Hand bearbeiten.\n' +
+  '// file://-Fallback für den Social-Video-Renderer: stellt window.SOCIAL_VIDEO_ASSETS (Team-Logos, VfB-Logo,\n' +
+  '// Spatz) als data:-URIs bereit. Grund: unter file:// behandelt Chrome jede lokale Datei als eigene fremde\n' +
+  '// Herkunft — auch ein per <img src="assets/…"> von derselben Festplatte geladenes Bild verunreinigt das\n' +
+  '// Canvas (captureStream()/toDataURL() schlagen danach fehl). data:-URIs haben dieses Problem nicht. Der\n' +
+  '// Renderer liest ausschließlich aus dieser Quelle; fehlt ein Schlüssel, greift der Initialen-Fallback. Die\n' +
+  '// Story-VORSCHAU im Dashboard ist davon unberührt und nutzt weiter die Dateipfade. Klassisches Skript\n' +
+  '// (kein type="module"), damit es auch per Doppelklick lädt (siehe <script src="social-video-assets.js">\n' +
+  '// vor dem Haupt-<script> in index.html). Siehe docs/social-video-spezifikation.md Abschnitt 3.3.\n';
+
+async function embedAssetFile(repoRoot, relPath) {
+  const buf = await readFile(path.join(repoRoot, relPath));
+  const mime = EMBED_MIME_BY_EXT[path.extname(relPath).toLowerCase()];
+  if (!mime) throw new Error(`unbekannter Asset-Typ: ${relPath}`);
+  return { relPath, bytes: buf.length, dataUri: `data:${mime};base64,${buf.toString('base64')}` };
+}
+
+/** Plant, was --embed einbetten würde: die beiden festen Assets (VfB-Logo, Spatz) plus alle TEAM-Logos, die
+ * bereits lokal in assets/teams/ liegen (dieselbe Menge wie planLogoCache().cached — kein --fetch nötig, rein
+ * lesend). Nicht lesbare/fehlende Dateien landen mit error statt dataUri im Ergebnis (werden beim Schreiben
+ * ausgelassen, der Renderer fällt für diesen Schlüssel auf Initialen zurück). */
+export async function planAssetEmbed(repoRoot = REPO_ROOT) {
+  const plan = await planLogoCache(repoRoot);
+  const teamPaths = plan.cached.map((t) => `assets/teams/${t.key}.png`);
+  const entries = [];
+  for (const relPath of [...EMBED_FIXED_PATHS, ...teamPaths]) {
+    try {
+      entries.push(await embedAssetFile(repoRoot, relPath));
+    } catch (e) {
+      entries.push({ relPath, bytes: 0, dataUri: null, error: e.message });
+    }
+  }
+  return entries;
+}
+
+function formatEmbedReport(entries) {
+  const ok = entries.filter((e) => e.dataUri);
+  const failed = entries.filter((e) => !e.dataUri);
+  const rawBytes = ok.reduce((s, e) => s + e.bytes, 0);
+  const dataUriBytes = ok.reduce((s, e) => s + e.dataUri.length, 0);
+  const lines = [];
+  lines.push('social-video-assets.js — Dry-Run, es wird nichts geschrieben');
+  lines.push(`Einzubettende Dateien: ${ok.length}`);
+  for (const e of ok) lines.push(`   · ${e.relPath}  (${e.bytes} Bytes roh)`);
+  if (failed.length) {
+    lines.push('');
+    lines.push('Nicht lesbar (werden ausgelassen, Renderer nutzt Initialen-Fallback):');
+    for (const e of failed) lines.push(`   · ${e.relPath}: ${e.error}`);
+  }
+  lines.push('');
+  lines.push(`Gesamtgröße roh: ${rawBytes} Bytes, als Data-URI (Base64): ${dataUriBytes} Bytes (~${Math.round(dataUriBytes / 1024)} KB).`);
+  return lines.join('\n') + '\n';
+}
+
+async function writeEmbeddedAssetsFile(repoRoot, entries) {
+  const ok = entries.filter((e) => e.dataUri);
+  const obj = {};
+  for (const e of ok) obj[e.relPath] = e.dataUri;
+  const body = `${EMBED_JS_HEADER}window.SOCIAL_VIDEO_ASSETS=${JSON.stringify(obj)};\n`;
+  await writeFileAtomic(path.join(repoRoot, 'social-video-assets.js'), Buffer.from(body, 'utf8'));
+  return { count: ok.length, bytes: Buffer.byteLength(body, 'utf8') };
 }
 
 export async function planLogoCache(repoRoot = REPO_ROOT) {
@@ -146,6 +230,16 @@ function formatPlanReport(plan) {
 
 export async function main(argv = process.argv.slice(2), { stdout = process.stdout, stderr = process.stderr, repoRoot = REPO_ROOT } = {}) {
   const args = parseArgs(argv);
+  if (args.embed) {
+    const entries = await planAssetEmbed(repoRoot);
+    if (!args.write) {
+      stdout.write(formatEmbedReport(entries));
+      return 0;
+    }
+    const result = await writeEmbeddedAssetsFile(repoRoot, entries);
+    stdout.write(`social-video-assets.js geschrieben: ${result.count} Assets, ${result.bytes} Bytes (~${Math.round(result.bytes / 1024)} KB).\n`);
+    return 0;
+  }
   const plan = await planLogoCache(repoRoot);
   if (!args.fetch) {
     stdout.write(formatPlanReport(plan));
