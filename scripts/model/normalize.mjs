@@ -239,20 +239,38 @@ function resultScore(game) {
   return Number.isFinite(home) && Number.isFinite(guest) ? { home, guest } : null;
 }
 
+/**
+ * Ausnahme zu `ended !== true` (Datenqualitäts-Phase): ein Spiel mit vorhandenem, numerisch
+ * vollständigem `result` UND mindestens einem Event gilt als beendet, auch wenn das rohe `ended`-Feld
+ * fälschlich `false` ist. Betrifft nachweislich 8 Spiele in 21/22 (25677, 25679, 25681, 25682, 25683,
+ * 26478, 26613, 26644 — siehe Build-Bericht für den aktuellen Nachweis, bewusst NICHT hart im Code
+ * verdrahtet: die Regel ist allgemein formuliert und greift automatisch, falls künftig importierte
+ * Daten denselben Fehler zeigen). Allgemein, weil `ended` hier erkennbar nur ein Datenfehler ist
+ * (unvollständige Spiele haben in der Praxis weder ein vollständiges Ergebnis noch Events) — kein
+ * Rateschritt, sondern eine Lücke zwischen zwei bereits vorhandenen, widersprüchlichen Rohfeldern.
+ * Ändert `season-data/*.json` nicht; wirkt ausschließlich auf die Modell-Einbeziehung (M0).
+ */
+function hasCompleteResultAndEvents(game) {
+  return resultScore(game) !== null && Array.isArray(game?.events) && game.events.length > 0;
+}
+
 /** Ausschlussgründe in fester Reihenfolge; der erste zutreffende ist der Hauptgrund (`reason`). */
 export const EXCLUSION_REASON_ORDER = ['not_ended', 'youth', 'forfeit', 'postponed', 'no_result'];
 
 /**
  * Modell-Spielfilter (Spezifikation M0.1 und Entscheidung zu P1a):
- *   not_ended  `ended !== true` (strikt)          youth     isYouthGame()-Regel
- *   forfeit    `result.forfait === true`          postponed `notice_type` verschoben/verlegt
+ *   not_ended  `ended !== true`, AUSSER vollständiges `result` + mindestens ein Event vorhanden
+ *              (siehe hasCompleteResultAndEvents — Datenqualitäts-Ausnahme, kein Raten)
+ *   youth      isYouthGame()-Regel
+ *   forfeit    `result.forfait === true`
+ *   postponed  `notice_type` verschoben/verlegt
  *   no_result  kein numerischer Endstand
  * @returns {{included:boolean, reason:string|null, reasons:string[]}} `reasons` = alle zutreffenden Gründe in
  *   EXCLUSION_REASON_ORDER, `reason` = der erste davon.
  */
 export function classifyModelGame(game) {
   const hits = {
-    not_ended: game?.ended !== true,
+    not_ended: game?.ended !== true && !hasCompleteResultAndEvents(game),
     youth: isYouthGame(game),
     forfeit: game?.result?.forfait === true,
     postponed: NOTICE_EXCLUDE_RE.test(String(game?.notice_type ?? '')),
@@ -316,6 +334,7 @@ function emptyQuality() {
     excluded: { forfeit: 0, postponed: 0, youth: 0, noResult: 0 },
     excludedGames: [],
     endedFalseWithEvidence: [],
+    endedFalseIncludedByException: [],
     goals: 0,
     goalTypes: { regular: 0, penalty_shot: 0, owngoal: 0, not_assigned: 0, other: 0 },
     ownGoals: { events: 0, games: 0, eventsUlm: 0, gamesUlm: 0 },
@@ -377,7 +396,11 @@ export function normalizeSeason(seasonData) {
       };
     };
 
-    if (g?.ended !== true) {
+    // Ausnahme (siehe hasCompleteResultAndEvents): ein Spiel mit vollständigem result UND
+    // mindestens einem Event gilt als beendet, auch wenn das rohe ended-Feld false ist — betrifft
+    // nachweislich 8 Spiele in 21/22 (siehe Build-Bericht), keine ID-Liste im Code.
+    const endedException = g?.ended !== true && hasCompleteResultAndEvents(g);
+    if (g?.ended !== true && !endedException) {
       q.notEnded++;
       const entry = exclusionEntry();
       q.excludedGames.push(entry);
@@ -390,6 +413,11 @@ export function normalizeSeason(seasonData) {
 
     // ── Qualitätsumfang: alle beendeten Spiele (auch später ausgeschlossene) ──
     q.ended++;
+    if (endedException) {
+      const entry = exclusionEntry();
+      q.endedFalseIncludedByException.push(entry);
+      warn('ended_false_included_by_exception', gameId, `ended !== true (${JSON.stringify(entry.ended)}), aber vollständiges Ergebnis (${entry.score}) und ${events.length} Events vorhanden — nach Datenqualitäts-Ausnahme einbezogen`);
+    }
     if (cls.reason === 'forfeit') q.excluded.forfeit++;
     else if (cls.reason === 'postponed') q.excluded.postponed++;
     else if (cls.reason === 'youth') q.excluded.youth++;
