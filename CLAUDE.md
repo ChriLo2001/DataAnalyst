@@ -11,6 +11,10 @@ Das VfB Ulm Analytics Center (`index.html`) ist eine Single-File-SPA, die Floorb
 - **Aus `docs/spec/` nur lesen, was der Auftrag nennt.** Ein Phasenauftrag nennt die betroffenen Module/Abschnitte (siehe Lesehinweis in [docs/spec/index.md](docs/spec/index.md)); nicht die ganze Spezifikation laden. Jede Datei verweist per Kopfzeile auf ihre Voraussetzungen.
 - **Rohdaten nie in den Kontext laden.** `season-data/*.json`, `lineup-data/*.json`, `model-data/*`, `season-data-embedded.js` (rund 2,4 MB, identischer Inhalt wie `season-data/*.json`, nur eingebettet) und `scripts/p0a-baseline-golden-values.json` sind groß und nicht zum Lesen gedacht — nur per Skript verarbeiten (Node-Prozess liest/schreibt sie, nicht das Gespräch).
 
+## Videoerzeugung
+
+- Für die Social-Video-Aufnahme/den Standbild-Export (Canvas-Export) ist `node scripts/serve.mjs` (liefert die App unter `http://localhost:5173`, Node ohne Abhängigkeiten) der empfohlene Weg. Die App funktioniert dafür inzwischen auch per Doppelklick (`file://`), weil die Renderer-Bilder als `data:`-URI eingebettet sind (`social-video-assets.js`, siehe `scripts/cache-team-logos.mjs --embed --write`) — scheitert der Export dennoch, nennt die App selbst den Befehl für `scripts/serve.mjs`.
+
 ## Dauerhafte Schutzregeln
 
 Gelten für jede Phase, unabhängig vom jeweiligen Auftrag:
@@ -35,3 +39,4 @@ Gelten für jede Phase, unabhängig vom jeweiligen Auftrag:
 
 - Eine Phase pro Sitzung.
 - Bei offenen Entscheidungen oder Widersprüchen: anhalten und fragen, nicht annehmen.
+- Temporäre Hilfsskripte/-dateien (z. B. zur Extraktion von Browser-Ergebnissen, zum Debuggen) gehören ins Scratchpad-Verzeichnis der Sitzung, nie ins Repo. Landet trotzdem eine `_tmp_*`-Datei im Repo, vor Abschluss der Phase entfernen — `git status` vor dem letzten Commit prüft das.

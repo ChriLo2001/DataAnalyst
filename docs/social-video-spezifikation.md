@@ -58,10 +58,10 @@ Der bestehende PNG-Export serialisiert die Story über SVG `foreignObject` in ei
 
 ### 3.3 Zwei Voraussetzungen, die zuerst erledigt werden
 
-1. **Logos lokal cachen.** Team-Logos liegen heute als externe Saisonmanager-URLs vor. Fremde Bilder „vergiften" das Canvas, dann schlagen `captureStream` und `toDataURL` fehl. Deshalb:
-   - neues Verzeichnis `assets/teams/<team-key>.png`
-   - neues Skript `scripts/cache-team-logos.mjs`, das die Logos **einmalig** und nur mit explizitem Flag `--fetch` herunterlädt (der einzige Ort im Projekt mit Netzwerkzugriff; ohne Flag arbeitet es rein lesend und berichtet, was fehlt)
-   - Renderer und PNG-Export nutzen ab dann die lokalen Dateien; fehlt eine Datei, greift der Initialen-Fallback
+1. **Logos lokal cachen UND als data:-URI einbetten.** Team-Logos liegen heute als externe Saisonmanager-URLs vor. Fremde Bilder „vergiften" das Canvas, dann schlagen `captureStream` und `toDataURL` fehl. Eine lokale Kopie unter `assets/teams/` allein reicht dafür NICHT aus — bestätigt per Konsolenausgabe: unter `file://` behandelt Chrome jede lokale Datei als eigene, fremde Herkunft, auch ein per `<img src="assets/…">` von derselben Festplatte geladenes Bild verunreinigt das Canvas genauso wie ein externes (`captureStream`: „Canvas is not origin-clean", `toDataURL`: „Tainted canvases may not be exported"). Über HTTP tritt das nicht auf. Deshalb zweistufig:
+   - **Cache:** `scripts/cache-team-logos.mjs`, lädt Logos **einmalig** und nur mit explizitem Flag `--fetch` herunter nach `assets/teams/<team-key>.png` (der einzige Ort im Projekt mit Netzwerkzugriff; ohne Flag arbeitet es rein lesend und berichtet, was fehlt).
+   - **Einbettung:** dasselbe Skript, `--embed` (Dry-Run) bzw. `--embed --write`, erzeugt `social-video-assets.js` — ein klassisches Skript (wie `season-data-embedded.js`), das `window.SOCIAL_VIDEO_ASSETS` mit allen vom Renderer benötigten Bildern als `data:`-URIs füllt (Team-Logos, VfB-Logo für die Fahne, Spatz). `data:`-URIs vergiften das Canvas nicht, auch nicht unter `file://`. **Nur der Canvas2D-Renderer liest aus `window.SOCIAL_VIDEO_ASSETS`** — fehlt ein Schlüssel, greift der Initialen-Fallback. Die Story-**Vorschau** im Dashboard bleibt unverändert und nutzt weiter die Dateipfade (kein Canvas-Export dort, also nicht betroffen).
+   - **Lokaler Server als Ausweg, falls dennoch nötig:** `scripts/serve.mjs` (Node ohne Abhängigkeiten) liefert den Projektordner unter `http://localhost:5173` aus — `node scripts/serve.mjs`. Empfohlener Weg für die Videoerzeugung, falls die Einbettung aus irgendeinem Grund nicht greift (z. B. `social-video-assets.js` noch nicht erzeugt). Die App prüft das selbst (Abschnitt 8) und nennt im Fehlerfall genau diesen Befehl statt einer Sammelmeldung.
 2. **Schriften sicherstellen.** Vor dem Zeichnen `document.fonts.ready` abwarten und prüfen, ob `Syne` und `DM Mono` verfügbar sind. Fehlen sie (z. B. unter `file://` ohne Netz), wird mit den definierten Ersatzschriften gezeichnet und im UI ein Hinweis gezeigt, dass die Typografie abweicht.
 
 ## 4. Szenen
@@ -241,7 +241,12 @@ Neue Datei `scripts/test-social-video.mjs`, im Stil der bestehenden Tests:
 6. **ffmpeg-Befehlsbau:** korrekte Argumente, korrekte Behandlung von Leerzeichen in Pfaden, Abbruch ohne ffmpeg, kein Überschreiben ohne `--force`.
 7. **Logo-Cache:** `cache-team-logos.mjs` ohne `--fetch` verändert nichts und listet fehlende Logos; mit `--fetch` wird nur in `assets/teams/` geschrieben.
 
-Zusätzlich manuell zu prüfen und im Abschlussbericht zu dokumentieren: ein echtes Video je Format, Kontaktbogen der Szenen als PNG, Abspielprobe auf dem Handy.
+S2-Nachtrag (Canvas-Taint unter `file://` behoben), zusätzlich in `scripts/test-social-video-render.mjs`:
+
+8. **Asset-Einbettung:** `cache-team-logos.mjs --embed` ohne `--write` schreibt nichts und berichtet nur; `socialVideoLoadAssets` bezieht Bilder nachweislich nur aus `window.SOCIAL_VIDEO_ASSETS` (statisch geprüft, kein `assets/…`-Dateipfad mehr im Quelltext dieser Funktion).
+9. **Vorprüfungs-Hinweis:** `socialVideoCanvasExportHint` meldet im `file://`-Fall den konkreten Ausweg (lokaler Server, Befehlszeile), sonst einen allgemeinen Hinweis — beides ohne Canvas/DOM testbar.
+
+Zusätzlich manuell zu prüfen und im Abschlussbericht zu dokumentieren: ein echtes Video je Format, Kontaktbogen der Szenen als PNG, Abspielprobe auf dem Handy, sowie (S2-Nachtrag) Video und Standbild sowohl über HTTP als auch per Doppelklick unter `file://`.
 
 ## 9. Akzeptanzkriterien
 
@@ -249,7 +254,8 @@ Zusätzlich manuell zu prüfen und im Abschlussbericht zu dokumentieren: ein ech
 - Story 1080 × 1920, Feed 1080 × 1350, jeweils 15,0 s ± 0,2 s, 30 fps, ohne Tonspur, MP4 unter 25 MB.
 - Sichere Ränder eingehalten, kein abgeschnittener Text in allen Testfällen.
 - Erscheinungsbild deckungsgleich mit der Story-Vorschau (Farben, Schriften, Logokreise, Formpillen).
-- Ohne Modelldaten, ohne Logo-Cache und unter `file://` läuft alles ohne Fehler, mit sichtbarem Hinweis.
+- Ohne Modelldaten und ohne Logo-Cache läuft alles ohne Fehler, mit sichtbarem Hinweis (Initialen-Fallback).
+- Video und Standbild funktionieren sowohl über HTTP als auch unter `file://` (Doppelklick) — S2-Nachtrag: Bilder kommen für den Renderer ausschließlich als `data:`-URI (`social-video-assets.js`), daher kein Canvas-Taint mehr unter `file://`. Schlägt der Export dennoch fehl, zeigt die App den echten Grund und den Befehl für `scripts/serve.mjs` statt einer Sammelmeldung.
 - ffmpeg-Hinweis dauerhaft sichtbar; `social-video.mjs` bricht ohne ffmpeg verständlich ab.
 - Alle bestehenden Tests bleiben grün, die vorhandene Story-Vorschau und der PNG-Export funktionieren unverändert.
 
