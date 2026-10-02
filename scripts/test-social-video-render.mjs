@@ -74,6 +74,21 @@ const FUNCTIONS = [
   'socialVideoSceneTimeMs', 'socialVideoStandbildTimeMs',
   // S2-Nachtrag (Canvas-Taint unter file:// behoben): reine Hinweistext-Funktion
   'socialVideoCanvasExportHint',
+  // S2c (Gestaltungskanon 2a im Renderer, Fakt=letztes Duell mit Fallback, Topscorer mit Stichtag) —
+  // socialVideoLastDuelWithFallback/socialVideoOpponentTopScorerAsOf brauchen matchcenterAllGames() echt
+  // (kein Parameter für eine vorgefilterte Spielliste, siehe Kommentar an der Funktion selbst).
+  'getSeasonData', 'matchcenterAllGamesForSeason', 'matchcenterAllGames', 'matchcenterSeasonKeys',
+  'matchcenterDirectGames', 'matchcenterContextGames', 'matchcenterScoutingGames',
+  'matchcenterEnsureOpponentPlayer', 'matchcenterRegisterPlayerGame', 'matchcenterAddScoring',
+  'matchcenterPenaltyMinutes', 'matchcenterIsLateGoalEvent', 'matchcenterIsClutchGoalEvent',
+  'matchcenterFinalizeOpponentPlayerProfiles', 'matchcenterFmt', 'matchcenterBuildOpponentPlayerInsights',
+  'matchcenterBuildOpponentScouting', 'socialVideoLastDuelWithFallback', 'socialVideoOpponentTopScorerAsOf',
+  'socialVideoMatchupPairElement', 'socialVideoDuelFactElement', 'socialVideoTopscorerCardElement',
+  'socialVideoOpponentKanonElements',
+  // S2c — Gestaltungskanon 2a, Schicht A (Kopfzeile/Fortschrittsbalken/Gegner-Szene)
+  'socialVideoPushHairline', 'socialVideoPushProgressBar', 'socialVideoHeaderText', 'socialVideoPushHeaderBar',
+  'socialVideoMatchupColumns', 'socialVideoPushFormHairline', 'socialVideoLayoutMatchupGroup',
+  'socialVideoLayoutDuelFactGroup', 'socialVideoLayoutTopscorerGroup', 'socialVideoLayoutOpponentKanon',
 ];
 const functionSource = FUNCTIONS.map(fnSource).join('\n');
 const constSourceAll = [
@@ -83,6 +98,9 @@ const constSourceAll = [
   'SOCIAL_VIDEO_FACT_MAX_CHARS', 'SOCIAL_VIDEO_FACT_HARD_MAX_CHARS', 'SOCIAL_VIDEO_STORY_SCENE_DEFS',
   'SOCIAL_VIDEO_FEED_SCENE_DEFS', 'SOCIAL_VIDEO_SAFE_TOP', 'SOCIAL_VIDEO_WIDTH', 'SOCIAL_VIDEO_SKYLINE_PATH_D',
   'SOCIAL_VIDEO_SKYLINE_VIEWBOX', 'SOCIAL_VIDEO_RISE_PX', 'SOCIAL_VIDEO_SPARROW_COUNT', 'SOCIAL_VIDEO_PILL_COLORS',
+  'SOCIAL_VIDEO_INK', 'SOCIAL_VIDEO_MUTED', 'SOCIAL_VIDEO_ACCENT', 'SOCIAL_VIDEO_HAIRLINE_GOLD',
+  'SOCIAL_VIDEO_HAIRLINE_SOFT', 'SOCIAL_VIDEO_FORM_WIN', 'SOCIAL_VIDEO_FORM_LOSS', 'SOCIAL_VIDEO_FORM_DRAW',
+  'SOCIAL_VIDEO_FORM_COLOR', 'SOCIAL_VIDEO_KANON_SCENE_IDS',
 ].map(constSource).join('\n');
 
 function makeContext(seasons = {}) {
@@ -95,11 +113,13 @@ function makeContext(seasons = {}) {
   const ctx = vm.createContext({
     console,
     SEASONS, SEASON_CONFIG, ACTIVE_SEASON_CONFIG: {}, SEASON_START: '', SEASON_END: '',
+    STATIC_SEASON_DATA: {},
     cachedAnalysis: (key, fn) => fn(),
     analysisCacheKey: () => '',
     detectSide: () => null,
     globalThis: { document: undefined },
   });
+  ctx.window = ctx;
   vm.runInContext(functionSource, ctx);
   vm.runInContext(constSourceAll, ctx);
   vm.runInContext(`for(const k of Object.keys(SEASONS)){SEASONS[k].data.rawLeagueGames=SEASONS[k].data.rawLeagueGames.map(normalizeGame);SEASONS[k].data.rawGames=SEASONS[k].data.rawGames.map(normalizeGame);}`, ctx);
@@ -113,6 +133,9 @@ function call(ctx, expr) {
 }
 function drawList(ctx, spec, timeMs) {
   return vm.runInContext(`socialVideoDrawList(${JSON.stringify(spec)}, ${timeMs})`, ctx);
+}
+function sceneTimeMs(ctx, spec, sceneId, fraction) {
+  return vm.runInContext(`socialVideoSceneTimeMs(${JSON.stringify(spec)}, ${JSON.stringify(sceneId)}, ${fraction})`, ctx);
 }
 
 const SAFE_LEFT = 64, SAFE_RIGHT = 64, SAFE_TOP = 120, SAFE_BOTTOM = 120, WIDTH = 1080;
@@ -244,16 +267,69 @@ console.log('== D) Fahne: Phase reine Funktion der Zeit, Amplitude innerhalb der
 }
 
 // ═════════════════════════════════════════════════════════════════════════
-console.log('== E) Hintergrundebene: Deckkraft hinter Textbereichen höchstens 0,35 ==');
+console.log('== E) Hintergrundebene: Deckkraft hinter Textbereichen höchstens 0,35 (noch nicht auf Kanon 2a umgestellte Szenen) ==');
 {
-  // Der abdunkelnde Verlauf (socialVideoDrawList) ist der EINE rect-Befehl mit Verlauf über den gesamten
-  // Inhaltsbereich (Spezifikation 4.4: "Unter Textblöcken liegt ein abdunkelnder Verlauf, damit der
-  // Kontrast erhalten bleibt" / "Deckkraft der Hintergrundebene höchstens 0,35 hinter Textbereichen").
+  // Der abdunkelnde Verlauf (socialVideoDrawList) gilt NUR noch für Szenen außerhalb des Gestaltungskanons 2a
+  // (intro/lastDuel/playersToWatch/outro, Spezifikation 4.4) — für opponent/opponentA/opponentB entfällt er
+  // bewusst (Abschnitt 2a verbietet Verlaufsfüllungen hinter Text), siehe Abschnitt E2 unten.
   for (const spec of [...storiesMd4, feedMd4]) {
-    const list = drawList(ctxReal, spec, socialVideoMidOf(spec));
+    const introT = sceneTimeMs(ctxReal, spec, 'intro', 0.5);
+    const list = drawList(ctxReal, spec, introT);
     const overlay = list.find((c) => c.type === 'rect' && c.fill?.type === 'linear' && c.w === WIDTH);
-    assertTrue(!!overlay, `${spec.format} ${spec.opponentDisplay || 'Feed'}: abdunkelnder Verlauf vorhanden`);
-    assertTrue((overlay?.opacity ?? 1) <= 0.35 + 1e-9, `${spec.format} ${spec.opponentDisplay || 'Feed'}: Deckkraft des abdunkelnden Verlaufs (${overlay?.opacity}) <= 0,35`);
+    assertTrue(!!overlay, `${spec.format} ${spec.opponentDisplay || 'Feed'} (intro): abdunkelnder Verlauf vorhanden`);
+    assertTrue((overlay?.opacity ?? 1) <= 0.35 + 1e-9, `${spec.format} ${spec.opponentDisplay || 'Feed'} (intro): Deckkraft des abdunkelnden Verlaufs (${overlay?.opacity}) <= 0,35`);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+console.log('== E2) Gestaltungskanon 2a — Prüfbar-Abschnitt (docs/social-video-spezifikation.md 2a) ==');
+{
+  const kanonSceneIds = new Set(['opponent', 'opponentA', 'opponentB']);
+  for (const spec of [...storiesMd4, feedMd4]) {
+    for (const scene of spec.scenes.filter((s) => kanonSceneIds.has(s.id))) {
+      const t = sceneTimeMs(ctxReal, spec, scene.id, 0.85);
+      const list = drawList(ctxReal, spec, t);
+      const label = `${spec.format} ${spec.opponentDisplay || 'Feed'} (${scene.id})`;
+
+      // Keine Verlaufsfüllung hinter Text: kein rect/circle/path-Befehl mit Verlaufsfüllung außer der
+      // Hintergrundebene selbst (socialVideoBackgroundLayer, cacheable:true markiert).
+      const gradientNonBackground = list.filter((c) => !c.cacheable && c.fill?.type && ['linear', 'radial'].includes(c.fill.type));
+      assertEqual(gradientNonBackground.length, 0, `${label}: keine Verlaufsfüllung außerhalb der Hintergrundebene`);
+
+      // Kein Container mit Eckradius (rx) UND Füllung — Kanon 2a kennt nur Haarlinien (1px, flächenlos) statt
+      // Kästen als Container.
+      const roundedContainers = list.filter((c) => c.type === 'rect' && c.rx && c.fill);
+      assertEqual(roundedContainers.length, 0, `${label}: kein Container mit Eckradius`);
+
+      // Keine farbigen Schatten: dieses Projekt kennt in der Zeichenliste kein shadow*-Feld — stellt sicher,
+      // dass keins eingeschlichen ist.
+      const withShadow = list.filter((c) => c.shadowColor || c.shadowBlur);
+      assertEqual(withShadow.length, 0, `${label}: keine Zeichenbefehle mit Schatten-Feldern`);
+
+      // Zahlen verwenden Tabellenziffern: jeder als tabular:true markierte Textbefehl nutzt den Mono-Font
+      // (einzige in diesem Projekt verfügbare echte Monospace-Schrift — Canvas2D kennt kein
+      // font-variant-numeric, siehe Kommentar an socialVideoFontString/socialVideoDrawCommand).
+      const tabularTexts = list.filter((c) => c.type === 'text' && c.tabular);
+      assertTrue(tabularTexts.length > 0, `${label}: mindestens ein tabellenziffern-markierter Textbefehl vorhanden`);
+      assertTrue(tabularTexts.every((c) => c.font === 'mono'), `${label}: alle tabular:true-Textbefehle nutzen den Mono-Font (Tabellenziffern)`);
+
+      // Höchstens fünf sichtbare Gruppen je Szene, inklusive Kopfzeile und Fortschrittsbalken.
+      const groups = new Set(list.map((c) => c.group).filter(Boolean));
+      assertTrue(groups.size <= 5, `${label}: höchstens fünf sichtbare Gruppen (${groups.size}: ${[...groups].join(', ')})`);
+
+      // Akzentfläche höchstens 5 Prozent der Bildfläche; Formbilanz-Farben (formColor:true) zählen laut
+      // Auftrag NICHT ins Budget, werden aber getrennt ausgewiesen.
+      const canvasArea = WIDTH * heightForFormat(spec.format);
+      const areaOf = (c) => {
+        if (c.type === 'rect') return Math.max(0, c.w) * Math.max(0, c.h);
+        if (c.type === 'circle') return Math.PI * c.r * c.r;
+        if (c.type === 'text') return Math.max(0, c.maxWidth || 0) * Math.max(0, c.size || 0);
+        return 0;
+      };
+      const accentArea = list.filter((c) => c.accent).reduce((s, c) => s + areaOf(c), 0);
+      const formColorArea = list.filter((c) => c.formColor).reduce((s, c) => s + areaOf(c), 0);
+      assertTrue(accentArea / canvasArea <= 0.05 + 1e-9, `${label}: Akzentfläche (${((accentArea / canvasArea) * 100).toFixed(2)}%) höchstens 5% — Formbilanz-Fläche getrennt: ${((formColorArea / canvasArea) * 100).toFixed(2)}%`);
+    }
   }
 }
 function socialVideoMidOf(spec) { return Math.round((spec.durationMs || 15000) / 2); }

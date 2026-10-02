@@ -70,6 +70,18 @@ const FUNCTIONS = [
   'socialVideoUlmGamesForMatchday', 'socialVideoTableRank', 'socialVideoFormAsOf', 'socialVideoLastDuelAsOf',
   'socialVideoTopScorerAsOf', 'socialVideoOpponentSceneData', 'socialVideoFileName', 'socialVideoMatchdayLabel',
   'socialVideoBuildStorySpec', 'socialVideoBuildFeedSpec', 'buildSocialVideoSpec',
+  // S2c (Gestaltungskanon 2a im Renderer, Fakt=letztes Duell mit Fallback, Topscorer mit Stichtag):
+  // socialVideoLastDuelWithFallback/socialVideoOpponentTopScorerAsOf brauchen matchcenterAllGames() echt
+  // (keine vorgefilterte Spielliste als Parameter, siehe Kommentar an der Funktion selbst) — deshalb hier
+  // zusätzlich die volle matchcenterAllGames-/matchcenterBuildOpponentScouting-Kette.
+  'getSeasonData', 'matchcenterAllGamesForSeason', 'matchcenterAllGames', 'matchcenterSeasonKeys',
+  'matchcenterDirectGames', 'matchcenterContextGames', 'matchcenterScoutingGames',
+  'matchcenterEnsureOpponentPlayer', 'matchcenterRegisterPlayerGame', 'matchcenterAddScoring',
+  'matchcenterPenaltyMinutes', 'matchcenterIsLateGoalEvent', 'matchcenterIsClutchGoalEvent',
+  'matchcenterFinalizeOpponentPlayerProfiles', 'matchcenterFmt', 'matchcenterBuildOpponentPlayerInsights',
+  'matchcenterBuildOpponentScouting', 'socialVideoLastDuelWithFallback', 'socialVideoOpponentTopScorerAsOf',
+  'socialVideoMatchupPairElement', 'socialVideoDuelFactElement', 'socialVideoTopscorerCardElement',
+  'socialVideoOpponentKanonElements',
 ];
 const functionSource = FUNCTIONS.map(fnSource).join('\n');
 const constSourceAll = [
@@ -91,11 +103,16 @@ function makeContext(seasons = {}) {
   const ctx = vm.createContext({
     console,
     SEASONS, SEASON_CONFIG, ACTIVE_SEASON_CONFIG: {}, SEASON_START: '', SEASON_END: '',
+    STATIC_SEASON_DATA: {}, // nur für matchcenterSeasonKeys/-SeasonLabel-Fallback, hier immer leer
     cachedAnalysis: (key, fn) => fn(),
     analysisCacheKey: () => '',
     detectSide: () => null, // nur für den (hier ungenutzten) statGamesData-Zweig von getSeasonStatsAsOf
     globalThis: { document: undefined },
   });
+  // window === der Sandbox-Global selbst (wie im echten Browser) — socialVideoOpponentTopScorerAsOf schreibt
+  // testweise auf window.matchcenterAllGames, das muss dieselbe Bindung treffen, die matchcenterScoutingGames
+  // über den bloßen Bezeichner matchcenterAllGames() liest.
+  ctx.window = ctx;
   vm.runInContext(functionSource, ctx);
   vm.runInContext(constSourceAll, ctx);
   // bucket.data.rawLeagueGames/.rawGames sind im echten App-Zustand bereits normalizeGame()-normalisiert
@@ -142,9 +159,9 @@ console.log('== A) Echte Daten: Spieltag 4 (25/26) — Abnahmebeispiel ==');
   assertEqual(schriesheim.matchday.arena, 'Mehrzweckhalle', 'Halle aus den Rohdaten übernommen');
   // Realdaten-Pin (siehe Schritt-1-Plan): Tabelle VOR Spieltag 4 — Schriesheim #5, Heidelberg #2, Ulm #3
   const opponentScene = (spec) => spec.scenes.find((sc) => sc.id === 'opponent');
-  const rankOf = (spec) => opponentScene(spec).elements.find((e) => e.type === 'stat' && e.label === 'Tabelle')?.text;
-  assertEqual(rankOf(schriesheim), '#5', 'TV Schriesheim: Tabellenplatz 5 vor Spieltag 4 (Realdaten-Pin)');
-  assertEqual(rankOf(heidelberg), '#2', 'FBC Heidelberg: Tabellenplatz 2 vor Spieltag 4 (Realdaten-Pin)');
+  const rankOf = (spec) => opponentScene(spec).elements.find((e) => e.type === 'matchupPair')?.opp?.rank;
+  assertEqual(rankOf(schriesheim), 5, 'TV Schriesheim: Tabellenplatz 5 vor Spieltag 4 (Realdaten-Pin)');
+  assertEqual(rankOf(heidelberg), 2, 'FBC Heidelberg: Tabellenplatz 2 vor Spieltag 4 (Realdaten-Pin)');
 
   const feed = callSpec(ctxReal, { seasonKey: '25/26', matchdayKey: md4.key, format: 'feed-4x5' });
   assertTrue(!Array.isArray(feed), 'feed-4x5: EIN Objekt, kein Array');
@@ -343,6 +360,30 @@ console.log('== H) cache-team-logos.mjs ohne --fetch verändert nichts ==');
   try { await readFile(path.join(sandbox, 'assets', 'teams', 'vfb-ulm.png')); } catch (e) { assetsDirExists = e.code !== 'ENOENT' ? true : false; }
   assertTrue(!assetsDirExists, 'kein assets/teams/-Verzeichnis nach Dry-Run erzeugt');
   await rm(sandbox, { recursive: true, force: true });
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+console.log('== I) decideLogoTreatment (S2c-Auftrag B3, dunkle Logos lesbar machen) — echte Dateien ==');
+{
+  // Regressions-Pins auf den tatsächlich im Repo vorhandenen Logos: belegt zugleich die Hue-Unterscheidung
+  // (annähernd einfarbig -> invert, farbig -> brighten/silhouette) mit echten Daten statt synthetischer PNGs.
+  const expected = {
+    'assets/vfb-ulm-logo-mark.png': 'silhouette', // farbig (Vereinsrot), auch aufgehellt zu dunkel
+    'assets/teams/tv-schriesheim.png': 'invert', // annähernd einfarbig
+    'assets/teams/breisgau-bandits.png': 'invert',
+    'assets/teams/floorball-mannheim.png': 'invert',
+    'assets/teams/fbc-heidelberg.png': 'silhouette', // farbig, auch aufgehellt zu dunkel
+    'assets/teams/vfb-ulm.png': 'silhouette',
+    'assets/teams/sportvg-feuerbach.png': 'none', // bereits hell genug
+    'assets/teams/sv-tuebingen-sharks.png': 'none',
+  };
+  for (const [relPath, tier] of Object.entries(expected)) {
+    const buf = await readFile(path.join(REPO_ROOT, relPath));
+    const result = cacheLogos.decideLogoTreatment(buf);
+    assertEqual(result.tier, tier, `${relPath}: Lesbarkeits-Stufe "${tier}"`);
+    if (tier === 'none') assertTrue(result.luminance >= 0.45, `${relPath}: Luminanz (${result.luminance?.toFixed(2)}) über dem Schwellwert`);
+    if (tier === 'invert') assertTrue(result.saturation < 0.2, `${relPath}: annähernd einfarbig (Sättigung ${result.saturation?.toFixed(2)} < 0,2)`);
+  }
 }
 
 console.log('');
