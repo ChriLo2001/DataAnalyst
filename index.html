@@ -21926,6 +21926,52 @@ function socialVideoTopScorerAsOf(asOfGames,teamKey,seasonKey){
   return rows[0]||null;
 }
 
+/** Letztes direktes Duell mit Stichtag-sicherem Fallback über Saisongrenzen (Spezifikation 5a/5c,
+ * S2c-Auftrag B1): Stufe 1 — letztes Duell der LAUFENDEN Saison vor dem Stichtag (socialVideoLastDuelAsOf,
+ * unverändert). Stufe 2 — sonst das letzte Duell einer FRÜHEREN Saison; kein eigener Stichtag nötig, eine
+ * bereits vollständig gespielte Saison liegt per Definition vollständig vor dem aktuellen Stichtag. Stufe 3
+ * (Vorgängerteam mit scope.display=true, Abschnitt 5a) — wartet auf data/team-lineage.json (Modul M1v, noch
+ * nicht angelegt, Zuordnung laut Entscheidung 13 noch offen): liefert bis dahin durchgängig null, das ist
+ * exakt das in 5a beschriebene Verhalten bei fehlendem Lineage-Eintrag ("kein Raten, Block entfällt,
+ * warnings-Eintrag"), kein Sonderfall dieser Phase. */
+function socialVideoLastDuelWithFallback(asOfGames,opponentMcKey,seasonKey,opponentDisplay){
+  const current=socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey);
+  if(current)return{...current,tier:'current',seasonLabel:null,asLabel:null};
+  const allDirect=matchcenterDirectGames(opponentMcKey,'alltime');
+  const prior=allDirect.filter(g=>g._mcSeasonKey!==seasonKey&&seasonOrderIndex(g._mcSeasonKey)<seasonOrderIndex(seasonKey)).sort(matchcenterSortGamesAsc);
+  const lastPrior=prior[prior.length-1];
+  if(lastPrior){
+    const outcome=matchcenterOutcomeForTeam(lastPrior,'ulm',lastPrior._mcSeasonKey);
+    if(outcome){
+      const oppSide=outcome.side==='home'?'guest':'home';
+      const thenName=matchcenterGameTeamName(lastPrior,oppSide);
+      const thenDisplay=matchcenterTeamDisplay(thenName,lastPrior._mcSeasonKey);
+      const asLabel=normalizeTeamKey(thenDisplay)!==normalizeTeamKey(opponentDisplay)?thenDisplay:null;
+      return{...outcome,tier:'priorSeason',seasonLabel:matchcenterSeasonLabel(lastPrior._mcSeasonKey),asLabel};
+    }
+  }
+  return null;
+}
+
+/** Trikotnummer-Topscorer des Gegners MIT Stichtag (S2c-Auftrag B, "Datengrundlage ist die bestehende
+ * Matchcenter-Logik matchcenterBuildOpponentScouting, nichts neu berechnen"). Diese Funktion kennt selbst
+ * keinen Stichtag und nimmt keine vorgefilterte Spielliste entgegen — Spezifikation 5c sieht für genau diesen
+ * Fall einen "dünnen Stichtag-Wrapper daneben" vor, der die bestehende Funktion UNVERÄNDERT lässt
+ * (Golden-Master-Schutz). Da matchcenterBuildOpponentScouting seine Spiele selbst über das globale
+ * matchcenterAllGames() bezieht und keinen Injektionspunkt hat, schränkt dieser Wrapper matchcenterAllGames()
+ * für die Dauer GENAU dieses einen synchronen Aufrufs auf Spiele vor dem Stichtag ein und stellt es im
+ * finally-Block sofort wieder her — JS ist single-threaded, daher ohne Nebenläufigkeitsrisiko. */
+function socialVideoOpponentTopScorerAsOf(opponentMcKey,seasonKey,cutoffDate){
+  const original=matchcenterAllGames;
+  window.matchcenterAllGames=function(){return original().filter(g=>g.date<cutoffDate);};
+  try{
+    const scouting=matchcenterBuildOpponentScouting(opponentMcKey,'current',seasonKey);
+    return scouting.topPlayers[0]||null;
+  }finally{
+    window.matchcenterAllGames=original;
+  }
+}
+
 /** Alle Kernwerte für EINEN Ulm-Gegner eines Spieltags (asOf strikt VOR dem Spieltag, siehe Kopfkommentar). */
 function socialVideoOpponentSceneData(seasonKey,matchday,ulmGame){
   const warnings=[];
@@ -21952,6 +21998,12 @@ function socialVideoOpponentSceneData(seasonKey,matchday,ulmGame){
   const lastDuel=socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey);
   if(!lastDuel)warnings.push({code:'scene-omitted',scene:'lastDuel',reason:'no-duel-before-matchday'});
 
+  const lastDuelWithFallback=socialVideoLastDuelWithFallback(asOfGames,opponentMcKey,seasonKey,opponentDisplay);
+  if(!lastDuelWithFallback)warnings.push({code:'element-omitted',scene:'opponent',element:'duelFact',reason:'no-duel-any-season'});
+
+  const opponentTopScorer=socialVideoOpponentTopScorerAsOf(opponentMcKey,seasonKey,matchday.date);
+  if(!opponentTopScorer)warnings.push({code:'element-omitted',scene:'opponent',element:'topscorerCard',reason:'no-scorer-data-this-season'});
+
   const topUlmRow=socialVideoTopScorerAsOf(asOfGames,'ulm',seasonKey);
   const topOppRow=socialVideoTopScorerAsOf(asOfGames,opponentMcKey,seasonKey);
   if(!topUlmRow&&!topOppRow)warnings.push({code:'scene-omitted',scene:'playersToWatch',reason:'no-scorer-data'});
@@ -21971,6 +22023,8 @@ function socialVideoOpponentSceneData(seasonKey,matchday,ulmGame){
     ulmFormLetters:matchcenterStoryFormLetters(ulmForm),oppFormLetters:matchcenterStoryFormLetters(oppForm),
     ulmFormRecord:matchcenterStoryFormRecord(ulmForm),oppFormRecord:matchcenterStoryFormRecord(oppForm),
     lastDuel,lastDuelHasData:!!topUlmRow||!!topOppRow,
+    lastDuelWithFallback,hasLastDuelWithFallback:!!lastDuelWithFallback,
+    opponentTopScorer,hasOpponentTopScorer:!!opponentTopScorer,
     topUlm,topOpponent,hasLastDuel:!!lastDuel,hasPlayersToWatch:!!topUlmRow||!!topOppRow,
     warnings,
   };
@@ -21990,12 +22044,52 @@ function socialVideoMatchdayLabel(matchday){
   return matchday?`Spieltag ${matchday.number}`:'Spieltag';
 }
 
+/** Gestaltungskanon 2a (docs/social-video-spezifikation.md Abschnitt 2a) — EIN zusammengesetztes Element für
+ * die Matchup-Gruppe der Gegner-Szene: beide Teams (Logo, Name, Tabellenplatz, Form) in einem Element, damit
+ * Schicht A sie als EINE der höchstens fünf Gruppen je Szene zeichnet (siehe socialVideoLayoutOpponentKanon). */
+function socialVideoMatchupPairElement(opp,animation='fade',delayMs=0){
+  return{type:'matchupPair',
+    ulm:{name:'VfB Ulm',rank:opp.ulmRank,formLetters:opp.ulmFormLetters,formRecord:opp.ulmFormRecord},
+    opp:{name:opp.opponentDisplay,rank:opp.oppRank,formLetters:opp.oppFormLetters,formRecord:opp.oppFormRecord,assetKey:opp.assetKey,asset:opp.logoAsset},
+    animation,delayMs};
+}
+/** Fakt-Gruppe = letztes direktes Duell (S2c-Auftrag B1), null wenn keine Stufe des Fallbacks einen Treffer
+ * liefert (Element entfällt dann ersatzlos, siehe socialVideoOpponentKanonElements). */
+function socialVideoDuelFactElement(opp,animation='fade',delayMs=0){
+  const d=opp.lastDuelWithFallback;
+  if(!d)return null;
+  const parts=[formatDateDE(d.game.date),'Verbandsliga BW (KF)'];
+  if(d.seasonLabel)parts.push(d.seasonLabel);
+  return{type:'duelFact',result:`${d.gf}:${d.ga}`,metaLine:parts.join(' · '),asLabel:d.asLabel,animation,delayMs};
+}
+/** Topscorer-Gruppe (S2c-Auftrag B): Vorname/Nachname aus dem letzten durch Leerzeichen getrennten Token des
+ * vollen Anzeigenamens — dieselbe Aufteilung wie bei langen Vereinsnamen bereits an anderer Stelle im Projekt
+ * üblich (letztes Token = Nachname). Null wenn der Gegner in der laufenden Saison vor dem Stichtag noch keine
+ * Scorerdaten hat (Element entfällt dann ersatzlos). */
+function socialVideoTopscorerCardElement(opp,animation='rise',delayMs=0){
+  const t=opp.opponentTopScorer;
+  if(!t)return null;
+  const nameParts=String(t.name||'').trim().split(/\s+/).filter(Boolean);
+  const last=nameParts.length>1?nameParts.pop():(nameParts[0]||t.name||'');
+  const first=nameParts.join(' ');
+  return{type:'topscorerCard',teamLabel:opp.opponentDisplay,jersey:t.jersey?String(t.jersey):'–',first,last,goals:t.goals,assists:t.assists,points:t.points,insight:t.dangerReason||'',animation,delayMs};
+}
+/** Die drei Gruppen der Gegner-Szene nach Kanon 2a: Matchup (immer), Fakt=letztes Duell (wenn vorhanden),
+ * Topscorer (wenn vorhanden) — zusammen mit Fortschrittsbalken und Kopfzeile (beide szenenübergreifend in
+ * socialVideoDrawList) genau die vorgegebenen höchstens fünf Gruppen je Szene. */
+function socialVideoOpponentKanonElements(opp){
+  const els=[socialVideoMatchupPairElement(opp,'fade',0)];
+  const duel=socialVideoDuelFactElement(opp,'fade',200);
+  if(duel)els.push(duel);
+  const ts=socialVideoTopscorerCardElement(opp,'rise',320);
+  if(ts)els.push(ts);
+  return els;
+}
+
 /** EIN Story-Spec-Objekt für genau einen Ulm-Gegner dieses Spieltags (siehe buildSocialVideoSpec unten). */
 function socialVideoBuildStorySpec(seasonKey,matchday,ulmGame,warningsOut){
   const opp=socialVideoOpponentSceneData(seasonKey,matchday,ulmGame);
   warningsOut.push(...opp.warnings);
-  const homeName=socialVideoFitText('VfB Ulm',SOCIAL_VIDEO_NAME_MAX_CHARS,SOCIAL_VIDEO_NAME_HARD_MAX_CHARS);
-  const oppName=socialVideoFitText(opp.opponentDisplay,SOCIAL_VIDEO_NAME_MAX_CHARS,SOCIAL_VIDEO_NAME_HARD_MAX_CHARS);
 
   const sceneDefs=SOCIAL_VIDEO_STORY_SCENE_DEFS.map(def=>({...def,present:def.id==='lastDuel'?opp.hasLastDuel:def.id==='playersToWatch'?opp.hasPlayersToWatch:true}));
   const timing=socialVideoDistributeSceneDurations(sceneDefs);
@@ -22010,12 +22104,7 @@ function socialVideoBuildStorySpec(seasonKey,matchday,ulmGame,warningsOut){
     {type:'meta',text:`${matchcenterSeasonLabel(seasonKey)} · Verbandsliga BW (KF)`,animation:'rise',delayMs:420},
   ]});
   const oppT=at('opponent');
-  if(oppT)scenes.push({id:'opponent',startMs:oppT.startMs,endMs:oppT.endMs,elements:[
-    {type:'logo',team:opp.assetKey,asset:opp.logoAsset,animation:'fade',delayMs:0},
-    {type:'title',text:oppName.text,textStage:oppName.stage,animation:'rise',delayMs:120},
-    ...(opp.oppRank!==null?[{type:'stat',label:'Tabelle',text:`#${opp.oppRank}`,animation:'count',delayMs:240}]:[]),
-    {type:'form',label:'Form (letzte 5)',pills:opp.oppFormLetters,record:opp.oppFormRecord,animation:'stagger',delayMs:360},
-  ]});
+  if(oppT)scenes.push({id:'opponent',startMs:oppT.startMs,endMs:oppT.endMs,elements:socialVideoOpponentKanonElements(opp)});
   const duelT=at('lastDuel');
   if(duelT&&opp.lastDuel)scenes.push({id:'lastDuel',startMs:duelT.startMs,endMs:duelT.endMs,elements:[
     {type:'result',text:`${opp.lastDuel.gf}:${opp.lastDuel.ga}`,sub:'Letztes Duell',animation:'count',delayMs:0},
@@ -22066,13 +22155,7 @@ function socialVideoBuildFeedSpec(seasonKey,matchday,ulmGames){
   const buildOppScene=(id,opp)=>{
     const t=at(id);
     if(!t||!opp)return null;
-    const name=socialVideoFitText(opp.opponentDisplay,SOCIAL_VIDEO_NAME_MAX_CHARS,SOCIAL_VIDEO_NAME_HARD_MAX_CHARS);
-    return{id,startMs:t.startMs,endMs:t.endMs,elements:[
-      {type:'logo',team:opp.assetKey,asset:opp.logoAsset,animation:'fade',delayMs:0},
-      {type:'title',text:name.text,textStage:name.stage,animation:'rise',delayMs:100},
-      ...(opp.oppRank!==null?[{type:'stat',label:'Tabelle',text:`#${opp.oppRank}`,animation:'count',delayMs:200}]:[]),
-      {type:'form',label:'Form',pills:opp.oppFormLetters,record:opp.oppFormRecord,animation:'stagger',delayMs:300},
-    ]};
+    return{id,startMs:t.startMs,endMs:t.endMs,elements:socialVideoOpponentKanonElements(opp)};
   };
   const sceneA=buildOppScene('opponentA',oppA);
   if(sceneA)scenes.push(sceneA);
@@ -22227,12 +22310,12 @@ function socialVideoSparrowPositions(timeMs,width,height){
   return out;
 }
 
-function socialVideoPushText(cmds,{text,x,y,baseSize,maxWidth,font='syne',weight=900,color='#fff',align='center',letterSpacing=0,opacity=1,charFactor}){
+function socialVideoPushText(cmds,{text,x,y,baseSize,maxWidth,font='syne',weight=900,color='#fff',align='center',letterSpacing=0,opacity=1,charFactor,tabular,formColor,group}){
   const t=String(text||'');
   if(!t)return;
   const factor=charFactor??(font==='mono'?0.6:0.66);
   const size=socialVideoEstimateFontSize(t,baseSize,maxWidth,factor);
-  cmds.push({type:'text',text:t,x,y,size,maxWidth,font,weight,color,align,letterSpacing,opacity});
+  cmds.push({type:'text',text:t,x,y,size,maxWidth,font,weight,color,align,letterSpacing,opacity,tabular,formColor,group});
 }
 
 /** Logokreis (Spezifikation Abschnitt 2: Goldrand, roter Verlauf, Initialen-Fallback). Schicht A kennt den
@@ -22268,6 +22351,200 @@ function socialVideoPushForm(cmds,{letters,cx,topY,delayMs,sceneMs,size=34}){
     socialVideoPushText(cmds,{text:letter,x,y,baseSize:size*0.5,maxWidth:size*0.9,font:'mono',color:colors.text,align:'center',opacity:p.opacity});
     x+=size+gap;
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Gestaltungskanon 2a (docs/social-video-spezifikation.md Abschnitt 2a) — "edel" statt Dashboard. Gilt ab
+// hier für die Gegner-Szene (socialVideoLayoutOpponentKanon) sowie szenenübergreifend für Fortschrittsbalken
+// und Kopfzeile (socialVideoPushProgressBar/-HeaderBar, aus socialVideoDrawList heraus aufgerufen). Die
+// übrigen Szenen (intro/lastDuel/playersToWatch/outro) bleiben bewusst auf dem bisherigen Stand — ihre
+// Gestaltung ist noch nicht durch eine eigene Entwurfsrunde freigegeben (siehe Abschlussbericht).
+// ─────────────────────────────────────────────────────────────────────────
+const SOCIAL_VIDEO_INK='#EDE7DF';
+const SOCIAL_VIDEO_MUTED='#8A8A90';
+const SOCIAL_VIDEO_ACCENT='#CC1A27';
+const SOCIAL_VIDEO_HAIRLINE_GOLD='rgba(216,168,74,.22)';
+const SOCIAL_VIDEO_HAIRLINE_SOFT='rgba(255,255,255,.12)';
+// Formbilanz-Ausnahme vom Farbbudget (Abschnitt 2a, S2c-Auftrag B2): gedämpfte, entsättigte Töne, zählen
+// NICHT ins Akzentbudget, werden aber in der Prüfung getrennt ausgewiesen (siehe formColor-Markierung unten).
+const SOCIAL_VIDEO_FORM_WIN='#8FB88F';
+const SOCIAL_VIDEO_FORM_LOSS='#C97B7B';
+const SOCIAL_VIDEO_FORM_DRAW=SOCIAL_VIDEO_MUTED;
+
+/** Dünne Trennlinie statt Container (Abschnitt 2a: "Trennung durch Haarlinien... statt durch Kästen"). Nie
+ * gefüllt mit einer Akzentfarbe aus dieser Funktion heraus — reine Trennlinie, kein Container-Rahmen. */
+function socialVideoPushHairline(cmds,{x,y,w,color=SOCIAL_VIDEO_HAIRLINE_GOLD,group}){
+  cmds.push({type:'rect',x,y,w,h:1,fill:color,opacity:1,group});
+}
+
+/** Fortschrittsbalken (Abschnitt 2a/4.1: "Szenen-Fortschrittsbalken am oberen Rand wie bei Instagram-
+ * Stories"). Dünne Haarlinien-Segmente statt gefüllter Pillen; die EINE Akzentfarbe markiert erledigte/
+ * aktive Segmente (accent:true, siehe Prüfung "Akzentfläche höchstens 5%" — die Fläche ist bei 1080×2px je
+ * Segment verschwindend klein). */
+function socialVideoPushProgressBar(totalScenes,activeIndex){
+  const cmds=[];
+  if(!totalScenes)return cmds;
+  const x0=SOCIAL_VIDEO_SAFE_LEFT,x1=SOCIAL_VIDEO_WIDTH-SOCIAL_VIDEO_SAFE_RIGHT;
+  const gap=8,w=(x1-x0-gap*(totalScenes-1))/totalScenes,y=SOCIAL_VIDEO_SAFE_TOP,h=2;
+  for(let i=0;i<totalScenes;i++){
+    const x=x0+i*(w+gap);
+    const done=activeIndex>=0&&i<=activeIndex;
+    cmds.push({type:'rect',x,y,w,h,fill:done?SOCIAL_VIDEO_ACCENT:SOCIAL_VIDEO_HAIRLINE_SOFT,opacity:1,accent:done,group:'progress'});
+  }
+  return cmds;
+}
+
+/** Text der dauerhaften Kopfzeile (Abschnitt 2a/4.1: "VfB Ulm gegen Gegner, Spieltag, Datum, Anpfiffzeit,
+ * Halle" — JEDE Szene). Reine Funktion aus den bereits vorhandenen Spec-Feldern, keine Neuberechnung. Beim
+ * Feed-Format (zwei Gegner, kein einzelnes spec.opponentDisplay) kommt der Gegnername aus dem matchupPair-
+ * Element der gerade aktiven Szene, falls vorhanden — sonst bleibt der generische Platzhalter "Gegner". */
+function socialVideoHeaderText(spec,activeScene){
+  const md=spec?.matchday||{};
+  const matchupEl=(activeScene?.elements||[]).find(e=>e.type==='matchupPair');
+  const oppLabel=spec?.opponentDisplay||matchupEl?.opp?.name||'Gegner';
+  const parts=[md.number!=null?`Spieltag ${md.number}`:'',md.date?formatDateDE(md.date):'',(md.kickoffs||[])[0]?`${md.kickoffs[0]} Uhr`:'',md.arena||''].filter(Boolean);
+  return`VfB Ulm gegen ${oppLabel} · ${parts.join(' · ')}`;
+}
+function socialVideoPushHeaderBar(spec,activeScene){
+  const cmds=[];
+  socialVideoPushText(cmds,{text:socialVideoHeaderText(spec,activeScene),x:SOCIAL_VIDEO_WIDTH/2,y:SOCIAL_VIDEO_SAFE_TOP+42,baseSize:20,maxWidth:socialVideoContentWidth(),font:'mono',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:1,charFactor:0.6});
+  cmds.forEach(c=>{c.group='header';});
+  return cmds;
+}
+
+/** Spaltenmittelpunkte des 12-Spalten-Rasters (5+2+5, Abschnitt 2a/Umfangspunkt A) — rein geometrisch,
+ * unabhängig von der Bildhöhe (Breite ist in beiden Formaten 1080). */
+function socialVideoMatchupColumns(){
+  const contentW=socialVideoContentWidth();
+  const gutter=16,cols=12;
+  const unit=(contentW-11*gutter)/cols;
+  const colW=5*unit+4*gutter;
+  const leftX0=SOCIAL_VIDEO_SAFE_LEFT;
+  const leftCx=leftX0+colW/2;
+  const rightX0=leftX0+7*(unit+gutter);
+  const rightCx=rightX0+colW/2;
+  return{leftCx,rightCx,dividerX:SOCIAL_VIDEO_WIDTH/2,colW};
+}
+
+/** Formbilanz als Reihe kleiner Zeichen auf einer Haarlinie (Abschnitt 2a-Ausnahme, S2c-Auftrag B2) — KEINE
+ * gefüllten Kreise mehr. Nur die Zeichen selbst sind farbig (S/U/N je gedämpftes Grün/Grau/Rot), die Linie
+ * bleibt die normale Gold-Haarlinie. Reihenfolge chronologisch, jüngstes Spiel rechts (letters kommt bereits
+ * in dieser Reihenfolge aus matchcenterStoryFormLetters/socialVideoFormAsOf, siehe dort). */
+const SOCIAL_VIDEO_FORM_COLOR={S:SOCIAL_VIDEO_FORM_WIN,N:SOCIAL_VIDEO_FORM_LOSS,U:SOCIAL_VIDEO_FORM_DRAW};
+function socialVideoPushFormHairline(cmds,{letters,cx,y,group}){
+  const marks=(letters&&letters.length?letters:['-']).slice(-5);
+  const gap=16,size=22;
+  const totalW=marks.length*size+(marks.length-1)*gap;
+  socialVideoPushHairline(cmds,{x:cx-totalW/2,y:y-10,w:totalW,group});
+  let x=cx-totalW/2+size/2;
+  for(const letter of marks){
+    const color=SOCIAL_VIDEO_FORM_COLOR[letter]||SOCIAL_VIDEO_MUTED;
+    socialVideoPushText(cmds,{text:letter,x,y,baseSize:size,maxWidth:size,font:'mono',color,align:'center',opacity:1,formColor:true,group});
+    x+=size+gap;
+  }
+}
+
+/** Matchup-Gruppe: beide Teams nebeneinander, Logos ohne Ring/Fläche (Gegner leicht entsättigt — Markierung
+ * desaturate:true, Schicht B wendet den Entsättigungs-/Aufhellungs-Filter an), Tabellenplatz in
+ * Tabellenziffern (tabular:true). */
+function socialVideoLayoutMatchupGroup(cmds,el,cy,sceneMs,k){
+  const cols=socialVideoMatchupColumns();
+  const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
+  if(p.opacity<=0)return;
+  const logoSize=184*k,logoTop=cy-220*k;
+  const sides=[{data:el.ulm,cx:cols.leftCx,isUlm:true},{data:el.opp,cx:cols.rightCx,isUlm:false}];
+  for(const side of sides){
+    const d=side.data;
+    const initials=matchcenterStoryInitials(side.isUlm?'VfB Ulm':d.name);
+    // Reihenfolge wichtig: Initialen ZUERST, Bild-Befehl DANACH — lädt das Bild, deckt es die Initialen ab;
+    // schlägt es fehl (Schicht B zeichnet dann keinen image-Befehl, siehe socialVideoDrawCommand), bleiben
+    // die Initialen sichtbar (derselbe Fallback-Mechanismus wie im bisherigen socialVideoPushLogo).
+    socialVideoPushText(cmds,{text:initials,x:side.cx,y:logoTop+logoSize/2,baseSize:logoSize*0.3,maxWidth:logoSize*0.7,font:'syne',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,group:'matchup'});
+    if(side.isUlm){
+      cmds.push({type:'image',assetKey:'assets/vfb-ulm-logo-mark.png',x:side.cx-logoSize/2,y:logoTop,w:logoSize,h:logoSize,opacity:p.opacity,group:'matchup'});
+    }else{
+      cmds.push({type:'image',assetKey:d.asset,x:side.cx-logoSize/2,y:logoTop,w:logoSize,h:logoSize,opacity:p.opacity,desaturate:true,group:'matchup'});
+    }
+    socialVideoPushText(cmds,{text:d.name,x:side.cx,y:logoTop+logoSize+56*k,baseSize:38*k,maxWidth:cols.colW,font:'syne',color:SOCIAL_VIDEO_INK,align:'center',opacity:p.opacity,group:'matchup'});
+    if(d.rank!==null&&d.rank!==undefined){
+      const countP=el.animation==='count'?p.eased:1;
+      const rankVal=Math.max(1,Math.round(d.rank*countP));
+      socialVideoPushText(cmds,{text:`#${rankVal}`,x:side.cx,y:logoTop+logoSize+180*k,baseSize:120*k,maxWidth:cols.colW,font:'mono',color:SOCIAL_VIDEO_INK,align:'center',opacity:p.opacity,tabular:true,group:'matchup'});
+      socialVideoPushText(cmds,{text:'Tabelle',x:side.cx,y:logoTop+logoSize+236*k,baseSize:14*k,maxWidth:cols.colW,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,letterSpacing:1.5,group:'matchup'});
+    }
+    socialVideoPushFormHairline(cmds,{letters:d.formLetters,cx:side.cx,y:logoTop+logoSize+290*k,group:'matchup'});
+    socialVideoPushText(cmds,{text:d.formRecord||'',x:side.cx,y:logoTop+logoSize+320*k,baseSize:16*k,maxWidth:cols.colW,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,group:'matchup'});
+  }
+  socialVideoPushText(cmds,{text:'VS',x:cols.dividerX,y:cy-142*k,baseSize:18*k,maxWidth:80,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,letterSpacing:2,group:'matchup'});
+  socialVideoPushHairline(cmds,{x:cols.dividerX,y:logoTop+logoSize+20*k,w:1,color:SOCIAL_VIDEO_HAIRLINE_SOFT,group:'matchup'});
+}
+
+/** Fakt-Gruppe = letztes direktes Duell (S2c-Auftrag B1): Ergebnis groß (Tabellenziffern), darunter klein
+ * Datum/Wettbewerb/Saison, bei Bedarf der damalige Teamname. Linksbündige Satzkante (Abschnitt 2a), Haarlinie
+ * statt Container. */
+function socialVideoLayoutDuelFactGroup(cmds,el,topY,sceneMs,k){
+  const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
+  if(p.opacity<=0)return;
+  const left=SOCIAL_VIDEO_SAFE_LEFT,w=socialVideoContentWidth();
+  socialVideoPushHairline(cmds,{x:left,y:topY,w,group:'fact'});
+  socialVideoPushText(cmds,{text:'Letztes Duell',x:left,y:topY+34*k,baseSize:14*k,maxWidth:w,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,letterSpacing:1.5,group:'fact'});
+  socialVideoPushText(cmds,{text:el.result,x:left,y:topY+100*k,baseSize:72*k,maxWidth:w*0.4,font:'mono',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,tabular:true,group:'fact'});
+  const metaText=el.asLabel?`${el.metaLine} · als ${el.asLabel}`:el.metaLine;
+  socialVideoPushText(cmds,{text:metaText,x:left,y:topY+150*k,baseSize:20*k,maxWidth:w,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,group:'fact'});
+}
+
+/** Topscorer-Gruppe (S2c-Auftrag B): Trikotnummer als große Ziffer NEBEN dem Namen, getrennt durch eine
+ * Haarlinie — kein Kreis (Abschnitt 2a). Vorname klein, Nachname groß; drei Kennzahlen in Tabellenziffern;
+ * eine Einordnungszeile. */
+function socialVideoLayoutTopscorerGroup(cmds,el,topY,sceneMs,k){
+  const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
+  if(p.opacity<=0)return;
+  const left=SOCIAL_VIDEO_SAFE_LEFT,w=socialVideoContentWidth();
+  socialVideoPushHairline(cmds,{x:left,y:topY,w,group:'topscorer'});
+  socialVideoPushText(cmds,{text:`Topscorer ${el.teamLabel}`,x:left,y:topY+34*k,baseSize:14*k,maxWidth:w,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,letterSpacing:1.5,group:'topscorer'});
+  const jerseyW=170*k;
+  socialVideoPushText(cmds,{text:el.jersey,x:left,y:topY+150*k,baseSize:104*k,maxWidth:jerseyW-24,font:'mono',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,tabular:true,group:'topscorer'});
+  socialVideoPushHairline(cmds,{x:left+jerseyW,y:topY+40*k,w:1,color:SOCIAL_VIDEO_HAIRLINE_GOLD,group:'topscorer'});
+  const nameX=left+jerseyW+30*k;
+  socialVideoPushText(cmds,{text:el.first,x:nameX,y:topY+100*k,baseSize:22*k,maxWidth:w-jerseyW-30*k,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,group:'topscorer'});
+  socialVideoPushText(cmds,{text:el.last,x:nameX,y:topY+152*k,baseSize:54*k,maxWidth:w-jerseyW-30*k,font:'syne',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,group:'topscorer'});
+  socialVideoPushHairline(cmds,{x:left,y:topY+200*k,w,group:'topscorer'});
+  const stats=[['Tore',el.goals],['Assists',el.assists],['Punkte',el.points]];
+  let sx=left;
+  const statW=180*k;
+  for(const[label,value]of stats){
+    socialVideoPushText(cmds,{text:String(value),x:sx,y:topY+266*k,baseSize:46*k,maxWidth:statW-20,font:'mono',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,tabular:true,group:'topscorer'});
+    socialVideoPushText(cmds,{text:label,x:sx,y:topY+292*k,baseSize:13*k,maxWidth:statW-20,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,letterSpacing:1,group:'topscorer'});
+    sx+=statW;
+  }
+  if(el.insight)socialVideoPushText(cmds,{text:el.insight,x:left,y:topY+340*k,baseSize:22*k,maxWidth:w,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,group:'topscorer'});
+}
+
+/** Layout der Gegner-Szene nach Gestaltungskanon 2a (S2c-Auftrag A): Matchup (zentriert, einzige zentrierte
+ * Gruppe neben Kopfzeile/Abschluss), Fakt und Topscorer (linke Satzkante). Lücken-Verteilung wie
+ * socialVideoLayoutScene, aber mit eigenen, großzügigeren Schlitzhöhen passend zur neuen Dichte. k skaliert
+ * alle festen Pixelwerte der drei Gruppen-Layoutfunktionen auf die tatsächliche Bildhöhe (Story 1920px, k=1;
+ * Feed 1350px, k≈0,70) — ohne k liefen Topscorer-Inhalte beim schmaleren Feed-Format unten aus dem sicheren
+ * Rand heraus (siehe Build-Bericht). */
+function socialVideoLayoutOpponentKanon(spec,scene,sceneMs,height){
+  const cmds=[];
+  const k=height/1920;
+  const topY=SOCIAL_VIDEO_SAFE_TOP+60*k; // Platz für Fortschrittsbalken+Kopfzeile, die socialVideoDrawList davor zeichnet
+  const bottomY=height-SOCIAL_VIDEO_SAFE_BOTTOM;
+  const els=scene.elements||[];
+  const slotH={matchupPair:720*k,duelFact:180*k,topscorerCard:400*k};
+  const totalH=els.reduce((sum,el)=>sum+(slotH[el.type]||160*k),0);
+  const available=bottomY-topY;
+  const gap=Math.min(90*k,Math.max(24*k,(available-totalH)/(els.length+1)));
+  let y=topY+gap;
+  for(const el of els){
+    const slot=slotH[el.type]||160*k;
+    if(el.type==='matchupPair')socialVideoLayoutMatchupGroup(cmds,el,y+slot/2,sceneMs,k);
+    else if(el.type==='duelFact')socialVideoLayoutDuelFactGroup(cmds,el,y,sceneMs,k);
+    else if(el.type==='topscorerCard')socialVideoLayoutTopscorerGroup(cmds,el,y,sceneMs,k);
+    y+=slot+gap;
+  }
+  return cmds;
 }
 
 /** Ein-Szeilen-Elemente (title/meta/stat/result) nacheinander senkrecht gestapelt, zentriert im verfügbaren
@@ -22386,15 +22663,28 @@ function socialVideoBackgroundLayer(spec,timeMs,height,sceneId){
  * @param {number} timeMs 0..spec.durationMs
  * @returns {Array<object>} Zeichenbefehle in Zeichenreihenfolge (Hintergrund zuerst, Inhalt zuletzt)
  */
+const SOCIAL_VIDEO_KANON_SCENE_IDS=new Set(['opponent','opponentA','opponentB']);
 function socialVideoDrawList(spec,timeMs){
   const height=socialVideoHeightForFormat(spec?.format);
   const at=socialVideoSceneAt(spec,timeMs);
   const sceneId=at?.scene?.id||null;
+  const isKanonScene=SOCIAL_VIDEO_KANON_SCENE_IDS.has(sceneId);
   const cmds=[...socialVideoBackgroundLayer(spec,timeMs,height,sceneId)];
-  // Abdunkelnder Verlauf unter dem Inhaltsbereich (Lesbarkeit hat Vorrang, Abschnitt 4.4) — zusammen mit der
-  // Hintergrundebene oben höchstens 0,35 Deckkraft hinter Textbereichen.
-  cmds.push({type:'rect',x:0,y:SOCIAL_VIDEO_SAFE_TOP-40,w:SOCIAL_VIDEO_WIDTH,h:height-SOCIAL_VIDEO_SAFE_TOP-SOCIAL_VIDEO_SAFE_BOTTOM+80,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.1)'],[0.5,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,.1)']]},opacity:0.35});
-  if(at)cmds.push(...socialVideoLayoutScene(spec,at.scene,at.sceneMs,height));
+  if(!isKanonScene){
+    // Abdunkelnder Verlauf unter dem Inhaltsbereich, NUR für die noch nicht auf Kanon 2a umgestellten Szenen
+    // (intro/lastDuel/playersToWatch/outro) — Kanon 2a verbietet Verlaufsfüllungen hinter Text, siehe
+    // Abschlussbericht ("Prüfbar"-Abschnitt).
+    cmds.push({type:'rect',x:0,y:SOCIAL_VIDEO_SAFE_TOP-40,w:SOCIAL_VIDEO_WIDTH,h:height-SOCIAL_VIDEO_SAFE_TOP-SOCIAL_VIDEO_SAFE_BOTTOM+80,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.1)'],[0.5,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,.1)']]},opacity:0.35});
+  }
+  if(spec?.scenes?.length){
+    const idx=spec.scenes.findIndex(s=>s.id===sceneId);
+    cmds.push(...socialVideoPushProgressBar(spec.scenes.length,idx));
+    cmds.push(...socialVideoPushHeaderBar(spec,at?.scene));
+  }
+  if(at){
+    if(isKanonScene)cmds.push(...socialVideoLayoutOpponentKanon(spec,at.scene,at.sceneMs,height));
+    else cmds.push(...socialVideoLayoutScene(spec,at.scene,at.sceneMs,height));
+  }
   return cmds;
 }
 
@@ -22503,7 +22793,20 @@ function socialVideoDrawCommand(ctx,cmd,assets){
     case'image':{
       const img=assets?.[cmd.assetKey];
       if(!img)break;
-      if(cmd.brightness&&cmd.brightness!==1)ctx.filter=`brightness(${cmd.brightness})`;
+      // Dunkle Logos lesbar machen (S2c-Auftrag B3): Stufe aus der Asset-Aufbereitung
+      // (scripts/cache-team-logos.mjs --embed, window.SOCIAL_VIDEO_ASSET_TREATMENT = {relPath:{tier,factor?}})
+      // — 'invert' (annähernd einfarbig) hellt per Canvas-Filter auf, 'brighten' (farbig, z. B. Vereinsrot)
+      // hellt farbtonerhaltend per brightness(factor) auf (Invertieren würde Rot zu Cyan verfälschen),
+      // 'silhouette' zeichnet eine einfarbig gebrochen-weiße Form aus der Alpha-Maske des Bildes (kein Ring,
+      // keine Platte dahinter, siehe Kommentar unten).
+      const treatment=window.SOCIAL_VIDEO_ASSET_TREATMENT?.[cmd.assetKey]?.tier||'none';
+      const treatmentFactor=window.SOCIAL_VIDEO_ASSET_TREATMENT?.[cmd.assetKey]?.factor;
+      const filters=[];
+      if(cmd.brightness&&cmd.brightness!==1)filters.push(`brightness(${cmd.brightness})`);
+      if(cmd.desaturate)filters.push('saturate(0.35) brightness(0.92)');
+      if(treatment==='invert')filters.push('invert(1)');
+      else if(treatment==='brighten')filters.push(`brightness(${treatmentFactor||2})`);
+      if(filters.length)ctx.filter=filters.join(' ');
       if(cmd.clip==='circle'){ctx.beginPath();ctx.arc(cmd.cx,cmd.cy,cmd.cr,0,Math.PI*2);ctx.clip();}
       if(cmd.srcRect){
         // srcRect ist in Anteilen (0..1) der tatsächlichen Quellbild-Größe angegeben (siehe
@@ -22512,6 +22815,22 @@ function socialVideoDrawCommand(ctx,cmd,assets){
         const nw=img.naturalWidth||img.width,nh=img.naturalHeight||img.height;
         const sr=cmd.srcRect;
         ctx.drawImage(img,sr.xFrac*nw,sr.yFrac*nh,sr.wFrac*nw,sr.hFrac*nh,cmd.x,cmd.y,cmd.w,cmd.h);
+      }else if(treatment==='silhouette'){
+        // Reicht Aufhellen/Invertieren nicht (Bericht nennt die betroffenen Logos), wird die Alpha-Maske des
+        // Bildes mit einer einfarbigen, gebrochen-weißen Fläche gefüllt ('source-atop': die Füllung erscheint
+        // NUR dort, wo das Bild selbst nicht transparent ist) — keine helle Platte, kein Ring dahinter. WICHTIG:
+        // source-atop auf dem HAUPT-Canvas würde gegen den bereits gezeichneten Hintergrund maskieren (der
+        // deckt die ganze Fläche ab) und die gesamte Bildbox füllen, nicht nur die Logoform — deshalb erst auf
+        // einem transparenten Offscreen-Canvas zusammensetzen und das Ergebnis dann an Ort und Stelle zeichnen.
+        const silCanvas=document.createElement('canvas');
+        silCanvas.width=Math.max(1,Math.round(cmd.w));
+        silCanvas.height=Math.max(1,Math.round(cmd.h));
+        const silCtx=silCanvas.getContext('2d');
+        silCtx.drawImage(img,0,0,cmd.w,cmd.h);
+        silCtx.globalCompositeOperation='source-atop';
+        silCtx.fillStyle=SOCIAL_VIDEO_INK;
+        silCtx.fillRect(0,0,cmd.w,cmd.h);
+        ctx.drawImage(silCanvas,cmd.x,cmd.y,cmd.w,cmd.h);
       }else ctx.drawImage(img,cmd.x,cmd.y,cmd.w,cmd.h);
       break;
     }
@@ -22554,7 +22873,10 @@ function socialVideoRenderFrame(ctx,drawList,assets,staticLayer){
  * socialVideoDrawCommand, Fall 'image'). Fehlschläge werden NICHT geworfen. */
 async function socialVideoLoadAssets(spec){
   const keys=new Set(['assets/spatz.svg','assets/vfb-ulm-logo-mark.png']);
-  for(const scene of spec?.scenes||[])for(const el of scene.elements||[])if(el.type==='logo'&&el.asset)keys.add(el.asset);
+  for(const scene of spec?.scenes||[])for(const el of scene.elements||[]){
+    if(el.type==='logo'&&el.asset)keys.add(el.asset);
+    if(el.type==='matchupPair'&&el.opp?.asset)keys.add(el.opp.asset);
+  }
   const source=window.SOCIAL_VIDEO_ASSETS||{};
   const assets={};
   await Promise.all([...keys].map(key=>new Promise(resolve=>{
