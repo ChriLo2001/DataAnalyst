@@ -96,6 +96,19 @@ Der bestehende PNG-Export serialisiert die Story über SVG `foreignObject` in ei
    - **Lokaler Server als Ausweg, falls dennoch nötig:** `scripts/serve.mjs` (Node ohne Abhängigkeiten) liefert den Projektordner unter `http://localhost:5173` aus — `node scripts/serve.mjs`. Empfohlener Weg für die Videoerzeugung, falls die Einbettung aus irgendeinem Grund nicht greift (z. B. `social-video-assets.js` noch nicht erzeugt). Die App prüft das selbst (Abschnitt 8) und nennt im Fehlerfall genau diesen Befehl statt einer Sammelmeldung.
 2. **Schriften sicherstellen.** Vor dem Zeichnen `document.fonts.ready` abwarten und prüfen, ob `Syne` und `DM Mono` verfügbar sind. Fehlen sie (z. B. unter `file://` ohne Netz), wird mit den definierten Ersatzschriften gezeichnet und im UI ein Hinweis gezeigt, dass die Typografie abweicht.
 
+### 3.4 Datei-Aufteilung (Renderer-Werkstatt, S2e)
+
+Der Renderer ist seit S2e aus `index.html` herausgelöst, auf vier klassische Skripte verteilt (kein `type="module"`, kein Bundler — funktioniert per Doppelklick und über `scripts/serve.mjs` gleichermaßen):
+
+- **`season-data-embedded.js`** (unverändert seit S1) — `window.STATIC_SEASON_DATA`, der `file://`-Fallback für Saisondaten.
+- **`matchcenter-core.js`** — rund 80 geteilte Matchcenter-/Saison-Funktionen (Team-Normalisierung, Tabellen, Formcheck, Gegner-Scouting), die sowohl `index.html` (Rest der App) als auch `buildSocialVideoSpec` brauchen. Reiner Verschiebungsort, keine eigene Logik.
+- **`social-video-assets.js`** — von `scripts/cache-team-logos.mjs --embed` UND `scripts/build-social-assets.mjs` gemeinsam geschrieben: Logo-/Spatz-Bilder als `data:`-URIs (`window.SOCIAL_VIDEO_ASSETS`), Lesbarkeits-Stufen fürs tatsächliche Zeichnen (`window.SOCIAL_VIDEO_ASSET_TREATMENT`), Skyline-Pfaddaten (`window.SOCIAL_VIDEO_SKYLINE`) und eine separate Logo-Messreihe (`window.SOCIAL_VIDEO_LOGO_MEASUREMENTS`, Abschnitt 4.4).
+- **`social-video-renderer.js`** — `buildSocialVideoSpec`, Schicht A (`socialVideoDrawList`, `socialVideoDrawListGroups`) und Schicht B (Canvas2D-Ausführung, `socialVideoCaptureVideo`, `socialVideoRenderStandbildDataUrl`). Lädt vor dem Haupt-`<script>` in `index.html`.
+
+Ladereihenfolge in `index.html`: `season-data-embedded.js` → `social-video-assets.js` → `matchcenter-core.js` → `social-video-renderer.js` → Haupt-`<script>`. Die UI-Verdrahtung (Spieltagsauswahl, Download-Auslösung, Fortschrittsanzeige in `rSocialVideoBlock`) bleibt in `index.html`, ruft die ausgelösten Funktionen als globale Funktionen auf.
+
+**`social-video-lab.html`** (eigenständig, kein Teil der App) lädt dieselben vier Skripte und bietet eine Werkstatt zur isolierten Beurteilung einzelner Bausteine — Details siehe Abschnitt 2a (Gruppen) und den S2e-Abschlussbericht. Jedes Zeichenkommando trägt seit S2e ein `group`-Feld aus einer festen Liste; `socialVideoDrawListGroups(drawList)` fasst sie zu `{name,count,bbox}` zusammen.
+
 ## 4. Szenen
 
 ### 4.1 Story 9:16, 15,0 Sekunden
@@ -279,6 +292,11 @@ S2-Nachtrag (Canvas-Taint unter `file://` behoben), zusätzlich in `scripts/test
 9. **Vorprüfungs-Hinweis:** `socialVideoCanvasExportHint` meldet im `file://`-Fall den konkreten Ausweg (lokaler Server, Befehlszeile), sonst einen allgemeinen Hinweis — beides ohne Canvas/DOM testbar.
 
 Zusätzlich manuell zu prüfen und im Abschlussbericht zu dokumentieren: ein echtes Video je Format, Kontaktbogen der Szenen als PNG, Abspielprobe auf dem Handy, sowie (S2-Nachtrag) Video und Standbild sowohl über HTTP als auch per Doppelklick unter `file://`.
+
+S2e-Nachtrag (Renderer-Werkstatt), zusätzlich:
+
+10. **Gruppen (`scripts/test-social-video-groups.mjs`):** jedes Zeichenkommando trägt eine Gruppe aus der festen Liste; Bounding-Boxen der Inhaltsgruppen liegen innerhalb der Leinwand; Kanon-2a-Befund (mehr als fünf Gruppen je Szene) ist als Golden-Pin dokumentiert, nicht stillschweigend behoben.
+11. **Statische Assets (`scripts/test-social-assets.mjs`):** `scripts/build-social-assets.mjs` findet die Skyline-Pfaddaten in `index.html`; für jedes Team der Saison 25/26 mit lokal gecachtem Logo liegt eine nach festen Schwellen abgeleitete Behandlung vor (Kontrast gegen den Kanon-Hintergrund entscheidet zuerst, dann Luminanz); für VfB Ulm ist die Behandlung immer „original" (harte Regel, zusätzlich als Laufzeit-Zusicherung in `socialVideoDrawCommand` verankert).
 
 ## 9. Akzeptanzkriterien
 

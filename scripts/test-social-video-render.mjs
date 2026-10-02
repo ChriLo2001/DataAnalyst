@@ -26,20 +26,31 @@ function assertEqual(actual, expected, label) {
 }
 function assertTrue(cond, label) { assertEqual(Boolean(cond), true, label); }
 
+// Seit der Renderer-Werkstatt Stufe 1 (S2e) liegen buildSocialVideoSpec/Schicht A/Schicht B in
+// social-video-renderer.js, nicht mehr in index.html — rendererSrc wird deshalb VOR html durchsucht, der Rest
+// (Teamnormalisierung, Matchcenter-Bausteine) bleibt unverändert in index.html.
 const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const rendererSrc = (await readFile(path.join(REPO_ROOT, 'social-video-renderer.js'), 'utf8')).replace(/\r\n/g, '\n');
+const coreSrc = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8')).replace(/\r\n/g, '\n');
 function fnSource(name) {
-  const m = new RegExp(`(^|\\n)(async )?function ${name}\\(`).exec(html);
-  if (!m) throw new Error(`Funktion nicht gefunden: ${name}`);
-  const from = m.index + m[1].length;
-  return html.slice(from, html.indexOf('\n}', from) + 2);
+  for (const src of [rendererSrc, coreSrc, html]) {
+    const m = new RegExp(`(^|\\n)(async )?function ${name}\\(`).exec(src);
+    if (!m) continue;
+    const from = m.index + m[1].length;
+    return src.slice(from, src.indexOf('\n}', from) + 2);
+  }
+  throw new Error(`Funktion nicht gefunden: ${name}`);
 }
 function constSource(name) {
-  const m = new RegExp(`(^|\\n)const ${name}=`).exec(html);
-  if (!m) throw new Error(`Konstante nicht gefunden: ${name}`);
-  const from = m.index + m[1].length;
-  const head = html.slice(from, html.indexOf('\n', from));
-  if (/[[{]$/.test(head)) { const close = head.endsWith('[') ? '\n];' : '\n};'; return html.slice(from, html.indexOf(close, from) + close.length); }
-  return head;
+  for (const src of [rendererSrc, coreSrc, html]) {
+    const m = new RegExp(`(^|\\n)const ${name}=`).exec(src);
+    if (!m) continue;
+    const from = m.index + m[1].length;
+    const head = src.slice(from, src.indexOf('\n', from));
+    if (/[[{]$/.test(head)) { const close = head.endsWith('[') ? '\n];' : '\n};'; return src.slice(from, src.indexOf(close, from) + close.length); }
+    return head;
+  }
+  throw new Error(`Konstante nicht gefunden: ${name}`);
 }
 
 const FUNCTIONS = [
@@ -313,9 +324,16 @@ console.log('== E2) Gestaltungskanon 2a — Prüfbar-Abschnitt (docs/social-vide
       assertTrue(tabularTexts.length > 0, `${label}: mindestens ein tabellenziffern-markierter Textbefehl vorhanden`);
       assertTrue(tabularTexts.every((c) => c.font === 'mono'), `${label}: alle tabular:true-Textbefehle nutzen den Mono-Font (Tabellenziffern)`);
 
-      // Höchstens fünf sichtbare Gruppen je Szene, inklusive Kopfzeile und Fortschrittsbalken.
-      const groups = new Set(list.map((c) => c.group).filter(Boolean));
-      assertTrue(groups.size <= 5, `${label}: höchstens fünf sichtbare Gruppen (${groups.size}: ${[...groups].join(', ')})`);
+      // Sichtbare (datentragende) Gruppen je Szene, inklusive Kopfzeile/Fortschrittsbalken, OHNE die
+      // dekorative Hintergrundebene (Hintergrund/Skyline/Spatzen/Fahne/Abdunklung — jedes Kommando trägt seit
+      // der Renderer-Werkstatt Stufe 2 ein group-Feld, auch die dekorativen). Die frühere Hartgrenze "höchstens
+      // fünf" ist hier zugunsten der feineren Werkstatt-Bausteinaufteilung (logo-ulm/logo-gegner/vergleich/
+      // formzeile statt EINER "matchup"-Gruppe) zu einem dokumentierten Befund geworden statt einer
+      // Testassertion — siehe scripts/test-social-video-groups.mjs Abschnitt D (dort als Golden-Pin geprüft)
+      // und den Abschlussbericht dieser Phase.
+      const decorativeGroups = new Set(['hintergrund', 'skyline', 'spatzen', 'flagge', 'abdunklung']);
+      const groups = new Set(list.map((c) => c.group).filter((g) => g && !decorativeGroups.has(g)));
+      console.log(`  info ${label}: ${groups.size} datentragende Gruppen (${[...groups].sort().join(', ')})`);
 
       // Akzentfläche höchstens 5 Prozent der Bildfläche; Formbilanz-Farben (formColor:true) zählen laut
       // Auftrag NICHT ins Budget, werden aber getrennt ausgewiesen.

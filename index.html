@@ -1649,17 +1649,19 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
      fehl). data:-URIs haben dieses Problem nicht. Siehe scripts/cache-team-logos.mjs --embed --write und
      docs/social-video-spezifikation.md Abschnitt 3.3. Klassisches Skript, lädt auch per Doppelklick. -->
 <script src="social-video-assets.js"></script>
+<!-- S2e — Canvas2D-Renderer (buildSocialVideoSpec, Schicht A, Schicht B) aus index.html herausgelöst
+     (Renderer-Werkstatt, Stufe 1). Klassisches Skript, lädt auch per Doppelklick und über scripts/serve.mjs. -->
+<!-- Geteilte Matchcenter-/Saison-Bausteine (buildSocialVideoSpec UND social-video-lab.html brauchen sie) —
+     siehe Kopfkommentar in matchcenter-core.js. Muss vor social-video-renderer.js laden. -->
+<script src="matchcenter-core.js"></script>
+<script src="social-video-renderer.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════════════
 const LOGO_B64='iVBORw0KGgoAAAANSUhEUgAAAMwAAAD3CAMAAABmQUuuAAAA4VBMVEX///8BAQHBGx8AAADFGx+Tk5NZDxPEGyFVDhN3FBb8/Pzj4+NGRkbr6+syCgvADRW9AAAnJyfz8/P16efJyckiIiKhoaG1tbU6Ojro6OjW1tZSUlKamprKaWvKXV/29vaIiIjSfn8wMDC7u7vZ2dnShIV1dXWqqqqAgIBgYGDGxsYQEBDBBQssLCxtbW1WVlYbGxvESErnxci/MDdQAAB5AA3bpaTak5XESkzEVVfRdXfNZ2vam57fsLLqyMvq0tPEJyvs3d3JWFa5FSG8Jy/CO0HeuLeCAAC4foGfhYZoUVVhMZIcAAAKJUlEQVR4nO2deZuiOhbGsSPjDMhFcUO0G0ot99K6XT219DLdfbu6Zvn+H2iygAKyGJaEsvL+UY+FJJ6fJzk5CQElSUhISEhISEhISEhISCgsW1v3ZWcO5RDJ40VXsxXedlHL6MqrGoiUOZenrwpIJnbXTkXeGPA2kEaTKA4f0KuCMRNhagKGm14TjGannJAXhlm0Gy72YJFyTk6Y7saxCrM3XvZghEJrP+W0vDBoOFoYhVkd/SFzMnyUD4PHo12J7ln0vIGQAQwZXttp7TmbDNk3pDOBcXlkrTAGV9oykJywgiE881lhHFCaE8qzGMJgnNW6KBR7fJIyMoXBOM1BIUPP9OY0+2UMg3HM/DjqKiqRZw5DvNPNhaKctjBeMKTvqNlZ1GYkCicYjONkbWuLaLfwg0E4Zqa2Zu/iUDjCIOfI9CzqJJ6FIwzC2dNmoOvYJsYbBtLc0MUBNQklDUadOsnFa2Cy6CZ9vYkwkGbEBEZZj/dxi0xBe1Cg7XdjYlMyTA00qWKaWqOH0QbODYhdL4vEAWDiDCKyYq4wirqYb87FOEHqLQdG0DpuMJlBAkCms/Z1Ij4w2nQ5yQMSAFr1VYUXjDKTz+rsNEBNeaYwh1lIM6dZIIhXL+IZq4xhRqPiSdyqUXvbsYSplURyZuUFw/CVgKmqBExVJWCqKgFTVQmYqkrAVFUCpqoSMFWVgKmqBExVJWCqqsww0Yt9/k1B7hJtYO9ypAknbxyP0C3zZoWJtu14FC3g7/cmOFV0GRB5BKym08XmbJqMMAD0VXXWDG+dAQN1phJ3OKotSQrav2Wprmazbn+3OfHCVFW7vQDMcqgOcd1gLElGu2wY+J1J+GptsLI5PDhFOwKBe1UewQQ3oWrj0EYoMAsbjC+Cj4D7SuuVDwNU+MWbIbvQdsMmcHeOz8bzeRvCoItFhoJE6pjdgnAhjTeMA//tB9s6uthrIceYxEMAOwnCDMHNBGm/IFdZ/PvtKgBTAz1k5CZgFvLHHBAb7InXuzCMJxP5aVU5GGy6/4IJxjOwM6bHi+wejFdqiR1aMRhYUgq2GNdOBLM+vhOEgf9Kwat5Z8IExiy34EmkzwHjdffD/2izxw3eeUxg/H3mCKNkgTk0017T9LA2o/1taIDKns6AHTwwOJq5l8jWGmewGEIbFgOoJojyzCIDDG6486FEvA+AjF+qy0AwyQFTg64wvDiLO4q0h67wbwdfgnCfQUMRfQAANXjocKfBAA9Oh9dFwODxWfK+GjCBg+MMtasxGVAMKGUHQtHs1giNtRQwM0mZOmOE0YRfnCWTW9R8m4tywZiu/dgmGVeMW/OthY+78sG0lwa61YJ+0MQwkoU3SkD/DNEQANUMDg+5YHDLGrkwqM15gWeNW/gxANhdKMuyILzqhNOZs2EsknwCtEOo72aABwPywpAEbermt9Kh/XowrrHBDWT9ZjhFPhtGPtYuka6KrV8WBIP74QZ4n9D07A/DKNYMC2XSktXM2GfGbo0oDrhfW9vwGHPDkHFSRo1povjHyTDMIQCYDsSxM0YzH4xSBswGVqYhK1Fgmx/ibywMABNUwpc3VweGuHwFbRwGBpMImIPtyJlLPwyc+hiBm1Hx3igeMCZpXrvjZyXD1MCtFEgBSG8b+aolM7sbDjD4g2/RX3tyHsxGQhHQV4Uj+Q1CZ8DYq23iYcYlwZAEbUwMPA+mLYWSMzST8+3KJQ3RDfiMYdAQpqKP3/vMSeozqHcvT1rV+NjhUMbjDcVMm5kbeoaHtCYWxhP6PCO4CoC3VsveCW00k3DTN+YwgFQQCFCxMD1ZkYI9BJ2Bt6laOzg7qZl9dIK3WsMeBu/fN0ASjIISMyiyV39xsnTm3gKgzsjGbMMLbqxhyPQ5NN/q+mFCN29rS3D6hTj+k7qHG0EQjMEqnSGWWIahmQGYqWFYBxjVOEgbrue1iMVjmBiM3b3LRtd3fw6ENFQCYxi27EUz29BcmJ5q2E6BMPBIu90LZsK37fZxBtprH3QbXoI40sDQsFs681XPfwbYuFXDuNBuuxOXw0G38mLmM35Lwr3AH9v8iiIJnRdZtf8d3+tgAXF9pqoSMFXVm4YBlZZJBaPJVZbTf1UPrhJ6E1I6yRpqKUopn1Y8pXza05WCsu9aifqUEm7+pifrj5Ty/0ws3bqngjHu9HcJqv89DaaeVPxdPQ3mH4nlWw90nvmdBpM4qKXBNP5IKZ8Ms6WDUf7kCVN7UzDXAuYyYB4vCEZ6EjAC5o3D6J/fMMwHAcMK5j1DmNolwVyUZwSMgBEwrxvmyyXBfL4kmPeXBHNRnhEwAoYBTK4AULWs+fM2B0zpnvlCB3NVaZgPAkbACBgBI2AETHVgri8J5kHAHIy5IJiL8kzVYL5WGKZBDdOqLgz15OzbJcG8VBlmS3kZ8F+VhqG8dP690jB0W7Skn4m1cYah3NYodX5UGeYjHYx9l1Qdb5jvdDBS4h4tzjDvflLCJC5pcob5TfujTQ9J4Yxv1qw/UbJIH3PAlOwZ2jETDjTVbWa0kRmGs+fqwtAGM0n6K2ESwBfmR4caJml6xhVGf6RmSUw1ucLQpplInV/xFXKFoU1msBK2afKEqWfoMpJ0H9/OeMLQD5lIP+MjAE8Y+lEGK/6GIK6eoc0yieJXaDjCZAnMSJ0qwmRsZTAJ0BuZYMrMmvUssQzppZUNpkTP0G4290mPqZMfTIYk01NcfsYNRr/LzAJDQD2yoXGDab1kh5GutpWCqf/KwYJcUyGYeutbHhjpOnKs4QXznItF6kSmNFxgGo1cPQYpMqfh45ls+bJfSlS6yQcmxxjjKWoBjQtMK8N0+URXpzQ8YPQ72kXZKHVOn9rAIdGsZ5r6n+rjSVLDwTOFNDKkk0V09jD6n0U0MiTlKeQb5jA69SWZeHWeg92GOUzu4dKv78GZDWsYymezpCm4yYEtTGNLuSMjVYG0hilMY/tI9zijM/TgWxBgCVPXqS9hnqHr49yGJYx+l3U9JoWGA0wxWUyEDoMnM5hG63cpfkG6b+lMYRqtp8L7/lEvus4SpnVVIgscPZ+36TCFZM0NmCh/LRMFqvOhxeb5Zg39V5E5TLTsh5bOoJnVW4/F5ZYJevmxLR1Gb12X2l2O6nz+VDLMv5+LmVeepSlIflh23j7zn5JGymgNRwk0+WAAaHdZoiAt4p2TBwaQ37hhLWMXh5MdBta4Y9rCjrKa0ThZYWBtTSv9Y8vS1IzCyQaDUNb8UDAO8g7IDYMqGU35oiB1V2EcahhUwY55CIuWKpsBHjoYVNQcq7whjlKsJfntZte+s2FQmcnSqtozy+2ZvCfPJ073TB3BkJNHjsUoCaOV1nVW+BdOPun16IvuhMV9+PRoOR1WzSdBGcP1Qv7v0w/yyO0tlO8Z2NstOvju8X87eaAa1QY5SrHtzs+P3+6/PlxffYb6gvX+6uH+5XvHfi0UQkJCQkJCQkJCQkJCjPR/x+l0bLFsQb4AAAAASUVORK5CYII=';
 const CURRENT_SEASON_KEY='25/26';
-const ULM_TEAM_ALIASES=[
-  'VfB Ulm',
-  'SG Sparks Ulm-Tübingen',
-  'SG Sparks Tübingen-Ulm'
-];
+
 const PRE_CLUB_HISTORY={
   '19/20':{
     label:'2019/20',
@@ -2390,35 +2392,7 @@ window.toggleSgOnlyAlltime=()=>setState({showSgOnlyAlltime:!S.showSgOnlyAlltime}
 function getActiveSeasonKey(){
   return S.activeSeasonKey||S.selectedSeasonKey||CURRENT_SEASON_KEY;
 }
-function getSeasonData(seasonKey=getActiveSeasonKey()){
-  const bucket=SEASONS[seasonKey]||createSeasonBucket(seasonKey,SEASON_CONFIG[seasonKey]||{label:seasonKey});
-  const data=bucket.data||{};
-  return{
-    games:data.games||data.gamesData||[],
-    gamesData:data.gamesData||[],
-    rawGames:data.rawGames||[],
-    loadedGames:data.loadedGames||data.rawGames||[],
-    failedGames:data.failedGames||[],
-    rawLeagueGames:data.rawLeagueGames||[],
-    relevantLeagueGames:data.relevantLeagueGames||[],
-    excludedGames:data.excludedGames||data.excludedScheduledGames||[],
-    excludedScheduledGames:data.excludedScheduledGames||[],
-    flaggedSuspiciousGames:data.flaggedSuspiciousGames||[],
-    players:data.players||[],
-    playersMap:data.playersMap||{},
-    events:data.events||{},
-    eventsList:data.eventsList||[],
-    penalties:data.penalties||{},
-    specialTeams:data.specialTeams||null,
-    teamStats:data.teamStats||{},
-    teamGoalsPerGame:data.teamGoalsPerGame||{},
-    standings:data.standings||[],
-    playerRegistry:data.playerRegistry||null,
-    playerStatus:data.playerStatus||null,
-    allTime:data.allTime||null,
-    warnings:data.warnings||[],
-  };
-}
+
 function getGlobalAllTimeSnapshot(){
   return{
     players:PLAYER_REGISTRY.allTime.players||{},
@@ -2456,76 +2430,14 @@ window.setActiveSeason=applySeasonContext;
 // ═══════════════════════════════════════════════════════
 //  UTILS
 // ═══════════════════════════════════════════════════════
-const MOJIBAKE_RUN_RE=/[\u0080-\u00ff\u0152\u0153\u0160\u0161\u0178\u2018-\u201d\u2020-\u2026\u2030\u2039\u203a\u20ac\u2122]+/g;
-const CP1252_REVERSE_BYTES={
-  0x20ac:0x80,0x201a:0x82,0x0192:0x83,0x201e:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,
-  0x02c6:0x88,0x2030:0x89,0x0160:0x8a,0x2039:0x8b,0x0152:0x8c,0x017d:0x8e,
-  0x2018:0x91,0x2019:0x92,0x201c:0x93,0x201d:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,
-  0x02dc:0x98,0x2122:0x99,0x0161:0x9a,0x203a:0x9b,0x0153:0x9c,0x017e:0x9e,0x0178:0x9f,
-};
-function mojibakeScore(value){
-  const s=String(value??'');
-  return (s.match(/(?:[\u00c2-\u00c5].|\u00e2.|\u00f0\u0178|\u00ef\u00b8|\ufffd)/g)||[]).length+
-    (s.match(/[\u0080-\u009f]/g)||[]).length;
-}
-function decodeCp1252AsUtf8(value){
-  const bytes=[];
-  for(const ch of String(value??'')){
-    const code=ch.charCodeAt(0);
-    const byte=code<=0xff?code:CP1252_REVERSE_BYTES[code];
-    if(byte===undefined)return value;
-    bytes.push(byte);
-  }
-  try{
-    return new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(bytes));
-  }catch(e){
-    return value;
-  }
-}
-function repairMojibake(value){
-  if(value===undefined||value===null)return value;
-  let out=String(value);
-  for(let pass=0;pass<3;pass++){
-    let changed=false;
-    out=out.replace(MOJIBAKE_RUN_RE,run=>{
-      if(!/[\u00c2-\u00c5\u00e2\u00f0\u00ef\ufffd]/.test(run)&&mojibakeScore(run)===0)return run;
-      const decoded=decodeCp1252AsUtf8(run);
-      if(decoded!==run&&mojibakeScore(decoded)<mojibakeScore(run)){
-        changed=true;
-        return decoded;
-      }
-      return run;
-    });
-    if(!changed)break;
-  }
-  return out;
-}
-const UI_TEXT_REPLACEMENTS=[
-  [/\bUebersicht\b/g,'Übersicht'],[/\buebersicht\b/g,'übersicht'],
-  [/\bVerfuegbarkeit\b/g,'Verfügbarkeit'],[/\bverfuegbar\b/g,'verfügbar'],[/\bverfuegbare\b/g,'verfügbare'],[/\bverfuegbaren\b/g,'verfügbaren'],[/\bVerfuegbar\b/g,'Verfügbar'],[/\bVerfuegbare\b/g,'Verfügbare'],
-  [/\bauswaehlen\b/g,'auswählen'],[/\bauswaehlt\b/g,'auswählt'],[/\bausgewaehlt\b/g,'ausgewählt'],[/\bgewaehlt\b/g,'gewählt'],[/\bAusgewaehlte\b/g,'Ausgewählte'],[/\bGewaehlt\b/g,'Gewählt'],[/\bWaehle\b/g,'Wähle'],[/\bWaehlen\b/g,'Wählen'],[/\bwaehle\b/g,'wähle'],[/\bwaehlen\b/g,'wählen'],
-  [/\boeffnen\b/g,'öffnen'],[/\boeffnet\b/g,'öffnet'],[/\boffen\b/g,'offen'],
-  [/\bmoeglich\b/g,'möglich'],[/\bmoegliche\b/g,'mögliche'],[/\bmoeglichen\b/g,'möglichen'],[/\bmoeglichst\b/g,'möglichst'],[/\bMoegliche\b/g,'Mögliche'],
-  [/\bSchluesselspieler\b/g,'Schlüsselspieler'],[/\bSchluesselduo\b/g,'Schlüsselduo'],[/\bSchluesselduos\b/g,'Schlüsselduos'],[/\bSchluesselakteure\b/g,'Schlüsselakteure'],
-  [/\bStaerke\b/g,'Stärke'],[/\bStaerken\b/g,'Stärken'],[/\bstaerksten\b/g,'stärksten'],[/\bstaerkste\b/g,'stärkste'],[/\bstaerker\b/g,'stärker'],[/\bpraegende\b/g,'prägende'],
-  [/\bErgaenzung\b/g,'Ergänzung'],[/\bErgaenzungen\b/g,'Ergänzungen'],[/\bergaenzen\b/g,'ergänzen'],[/\bergaenzt\b/g,'ergänzt'],[/\bErgaenzungsbaustein\b/g,'Ergänzungsbaustein'],
-  [/\bLuecke\b/g,'Lücke'],[/\bLuecken\b/g,'Lücken'],[/\bLueckenanalyse\b/g,'Lückenanalyse'],
-  [/\bGegnerqualitaet\b/g,'Gegnerqualität'],[/\bEigenstaendigkeit\b/g,'Eigenständigkeit'],[/\bKreativitaet\b/g,'Kreativität'],[/\bStabilitaet\b/g,'Stabilität'],
-  [/\bUeberzahl\b/g,'Überzahl'],[/\bUeberzahltore\b/g,'Überzahltore'],[/\bueber\b/g,'über'],[/\bUeber\b/g,'Über'],
-  [/\bTorschuetzen\b/g,'Torschützen'],[/\bRueckschlaege\b/g,'Rückschläge'],[/\bRueckenwind\b/g,'Rückenwind'],
-  [/\bfrueh\b/g,'früh'],[/\bFrueh\b/g,'Früh'],[/\bspaet\b/g,'spät'],[/\bSpaet\b/g,'Spät'],[/\bhaeufige\b/g,'häufige'],[/\bauffaellig\b/g,'auffällig'],[/\bauffaelligste\b/g,'auffälligste'],
-  [/\bkuenstlichen\b/g,'künstlichen'],[/\bkuenstliche\b/g,'künstliche'],[/\bduerfen\b/g,'dürfen'],[/\bduerfte\b/g,'dürfte'],[/\bmoechte\b/g,'möchte'],
-  [/\bgrossen\b/g,'großen'],[/\bgrosse\b/g,'große'],[/\bgrosses\b/g,'großes'],[/\bgroesseren\b/g,'größeren'],[/\bgroesste\b/g,'größte'],
-  [/\bfuer\b/g,'für'],[/\bFuer\b/g,'Für']
-];
-function fixKnownUiTransliterations(value){
-  let out=String(value??'');
-  for(const [pattern,replacement] of UI_TEXT_REPLACEMENTS)out=out.replace(pattern,replacement);
-  return out;
-}
-function cleanText(value){
-  return fixKnownUiTransliterations(repairMojibake(String(value??'')));
-}
+
+
+
+
+
+
+
+
 function fixMojibakeText(value){
   return cleanText(value);
 }
@@ -2551,33 +2463,10 @@ function repairRenderedMojibake(root=document.body){
     }
   }
 }
-function normalizeTeamName(name){
-  return cleanText(name)
-    .trim()
-    .toLowerCase()
-    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z0-9]+/g,' ')
-    .trim()
-    .replace(/\s+/g,' ');
-}
-function normalizeOpponentNameForAllTime(name,seasonKey=''){
-  const raw=cleanText(name).trim();
-  const n=normalizeTeamName(raw);
-  if(!raw)return'?';
-  if(isFreiburgTuebingenSgName(n))return'SG Freiburg-T\u00fcbingen';
-  if(isMannheimLudwigshafenSgName(n))return'SG Mannheim-Ludwigshafen';
-  if(n==='freiburg'||n==='breisgau bandits')return'Breisgau Bandits';
-  if(n==='tubingen'||n==='tuebingen'||n==='sv tubingen sharks'||n==='sv tuebingen sharks')return'SV T\u00fcbingen Sharks';
-  if(seasonKey==='22/23'&&n==='sportvg feuerbach 1')return'Sportvg Feuerbach';
-  return raw;
-}
-function isFreiburgTuebingenSgName(n){
-  return !!n&&n.includes('sg')&&n.includes('freiburg')&&(n.includes('tubingen')||n.includes('tuebingen'));
-}
-function isMannheimLudwigshafenSgName(n){
-  return !!n&&n.includes('sg')&&n.includes('mannheim')&&n.includes('ludwigshafen');
-}
+
+
+
+
 function getAllTimeOpponentNames(name,seasonKey=''){
   const raw=cleanText(name).trim();
   const n=normalizeTeamName(raw);
@@ -2589,13 +2478,8 @@ function getAllTimeOpponentNames(name,seasonKey=''){
 function getUniqueAllTimeOpponentNames(name,seasonKey=''){
   return[...new Set(getAllTimeOpponentNames(name,seasonKey).filter(Boolean))];
 }
-const ULM_TEAM_ALIAS_KEYS=ULM_TEAM_ALIASES.map(normalizeTeamName);
-function isUlmTeamName(name){
-  const n=normalizeTeamName(name);
-  if(!n)return false;
-  return ULM_TEAM_ALIAS_KEYS.some(alias=>n===alias||n.includes(alias))||
-    (n.includes('vfb')&&n.includes('ulm'));
-}
+
+
 function getUlmTeamStatus(name){
   if(!isUlmTeamName(name))return null;
   const n=normalizeTeamName(name);
@@ -2609,29 +2493,8 @@ function detectUlmSide(g){
   return null;
 }
 const detectSide=g=>detectUlmSide(g);
-function pFull(p){
-  if(!p||typeof p!=='object')return'';
-  const first=p.player_firstname??p.first_name??p.firstname??p.firstName??'';
-  const last=p.player_name??p.last_name??p.lastname??p.lastName??'';
-  const joined=(cleanText(first)+' '+cleanText(last)).trim();
-  return normalizePlayerDisplayName(joined||cleanText(p.name??p.full_name??p.fullName??p.playerName??p.displayName??p.label??'').trim());
-}
-function normalizePlayerDisplayName(name){
-  const cleaned=cleanText(name)
-    .trim()
-    .replace(/\bMichael\s+Stanek\b/gi,'Michael Staněk')
-    .replace(/\bMichael\s+Staněk\b/g,'Michael Staněk')
-    .replace(/\bJaroslav\s+Å[\u00a0 ]torek\b/g,'Jaroslav Štorek');
-  const key=cleaned.toLowerCase()
-    .replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/[^a-z0-9]+/g,' ')
-    .trim()
-    .replace(/\s+/g,' ');
-  if(key==='michael stanek')return'Michael Staněk';
-  if(key==='jaroslav storek')return'Jaroslav Štorek';
-  return cleaned;
-}
+
+
 function normalizePlayerName(name){
   return cleanText(name)
     .trim()
@@ -2650,9 +2513,7 @@ function isPreClubHistoryPlayerName(name){
   if(!normalized)return false;
   return getPreClubHistoryPlayerNames().some(historyName=>normalizePlayerName(historyName)===normalized);
 }
-function gameStableId(g){
-  return g?.id||`${g?.date||g?.game_date||''}-${g?.home_team_name||''}-${g?.guest_team_name||''}`;
-}
+
 function diagnoseGameDuplicates(gamesData){
   const byId=new Map();
   for(const g of gamesData||[]){
@@ -3028,29 +2889,9 @@ function resolveAssistPlayer(event,playersById=null,roster=[]){
     return null;
   }
 }
-function parseGameClock(time){
-  if(time===undefined||time===null||time==='')return null;
-  const raw=String(time).trim();
-  const match=raw.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
-  if(!match)return null;
-  const minutes=Number(match[1]);
-  const seconds=match[2]===undefined?0:Number(match[2]);
-  if(!Number.isFinite(minutes)||!Number.isFinite(seconds)||seconds<0||seconds>=60)return null;
-  return minutes*60+seconds;
-}
+
 const t2s=t=>parseGameClock(t)??0;
-function getPhaseKey(period,time){
-  const p=Number(period);
-  const s=parseGameClock(time);
-  if(!Number.isFinite(p)||s===null)return'Unbekannt';
-  if(p===1&&s<=600)return'1.D 0-10min';
-  if(p===1)return'1.D 10-20min';
-  if(p===2&&s<=600)return'2.D 0-10min';
-  if(p===2)return'2.D 10-20min';
-  if(p===3&&s<=600)return'3.D 0-10min';
-  if(p===3)return'3.D 10-20min';
-  return'Unbekannt';
-}
+
 function variance(arr){
   if(!arr.length)return 0;
   const m=arr.reduce((a,b)=>a+b,0)/arr.length;
@@ -3124,33 +2965,10 @@ function isGamePlayed(game){
 }
 
 // Detect youth/junior games — these must never enter standings or player stats
-function isYouthGame(g){
-  const YOUTH=/\bU\s*\d{2}\b|Jugend|Junior|Youth|Nachwuchs/i;
-  const fields=[
-    g.competition_type,g.match_type,g.game_type,
-    g.spielplan_name,g.league_name,g.competition_name,
-    g.season_name,g.league?.name,g.season?.name,g.spielplan?.name,
-  ].filter(Boolean);
-  return fields.some(f=>YOUTH.test(String(f)));
-}
 
-function gameStatusText(game){
-  return [
-    game?.status,game?.game_status,game?.state,game?.notice_type,game?.notice_string,
-    game?.remarks,game?.remark,game?.comment,game?.comments,
-    game?.result?.postfix?.short,game?.result?.postfix?.long,
-  ].map(v=>cleanText(v||'')).join(' ').trim().toLowerCase();
-}
-function gameScore(game){
-  const hg=game?.home_goals??game?.home_score??game?.result?.home_goals??game?.result?.home;
-  const gg=game?.guest_goals??game?.guest_score??game?.result?.guest_goals??game?.result?.guest;
-  const home=Number.parseInt(hg,10);
-  const guest=Number.parseInt(gg,10);
-  return{
-    home,guest,
-    hasScore:Number.isFinite(home)&&Number.isFinite(guest),
-  };
-}
+
+
+
 /**
  * P0a.4 — reine Zeitpunkt-Filterfunktion, minimaler Port von
  * isGameAtOrBeforeAsOf() aus scripts/game-ordering.mjs (index.html ist ein
@@ -3160,79 +2978,9 @@ function gameScore(game){
  * asOf-Form bewusst minimal: {date:"YYYY-MM-DD", startTime?:"HH:MM"}. Ohne
  * asOf bzw. ohne asOf.date: keine Einschränkung (unverändertes Verhalten).
  */
-function isGameAtOrBeforeAsOf(game,asOf){
-  const asOfDate=String(asOf?.date??'');
-  if(!asOfDate)return true;
-  const gameDate=String(game?.date??'');
-  if(gameDate!==asOfDate)return gameDate<asOfDate;
-  const hasAsOfTime=asOf?.startTime!==undefined&&asOf?.startTime!==null&&asOf?.startTime!=='';
-  if(!hasAsOfTime)return true;
-  const gameTime=String(game?.start_time??'');
-  const asOfTime=String(asOf.startTime);
-  return gameTime<=asOfTime;
-}
-function classifyGameForStats(game,season=null,asOf=null){
-  if(asOf&&!isGameAtOrBeforeAsOf(game,asOf)){
-    return{isRelevantLeagueGame:false,status:'future',reason:'Spielzeitpunkt liegt nach dem gewählten asOf-Zeitpunkt',countsForStats:false};
-  }
-  const statusText=gameStatusText(game);
-  const score=gameScore(game);
-  const events=Array.isArray(game?.events)?game.events:[];
-  const goalEvents=events.filter(e=>e?.event_type==='goal').length;
-  const eventCount=events.length;
-  const finished=game?.ended===true||
-    /match_record_closed|finalized|aftergame|finished|finish|closed|beendet|gespielt/.test(statusText);
-  const started=game?.started===true||eventCount>0;
-  const isForfeit=!!game?.result?.forfait||/forfait|kampflos/.test(statusText);
-  const cancelled=!!(game?.canceled||game?.cancelled||game?.is_canceled)||
-    /cancelled|canceled|cancel|abgesagt/.test(statusText);
-  const postponed=!!game?.postponed||!!game?.is_postponed||
-    /postponed|postpone|verschoben|verlegt/.test(statusText);
-  const hasRealResult=score.hasScore&&(goalEvents>0||eventCount>0||finished||isForfeit);
-  const hasPlayedEvidence=goalEvents>0||(finished&&score.hasScore)||(isForfeit&&score.hasScore);
-  if(isYouthGame(game)){
-    return{isRelevantLeagueGame:false,status:'unplayed',reason:'Nachwuchs-/Jugendspiel',countsForStats:false};
-  }
-  if(cancelled){
-    return{isRelevantLeagueGame:false,status:'cancelled',reason:'Saisonmanager markiert das Spiel als abgesagt',countsForStats:false};
-  }
-  if(postponed&&!hasPlayedEvidence){
-    return{isRelevantLeagueGame:false,status:'postponed',reason:'Saisonmanager markiert das Spiel als verschoben und es gibt keinen echten Endstand/keine Events',countsForStats:false};
-  }
-  if(postponed&&hasPlayedEvidence){
-    return{isRelevantLeagueGame:true,status:'suspicious',reason:'Verschoben-Flag vorhanden, aber Endstand/Events deuten auf ausgetragenes Spiel hin',countsForStats:true};
-  }
-  if(!score.hasScore&&!eventCount){
-    return{isRelevantLeagueGame:false,status:'unplayed',reason:'Kein Endstand und keine Events vorhanden',countsForStats:false};
-  }
-  if(hasPlayedEvidence){
-    return{isRelevantLeagueGame:true,status:'played',reason:isForfeit?'Offizielles Forfait-Ergebnis':'Ausgetragenes Spiel mit Endstand/Eventdaten',countsForStats:true};
-  }
-  if(hasRealResult){
-    return{isRelevantLeagueGame:true,status:'played',reason:'Offizieller Endstand vorhanden',countsForStats:true};
-  }
-  return{isRelevantLeagueGame:false,status:'suspicious',reason:'Status/Endstand/Eventdaten sind nicht eindeutig genug für Statistikzählung',countsForStats:false};
-}
-function getRelevantSeasonGames(season,asOf=null){
-  let games=[],seasonInfo=null;
-  if(Array.isArray(season)){
-    games=season;
-  }else if(season?.gamesData){
-    games=season.gamesData;
-    seasonInfo=season;
-  }else if(season?.games){
-    games=season.games;
-    seasonInfo=season;
-  }else if(season?.data){
-    const data=season.data;
-    games=data.rawLeagueGames?.length?data.rawLeagueGames:
-      data.relevantLeagueGames?.length?data.relevantLeagueGames:
-      data.gamesData?.length?data.gamesData:
-      data.games||[];
-    seasonInfo=season;
-  }
-  return (games||[]).filter(g=>classifyGameForStats(g,seasonInfo,asOf).countsForStats);
-}
+
+
+
 /**
  * P0a.7 — übersetzt den globalen asOf-Zustand {seasonKey,date,startTime?}
  * (siehe Spezifikation Abschnitt 3.6.2) in die minimale, bereits in P0a.4
@@ -3283,18 +3031,7 @@ function deriveAsOfForSeason(seasonKey,globalAsOf){
  * asOf-Filterung würde eine erneute vollständige Neuregistrierung
  * voraussetzen, die hier ausdrücklich nicht vorgenommen wird.
  */
-function getSeasonStatsAsOf(seasonKey,asOf=deriveAsOfForSeason(seasonKey,S.asOf)){
-  const bucket=SEASONS[seasonKey];
-  if(!bucket?.data)return null;
-  const seasonConfig=SEASON_CONFIG[seasonKey]||SEASON_CONFIG[CURRENT_SEASON_KEY];
-  return cachedAnalysis(analysisCacheKey('season-stats-asof',{seasonKey},asOf),()=>{
-    const relevantLeagueGames=getRelevantSeasonGames(bucket.data.rawLeagueGames||[],asOf);
-    const standings=buildStandings(relevantLeagueGames,seasonConfig);
-    const relevantLeagueGameKeys=new Set(relevantLeagueGames.map(g=>String(g.id||gameStableId(g))));
-    const statGamesData=(bucket.data.rawGames||[]).filter(g=>detectSide(g)&&classifyGameForStats(g,null,asOf).countsForStats&&relevantLeagueGameKeys.has(String(g.id||gameStableId(g))));
-    return{seasonKey,asOf,relevantLeagueGames,standings,statGamesData};
-  });
-}
+
 
 /**
  * P0b.6 — Browser-Port von scripts/game-ordering.mjs::compareGamesChronologically
@@ -3309,20 +3046,7 @@ function getSeasonStatsAsOf(seasonKey,asOf=deriveAsOfForSeason(seasonKey,S.asOf)
  *
  * compareGamesChronologically ist bytegleich zu game-ordering.mjs:28.
  */
-function compareGamesChronologically(a,b){
-  const dateA=String(a?.date??'');
-  const dateB=String(b?.date??'');
-  if(dateA!==dateB)return dateA<dateB?-1:1;
-  const startA=String(a?.start_time??'');
-  const startB=String(b?.start_time??'');
-  if(startA!==startB)return startA<startB?-1:1;
-  const numA=Number(a?.game_number)||0;
-  const numB=Number(b?.game_number)||0;
-  if(numA!==numB)return numA-numB;
-  const idA=Number(a?.id)||0;
-  const idB=Number(b?.id)||0;
-  return idA-idB;
-}
+
 /**
  * buildMatchdays ist bytegleich zu matchday-derivation.mjs:87 (Gruppierung
  * nach game.game_day.game_day_number, Fallback auf date, siehe dortige
@@ -3330,48 +3054,7 @@ function compareGamesChronologically(a,b){
  * hier nicht wiederholt, um Doppelpflege zu vermeiden; bei Änderungsbedarf
  * IMMER zuerst dort, dann hier).
  */
-function buildMatchdays(seasonData){
-  const seasonKey=seasonData?.season??'';
-  const games=Array.isArray(seasonData?.games)?seasonData.games:[];
-  const groups=new Map();
-  for(const game of games){
-    const gameDayNumber=game?.game_day?.game_day_number;
-    const hasNumber=gameDayNumber!==undefined&&gameDayNumber!==null&&gameDayNumber!=='';
-    const groupKey=hasNumber?`num:${gameDayNumber}`:`date:${String(game?.date??'')}`;
-    if(!groups.has(groupKey))groups.set(groupKey,[]);
-    groups.get(groupKey).push(game);
-  }
-  const matchdays=[];
-  for(const groupGames of groups.values()){
-    const sortedGames=[...groupGames].sort(compareGamesChronologically);
-    const rawNumber=sortedGames[0]?.game_day?.game_day_number;
-    const number=rawNumber!==undefined&&rawNumber!==null&&rawNumber!==''?Number(rawNumber):null;
-    const date=String(sortedGames[0]?.date??'');
-    const teamGames={};
-    for(const g of sortedGames){
-      for(const rawName of[g?.home_team_name,g?.guest_team_name]){
-        if(!rawName)continue;
-        const teamKey=String(rawName).trim();
-        if(!teamKey)continue;
-        if(!teamGames[teamKey])teamGames[teamKey]=[];
-        teamGames[teamKey].push(g.id);
-      }
-    }
-    const endedFlags=sortedGames.map(g=>g?.ended===true);
-    const allEnded=endedFlags.length>0&&endedFlags.every(Boolean);
-    const noneEnded=endedFlags.every(f=>!f);
-    const status=allEnded?'abgeschlossen':noneEnded?'geplant':'unvollstaendig';
-    matchdays.push({
-      key:`${seasonKey}#${number!==null?number:`date:${date}`}`,
-      seasonKey,number,date,games:sortedGames,teamGames,status,
-    });
-  }
-  matchdays.sort((a,b)=>{
-    if(a.number!==null&&b.number!==null&&a.number!==b.number)return a.number-b.number;
-    return a.date<b.date?-1:a.date>b.date?1:0;
-  });
-  return matchdays;
-}
+
 /**
  * Liefert die Matchdays einer Saison über den bereits bestehenden
  * asOf-fähigen Cache (P0a.6/cachedAnalysis) — Matchdays hängen selbst nicht
@@ -3380,11 +3063,7 @@ function buildMatchdays(seasonData){
  * gefiltert) — genau die Eingabeform, mit der buildMatchdays() in P0a.5
  * gegen die echten season-data/*.json geprüft wurde.
  */
-function getSeasonMatchdays(seasonKey){
-  const bucket=SEASONS[seasonKey];
-  if(!bucket?.data)return[];
-  return cachedAnalysis(analysisCacheKey('matchdays',{seasonKey}),()=>buildMatchdays({season:seasonKey,games:bucket.data.rawLeagueGames||[]}));
-}
+
 /**
  * Übersetzt einen Matchday in den asOf-Cutoff "unmittelbar nach diesem
  * Spieltag" — das chronologisch letzte Spiel DIESES Matchdays (über alle
@@ -3393,20 +3072,9 @@ function getSeasonMatchdays(seasonKey){
  * neue Zeitlogik: nutzt ausschließlich die bereits vorhandene {date,
  * startTime?}-Form aus P0a.4/P0a.7.
  */
-function matchdayAsOfCutoff(matchday){
-  const games=matchday?.games||[];
-  const last=games[games.length-1];
-  if(!last)return null;
-  const date=String(last.date||'');
-  if(!date)return null;
-  const startTime=String(last.start_time||'');
-  return startTime?{date,startTime}:{date};
-}
+
 /** Reine Formatierung "YYYY-MM-DD" -> "DD.MM.YYYY" für die Spieltag-Beschriftung. Keine Date()-Objekte/Zeitzonen-Logik nötig. */
-function formatDateDE(isoDate){
-  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate||''));
-  return m?`${m[3]}.${m[2]}.${m[1]}`:String(isoDate||'');
-}
+
 
 /**
  * P0a.8 — Hash-Routing für den bestehenden Season-/asOf-Zustand
@@ -3889,46 +3557,7 @@ function gameResult(game,side){
 // ═══════════════════════════════════════════════════════
 //  STANDINGS (compute from all game data)
 // ═══════════════════════════════════════════════════════
-function buildStandings(gamesData,seasonConfig=ACTIVE_SEASON_CONFIG){
-  const seasonId=seasonConfig.seasonId;
-  const seasonStart=seasonConfig.dateRange?.start||SEASON_START;
-  const seasonEnd=seasonConfig.dateRange?.end||SEASON_END;
-  const map={};
-  const seenIds=new Set(); // deduplicate: same game may appear from season-API + team-API fetch
-  for(const g of gamesData){
-    if(!classifyGameForStats(g,seasonConfig).countsForStats)continue;
-    // ── Deduplication by game ID ──────────────────────────
-    const gid=Number(g.id||0);
-    if(gid){if(seenIds.has(gid))continue;seenIds.add(gid);}
-    // ── Date range guard (this season only) ──────────────
-    const gd=g.date||g.game_date||'';
-    const _bsid=Number(g.season_id??g.league_season_id??g.season?.id??0);
-    if(seasonId&&_bsid&&_bsid!==seasonId)continue;
-    if(!gd&&seasonId&&_bsid!==seasonId)continue; // no date + no season_id → Süddeutsche
-    if(gd&&((seasonStart&&gd<seasonStart)||(seasonEnd&&gd>seasonEnd)))continue;
-    // ── Score validity ────────────────────────────────────
-    const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
-    if(isNaN(hg)||isNaN(gg))continue;
-    // ── Reject postponed/cancelled ────────────────────────
-    // ── 0:0 requires real events (not just a placeholder) ─
-    const hn=g.home_team_name||'?',gn=g.guest_team_name||'?';
-    if(!map[hn])map[hn]={name:hn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
-    if(!map[gn])map[gn]={name:gn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
-    // Safety: skip if game ID already counted for this team
-    if(gid&&(map[hn].gameIds.has(gid)||map[gn].gameIds.has(gid)))continue;
-    if(gid){map[hn].gameIds.add(gid);map[gn].gameIds.add(gid);}
-    map[hn].sp++;map[gn].sp++;
-    map[hn].gf+=hg;map[hn].ga+=gg;
-    map[gn].gf+=gg;map[gn].ga+=hg;
-    if(hg>gg){map[hn].w++;map[gn].l++;}
-    else if(hg<gg){map[gn].w++;map[hn].l++;}
-    else{map[hn].d++;map[gn].d++;}
-  }
-  const teams=Object.values(map).map(t=>({...t,pts:t.w*3+t.d,diff:t.gf-t.ga}));
-  teams.sort((a,b)=>b.pts-a.pts||b.diff-a.diff||b.gf-a.gf);
-  teams.forEach((t,i)=>t.rank=i+1);
-  return teams;
-}
+
 
 function getOppStrength(oppName,standings){
   const t=standings.find(s=>s.name===oppName);
@@ -6344,28 +5973,7 @@ async function fetchSeasonGameRaw(seasonConfig,seasonKey,gameId){
 }
 
 // Normalize a game object: unify field names from different API versions
-function normalizeGame(g){
-  if(!g||typeof g!=='object')return g;
-  const gameId=g.id??g.game_id??g.game?.id??null;
-  // Score: try home_goals, home_score, result.home_goals, result.home
-  const hg=g.home_goals??g.home_score??g.result?.home_goals??g.result?.home??null;
-  const gg=g.guest_goals??g.guest_score??g.result?.guest_goals??g.result?.guest??null;
-  // Team names: try home_team_name, home_team.name, home.name
-  const hn=g.home_team_name??g.home_team?.name??g.home?.name??null;
-  const gn=g.guest_team_name??g.guest_team?.name??g.guest?.name??null;
-  // Events: might be nested under game.events or at top level
-  const evs=g.events??g.goals??[];
-  return{
-    ...g,
-    id:gameId,
-    home_goals:hg!==null?String(hg):null,
-    guest_goals:gg!==null?String(gg):null,
-    home_team_name:hn??g.home_team_name,
-    guest_team_name:gn??g.guest_team_name,
-    events:Array.isArray(evs)?evs:[],
-    _raw:undefined,// don't bloat state
-  };
-}
+
 function getStaticSeasonGames(seasonKey){
   const data=STATIC_SEASON_DATA[seasonKey];
   return Array.isArray(data?.games)?data.games:[];
@@ -10429,11 +10037,7 @@ function rGoalieAnalysis(playerName,stats,{contextLabel='Saison',color='#14b8a6'
     <div>${content}</div>
   </div>`;
 }
-function seasonOrderIndex(seasonKey){
-  const keys=Object.keys(SEASON_CONFIG);
-  const idx=keys.indexOf(seasonKey);
-  return idx===-1?999:idx;
-}
+
 function getPreviousSeasonKey(seasonKey){
   const keys=Object.keys(SEASON_CONFIG);
   const idx=keys.indexOf(seasonKey);
@@ -15725,15 +15329,8 @@ function rLexiconPage(){
     </div>`;
 }
 
-function matchcenterClamp(value,min=0,max=100){
-  const n=Number(value);
-  if(!Number.isFinite(n))return min;
-  return Math.max(min,Math.min(max,n));
-}
-function matchcenterNum(value,fallback=0){
-  const n=Number(value);
-  return Number.isFinite(n)?n:fallback;
-}
+
+
 function clampScore(value){
   const n=Number(value);
   return Number.isFinite(n)?Math.max(0,Math.min(100,Math.round(n))):0;
@@ -15880,102 +15477,29 @@ function rScoreBreakdown(title,explanation){
     ${explanation.confidence?.label?`<span class="mc-confidence-badge ${escAttr(matchcenterConfidenceClass(explanation.confidence.level||explanation.confidence.label))}">${escHtml(explanation.confidence.label)}</span>`:''}
   </details>`;
 }
-function matchcenterFmt(value,digits=1){
-  const n=Number(value);
-  if(!Number.isFinite(n))return '-';
-  return n.toFixed(digits).replace('.',',');
-}
+
 function matchcenterSigned(value){
   const n=Number(value);
   if(!Number.isFinite(n))return '-';
   return `${n>0?'+':''}${n}`;
 }
-function matchcenterDateValue(g){
-  const raw=g?.date||g?.game_date||g?.starts_at||'';
-  const t=Date.parse(raw);
-  return Number.isFinite(t)?t:0;
-}
+
 function matchcenterDateLabel(g){
   const raw=String(g?.date||g?.game_date||'').slice(0,10);
   const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m?`${m[3]}.${m[2]}.${m[1]}`:(raw||'-');
 }
-function matchcenterSortGamesAsc(a,b){
-  return matchcenterDateValue(a)-matchcenterDateValue(b)||
-    matchcenterNum(a?.game_number,0)-matchcenterNum(b?.game_number,0)||
-    matchcenterNum(a?.id,0)-matchcenterNum(b?.id,0);
-}
-function matchcenterSeasonKeys(){
-  return [...new Set([...Object.keys(SEASON_CONFIG||{}),...Object.keys(STATIC_SEASON_DATA||{})])]
-    .sort((a,b)=>seasonOrderIndex(a)-seasonOrderIndex(b));
-}
-function matchcenterSeasonLabel(seasonKey){
-  return SEASON_CONFIG[seasonKey]?.label||STATIC_SEASON_DATA[seasonKey]?.label||seasonKey;
-}
-function matchcenterSeasonIsUlmTuebingenSgEra(seasonKey=''){
-  if(!seasonKey)return true;
-  return seasonOrderIndex(seasonKey)<=seasonOrderIndex('23/24');
-}
-const TEAM_ALIAS_RULES=[
-  {canonical:'VfB Ulm',aliases:['VfB Ulm','Ulm','Ulm / SG'],role:'ownTeam'},
-  {canonical:'VfB Ulm',aliases:['SG Sparks Ulm-Tuebingen','SG Sparks Tuebingen-Ulm','SG Ulm-Tuebingen','SG Tuebingen-Ulm'],seasons:['21/22','22/23','23/24'],role:'ownTeam'},
-  {canonical:'Breisgau Bandits',aliases:['SG Freiburg-Tuebingen','SG Tuebingen-Freiburg','Freiburg-Tuebingen','Freiburg Tuebingen'],seasons:['24/25','25/26','26/27'],role:'opponentAlias'},
-  {canonical:'SV Tuebingen Sharks',aliases:['SG Freiburg-Tuebingen','SG Tuebingen-Freiburg','Freiburg-Tuebingen','Freiburg Tuebingen'],seasons:['24/25','25/26','26/27'],role:'opponentAlias'},
-  {canonical:'SV Tuebingen Sharks',aliases:['SV Tuebingen Sharks','Tuebingen Sharks','Tuebingen'],role:'opponentAlias'},
-  {canonical:'Breisgau Bandits',aliases:['Breisgau Bandits','Freiburg','Breisgau'],role:'opponentAlias'}
-];
-function teamAliasSeasonMatches(rule,seasonKey=''){
-  if(!rule?.seasons?.length)return true;
-  const label=matchcenterSeasonLabel(seasonKey);
-  const keys=new Set([seasonKey,label].filter(Boolean).map(String));
-  return rule.seasons.some(season=>keys.has(String(season)));
-}
-function normalizeTeamKey(name){
-  return normalizeTeamName(name||'');
-}
-function teamAliasRuleMatches(rule,name,seasonKey=''){
-  const key=normalizeTeamKey(name);
-  if(!key||!teamAliasSeasonMatches(rule,seasonKey))return false;
-  return [rule.canonical,...(rule.aliases||[])].some(alias=>normalizeTeamKey(alias)===key);
-}
-function isOwnTeam(name,seasonKey=''){
-  const key=normalizeTeamKey(name);
-  if(!key)return false;
-  const explicit=TEAM_ALIAS_RULES.some(rule=>rule.role==='ownTeam'&&teamAliasRuleMatches(rule,name,seasonKey));
-  if(explicit)return true;
-  if(key.includes('freiburg')&&(key.includes('tubingen')||key.includes('tuebingen')))return false;
-  if(key==='ulm'||key==='ulm sg'||(key.includes('vfb')&&key.includes('ulm')))return true;
-  if(key.includes('ulm')&&(key.includes('tubingen')||key.includes('tuebingen')))return matchcenterSeasonIsUlmTuebingenSgEra(seasonKey);
-  if(key.includes('sg sparks')&&key.includes('ulm'))return matchcenterSeasonIsUlmTuebingenSgEra(seasonKey);
-  return false;
-}
-function getCanonicalTeamName(name,seasonKey='',context='season'){
-  if(isOwnTeam(name,seasonKey))return context==='display'?'Ulm / SG':'VfB Ulm';
-  const rule=TEAM_ALIAS_RULES.find(row=>row.role==='opponentAlias'&&teamAliasRuleMatches(row,name,seasonKey));
-  if(rule)return rule.canonical;
-  return cleanText(normalizeOpponentNameForAllTime(name,seasonKey));
-}
-function getOpponentAliasKeys(opponentName,seasonKey='',mode='season'){
-  const rawKey=normalizeTeamKey(opponentName||'');
-  const canonical=getCanonicalTeamName(opponentName,seasonKey,'opponent');
-  const canonicalKey=normalizeTeamKey(canonical);
-  const keys=new Set([rawKey,canonicalKey].filter(Boolean));
-  if(matchcenterAliasModeForContext(mode)!=='alltime')return[...keys];
-  for(const rule of TEAM_ALIAS_RULES.filter(row=>row.role==='opponentAlias')){
-    const ruleKey=normalizeTeamKey(rule.canonical);
-    const aliasKeys=(rule.aliases||[]).map(normalizeTeamKey);
-    if(ruleKey===canonicalKey||ruleKey===rawKey||aliasKeys.includes(rawKey)||aliasKeys.includes(canonicalKey)){
-      keys.add(ruleKey);
-      aliasKeys.forEach(key=>keys.add(key));
-    }
-  }
-  const sgKey=normalizeTeamKey('SG Freiburg-Tuebingen');
-  const base=canonicalKey||rawKey;
-  const isBreisgau=base.includes('breisgau')||base.includes('freiburg');
-  const isTuebingen=base.includes('tubingen')||base.includes('tuebingen');
-  if(isBreisgau||isTuebingen)keys.add(sgKey);
-  return[...keys].filter(Boolean);
-}
+
+
+
+
+
+
+
+
+
+
+
 function dedupeGamesById(games){
   const seen=new Set();
   return (games||[]).filter(g=>{
@@ -15992,21 +15516,9 @@ function matchcenterIsFreiburgTuebingenTeamName(name){
   const hasFreiburg=n.includes('freiburg')||n.includes('breisgau');
   return hasTuebingen&&hasFreiburg;
 }
-function matchcenterIsUlmTeamName(teamName,seasonKey=''){
-  return isOwnTeam(teamName,seasonKey);
-}
-function normalizeTeamNameForMatchcenter(teamName,seasonKey=''){
-  const cleaned=cleanText(teamName||'').trim();
-  if(!cleaned)return'?';
-  return getCanonicalTeamName(cleaned,seasonKey,'display');
-}
-function matchcenterDetectUlmSide(g,seasonKey=g?._mcSeasonKey||''){
-  const h=matchcenterGameTeamName(g,'home');
-  const gu=matchcenterGameTeamName(g,'guest');
-  if(matchcenterIsUlmTeamName(h,seasonKey))return'home';
-  if(matchcenterIsUlmTeamName(gu,seasonKey))return'guest';
-  return null;
-}
+
+
+
 function matchcenterSeasonHasGames(seasonKey){
   return !!seasonKey&&matchcenterAllGamesForSeason(seasonKey).length>0;
 }
@@ -16016,101 +15528,17 @@ function matchcenterDefaultSeasonKey(){
   const keys=matchcenterSeasonKeys();
   return [...keys].reverse().find(key=>matchcenterSeasonHasGames(key))||active;
 }
-function matchcenterTeamDisplay(name,seasonKey=''){
-  return normalizeTeamNameForMatchcenter(name,seasonKey);
-}
-function matchcenterTeamKey(name,seasonKey=''){
-  if(matchcenterIsUlmTeamName(name,seasonKey))return'ulm';
-  const display=matchcenterTeamDisplay(name,seasonKey);
-  return normalizeTeamName(display);
-}
-function matchcenterAliasModeForContext(context='season'){
-  return context==='alltime'||context==='h2h5'||context==='history'||context==='direct'?'alltime':'season';
-}
-function getOpponentAliasKeysForMatchcenter(opponentName,seasonKey='',mode='season'){
-  return getOpponentAliasKeys(opponentName,seasonKey,mode);
-  const rawKey=normalizeTeamName(opponentName||'');
-  const display=normalizeTeamNameForMatchcenter(opponentName||'',seasonKey);
-  const displayKey=display&&display!=='?'?normalizeTeamName(display):'';
-  const baseKey=displayKey||rawKey;
-  const keys=new Set([baseKey].filter(Boolean));
-  if(matchcenterAliasModeForContext(mode)!=='alltime')return[...keys];
-  const sgKey=normalizeTeamName('SG Freiburg-Tübingen');
-  const breisgauKey=normalizeTeamName('Breisgau Bandits');
-  const freiburgKey=normalizeTeamName('Freiburg');
-  const tuebingenKey=normalizeTeamName('SV Tübingen Sharks');
-  const tuebingenPlainKey=normalizeTeamName('Tübingen');
-  const isBreisgau=baseKey===breisgauKey||baseKey===freiburgKey||baseKey.includes('breisgau')||baseKey.includes('freiburg');
-  const isTuebingen=baseKey===tuebingenKey||baseKey===tuebingenPlainKey||baseKey.includes('tubingen')||baseKey.includes('tuebingen');
-  if(isBreisgau){
-    keys.add(breisgauKey);
-    keys.add(sgKey);
-  }
-  if(isTuebingen){
-    keys.add(tuebingenKey);
-    keys.add(sgKey);
-  }
-  if(isFreiburgTuebingenSgName(baseKey))keys.add(sgKey);
-  return[...keys].filter(Boolean);
-}
-function matchcenterGameTeamName(g,side){
-  return cleanText(g?.[side==='home'?'home_team_name':'guest_team_name']||'?');
-}
-function matchcenterGameSideForTeam(g,teamKey,seasonKey=''){
-  if(teamKey==='ulm')return matchcenterDetectUlmSide(g,seasonKey||g?._mcSeasonKey||'');
-  const homeKey=matchcenterTeamKey(matchcenterGameTeamName(g,'home'),seasonKey);
-  const guestKey=matchcenterTeamKey(matchcenterGameTeamName(g,'guest'),seasonKey);
-  if(homeKey===teamKey)return'home';
-  if(guestKey===teamKey)return'guest';
-  return null;
-}
-function matchcenterGameSideForOpponentKey(g,opponentKey,seasonKey='',mode='season'){
-  const aliases=new Set(getOpponentAliasKeysForMatchcenter(opponentKey,seasonKey,mode));
-  const matches=[];
-  for(const side of ['home','guest']){
-    const rawName=matchcenterGameTeamName(g,side);
-    if(matchcenterIsUlmTeamName(rawName,seasonKey))continue;
-    const key=matchcenterTeamKey(rawName,seasonKey);
-    if(aliases.has(key))matches.push(side);
-  }
-  return matches.length===1?matches[0]:null;
-}
-function matchcenterGameScore(g){
-  const score=gameScore(g);
-  return score.hasScore?score:null;
-}
-function matchcenterOutcomeForTeam(g,teamKey,seasonKey=''){
-  const side=matchcenterGameSideForTeam(g,teamKey,seasonKey);
-  const score=matchcenterGameScore(g);
-  if(!side||!score)return null;
-  const gf=side==='home'?score.home:score.guest;
-  const ga=side==='home'?score.guest:score.home;
-  const result=gf>ga?'W':gf<ga?'L':'D';
-  return{game:g,side,gf,ga,diff:gf-ga,result,points:result==='W'?3:result==='D'?1:0,total:gf+ga};
-}
-function matchcenterAllGamesForSeason(seasonKey){
-  const data=getSeasonData(seasonKey);
-  let source=data.rawLeagueGames?.length?data.rawLeagueGames:
-    data.relevantLeagueGames?.length?data.relevantLeagueGames:
-    data.gamesData?.length?data.gamesData:
-    data.games?.length?data.games:
-    [];
-  if(!source.length&&S.activeSeasonKey===seasonKey&&Array.isArray(S.gamesData)&&S.gamesData.length)source=S.gamesData;
-  if(!source.length)source=getStaticSeasonGames(seasonKey);
-  const seen=new Set();
-  return (source||[]).map(g=>({...normalizeGame(g),_mcSeasonKey:seasonKey}))
-    .filter(g=>classifyGameForStats(g,{seasonKey,seasonConfig:SEASON_CONFIG[seasonKey]}).countsForStats)
-    .filter(g=>{
-      const key=String(g.id||gameStableId(g)||`${g.date}|${g.home_team_name}|${g.guest_team_name}`);
-      if(seen.has(key))return false;
-      seen.add(key);
-      return true;
-    })
-    .sort(matchcenterSortGamesAsc);
-}
-function matchcenterAllGames(){
-  return matchcenterSeasonKeys().flatMap(key=>matchcenterAllGamesForSeason(key));
-}
+
+
+
+
+
+
+
+
+
+
+
 function matchcenterOpponentMode(context){
   return context==='alltime'?'alltime':'season';
 }
@@ -16178,26 +15606,8 @@ function getMatchcenterDirectOpponents(seasonKey=matchcenterDefaultSeasonKey(),m
     })
     .sort((a,b)=>b.lastDate-a.lastDate||a.label.localeCompare(b.label,'de'));
 }
-function matchcenterDirectGames(opponentKey,mode='season'){
-  const aliasMode=matchcenterAliasModeForContext(mode);
-  const seen=new Set();
-  return matchcenterAllGames()
-    .filter(g=>{
-      if(!matchcenterDetectUlmSide(g,g._mcSeasonKey))return false;
-      if(!matchcenterGameSideForOpponentKey(g,opponentKey,g._mcSeasonKey,aliasMode))return false;
-      const key=matchcenterGameKey(g);
-      if(seen.has(key))return false;
-      seen.add(key);
-      return true;
-    })
-    .sort(matchcenterSortGamesAsc);
-}
-function matchcenterContextGames(directGames,context,seasonKey){
-  const sorted=[...directGames].sort(matchcenterSortGamesAsc);
-  if(context==='alltime')return sorted;
-  if(context==='h2h5')return sorted.slice(-5);
-  return sorted.filter(g=>g._mcSeasonKey===seasonKey);
-}
+
+
 function matchcenterAnalyzeDirect(opponentKey,context,seasonKey){
   const allDirect=matchcenterDirectGames(opponentKey,matchcenterAliasModeForContext(context));
   const games=matchcenterContextGames(allDirect,context,seasonKey);
@@ -16261,259 +15671,28 @@ function matchcenterAnalyzeForm(teamKey,seasonKey){
   }
   return{teamGames,last5,totals,gpg,gapg,score,limited:totals.games>0&&totals.games<5,sourceLimited:teamKey!=='ulm'&&!hasLeagueBreadth};
 }
-function matchcenterGameKey(g){
-  return String(g?.id||gameStableId(g)||`${g?.date||''}|${g?.home_team_name||''}|${g?.guest_team_name||''}`);
-}
-function matchcenterScoutingGames(opponentKey,context,seasonKey){
-  const aliasMode=matchcenterAliasModeForContext(context);
-  if(context==='h2h5')return matchcenterContextGames(matchcenterDirectGames(opponentKey,aliasMode),'h2h5',seasonKey);
-  const seen=new Set();
-  return matchcenterAllGames()
-    .filter(g=>{
-      if(!matchcenterGameSideForOpponentKey(g,opponentKey,g._mcSeasonKey,aliasMode))return false;
-      const key=matchcenterGameKey(g);
-      if(seen.has(key))return false;
-      seen.add(key);
-      return true;
-    })
-    .filter(g=>context==='alltime'||g._mcSeasonKey===seasonKey)
-    .sort(matchcenterSortGamesAsc);
-}
-function matchcenterRosterPlayers(g,side){
-  const players=g?.players?.[side];
-  return Array.isArray(players)?players:[];
-}
-function matchcenterPlayerDisplayName(player,number=''){
-  const name=cleanText(pFull(player)||'').trim();
-  if(name)return name;
-  const n=String(number||player?.trikot_number||'').trim();
-  return n?`Nr. ${n}`:'Unbekannter Spieler';
-}
-function matchcenterFindRosterPlayer(g,side,number){
-  const n=String(number??'').trim();
-  if(!n||n==='0')return null;
-  return matchcenterRosterPlayers(g,side).find(p=>String(p?.trikot_number??'').trim()===n)||null;
-}
-function matchcenterPlayerKey(player,teamKey,number=''){
-  const id=player?.player_id??player?.id;
-  if(id!==undefined&&id!==null&&String(id).trim())return`${teamKey}:id:${String(id).trim()}`;
-  const name=matchcenterPlayerDisplayName(player,number);
-  return`${teamKey}:name:${normalizeTeamName(name)}:${String(number||'')}`;
-}
-function matchcenterEventNumber(ev,field='number'){
-  const raw=ev?.[field];
-  const n=String(raw??'').trim();
-  return n&&n!=='0'?n:'';
-}
-function matchcenterPenaltyMinutes(ev){
-  const direct=Number(ev?.personalPenaltyMinutes??ev?.penaltyMinutes??ev?.minutes);
-  if(Number.isFinite(direct))return Math.max(0,direct);
-  const raw=cleanText(`${ev?.penalty_type_string||''} ${ev?.penalty_type||''}`).toLowerCase();
-  if(/match|ms/.test(raw))return 0;
-  if(/10/.test(raw))return 10;
-  if(/2\s*\+\s*2|2\+2/.test(raw))return 4;
-  const m=raw.match(/(\d+)/);
-  return m?Number(m[1]):0;
-}
+
+
+
+
+
+
+
+
 function matchcenterGoalMinute(ev){
   const p=Number(ev?.period);
   const s=parseGameClock(ev?.time);
   if(!Number.isFinite(p)||s===null)return null;
   return (Math.max(1,p)-1)*20+s/60;
 }
-function matchcenterIsLateGoalEvent(ev){
-  const p=Number(ev?.period);
-  const s=parseGameClock(ev?.time);
-  return Number.isFinite(p)&&p>=2&&s!==null&&s>=900;
-}
-function matchcenterIsClutchGoalEvent(ev,side){
-  const hg=Number(ev?.home_goals),gg=Number(ev?.guest_goals);
-  if(!Number.isFinite(hg)||!Number.isFinite(gg))return false;
-  const afterFor=side==='home'?hg:gg;
-  const afterAgainst=side==='home'?gg:hg;
-  const beforeFor=afterFor-1;
-  const beforeAgainst=afterAgainst;
-  const afterDiff=afterFor-afterAgainst;
-  const beforeDiff=beforeFor-beforeAgainst;
-  return afterDiff===0||afterDiff===1&&beforeDiff<=0||afterDiff>0&&beforeDiff<0;
-}
-function matchcenterEnsureOpponentPlayer(map,player,teamName,teamKey,number=''){
-  if(teamKey==='ulm')return null;
-  const key=matchcenterPlayerKey(player,teamKey,number);
-  if(!key||key.includes('unbekannter spieler:'))return null;
-  if(!map.has(key)){
-    map.set(key,{
-      key,
-      playerId:player?.player_id??player?.id??null,
-      name:matchcenterPlayerDisplayName(player,number),
-      teamName:matchcenterTeamDisplay(teamName),
-      jersey:number||player?.trikot_number||'',
-      gamesSet:new Set(),
-      last5GamesSet:new Set(),
-      vsUlmGamesSet:new Set(),
-      gamePoints:{},
-      goals:0,assists:0,points:0,penaltyMinutes:0,
-      last5:{games:0,goals:0,assists:0,points:0,pointsPerGame:0,scoringStreak:0},
-      vsUlm:{games:0,goals:0,assists:0,points:0,pointsPerGame:0,goalsPerGame:0,clutchGoals:0,lateGoals:0,penaltyMinutes:0},
-      goalShare:0,assistShare:0,dangerScore:0,dangerReason:'',formBadge:'stabil',
-      noDirectUlmData:false,ulmFit:null,
-    });
-  }
-  return map.get(key);
-}
-function matchcenterRegisterPlayerGame(profile,gameKey,bucket='gamesSet'){
-  if(profile?.[bucket])profile[bucket].add(gameKey);
-}
-function matchcenterAddScoring(profile,gameKey,type,scope){
-  if(!profile)return;
-  if(type==='goal')profile.goals+=1;
-  if(type==='assist')profile.assists+=1;
-  profile.points+=1;
-  profile.gamePoints[gameKey]=(profile.gamePoints[gameKey]||0)+1;
-  if(scope.last5){
-    if(type==='goal')profile.last5.goals+=1;
-    if(type==='assist')profile.last5.assists+=1;
-    profile.last5.points+=1;
-  }
-  if(scope.vsUlm){
-    if(type==='goal')profile.vsUlm.goals+=1;
-    if(type==='assist')profile.vsUlm.assists+=1;
-    profile.vsUlm.points+=1;
-  }
-}
-function matchcenterFinalizeOpponentPlayerProfiles(map,last5GameKeys,totalGoals,totalAssists){
-  const rows=[...map.values()].map(p=>{
-    p.games=p.gamesSet.size;
-    p.pointsPerGame=p.games?p.points/p.games:0;
-    p.goalsPerGame=p.games?p.goals/p.games:0;
-    p.goalShare=totalGoals?p.goals/totalGoals:0;
-    p.assistShare=totalAssists?p.assists/totalAssists:0;
-    p.last5.games=p.last5GamesSet.size;
-    p.last5.pointsPerGame=p.last5.games?p.last5.points/p.last5.games:0;
-    let streak=0;
-    for(const gameKey of [...last5GameKeys].reverse()){
-      if((p.gamePoints[gameKey]||0)>0)streak+=1;
-      else break;
-    }
-    p.last5.scoringStreak=streak;
-    p.vsUlm.games=p.vsUlmGamesSet.size;
-    p.vsUlm.pointsPerGame=p.vsUlm.games?p.vsUlm.points/p.vsUlm.games:0;
-    p.vsUlm.goalsPerGame=p.vsUlm.games?p.vsUlm.goals/p.vsUlm.games:0;
-    p.noDirectUlmData=p.vsUlm.games===0;
-    p.ulmFit=p.vsUlm.games&&p.games&&p.pointsPerGame>0?p.vsUlm.pointsPerGame-p.pointsPerGame:null;
-    const vsPpgScore=matchcenterClamp((p.vsUlm.pointsPerGame/2.6)*100);
-    const vsGpgScore=matchcenterClamp((p.vsUlm.goalsPerGame/1.7)*100);
-    const formScore=matchcenterClamp((p.last5.pointsPerGame/2.4)*80+Math.min(20,p.last5.scoringStreak*6));
-    const generalScore=matchcenterClamp((p.pointsPerGame/2.3)*70+(p.goalsPerGame/1.4)*30);
-    const clutchScore=matchcenterClamp((p.vsUlm.clutchGoals+p.vsUlm.lateGoals)*18);
-    p.dangerScore=Math.round(p.vsUlm.games
-      ?matchcenterClamp(vsPpgScore*.35+vsGpgScore*.2+formScore*.25+generalScore*.15+clutchScore*.05)
-      :matchcenterClamp(formScore*.48+generalScore*.44+(p.goalsPerGame/1.4)*8));
-    p.formBadge=p.last5.pointsPerGame>=1.5||p.last5.scoringStreak>=3?'hot':p.last5.pointsPerGame>=0.8?'stable':p.last5.points>0?'rising':'stabil';
-    return p;
-  });
-  const topGoalGetter=[...rows].sort((a,b)=>b.goals-a.goals||b.points-a.points)[0];
-  for(const p of rows){
-    if(p.vsUlm.games&&p.vsUlm.pointsPerGame>=1){
-      p.dangerReason=`${matchcenterFmt(p.vsUlm.pointsPerGame,1)} Punkte/Spiel gegen Ulm`;
-    }else if(p.last5.points>=4){
-      p.dangerReason=`${p.last5.points} Punkte in den letzten ${p.last5.games} Spielen`;
-    }else if(topGoalGetter&&p.key===topGoalGetter.key&&p.goals>0){
-      p.dangerReason='stärkster Torjäger des Gegners';
-    }else if(p.noDirectUlmData&&p.last5.points>0){
-      p.dangerReason='keine direkte Ulm-Datenbasis, aber aktuelle Form';
-    }else{
-      p.dangerReason=`${p.points} Punkte im gewählten Kontext`;
-    }
-  }
-  return rows.filter(p=>p.points>0||p.penaltyMinutes>0);
-}
-function matchcenterBuildOpponentScouting(opponentKey,context,seasonKey){
-  const games=matchcenterScoutingGames(opponentKey,context,seasonKey);
-  const aliasMode=matchcenterAliasModeForContext(context);
-  const directGames=matchcenterContextGames(matchcenterDirectGames(opponentKey,aliasMode),context==='alltime'?'alltime':context==='h2h5'?'h2h5':'current',seasonKey);
-  const directKeys=new Set(directGames.map(matchcenterGameKey));
-  const last5Games=[...games].sort(matchcenterSortGamesAsc).slice(-5);
-  const last5Keys=new Set(last5Games.map(matchcenterGameKey));
-  const profiles=new Map();
-  let totalGoals=0,totalAssists=0;
-  for(const g of games){
-    const side=matchcenterGameSideForOpponentKey(g,opponentKey,g._mcSeasonKey,aliasMode);
-    if(!side)continue;
-    const teamName=matchcenterGameTeamName(g,side);
-    const teamKey=matchcenterTeamKey(teamName,g._mcSeasonKey);
-    const gameKey=matchcenterGameKey(g);
-    const isLast5=last5Keys.has(gameKey);
-    const isVsUlm=directKeys.has(gameKey);
-    for(const rosterPlayer of matchcenterRosterPlayers(g,side)){
-      if(rosterPlayer?.goalkeeper&&!(rosterPlayer?.scored||rosterPlayer?.points))continue;
-      const p=matchcenterEnsureOpponentPlayer(profiles,rosterPlayer,teamName,teamKey,rosterPlayer?.trikot_number);
-      if(!p)continue;
-      matchcenterRegisterPlayerGame(p,gameKey,'gamesSet');
-      if(isLast5)matchcenterRegisterPlayerGame(p,gameKey,'last5GamesSet');
-      if(isVsUlm)matchcenterRegisterPlayerGame(p,gameKey,'vsUlmGamesSet');
-    }
-    for(const ev of g.events||[]){
-      if(ev?.event_team!==side)continue;
-      if(ev?.event_type==='goal'){
-        totalGoals+=1;
-        const scorerNumber=matchcenterEventNumber(ev,'number');
-        const scorer=matchcenterFindRosterPlayer(g,side,scorerNumber);
-        const scorerProfile=matchcenterEnsureOpponentPlayer(profiles,scorer,teamName,teamKey,scorerNumber);
-        if(scorerProfile){
-          matchcenterRegisterPlayerGame(scorerProfile,gameKey,'gamesSet');
-          if(isLast5)matchcenterRegisterPlayerGame(scorerProfile,gameKey,'last5GamesSet');
-          if(isVsUlm)matchcenterRegisterPlayerGame(scorerProfile,gameKey,'vsUlmGamesSet');
-          matchcenterAddScoring(scorerProfile,gameKey,'goal',{last5:isLast5,vsUlm:isVsUlm});
-          if(isVsUlm&&matchcenterIsLateGoalEvent(ev))scorerProfile.vsUlm.lateGoals+=1;
-          if(isVsUlm&&matchcenterIsClutchGoalEvent(ev,side))scorerProfile.vsUlm.clutchGoals+=1;
-        }
-        const assistNumber=matchcenterEventNumber(ev,'assist');
-        if(assistNumber){
-          totalAssists+=1;
-          const assister=matchcenterFindRosterPlayer(g,side,assistNumber);
-          const assistProfile=matchcenterEnsureOpponentPlayer(profiles,assister,teamName,teamKey,assistNumber);
-          if(assistProfile){
-            matchcenterRegisterPlayerGame(assistProfile,gameKey,'gamesSet');
-            if(isLast5)matchcenterRegisterPlayerGame(assistProfile,gameKey,'last5GamesSet');
-            if(isVsUlm)matchcenterRegisterPlayerGame(assistProfile,gameKey,'vsUlmGamesSet');
-            matchcenterAddScoring(assistProfile,gameKey,'assist',{last5:isLast5,vsUlm:isVsUlm});
-          }
-        }
-      }else if(ev?.event_type==='penalty'){
-        const number=matchcenterEventNumber(ev,'number');
-        const penalized=matchcenterFindRosterPlayer(g,side,number);
-        const profile=matchcenterEnsureOpponentPlayer(profiles,penalized,teamName,teamKey,number);
-        const mins=matchcenterPenaltyMinutes(ev);
-        if(profile&&mins){
-          profile.penaltyMinutes+=mins;
-          if(isVsUlm)profile.vsUlm.penaltyMinutes+=mins;
-        }
-      }
-    }
-  }
-  const players=matchcenterFinalizeOpponentPlayerProfiles(profiles,[...last5Keys],totalGoals,totalAssists);
-  const byDanger=[...players].sort((a,b)=>b.dangerScore-a.dangerScore||b.vsUlm.points-a.vsUlm.points||b.points-a.points).slice(0,5);
-  const topPlayers=[...players].filter(p=>p.points>0).sort((a,b)=>b.points-a.points||b.goals-a.goals||b.pointsPerGame-a.pointsPerGame).slice(0,5);
-  const vsUlm=[...players].filter(p=>p.vsUlm.points>0).sort((a,b)=>b.vsUlm.points-a.vsUlm.points||b.vsUlm.goals-a.vsUlm.goals||b.vsUlm.pointsPerGame-a.vsUlm.pointsPerGame).slice(0,5);
-  const form=[...players].filter(p=>p.last5.points>0).sort((a,b)=>b.last5.points-a.last5.points||b.last5.pointsPerGame-a.last5.pointsPerGame).slice(0,5);
-  const insights=matchcenterBuildOpponentPlayerInsights({players,byDanger,topPlayers,vsUlm,form,games,last5Games});
-  return{players,byDanger,topPlayers,vsUlm,form,insights,games,last5Games,totalGoals,totalAssists};
-}
-function matchcenterBuildOpponentPlayerInsights(scout){
-  const insights=[];
-  const danger=scout.byDanger?.[0];
-  if(danger)insights.push(`${danger.name} ist aktuell der hoechste Watchlist-Spieler (${danger.dangerScore}/100).`);
-  const vs=scout.vsUlm?.[0];
-  if(vs)insights.push(`${vs.name} war gegen Ulm am produktivsten: ${vs.vsUlm.points} Punkte in ${vs.vsUlm.games} Spiel${vs.vsUlm.games!==1?'en':''}.`);
-  const hot=(scout.form||[]).filter(p=>p.last5.pointsPerGame>=1.5).length;
-  if(hot)insights.push(`${hot} Gegner-Spieler liegen im Formfenster bei mindestens 1,5 Punkten pro Spiel.`);
-  const missingDirect=(scout.byDanger||[]).filter(p=>p.noDirectUlmData).length;
-  if(missingDirect)insights.push(`Bei ${missingDirect} Watchlist-Spieler${missingDirect!==1?'n':''} basiert die Bewertung stärker auf aktueller Form, weil direkte Ulm-Daten fehlen.`);
-  const concentration=scout.topPlayers?.[0]&&scout.totalGoals?scout.topPlayers[0].goalShare:0;
-  if(concentration>=0.35)insights.push('Die groesste Torgefahr buendelt sich stark auf einen einzelnen Gegner-Spieler.');
-  return insights.slice(0,5);
-}
+
+
+
+
+
+
+
+
 function matchcenterEmptyBuckets(){
   return {'0-10':0,'10-20':0,'20-30':0,'30-40':0};
 }
@@ -17422,9 +16601,7 @@ function rMatchcenterDetailsSection(profile,opponentLabel,insights){
 function matchcenterResultClass(result){
   return result==='W'?'win':result==='D'?'draw':result==='L'?'loss':'empty';
 }
-function matchcenterResultLetter(result){
-  return result==='W'?'S':result==='D'?'U':result==='L'?'N':'-';
-}
+
 function matchcenterUlmTeamLabelForGame(game){
   const side=matchcenterDetectUlmSide(game,game?._mcSeasonKey);
   if(!side)return'Ulm / SG';
@@ -20904,12 +20081,7 @@ function rMatchcenterMatchPlan(plan,opponentLabel){
   </section>`;
 }
 const MATCHCENTER_STORY_LOGOS={};
-function matchcenterStoryInitials(name){
-  const parts=String(name||'').replace(/[^\p{L}\p{N}\s-]/gu,' ').split(/\s+/).filter(Boolean);
-  if(!parts.length)return'??';
-  const initials=parts.slice(0,2).map(part=>part[0]||'').join('').toUpperCase();
-  return initials||'??';
-}
+
 function matchcenterStoryLogoBase(seasonKey=''){
   const cfg=SEASON_CONFIG?.[seasonKey]||{};
   const fromConfig=cfg.urls?.games||cfg.urls?.table||cfg.urls?.scorer||'';
@@ -20930,11 +20102,7 @@ function matchcenterStorySafeLogoUrl(url,seasonKey=''){
 // kein neuer Normalisierungsalgorithmus, nur deren Komposition mit Bindestrich statt Leerzeichen. Ein
 // eigener Abgleichtest (scripts/test-social-video.mjs) beweist für ALLE Teams ALLER Saisons in season-data,
 // dass diese Funktion und teamKeyFor denselben Schlüssel liefern.
-function matchcenterStoryTeamAssetKey(name,seasonKey=''){
-  const raw=cleanText(name||'').trim();
-  if(!raw)return'';
-  return normalizeTeamName(getCanonicalTeamName(raw,seasonKey,'season')).replace(/ /g,'-');
-}
+
 function getTeamLogoUrlForStory(teamName,seasonKey){
   const raw=cleanText(teamName||'').trim();
   if(!raw)return null;
@@ -21005,30 +20173,7 @@ function matchcenterStoryRankText(rank){
 function matchcenterStoryInlineStat(text){
   return String(text||'').trim().replace(/[.!?]+$/,'');
 }
-function matchcenterStoryShortTeamLabel(name){
-  const raw=cleanText(name||'').trim();
-  if(!raw)return'Team';
-  if(/breisgau/i.test(raw))return'Breisgau';
-  if(/feuerbach/i.test(raw))return'Feuerbach';
-  if(/t[üu]bingen/i.test(raw))return'Tübingen';
-  if(/schriesheim/i.test(raw))return'Schriesheim';
-  if(/heidelberg/i.test(raw))return'Heidelberg';
-  if(/mannheim/i.test(raw))return'Mannheim';
-  if(/karlsruhe/i.test(raw))return'Karlsruhe';
-  if(raw.length<=14)return raw;
-  const compact=raw
-    .replace(/^SV\s*03\s+/i,'')
-    .replace(/^SV\s+/i,'')
-    .replace(/^TV\s+/i,'')
-    .replace(/^FBC\s+/i,'')
-    .replace(/^DJK\s+Giants\s+/i,'')
-    .replace(/^Floorball\s+/i,'')
-    .replace(/^Sportvg\s+/i,'')
-    .replace(/\s+Sharks$/i,'')
-    .trim();
-  if(compact&&compact.length<=16)return compact;
-  return raw.split(/\s+/).slice(-2).join(' ');
-}
+
 function matchcenterStoryRankRows(data){
   const rows=[
     {label:data.home?.short||'Ulm',rank:data.ulmTableRank,cls:'mc-story-rank-ulm',order:0},
@@ -21041,42 +20186,8 @@ function matchcenterStoryRankRows(data){
     return a.order-b.order;
   }).map(row=>`<i class="${escAttr(row.cls)}"><span>${escHtml(row.label)}</span><b>${escHtml(matchcenterStoryRankText(row.rank))}</b></i>`).join('');
 }
-function matchcenterStoryFormLetters(form){
-  return (form?.last5||[]).map(row=>matchcenterResultLetter(row.result)).filter(letter=>letter&&letter!=='-');
-}
-function matchcenterStoryPlayer(row,teamLabel,kind='opponent'){
-  if(!row)return{
-    name:'Noch offen',
-    team:teamLabel,
-    stat:'Keine Scorerdaten',
-    line:'Datenbasis offen',
-    note:'Form offen'
-  };
-  const last5=row.last5||{};
-  const season=row.season||{};
-  const direct=row.direct||row.vsUlm||{};
-  const lastGames=matchcenterNum(last5.games,0);
-  const lastPoints=matchcenterNum(last5.points,0);
-  const lastGoals=matchcenterNum(last5.goals,0);
-  const lastAssists=matchcenterNum(last5.assists,0);
-  const fallbackGames=matchcenterNum(row.games,0)||matchcenterNum(season.games,0)||matchcenterNum(direct.games,0);
-  const points=lastGames?lastPoints:(matchcenterNum(row.points,0)||matchcenterNum(season.points,0)||matchcenterNum(direct.points,0));
-  const goals=lastGames?lastGoals:(matchcenterNum(row.goals,0)||matchcenterNum(season.goals,0)||matchcenterNum(direct.goals,0));
-  const assists=lastGames?lastAssists:(matchcenterNum(row.assists,0)||matchcenterNum(season.assists,0)||matchcenterNum(direct.assists,0));
-  const games=lastGames||fallbackGames;
-  const stat=games?`${points} Pkt. in ${games} Sp.`:'Scorerdaten offen';
-  const clutch=kind==='ulm'
-    ?matchcenterNum(row.clutchGoals,0)+matchcenterNum(row.leadGoals,0)+matchcenterNum(row.equalizerGoals,0)+matchcenterNum(row.lateGoals,0)
-    :matchcenterNum(direct.clutchGoals,0)+matchcenterNum(direct.lateGoals,0);
-  const note=clutch?`${clutch} wichtige Treffer`:(lastGames?'letzte Spiele':'Saison-/Direktdaten');
-  return{
-    name:row.name||'Unbekannt',
-    team:teamLabel||row.teamName||'Team',
-    stat,
-    line:`${goals} Tore / ${assists} Assists`,
-    note
-  };
-}
+
+
 function matchcenterStoryAddFact(facts,text){
   const clean=String(text||'').trim();
   if(!clean||facts.length>=4)return;
@@ -21200,12 +20311,7 @@ function matchcenterStoryPickFactItems(candidates,options=3){
 function matchcenterStoryPickFacts(candidates,limit=3){
   return matchcenterStoryPickFactItems(candidates,limit).map(item=>item.selectedText||item.text);
 }
-function matchcenterStoryFormRecord(form){
-  const t=form?.totals||{};
-  const games=matchcenterNum(t.games,0);
-  if(!games)return'keine Spiele';
-  return`${matchcenterNum(t.w,0)}S ${matchcenterNum(t.d,0)}U ${matchcenterNum(t.l,0)}N`;
-}
+
 function matchcenterStoryCurrentStreak(form,result){
   const rows=(form?.last5||[]).filter(Boolean);
   let count=0;
@@ -21707,143 +20813,7 @@ function fitMatchcenterStoryLayout(root=document){
   }
 }
 
-// ═════════════════════════════════════════════════════════════════════════
-// S1 — Social-Video-Spezifikation (docs/social-video-spezifikation.md), Abschnitt 5: buildSocialVideoSpec.
-// Reine Funktion: zeichnet nicht, kein DOM-Zugriff. Wiederverwendet ausschließlich bestehende Bausteine
-// (getSeasonMatchdays/buildMatchdays, getSeasonStatsAsOf, matchcenterOutcomeForTeam, matchcenterGameSideForTeam/
-// -ForOpponentKey, matchcenterEventNumber/-FindRosterPlayer/-RosterPlayers/-PlayerKey/-PlayerDisplayName,
-// matchcenterStoryPlayer/-FormLetters/-FormRecord/-ShortTeamLabel, matchcenterStoryTeamAssetKey). Abschnitt 5a/5b
-// (Vererbung, vorläufige Termine) sind für S1 NICHT umgesetzt (weder data/team-lineage.json noch
-// data/schedule-provisional.json werden gelesen) — fehlt Historie zu einem Gegner, greift bereits der normale
-// "keine Daten -> Szene/Element entfällt"-Fallback, kein Raten.
-// ═════════════════════════════════════════════════════════════════════════
 
-const SOCIAL_VIDEO_DURATION_MS=15000;
-const SOCIAL_VIDEO_FPS=30;
-const SOCIAL_VIDEO_MIN_CONTENT_MS=1500;
-const SOCIAL_VIDEO_NAME_MAX_CHARS=20;
-const SOCIAL_VIDEO_NAME_HARD_MAX_CHARS=30;
-const SOCIAL_VIDEO_FACT_MAX_CHARS=90;
-const SOCIAL_VIDEO_FACT_HARD_MAX_CHARS=130;
-
-/** Szenen-Basiswerte aus Spezifikation Abschnitt 4.1/4.2. `fixed` Szenen (Intro/Abschluss) werden nie
- * gestreckt, nur bis zu ihrem eigenen capMs (Owner-Entscheidung: Intro höchstens 2.600 ms, Abschluss höchstens
- * 2.400 ms bei der Story; beim Feed liegt der Basiswert bereits auf dem eigenen Cap, keine Wirkung). */
-const SOCIAL_VIDEO_STORY_SCENE_DEFS=[
-  {id:'intro',baseMs:2400,fixed:true,capMs:2600},
-  {id:'opponent',baseMs:4000},
-  {id:'lastDuel',baseMs:3000},
-  {id:'playersToWatch',baseMs:3600},
-  {id:'outro',baseMs:2000,fixed:true,capMs:2400},
-];
-const SOCIAL_VIDEO_FEED_SCENE_DEFS=[
-  {id:'intro',baseMs:2400,fixed:true,capMs:2400},
-  {id:'opponentA',baseMs:4600},
-  {id:'opponentB',baseMs:4600},
-  {id:'outro',baseMs:3400,fixed:true,capMs:3400},
-];
-
-/**
- * Verteilt totalMs auf die gegebenen Szenen (Owner-Entscheidung, siehe docs/social-video-spezifikation.md
- * Abschnitt 5): fixe Szenen (Intro/Abschluss) bleiben bei ihrem Basiswert (gedeckelt durch capMs); alle
- * ANDEREN, als abwesend markierten Szenen (`present:false`) entfallen vorab. Die freie Zeit (total − Summe
- * fixer Szenen) wird PROPORTIONAL zum jeweiligen Basiswert auf die verbleibenden Inhaltsszenen verteilt
- * (Rundungsrest komplett der letzten Inhaltsszene, damit die Summe exakt totalMs bleibt). Fällt eine
- * Inhaltsszene dadurch unter minContentMs, entfällt sie komplett und die Verteilung läuft mit den
- * verbleibenden Inhaltsszenen erneut (rekursiv, hier als Schleife). Reine Funktion, exportiert für
- * scripts/test-social-video.mjs (node:vm-Extraktion, wie bei den bestehenden P0b-Tests).
- * @param {{id:string, baseMs:number, fixed?:boolean, capMs?:number, present?:boolean}[]} sceneDefs
- * @returns {{id:string, ms:number, startMs:number, endMs:number}[]}
- */
-function socialVideoDistributeSceneDurations(sceneDefs,totalMs=SOCIAL_VIDEO_DURATION_MS,minContentMs=SOCIAL_VIDEO_MIN_CONTENT_MS){
-  let defs=(sceneDefs||[]).filter(s=>s&&s.present!==false);
-  for(let guard=0;guard<10;guard++){
-    const fixed=defs.filter(s=>s.fixed);
-    const content=defs.filter(s=>!s.fixed);
-    const fixedMs=fixed.reduce((sum,s)=>sum+Math.min(s.baseMs,s.capMs??s.baseMs),0);
-    const budget=Math.max(0,totalMs-fixedMs);
-    const weightSum=content.reduce((sum,s)=>sum+s.baseMs,0);
-    if(!content.length||weightSum<=0){
-      const result=[];let cursor=0;
-      for(const s of fixed){const ms=Math.min(s.baseMs,s.capMs??s.baseMs);result.push({id:s.id,ms,startMs:cursor,endMs:cursor+ms});cursor+=ms;}
-      return result;
-    }
-    const shares=content.map(s=>Math.floor(budget*(s.baseMs/weightSum)));
-    const usedByContent=shares.reduce((a,b)=>a+b,0);
-    shares[shares.length-1]+=budget-usedByContent;
-    const tooSmallIdx=shares.findIndex(ms=>ms<minContentMs);
-    if(tooSmallIdx>=0){
-      const dropId=content[tooSmallIdx].id;
-      defs=defs.filter(s=>s.id!==dropId);
-      continue;
-    }
-    const result=[];let cursor=0;
-    for(const s of defs){
-      const ms=s.fixed?Math.min(s.baseMs,s.capMs??s.baseMs):shares[content.indexOf(s)];
-      result.push({id:s.id,ms,startMs:cursor,endMs:cursor+ms});
-      cursor+=ms;
-    }
-    return result;
-  }
-  return[];
-}
-
-/** Zeichenobergrenzen-Abstufung (Spezifikation Abschnitt 5: "dieselbe Abstufung wie in der Story-Vorschau" —
- * vgl. matchcenterStoryNameClass/matchcenterStoryVisibleFacts, hier als generischer Text-Helfer für ein
- * einzelnes Element). Bis maxChars unverändert ("normal"); darüber kleinere Schriftstufe ("tight", Text
- * bleibt vollständig); darüber Kürzung mit Auslassungszeichen an einer Wortgrenze. */
-function socialVideoFitText(text,maxChars=SOCIAL_VIDEO_FACT_MAX_CHARS,hardMaxChars=SOCIAL_VIDEO_FACT_HARD_MAX_CHARS){
-  const raw=cleanText(text||'').trim();
-  if(!raw)return{text:'',stage:'normal',truncated:false};
-  if(raw.length<=maxChars)return{text:raw,stage:'normal',truncated:false};
-  if(raw.length<=hardMaxChars)return{text:raw,stage:'tight',truncated:false};
-  const cut=raw.slice(0,hardMaxChars);
-  const lastSpace=cut.lastIndexOf(' ');
-  const wordBoundary=lastSpace>hardMaxChars*0.6?cut.slice(0,lastSpace):cut;
-  return{text:wordBoundary.trim()+'…',stage:'tight',truncated:true};
-}
-
-/** Schriftenprüfung (Spezifikation Abschnitt 3.3 Punkt 2): document.fonts.ready abwarten, dann prüfen, ob
- * Syne (900) und DM Mono (800) tatsächlich geladen sind. Fehlen sie (z. B. file:// ohne Netz), wird
- * fallback:true zurückgegeben — der Aufrufer zeichnet dann mit den in der CSS definierten Ersatzschriften
- * weiter (kein Abbruch) und zeigt im UI einen Hinweis. */
-async function socialVideoCheckFonts(){
-  try{
-    if(!globalThis.document?.fonts?.ready)return{ready:false,syne:false,dmMono:false,fallback:true};
-    await document.fonts.ready;
-    const syne=document.fonts.check("900 16px 'Syne'");
-    const dmMono=document.fonts.check("800 16px 'DM Mono'");
-    return{ready:true,syne,dmMono,fallback:!(syne&&dmMono)};
-  }catch(e){
-    return{ready:false,syne:false,dmMono:false,fallback:true};
-  }
-}
-
-/** Fähigkeitsprüfung für den SVG-foreignObject->Canvas->PNG-Export. Seit S2 betrifft das NUR noch
- * window.downloadMatchdayStory (Live-Vorschau-Export im Social Media Center) — downloadSocialVideoStandbild
- * nutzt seit der Canvas2D-Umstellung keinen foreignObject-Weg mehr und ist von diesem Befund unabhängig
- * (siehe rMatchcenterSocialMediaCenter-Hinweistext). Prinzip: ein winziges, rein lokales 1x1-foreignObject-
- * SVG ohne jeden externen Inhalt wird auf einen 1x1-Canvas gezeichnet und per toDataURL() ausgelesen.
- * Aktuelle Chrome-Versionen "tainten" dabei JEDEN Canvas, auf den ein SVG mit <foreignObject> gezeichnet
- * wurde — unabhängig von externen Ressourcen —, andere Engines (z. B. Firefox) erlauben es. Das Ergebnis
- * hängt nur von der Browser-Engine ab, nicht von den jeweiligen Spec-Daten, deshalb genügt EIN winziger,
- * günstiger Testlauf statt einer echten Story/Feed-Auszeichnung. */
-async function probeSocialVideoExportCapability(){
-  try{
-    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><foreignObject width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml"></div></foreignObject></svg>';
-    const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
-    const img=new Image();
-    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
-    const canvas=document.createElement('canvas');
-    canvas.width=1;canvas.height=1;
-    canvas.getContext('2d').drawImage(img,0,0,1,1);
-    URL.revokeObjectURL(url);
-    canvas.toDataURL('image/png');
-    return true;
-  }catch(e){
-    return false;
-  }
-}
 /** Löst probeSocialVideoExportCapability() genau einmal aus (Promise-Cache analog zu
  * ensureExternalSeasonData) und schreibt das Ergebnis nach S.socialVideoExportPossible, sobald es
  * feststeht — von rMatchcenterSocialMediaCenter() aus aufgerufen (dem einzigen verbleibenden Konsumenten
@@ -21856,1182 +20826,6 @@ function ensureSocialVideoExportCapabilityChecked(){
   probeSocialVideoExportCapability().then(possible=>setState({socialVideoExportPossible:possible}));
 }
 
-/** Ulms eigene Spiele eines Spieltags, sortiert nach Anpfiffzeit (Owner-Entscheidung Punkt 1 — NICHT über
- * overviewOpponentLabel/matchday.teamGames, das bei einem vollen Spieltag ALLE anderen Teams listen würde,
- * nicht nur Ulms tatsächliche Gegner; Muster analog getFurtherSameDayUlmGames). */
-function socialVideoUlmGamesForMatchday(seasonKey,matchday){
-  if(!matchday)return[];
-  return(matchday.games||[])
-    .filter(g=>matchcenterDetectUlmSide(g,seasonKey))
-    .sort((a,b)=>String(a?.start_time||'').localeCompare(String(b?.start_time||''))||compareGamesChronologically(a,b));
-}
-
-function socialVideoTableRank(standings,teamDisplayName,seasonKey){
-  const wantedKey=matchcenterTeamKey(teamDisplayName,seasonKey);
-  const row=(standings||[]).find(t=>matchcenterTeamKey(t.name||t.team||t.teamName||'',seasonKey)===wantedKey);
-  return row?Number(row.rank)||null:null;
-}
-
-/** AsOf-bewusstes Äquivalent zu matchcenterAnalyzeForm (siehe Kopfkommentar) — dieselbe matchcenterOutcomeForTeam/
- * matchcenterSortGamesAsc-Logik, nur auf einer bereits vorgefilterten (asOf) Spielliste. */
-function socialVideoFormAsOf(asOfGames,teamKey,seasonKey){
-  const teamGames=(asOfGames||[]).map(g=>matchcenterOutcomeForTeam(g,teamKey,seasonKey)).filter(Boolean).sort((a,b)=>matchcenterSortGamesAsc(a.game,b.game));
-  const last5=teamGames.slice(-5);
-  const totals=last5.reduce((a,o)=>{a.games+=1;a.points+=o.points;a.gf+=o.gf;a.ga+=o.ga;a.diff+=o.diff;if(o.result==='W')a.w+=1;else if(o.result==='L')a.l+=1;else a.d+=1;return a;},{games:0,points:0,w:0,d:0,l:0,gf:0,ga:0,diff:0});
-  return{teamGames,last5,totals};
-}
-
-/** AsOf-bewusstes letztes direktes Duell Ulm–Gegner (siehe Kopfkommentar) — `opponentMcKey` im Format von
- * matchcenterTeamKey (NICHT der Bindestrich-Asset-Schlüssel). */
-function socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey){
-  const direct=(asOfGames||[])
-    .filter(g=>matchcenterDetectUlmSide(g,seasonKey)&&matchcenterGameSideForOpponentKey(g,opponentMcKey,seasonKey,'season'))
-    .sort(matchcenterSortGamesAsc);
-  const last=direct[direct.length-1];
-  return last?matchcenterOutcomeForTeam(last,'ulm',seasonKey):null;
-}
-
-/** Minimaler, asOf-bewusster Punkte-Spitzenreiter (Tore+Assists) eines Teams im Fenster — wiederverwendet
- * dieselben Event-Bausteine wie matchcenterBuildUlmPlayerScouting/-OpponentScouting (matchcenterEventNumber,
- * matchcenterFindRosterPlayer, matchcenterPlayerKey/-DisplayName), aber ohne deren mehrdimensionales Ranking
- * (Impact/Clutch/Direct/Form getrennt) — für "Players to watch" genügt der einfache Punkte-Spitzenreiter. */
-function socialVideoTopScorerAsOf(asOfGames,teamKey,seasonKey){
-  const tally=new Map();
-  for(const g of asOfGames||[]){
-    const side=matchcenterGameSideForTeam(g,teamKey,seasonKey);
-    if(!side)continue;
-    const gameKey=matchcenterGameKey(g);
-    for(const ev of g.events||[]){
-      if(ev?.event_team!==side||ev?.event_type!=='goal')continue;
-      const scorerNumber=matchcenterEventNumber(ev,'number');
-      const scorer=matchcenterFindRosterPlayer(g,side,scorerNumber);
-      if(scorer){
-        const key=matchcenterPlayerKey(scorer,teamKey,scorerNumber);
-        const row=tally.get(key)||{name:matchcenterPlayerDisplayName(scorer,scorerNumber),games:new Set(),goals:0,assists:0};
-        row.goals+=1;row.games.add(gameKey);tally.set(key,row);
-      }
-      const assistNumber=matchcenterEventNumber(ev,'assist');
-      if(assistNumber){
-        const assister=matchcenterFindRosterPlayer(g,side,assistNumber);
-        if(assister){
-          const key=matchcenterPlayerKey(assister,teamKey,assistNumber);
-          const row=tally.get(key)||{name:matchcenterPlayerDisplayName(assister,assistNumber),games:new Set(),goals:0,assists:0};
-          row.assists+=1;row.games.add(gameKey);tally.set(key,row);
-        }
-      }
-    }
-  }
-  const rows=[...tally.values()].map(r=>({name:r.name,games:r.games.size,goals:r.goals,assists:r.assists,points:r.goals+r.assists})).filter(r=>r.points>0);
-  rows.sort((a,b)=>b.points-a.points||b.goals-a.goals||a.name.localeCompare(b.name,'de'));
-  return rows[0]||null;
-}
-
-/** Letztes direktes Duell mit Stichtag-sicherem Fallback über Saisongrenzen (Spezifikation 5a/5c,
- * S2c-Auftrag B1): Stufe 1 — letztes Duell der LAUFENDEN Saison vor dem Stichtag (socialVideoLastDuelAsOf,
- * unverändert). Stufe 2 — sonst das letzte Duell einer FRÜHEREN Saison; kein eigener Stichtag nötig, eine
- * bereits vollständig gespielte Saison liegt per Definition vollständig vor dem aktuellen Stichtag. Stufe 3
- * (Vorgängerteam mit scope.display=true, Abschnitt 5a) — wartet auf data/team-lineage.json (Modul M1v, noch
- * nicht angelegt, Zuordnung laut Entscheidung 13 noch offen): liefert bis dahin durchgängig null, das ist
- * exakt das in 5a beschriebene Verhalten bei fehlendem Lineage-Eintrag ("kein Raten, Block entfällt,
- * warnings-Eintrag"), kein Sonderfall dieser Phase. */
-function socialVideoLastDuelWithFallback(asOfGames,opponentMcKey,seasonKey,opponentDisplay){
-  const current=socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey);
-  if(current)return{...current,tier:'current',seasonLabel:null,asLabel:null};
-  const allDirect=matchcenterDirectGames(opponentMcKey,'alltime');
-  const prior=allDirect.filter(g=>g._mcSeasonKey!==seasonKey&&seasonOrderIndex(g._mcSeasonKey)<seasonOrderIndex(seasonKey)).sort(matchcenterSortGamesAsc);
-  const lastPrior=prior[prior.length-1];
-  if(lastPrior){
-    const outcome=matchcenterOutcomeForTeam(lastPrior,'ulm',lastPrior._mcSeasonKey);
-    if(outcome){
-      const oppSide=outcome.side==='home'?'guest':'home';
-      const thenName=matchcenterGameTeamName(lastPrior,oppSide);
-      const thenDisplay=matchcenterTeamDisplay(thenName,lastPrior._mcSeasonKey);
-      const asLabel=normalizeTeamKey(thenDisplay)!==normalizeTeamKey(opponentDisplay)?thenDisplay:null;
-      return{...outcome,tier:'priorSeason',seasonLabel:matchcenterSeasonLabel(lastPrior._mcSeasonKey),asLabel};
-    }
-  }
-  return null;
-}
-
-/** Trikotnummer-Topscorer des Gegners MIT Stichtag (S2c-Auftrag B, "Datengrundlage ist die bestehende
- * Matchcenter-Logik matchcenterBuildOpponentScouting, nichts neu berechnen"). Diese Funktion kennt selbst
- * keinen Stichtag und nimmt keine vorgefilterte Spielliste entgegen — Spezifikation 5c sieht für genau diesen
- * Fall einen "dünnen Stichtag-Wrapper daneben" vor, der die bestehende Funktion UNVERÄNDERT lässt
- * (Golden-Master-Schutz). Da matchcenterBuildOpponentScouting seine Spiele selbst über das globale
- * matchcenterAllGames() bezieht und keinen Injektionspunkt hat, schränkt dieser Wrapper matchcenterAllGames()
- * für die Dauer GENAU dieses einen synchronen Aufrufs auf Spiele vor dem Stichtag ein und stellt es im
- * finally-Block sofort wieder her — JS ist single-threaded, daher ohne Nebenläufigkeitsrisiko. */
-function socialVideoOpponentTopScorerAsOf(opponentMcKey,seasonKey,cutoffDate){
-  const original=matchcenterAllGames;
-  window.matchcenterAllGames=function(){return original().filter(g=>g.date<cutoffDate);};
-  try{
-    const scouting=matchcenterBuildOpponentScouting(opponentMcKey,'current',seasonKey);
-    return scouting.topPlayers[0]||null;
-  }finally{
-    window.matchcenterAllGames=original;
-  }
-}
-
-/** Alle Kernwerte für EINEN Ulm-Gegner eines Spieltags (asOf strikt VOR dem Spieltag, siehe Kopfkommentar). */
-function socialVideoOpponentSceneData(seasonKey,matchday,ulmGame){
-  const warnings=[];
-  const ulmSide=matchcenterDetectUlmSide(ulmGame,seasonKey);
-  const oppSide=ulmSide==='home'?'guest':'home';
-  const opponentRaw=matchcenterGameTeamName(ulmGame,oppSide);
-  const opponentDisplay=matchcenterTeamDisplay(opponentRaw,seasonKey);
-  const opponentShort=matchcenterStoryShortTeamLabel(opponentDisplay);
-  const opponentMcKey=matchcenterTeamKey(opponentRaw,seasonKey);
-  const assetKey=matchcenterStoryTeamAssetKey(opponentRaw,seasonKey);
-
-  const asOf={date:matchday.date,startTime:'00:00'};
-  const stats=getSeasonStatsAsOf(seasonKey,asOf);
-  const standings=stats?.standings||[];
-  const asOfGames=(stats?.relevantLeagueGames||[]).map(g=>({...normalizeGame(g),_mcSeasonKey:seasonKey}));
-
-  const ulmRank=socialVideoTableRank(standings,'VfB Ulm',seasonKey);
-  const oppRank=socialVideoTableRank(standings,opponentDisplay,seasonKey);
-  if(ulmRank===null||oppRank===null)warnings.push({code:'element-omitted',scene:'opponent',element:'tableRank',reason:'no-standings-before-matchday'});
-
-  const ulmForm=socialVideoFormAsOf(asOfGames,'ulm',seasonKey);
-  const oppForm=socialVideoFormAsOf(asOfGames,opponentMcKey,seasonKey);
-
-  const lastDuel=socialVideoLastDuelAsOf(asOfGames,opponentMcKey,seasonKey);
-  if(!lastDuel)warnings.push({code:'scene-omitted',scene:'lastDuel',reason:'no-duel-before-matchday'});
-
-  const lastDuelWithFallback=socialVideoLastDuelWithFallback(asOfGames,opponentMcKey,seasonKey,opponentDisplay);
-  if(!lastDuelWithFallback)warnings.push({code:'element-omitted',scene:'opponent',element:'duelFact',reason:'no-duel-any-season'});
-
-  const opponentTopScorer=socialVideoOpponentTopScorerAsOf(opponentMcKey,seasonKey,matchday.date);
-  if(!opponentTopScorer)warnings.push({code:'element-omitted',scene:'opponent',element:'topscorerCard',reason:'no-scorer-data-this-season'});
-
-  const topUlmRow=socialVideoTopScorerAsOf(asOfGames,'ulm',seasonKey);
-  const topOppRow=socialVideoTopScorerAsOf(asOfGames,opponentMcKey,seasonKey);
-  if(!topUlmRow&&!topOppRow)warnings.push({code:'scene-omitted',scene:'playersToWatch',reason:'no-scorer-data'});
-  else{
-    if(!topUlmRow)warnings.push({code:'element-omitted',scene:'playersToWatch',element:'ulm',reason:'no-scorer-data'});
-    if(!topOppRow)warnings.push({code:'element-omitted',scene:'playersToWatch',element:'opponent',reason:'no-scorer-data'});
-  }
-  const topUlm=matchcenterStoryPlayer(topUlmRow,'VfB Ulm','ulm');
-  const topOpponent=matchcenterStoryPlayer(topOppRow,opponentDisplay,'opponent');
-
-  return{
-    opponentDisplay,opponentShort,opponentMcKey,assetKey,
-    logoAsset:`assets/teams/${assetKey}.png`,
-    kickoff:String(ulmGame?.start_time||''),
-    arena:cleanText(ulmGame?.arena_name||''),
-    ulmRank,oppRank,
-    ulmFormLetters:matchcenterStoryFormLetters(ulmForm),oppFormLetters:matchcenterStoryFormLetters(oppForm),
-    ulmFormRecord:matchcenterStoryFormRecord(ulmForm),oppFormRecord:matchcenterStoryFormRecord(oppForm),
-    lastDuel,lastDuelHasData:!!topUlmRow||!!topOppRow,
-    lastDuelWithFallback,hasLastDuelWithFallback:!!lastDuelWithFallback,
-    opponentTopScorer,hasOpponentTopScorer:!!opponentTopScorer,
-    topUlm,topOpponent,hasLastDuel:!!lastDuel,hasPlayersToWatch:!!topUlmRow||!!topOppRow,
-    warnings,
-  };
-}
-
-/** Dateiname nach Spezifikation Abschnitt 6.4 — Gegner-Key nach demselben Muster wie
- * matchcenterStoryDownloadFileName (Kleinschreibung, ohne Umlaute, Bindestriche). */
-function socialVideoFileName({matchdayNumber,date,format,opponentAssetKey},ext='webm'){
-  const md=String(matchdayNumber??'');
-  const d=String(date||'').replace(/[^0-9-]+/g,'');
-  if(format==='feed-4x5')return`vfb-ulm-md${md}-${d}-feed.${ext}`;
-  const opp=String(opponentAssetKey||'gegner').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'gegner';
-  return`vfb-ulm-md${md}-${d}-story-${opp}.${ext}`;
-}
-
-function socialVideoMatchdayLabel(matchday){
-  return matchday?`Spieltag ${matchday.number}`:'Spieltag';
-}
-
-/** Gestaltungskanon 2a (docs/social-video-spezifikation.md Abschnitt 2a) — EIN zusammengesetztes Element für
- * die Matchup-Gruppe der Gegner-Szene: beide Teams (Logo, Name, Tabellenplatz, Form) in einem Element, damit
- * Schicht A sie als EINE der höchstens fünf Gruppen je Szene zeichnet (siehe socialVideoLayoutOpponentKanon). */
-function socialVideoMatchupPairElement(opp,animation='fade',delayMs=0){
-  return{type:'matchupPair',
-    ulm:{name:'VfB Ulm',rank:opp.ulmRank,formLetters:opp.ulmFormLetters,formRecord:opp.ulmFormRecord},
-    opp:{name:opp.opponentDisplay,rank:opp.oppRank,formLetters:opp.oppFormLetters,formRecord:opp.oppFormRecord,assetKey:opp.assetKey,asset:opp.logoAsset},
-    animation,delayMs};
-}
-/** Fakt-Gruppe = letztes direktes Duell (S2c-Auftrag B1), null wenn keine Stufe des Fallbacks einen Treffer
- * liefert (Element entfällt dann ersatzlos, siehe socialVideoOpponentKanonElements). */
-function socialVideoDuelFactElement(opp,animation='fade',delayMs=0){
-  const d=opp.lastDuelWithFallback;
-  if(!d)return null;
-  const parts=[formatDateDE(d.game.date),'Verbandsliga BW (KF)'];
-  if(d.seasonLabel)parts.push(d.seasonLabel);
-  return{type:'duelFact',result:`${d.gf}:${d.ga}`,metaLine:parts.join(' · '),asLabel:d.asLabel,animation,delayMs};
-}
-/** Topscorer-Gruppe (S2c-Auftrag B): Vorname/Nachname aus dem letzten durch Leerzeichen getrennten Token des
- * vollen Anzeigenamens — dieselbe Aufteilung wie bei langen Vereinsnamen bereits an anderer Stelle im Projekt
- * üblich (letztes Token = Nachname). Null wenn der Gegner in der laufenden Saison vor dem Stichtag noch keine
- * Scorerdaten hat (Element entfällt dann ersatzlos). */
-function socialVideoTopscorerCardElement(opp,animation='rise',delayMs=0){
-  const t=opp.opponentTopScorer;
-  if(!t)return null;
-  const nameParts=String(t.name||'').trim().split(/\s+/).filter(Boolean);
-  const last=nameParts.length>1?nameParts.pop():(nameParts[0]||t.name||'');
-  const first=nameParts.join(' ');
-  return{type:'topscorerCard',teamLabel:opp.opponentDisplay,jersey:t.jersey?String(t.jersey):'–',first,last,goals:t.goals,assists:t.assists,points:t.points,insight:t.dangerReason||'',animation,delayMs};
-}
-/** Die drei Gruppen der Gegner-Szene nach Kanon 2a: Matchup (immer), Fakt=letztes Duell (wenn vorhanden),
- * Topscorer (wenn vorhanden) — zusammen mit Fortschrittsbalken und Kopfzeile (beide szenenübergreifend in
- * socialVideoDrawList) genau die vorgegebenen höchstens fünf Gruppen je Szene. */
-function socialVideoOpponentKanonElements(opp){
-  const els=[socialVideoMatchupPairElement(opp,'fade',0)];
-  const duel=socialVideoDuelFactElement(opp,'fade',200);
-  if(duel)els.push(duel);
-  const ts=socialVideoTopscorerCardElement(opp,'rise',320);
-  if(ts)els.push(ts);
-  return els;
-}
-
-/** EIN Story-Spec-Objekt für genau einen Ulm-Gegner dieses Spieltags (siehe buildSocialVideoSpec unten). */
-function socialVideoBuildStorySpec(seasonKey,matchday,ulmGame,warningsOut){
-  const opp=socialVideoOpponentSceneData(seasonKey,matchday,ulmGame);
-  warningsOut.push(...opp.warnings);
-
-  const sceneDefs=SOCIAL_VIDEO_STORY_SCENE_DEFS.map(def=>({...def,present:def.id==='lastDuel'?opp.hasLastDuel:def.id==='playersToWatch'?opp.hasPlayersToWatch:true}));
-  const timing=socialVideoDistributeSceneDurations(sceneDefs);
-  const at=id=>timing.find(t=>t.id===id);
-
-  const scenes=[];
-  const introT=at('intro');
-  if(introT)scenes.push({id:'intro',startMs:introT.startMs,endMs:introT.endMs,elements:[
-    {type:'logo',team:'vfb-ulm',asset:'assets/vfb-ulm-logo-mark.png',animation:'fade',delayMs:0},
-    {type:'title',text:socialVideoMatchdayLabel(matchday),animation:'rise',delayMs:200},
-    {type:'meta',text:`${formatDateDE(matchday.date)}${opp.arena?' · '+opp.arena:''}`,animation:'rise',delayMs:320},
-    {type:'meta',text:`${matchcenterSeasonLabel(seasonKey)} · Verbandsliga BW (KF)`,animation:'rise',delayMs:420},
-  ]});
-  const oppT=at('opponent');
-  if(oppT)scenes.push({id:'opponent',startMs:oppT.startMs,endMs:oppT.endMs,elements:socialVideoOpponentKanonElements(opp)});
-  const duelT=at('lastDuel');
-  if(duelT&&opp.lastDuel)scenes.push({id:'lastDuel',startMs:duelT.startMs,endMs:duelT.endMs,elements:[
-    {type:'result',text:`${opp.lastDuel.gf}:${opp.lastDuel.ga}`,sub:'Letztes Duell',animation:'count',delayMs:0},
-    {type:'meta',text:matchcenterSeasonLabel(seasonKey),animation:'fade',delayMs:200},
-  ]});
-  const watchT=at('playersToWatch');
-  if(watchT&&(opp.hasPlayersToWatch))scenes.push({id:'playersToWatch',startMs:watchT.startMs,endMs:watchT.endMs,elements:[
-    ...(opp.topUlm.stat!=='Keine Scorerdaten'?[{type:'playerCard',team:'ulm',name:opp.topUlm.name,stat:opp.topUlm.stat,note:socialVideoFitText(opp.topUlm.line,SOCIAL_VIDEO_FACT_MAX_CHARS,SOCIAL_VIDEO_FACT_HARD_MAX_CHARS).text,animation:'rise',delayMs:0}]:[]),
-    ...(opp.topOpponent.stat!=='Keine Scorerdaten'?[{type:'playerCard',team:'opponent',name:opp.topOpponent.name,stat:opp.topOpponent.stat,note:socialVideoFitText(opp.topOpponent.line,SOCIAL_VIDEO_FACT_MAX_CHARS,SOCIAL_VIDEO_FACT_HARD_MAX_CHARS).text,animation:'rise',delayMs:240}]:[]),
-  ]});
-  const outroT=at('outro');
-  if(outroT)scenes.push({id:'outro',startMs:outroT.startMs,endMs:outroT.endMs,elements:[
-    {type:'stat',label:'Anpfiff',text:opp.kickoff||'-',animation:'fade',delayMs:0},
-    {type:'meta',text:opp.arena||'',animation:'fade',delayMs:80},
-    {type:'logo',team:'vfb-ulm',asset:'assets/vfb-ulm-logo-mark.png',animation:'fade',delayMs:160},
-  ]});
-
-  return{
-    schemaVersion:1,format:'story-9x16',seasonKey,
-    matchday:{number:matchday.number,date:matchday.date,arena:opp.arena,kickoffs:[opp.kickoff].filter(Boolean)},
-    durationMs:SOCIAL_VIDEO_DURATION_MS,fps:SOCIAL_VIDEO_FPS,
-    scenes,
-    opponentAssetKey:opp.assetKey,opponentDisplay:opp.opponentDisplay,
-    dataSources:{standings:'app',form:'app',lastDuel:opp.hasLastDuel?'app':'absent',playersToWatch:opp.hasPlayersToWatch?'matchcenter':'absent',prognosis:'absent'},
-    warnings:opp.warnings,
-  };
-}
-
-/** Ein Feed-Post-Spec-Objekt für den ganzen Spieltag (beide Gegner, siehe Abschnitt 4.2). */
-function socialVideoBuildFeedSpec(seasonKey,matchday,ulmGames){
-  const warnings=[];
-  const opps=ulmGames.map(g=>socialVideoOpponentSceneData(seasonKey,matchday,g));
-  opps.forEach(o=>warnings.push(...o.warnings));
-  const [oppA,oppB]=opps;
-
-  const sceneDefs=SOCIAL_VIDEO_FEED_SCENE_DEFS.map(def=>({...def,present:def.id==='opponentA'?!!oppA:def.id==='opponentB'?!!oppB:true}));
-  const timing=socialVideoDistributeSceneDurations(sceneDefs);
-  const at=id=>timing.find(t=>t.id===id);
-
-  const scenes=[];
-  const introT=at('intro');
-  if(introT)scenes.push({id:'intro',startMs:introT.startMs,endMs:introT.endMs,elements:[
-    {type:'title',text:socialVideoMatchdayLabel(matchday),animation:'rise',delayMs:0},
-    {type:'meta',text:`${formatDateDE(matchday.date)}${oppA?.arena?' · '+oppA.arena:''}`,animation:'rise',delayMs:120},
-    ...(oppA?[{type:'logo',team:oppA.assetKey,asset:oppA.logoAsset,animation:'fade',delayMs:240}]:[]),
-    ...(oppB?[{type:'logo',team:oppB.assetKey,asset:oppB.logoAsset,animation:'fade',delayMs:320}]:[]),
-  ]});
-  const buildOppScene=(id,opp)=>{
-    const t=at(id);
-    if(!t||!opp)return null;
-    return{id,startMs:t.startMs,endMs:t.endMs,elements:socialVideoOpponentKanonElements(opp)};
-  };
-  const sceneA=buildOppScene('opponentA',oppA);
-  if(sceneA)scenes.push(sceneA);
-  const sceneB=buildOppScene('opponentB',oppB);
-  if(sceneB)scenes.push(sceneB);
-  const outroT=at('outro');
-  if(outroT)scenes.push({id:'outro',startMs:outroT.startMs,endMs:outroT.endMs,elements:[
-    ...(oppA?[{type:'stat',label:`vs ${oppA.opponentShort}`,text:oppA.kickoff||'-',animation:'fade',delayMs:0}]:[]),
-    ...(oppB?[{type:'stat',label:`vs ${oppB.opponentShort}`,text:oppB.kickoff||'-',animation:'fade',delayMs:100}]:[]),
-    {type:'meta',text:oppA?.arena||oppB?.arena||'',animation:'fade',delayMs:200},
-    {type:'logo',team:'vfb-ulm',asset:'assets/vfb-ulm-logo-mark.png',animation:'fade',delayMs:280},
-  ]});
-
-  return{
-    schemaVersion:1,format:'feed-4x5',seasonKey,
-    matchday:{number:matchday.number,date:matchday.date,arena:oppA?.arena||oppB?.arena||'',kickoffs:[oppA?.kickoff,oppB?.kickoff].filter(Boolean)},
-    durationMs:SOCIAL_VIDEO_DURATION_MS,fps:SOCIAL_VIDEO_FPS,
-    scenes,
-    dataSources:{standings:'app',form:'app',lastDuel:'absent',playersToWatch:'absent',prognosis:'absent'},
-    warnings,
-  };
-}
-
-/**
- * buildSocialVideoSpec({seasonKey, matchdayKey, format}) — Spezifikation Abschnitt 5. Reine Funktion, zeichnet
- * nicht, kein DOM-Zugriff. `matchdayKey` = matchday.key (z. B. "25/26#4") ODER die reine Spieltagsnummer.
- * format:'story-9x16' liefert ein ARRAY (ein Spec-Objekt je Ulm-Gegner dieses Spieltags, 1–2 Einträge, nach
- * Anpfiffzeit sortiert — Owner-Entscheidung, da die Funktion keinen Gegner-Parameter hat, ein Spieltag aber bis
- * zu zwei Gegner). format:'feed-4x5' liefert EIN Objekt (ein Post für beide Gegner).
- * @returns {object|object[]|{schemaVersion:1,format,seasonKey,matchday:null,scenes:[],warnings:[{code:'matchday-not-found'}]}}
- */
-function buildSocialVideoSpec({seasonKey,matchdayKey,format}={}){
-  const matchdays=getSeasonMatchdays(seasonKey).filter(m=>m.number!==null);
-  const matchday=matchdays.find(m=>m.key===matchdayKey)||matchdays.find(m=>String(m.number)===String(matchdayKey));
-  if(!matchday){
-    const empty={schemaVersion:1,format,seasonKey,matchday:null,durationMs:0,fps:SOCIAL_VIDEO_FPS,scenes:[],dataSources:{standings:'app',form:'app',lastDuel:'absent',playersToWatch:'absent',prognosis:'absent'},warnings:[{code:'matchday-not-found',matchdayKey}]};
-    return format==='story-9x16'?[empty]:empty;
-  }
-  const ulmGames=socialVideoUlmGamesForMatchday(seasonKey,matchday);
-  if(format==='feed-4x5')return socialVideoBuildFeedSpec(seasonKey,matchday,ulmGames);
-  if(!ulmGames.length){
-    const empty={schemaVersion:1,format:'story-9x16',seasonKey,matchday:{number:matchday.number,date:matchday.date,arena:'',kickoffs:[]},durationMs:0,fps:SOCIAL_VIDEO_FPS,scenes:[],dataSources:{standings:'app',form:'app',lastDuel:'absent',playersToWatch:'absent',prognosis:'absent'},warnings:[{code:'no-ulm-game-this-matchday'}]};
-    return[empty];
-  }
-  const warningsUnused=[];
-  return ulmGames.map(g=>socialVideoBuildStorySpec(seasonKey,matchday,g,warningsUnused));
-}
-
-// ═════════════════════════════════════════════════════════════════════════
-// S2 — Canvas2D-Renderer, SCHICHT A (docs/social-video-spezifikation.md Abschnitt 3.2/4): rein, kein
-// Canvas/DOM, keine Schriftmessung (Schicht B hat die Schriftmetriken; hier wird die Textgröße stattdessen
-// über eine Zeichen-pro-Pixel-Schätzung konservativ begrenzt, siehe socialVideoEstimateFontSize — dieselbe
-// Zeichenliste ist dadurch deterministisch testbar, ohne dass ein Browser läuft). socialVideoDrawList(spec,
-// timeMs) ist der einzige Einstiegspunkt. Schicht B (weiter unten, nach dem S1-Standbild-Abschnitt) führt die
-// Liste nur noch aus — kein Layout, keine Animation dort.
-// ═════════════════════════════════════════════════════════════════════════
-
-const SOCIAL_VIDEO_SAFE_TOP=120,SOCIAL_VIDEO_SAFE_BOTTOM=120,SOCIAL_VIDEO_SAFE_LEFT=64,SOCIAL_VIDEO_SAFE_RIGHT=64;
-const SOCIAL_VIDEO_WIDTH=1080;
-function socialVideoHeightForFormat(format){
-  return format==='feed-4x5'?1350:1920;
-}
-function socialVideoContentWidth(){
-  return SOCIAL_VIDEO_WIDTH-SOCIAL_VIDEO_SAFE_LEFT-SOCIAL_VIDEO_SAFE_RIGHT;
-}
-
-// Wiederverwendete Skyline-Silhouette aus der Cover-Animation (index.html, Klassen cv-skyline-*, ~Zeile 1563):
-// KEIN Raster-Asset, ein inline-SVG-Pfad — wortgleich als Konstante übernommen (Geometrie), per Path2D direkt
-// in Canvas2D zeichenbar. Die BEWEGUNG ist für Video eigens nach Abschnitt 4.4 berechnet
-// (socialVideoSkylineTransform): einmaliger Sweep im Intro statt des 4,8s-Loops der Cover-Seite, höchstens
-// 8px Parallaxe über die volle Dauer statt 1080px-Sweep — die Cover-Keyframes (cv-skyline-sweep/-pulse-
-// opacity) werden NICHT wiederverwendet, weil 4.4 für Video andere Werte vorschreibt.
-const SOCIAL_VIDEO_SKYLINE_PATH_D='M28 184 L86 118 L150 184 L150 134 C150 126 158 123 159 106 C160 124 171 127 172 134 L172 181 L204 151 L225 151 L238 89 L249 151 L316 151 L339 151 L341 95 L348 87 L358 32 L368 87 L376 96 L380 197 L394 197 L397 153 L406 153 L409 129 L412 153 L526 153 L526 192 L543 180 L546 118 L553 118 L560 50 L567 118 L577 118 L579 190 L588 176 L596 190 L610 173 L624 195 L662 195 L662 214 L812 214';
-const SOCIAL_VIDEO_SKYLINE_VIEWBOX={w:900,h:260};
-
-function socialVideoEaseOutCubic(t){
-  const c=Math.min(1,Math.max(0,t));
-  return 1-Math.pow(1-c,3);
-}
-
-/** Konservative Zeichenbreiten-Schätzung (keine echte Schriftmessung, siehe Kopfkommentar): wählt die größte
- * Schriftgröße bis baseSize, bei der text (Zeichenzahl * charFactor * Größe) noch in maxWidth passt. Syne
- * (fett, breit) bekommt einen größeren Faktor als DM Mono. Garantiert dadurch KONSTRUKTIV, nicht erst durch
- * Messung, dass kein Textelement die sicheren Ränder überschreitet — auch bei sehr langen Vereinsnamen. */
-function socialVideoEstimateFontSize(text,baseSize,maxWidth,charFactor,minSize=11){
-  const len=Math.max(1,String(text||'').length);
-  const fits=maxWidth/(len*charFactor);
-  return Math.max(minSize,Math.min(baseSize,fits));
-}
-
-/** Findet die aktive Szene bei timeMs. Szenen sind lückenlos [startMs,endMs); am Dauerende bzw. vor
- * Szenenbeginn wird auf die letzte/erste Szene geklemmt. null nur, wenn spec.scenes leer ist (z. B. kein
- * Ulm-Spiel an diesem Spieltag gefunden — Spezifikation 5: "keine leeren Elemente", keine leere Zeichenliste
- * nötig, der Aufrufer zeigt in diesem Fall ohnehin nur den Hintergrund). */
-function socialVideoSceneAt(spec,timeMs){
-  const scenes=spec?.scenes||[];
-  if(!scenes.length)return null;
-  const t=Math.min(Math.max(0,timeMs),spec.durationMs??15000);
-  let scene=scenes.find(s=>t>=s.startMs&&t<s.endMs);
-  if(!scene)scene=t>=scenes[scenes.length-1].endMs?scenes[scenes.length-1]:scenes[0];
-  return{scene,sceneMs:t-scene.startMs,sceneIndex:scenes.indexOf(scene)};
-}
-
-/** Animationsfortschritt (Spezifikation 4.3): fade/rise 300ms, count (Hochzählen) 600ms easeOutCubic, stagger
- * wie fade (Item-Abstand wird vom Aufrufer über zusätzliche delayMs pro Pille gebildet). Vor delayMs:
- * unsichtbar. */
-function socialVideoElementProgress(animation,delayMs,sceneMs){
-  const elapsed=sceneMs-(delayMs||0);
-  const dur=animation==='count'?600:300;
-  if(elapsed<=0)return{opacity:0,raw:0,eased:0};
-  const raw=Math.min(1,elapsed/dur);
-  return{opacity:raw,raw,eased:socialVideoEaseOutCubic(raw)};
-}
-const SOCIAL_VIDEO_RISE_PX=24;
-
-/** Reine Phasenfunktion der Fahne (Spezifikation 4.4): Periode ca. 2,5s, Phase AUSSCHLIESSLICH von timeMs
- * abhängig (kein Zufall, keine Physik, kein Reset pro Szene — zwei Aufrufe mit demselben timeMs liefern
- * denselben Wert, siehe Test). */
-function socialVideoFlagPhase(timeMs){
-  return(timeMs/2500)*2*Math.PI;
-}
-/** Vertikaler Höhenversatz einer Fahnen-Spalte bei x (0..flagWidth), höchstens 1,5% von flagHeight
- * (Spezifikation 4.4), Wellenlänge ca. halbe Fahnenbreite. */
-function socialVideoFlagColumnOffset(x,flagWidth,flagHeight,timeMs){
-  const amplitude=flagHeight*0.015;
-  const wavelength=Math.max(1,flagWidth*0.5);
-  return Math.sin((x/wavelength)*2*Math.PI+socialVideoFlagPhase(timeMs))*amplitude;
-}
-
-/** Langsame Parallaxe (höchstens 8px über die volle Dauer) plus Fortschritt des einmaligen Intro-Sweeps
- * (0..1, nur während der ersten introMs). */
-function socialVideoSkylineTransform(timeMs,durationMs,introMs){
-  const parallaxX=durationMs>0?(Math.min(timeMs,durationMs)/durationMs)*8:0;
-  const sweepProgress=introMs>0?Math.min(1,Math.max(0,timeMs/introMs)):1;
-  return{parallaxX,sweepProgress};
-}
-
-/** Deterministische Spatzen-Positionen (höchstens 12, Spezifikation 4.4: "langsam, unregelmäßig verteilt,
- * Deckkraft unter 0,5"). Kein Math.random() (Determinismus-Pflicht, Abschnitt 5/8) — Startposition und
- * Geschwindigkeit je Spatz kommen aus einer festen, unregelmäßig wirkenden Zahlenfolge (Indexabhängig). */
-const SOCIAL_VIDEO_SPARROW_COUNT=12;
-function socialVideoSparrowPositions(timeMs,width,height){
-  const out=[];
-  for(let i=0;i<SOCIAL_VIDEO_SPARROW_COUNT;i++){
-    const seed=(i*0.6180339887)%1; // golden-ratio-Streuung statt Zufall: wirkt unregelmäßig, ist aber fix
-    const speed=6+((i*37)%17); // px/s, 6..22, je Spatz konstant
-    const baseY=height*0.58+((i*53)%180);
-    const x=((seed*width)+(timeMs/1000)*speed)%(width+80)-40;
-    const y=baseY+Math.sin((timeMs/1000)*0.4+i)*10;
-    out.push({x,y,opacity:0.14+((i*7)%10)/40});
-  }
-  return out;
-}
-
-function socialVideoPushText(cmds,{text,x,y,baseSize,maxWidth,font='syne',weight=900,color='#fff',align='center',letterSpacing=0,opacity=1,charFactor,tabular,formColor,group}){
-  const t=String(text||'');
-  if(!t)return;
-  const factor=charFactor??(font==='mono'?0.6:0.66);
-  const size=socialVideoEstimateFontSize(t,baseSize,maxWidth,factor);
-  cmds.push({type:'text',text:t,x,y,size,maxWidth,font,weight,color,align,letterSpacing,opacity,tabular,formColor,group});
-}
-
-/** Logokreis (Spezifikation Abschnitt 2: Goldrand, roter Verlauf, Initialen-Fallback). Schicht A kennt den
- * Ladezustand der Bilddatei nicht (rein, kein Netzwerk/Dateisystem) — deshalb werden IMMER Ring+Initialen UND
- * ein image-Befehl erzeugt; Schicht B zeichnet den image-Befehl nur, wenn das Asset tatsächlich geladen
- * werden konnte, sonst bleiben die darunterliegenden Initialen sichtbar (derselbe Fallback-Effekt wie das
- * bestehende <img onerror> in rMatchcenterStoryLogo). */
-function socialVideoPushLogo(cmds,{cx,cy,r,assetKey,initials,isUlm,opacity}){
-  const ringColor='#E8A020';
-  cmds.push({type:'circle',x:cx,y:cy,r,fill:{type:'radial',cx:0.5,cy:0.42,stops:[[0,'#fdfaf2'],[0.58,'#f8f2e6'],[1,'#e8d8b8']]},stroke:ringColor,strokeWidth:3,opacity});
-  socialVideoPushText(cmds,{text:initials,x:cx,y:cy,baseSize:r*0.62,maxWidth:r*1.5,font:'syne',color:'#1f0b0f',align:'center',opacity});
-  cmds.push({type:'image',assetKey,x:cx-r*0.74,y:cy-r*0.74,w:r*1.48,h:r*1.48,clip:'circle',cx,cy,cr:r,opacity});
-}
-
-const SOCIAL_VIDEO_PILL_COLORS={
-  S:{from:'#F09020',to:'#CC1A27',text:'#fff'},
-  U:{from:'#6b7280',to:'#2f3542',text:'#fde68a'},
-  N:{from:'#5e111b',to:'#120508',text:'#f8b4b4'},
-  '-':{from:'rgba(148,163,184,.14)',to:'rgba(148,163,184,.14)',text:'#94a3b8'},
-};
-/** Formpillen-Reihe (Spezifikation 4.1: "Formpillen erscheinen nacheinander im Abstand von 80ms"). */
-function socialVideoPushForm(cmds,{letters,cx,topY,delayMs,sceneMs,size=34}){
-  const pills=(letters&&letters.length?letters:['-']).slice(-5);
-  const gap=10;
-  const totalW=pills.length*size+(pills.length-1)*gap;
-  let x=cx-totalW/2+size/2;
-  pills.forEach((letter,i)=>{
-    const p=socialVideoElementProgress('stagger',delayMs+i*80,sceneMs);
-    if(p.opacity<=0)return;
-    const colors=SOCIAL_VIDEO_PILL_COLORS[letter]||SOCIAL_VIDEO_PILL_COLORS['-'];
-    const y=topY-(1-p.eased)*SOCIAL_VIDEO_RISE_PX;
-    cmds.push({type:'circle',x,y,r:size/2,fill:{type:'linear',x0:0,y0:-1,x1:0,y1:1,stops:[[0,colors.from],[1,colors.to]]},opacity:p.opacity});
-    socialVideoPushText(cmds,{text:letter,x,y,baseSize:size*0.5,maxWidth:size*0.9,font:'mono',color:colors.text,align:'center',opacity:p.opacity});
-    x+=size+gap;
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Gestaltungskanon 2a (docs/social-video-spezifikation.md Abschnitt 2a) — "edel" statt Dashboard. Gilt ab
-// hier für die Gegner-Szene (socialVideoLayoutOpponentKanon) sowie szenenübergreifend für Fortschrittsbalken
-// und Kopfzeile (socialVideoPushProgressBar/-HeaderBar, aus socialVideoDrawList heraus aufgerufen). Die
-// übrigen Szenen (intro/lastDuel/playersToWatch/outro) bleiben bewusst auf dem bisherigen Stand — ihre
-// Gestaltung ist noch nicht durch eine eigene Entwurfsrunde freigegeben (siehe Abschlussbericht).
-// ─────────────────────────────────────────────────────────────────────────
-const SOCIAL_VIDEO_INK='#EDE7DF';
-const SOCIAL_VIDEO_MUTED='#8A8A90';
-const SOCIAL_VIDEO_ACCENT='#CC1A27';
-const SOCIAL_VIDEO_HAIRLINE_GOLD='rgba(216,168,74,.22)';
-const SOCIAL_VIDEO_HAIRLINE_SOFT='rgba(255,255,255,.12)';
-// Formbilanz-Ausnahme vom Farbbudget (Abschnitt 2a, S2c-Auftrag B2): gedämpfte, entsättigte Töne, zählen
-// NICHT ins Akzentbudget, werden aber in der Prüfung getrennt ausgewiesen (siehe formColor-Markierung unten).
-const SOCIAL_VIDEO_FORM_WIN='#8FB88F';
-const SOCIAL_VIDEO_FORM_LOSS='#C97B7B';
-const SOCIAL_VIDEO_FORM_DRAW=SOCIAL_VIDEO_MUTED;
-
-/** Dünne Trennlinie statt Container (Abschnitt 2a: "Trennung durch Haarlinien... statt durch Kästen"). Nie
- * gefüllt mit einer Akzentfarbe aus dieser Funktion heraus — reine Trennlinie, kein Container-Rahmen. */
-function socialVideoPushHairline(cmds,{x,y,w,color=SOCIAL_VIDEO_HAIRLINE_GOLD,group}){
-  cmds.push({type:'rect',x,y,w,h:1,fill:color,opacity:1,group});
-}
-
-/** Fortschrittsbalken (Abschnitt 2a/4.1: "Szenen-Fortschrittsbalken am oberen Rand wie bei Instagram-
- * Stories"). Dünne Haarlinien-Segmente statt gefüllter Pillen; die EINE Akzentfarbe markiert erledigte/
- * aktive Segmente (accent:true, siehe Prüfung "Akzentfläche höchstens 5%" — die Fläche ist bei 1080×2px je
- * Segment verschwindend klein). */
-function socialVideoPushProgressBar(totalScenes,activeIndex){
-  const cmds=[];
-  if(!totalScenes)return cmds;
-  const x0=SOCIAL_VIDEO_SAFE_LEFT,x1=SOCIAL_VIDEO_WIDTH-SOCIAL_VIDEO_SAFE_RIGHT;
-  const gap=8,w=(x1-x0-gap*(totalScenes-1))/totalScenes,y=SOCIAL_VIDEO_SAFE_TOP,h=2;
-  for(let i=0;i<totalScenes;i++){
-    const x=x0+i*(w+gap);
-    const done=activeIndex>=0&&i<=activeIndex;
-    cmds.push({type:'rect',x,y,w,h,fill:done?SOCIAL_VIDEO_ACCENT:SOCIAL_VIDEO_HAIRLINE_SOFT,opacity:1,accent:done,group:'progress'});
-  }
-  return cmds;
-}
-
-/** Text der dauerhaften Kopfzeile (Abschnitt 2a/4.1: "VfB Ulm gegen Gegner, Spieltag, Datum, Anpfiffzeit,
- * Halle" — JEDE Szene). Reine Funktion aus den bereits vorhandenen Spec-Feldern, keine Neuberechnung. Beim
- * Feed-Format (zwei Gegner, kein einzelnes spec.opponentDisplay) kommt der Gegnername aus dem matchupPair-
- * Element der gerade aktiven Szene, falls vorhanden — sonst bleibt der generische Platzhalter "Gegner". */
-function socialVideoHeaderText(spec,activeScene){
-  const md=spec?.matchday||{};
-  const matchupEl=(activeScene?.elements||[]).find(e=>e.type==='matchupPair');
-  const oppLabel=spec?.opponentDisplay||matchupEl?.opp?.name||'Gegner';
-  const parts=[md.number!=null?`Spieltag ${md.number}`:'',md.date?formatDateDE(md.date):'',(md.kickoffs||[])[0]?`${md.kickoffs[0]} Uhr`:'',md.arena||''].filter(Boolean);
-  return`VfB Ulm gegen ${oppLabel} · ${parts.join(' · ')}`;
-}
-function socialVideoPushHeaderBar(spec,activeScene){
-  const cmds=[];
-  socialVideoPushText(cmds,{text:socialVideoHeaderText(spec,activeScene),x:SOCIAL_VIDEO_WIDTH/2,y:SOCIAL_VIDEO_SAFE_TOP+42,baseSize:20,maxWidth:socialVideoContentWidth(),font:'mono',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:1,charFactor:0.6});
-  cmds.forEach(c=>{c.group='header';});
-  return cmds;
-}
-
-/** Spaltenmittelpunkte des 12-Spalten-Rasters (5+2+5, Abschnitt 2a/Umfangspunkt A) — rein geometrisch,
- * unabhängig von der Bildhöhe (Breite ist in beiden Formaten 1080). */
-function socialVideoMatchupColumns(){
-  const contentW=socialVideoContentWidth();
-  const gutter=16,cols=12;
-  const unit=(contentW-11*gutter)/cols;
-  const colW=5*unit+4*gutter;
-  const leftX0=SOCIAL_VIDEO_SAFE_LEFT;
-  const leftCx=leftX0+colW/2;
-  const rightX0=leftX0+7*(unit+gutter);
-  const rightCx=rightX0+colW/2;
-  return{leftCx,rightCx,dividerX:SOCIAL_VIDEO_WIDTH/2,colW};
-}
-
-/** Formbilanz als Reihe kleiner Zeichen auf einer Haarlinie (Abschnitt 2a-Ausnahme, S2c-Auftrag B2) — KEINE
- * gefüllten Kreise mehr. Nur die Zeichen selbst sind farbig (S/U/N je gedämpftes Grün/Grau/Rot), die Linie
- * bleibt die normale Gold-Haarlinie. Reihenfolge chronologisch, jüngstes Spiel rechts (letters kommt bereits
- * in dieser Reihenfolge aus matchcenterStoryFormLetters/socialVideoFormAsOf, siehe dort). */
-const SOCIAL_VIDEO_FORM_COLOR={S:SOCIAL_VIDEO_FORM_WIN,N:SOCIAL_VIDEO_FORM_LOSS,U:SOCIAL_VIDEO_FORM_DRAW};
-function socialVideoPushFormHairline(cmds,{letters,cx,y,group}){
-  const marks=(letters&&letters.length?letters:['-']).slice(-5);
-  const gap=16,size=22;
-  const totalW=marks.length*size+(marks.length-1)*gap;
-  socialVideoPushHairline(cmds,{x:cx-totalW/2,y:y-10,w:totalW,group});
-  let x=cx-totalW/2+size/2;
-  for(const letter of marks){
-    const color=SOCIAL_VIDEO_FORM_COLOR[letter]||SOCIAL_VIDEO_MUTED;
-    socialVideoPushText(cmds,{text:letter,x,y,baseSize:size,maxWidth:size,font:'mono',color,align:'center',opacity:1,formColor:true,group});
-    x+=size+gap;
-  }
-}
-
-/** Matchup-Gruppe: beide Teams nebeneinander, Logos ohne Ring/Fläche (Gegner leicht entsättigt — Markierung
- * desaturate:true, Schicht B wendet den Entsättigungs-/Aufhellungs-Filter an), Tabellenplatz in
- * Tabellenziffern (tabular:true). */
-function socialVideoLayoutMatchupGroup(cmds,el,cy,sceneMs,k){
-  const cols=socialVideoMatchupColumns();
-  const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
-  if(p.opacity<=0)return;
-  const logoSize=184*k,logoTop=cy-220*k;
-  const sides=[{data:el.ulm,cx:cols.leftCx,isUlm:true},{data:el.opp,cx:cols.rightCx,isUlm:false}];
-  for(const side of sides){
-    const d=side.data;
-    const initials=matchcenterStoryInitials(side.isUlm?'VfB Ulm':d.name);
-    // Reihenfolge wichtig: Initialen ZUERST, Bild-Befehl DANACH — lädt das Bild, deckt es die Initialen ab;
-    // schlägt es fehl (Schicht B zeichnet dann keinen image-Befehl, siehe socialVideoDrawCommand), bleiben
-    // die Initialen sichtbar (derselbe Fallback-Mechanismus wie im bisherigen socialVideoPushLogo).
-    socialVideoPushText(cmds,{text:initials,x:side.cx,y:logoTop+logoSize/2,baseSize:logoSize*0.3,maxWidth:logoSize*0.7,font:'syne',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,group:'matchup'});
-    if(side.isUlm){
-      cmds.push({type:'image',assetKey:'assets/vfb-ulm-logo-mark.png',x:side.cx-logoSize/2,y:logoTop,w:logoSize,h:logoSize,opacity:p.opacity,group:'matchup'});
-    }else{
-      cmds.push({type:'image',assetKey:d.asset,x:side.cx-logoSize/2,y:logoTop,w:logoSize,h:logoSize,opacity:p.opacity,desaturate:true,group:'matchup'});
-    }
-    socialVideoPushText(cmds,{text:d.name,x:side.cx,y:logoTop+logoSize+56*k,baseSize:38*k,maxWidth:cols.colW,font:'syne',color:SOCIAL_VIDEO_INK,align:'center',opacity:p.opacity,group:'matchup'});
-    if(d.rank!==null&&d.rank!==undefined){
-      const countP=el.animation==='count'?p.eased:1;
-      const rankVal=Math.max(1,Math.round(d.rank*countP));
-      socialVideoPushText(cmds,{text:`#${rankVal}`,x:side.cx,y:logoTop+logoSize+180*k,baseSize:120*k,maxWidth:cols.colW,font:'mono',color:SOCIAL_VIDEO_INK,align:'center',opacity:p.opacity,tabular:true,group:'matchup'});
-      socialVideoPushText(cmds,{text:'Tabelle',x:side.cx,y:logoTop+logoSize+236*k,baseSize:14*k,maxWidth:cols.colW,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,letterSpacing:1.5,group:'matchup'});
-    }
-    socialVideoPushFormHairline(cmds,{letters:d.formLetters,cx:side.cx,y:logoTop+logoSize+290*k,group:'matchup'});
-    socialVideoPushText(cmds,{text:d.formRecord||'',x:side.cx,y:logoTop+logoSize+320*k,baseSize:16*k,maxWidth:cols.colW,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,group:'matchup'});
-  }
-  socialVideoPushText(cmds,{text:'VS',x:cols.dividerX,y:cy-142*k,baseSize:18*k,maxWidth:80,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'center',opacity:p.opacity,letterSpacing:2,group:'matchup'});
-  socialVideoPushHairline(cmds,{x:cols.dividerX,y:logoTop+logoSize+20*k,w:1,color:SOCIAL_VIDEO_HAIRLINE_SOFT,group:'matchup'});
-}
-
-/** Fakt-Gruppe = letztes direktes Duell (S2c-Auftrag B1): Ergebnis groß (Tabellenziffern), darunter klein
- * Datum/Wettbewerb/Saison, bei Bedarf der damalige Teamname. Linksbündige Satzkante (Abschnitt 2a), Haarlinie
- * statt Container. */
-function socialVideoLayoutDuelFactGroup(cmds,el,topY,sceneMs,k){
-  const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
-  if(p.opacity<=0)return;
-  const left=SOCIAL_VIDEO_SAFE_LEFT,w=socialVideoContentWidth();
-  socialVideoPushHairline(cmds,{x:left,y:topY,w,group:'fact'});
-  socialVideoPushText(cmds,{text:'Letztes Duell',x:left,y:topY+34*k,baseSize:14*k,maxWidth:w,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,letterSpacing:1.5,group:'fact'});
-  socialVideoPushText(cmds,{text:el.result,x:left,y:topY+100*k,baseSize:72*k,maxWidth:w*0.4,font:'mono',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,tabular:true,group:'fact'});
-  const metaText=el.asLabel?`${el.metaLine} · als ${el.asLabel}`:el.metaLine;
-  socialVideoPushText(cmds,{text:metaText,x:left,y:topY+150*k,baseSize:20*k,maxWidth:w,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,group:'fact'});
-}
-
-/** Topscorer-Gruppe (S2c-Auftrag B): Trikotnummer als große Ziffer NEBEN dem Namen, getrennt durch eine
- * Haarlinie — kein Kreis (Abschnitt 2a). Vorname klein, Nachname groß; drei Kennzahlen in Tabellenziffern;
- * eine Einordnungszeile. */
-function socialVideoLayoutTopscorerGroup(cmds,el,topY,sceneMs,k){
-  const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
-  if(p.opacity<=0)return;
-  const left=SOCIAL_VIDEO_SAFE_LEFT,w=socialVideoContentWidth();
-  socialVideoPushHairline(cmds,{x:left,y:topY,w,group:'topscorer'});
-  socialVideoPushText(cmds,{text:`Topscorer ${el.teamLabel}`,x:left,y:topY+34*k,baseSize:14*k,maxWidth:w,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,letterSpacing:1.5,group:'topscorer'});
-  const jerseyW=170*k;
-  socialVideoPushText(cmds,{text:el.jersey,x:left,y:topY+150*k,baseSize:104*k,maxWidth:jerseyW-24,font:'mono',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,tabular:true,group:'topscorer'});
-  socialVideoPushHairline(cmds,{x:left+jerseyW,y:topY+40*k,w:1,color:SOCIAL_VIDEO_HAIRLINE_GOLD,group:'topscorer'});
-  const nameX=left+jerseyW+30*k;
-  socialVideoPushText(cmds,{text:el.first,x:nameX,y:topY+100*k,baseSize:22*k,maxWidth:w-jerseyW-30*k,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,group:'topscorer'});
-  socialVideoPushText(cmds,{text:el.last,x:nameX,y:topY+152*k,baseSize:54*k,maxWidth:w-jerseyW-30*k,font:'syne',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,group:'topscorer'});
-  socialVideoPushHairline(cmds,{x:left,y:topY+200*k,w,group:'topscorer'});
-  const stats=[['Tore',el.goals],['Assists',el.assists],['Punkte',el.points]];
-  let sx=left;
-  const statW=180*k;
-  for(const[label,value]of stats){
-    socialVideoPushText(cmds,{text:String(value),x:sx,y:topY+266*k,baseSize:46*k,maxWidth:statW-20,font:'mono',color:SOCIAL_VIDEO_INK,align:'left',opacity:p.opacity,tabular:true,group:'topscorer'});
-    socialVideoPushText(cmds,{text:label,x:sx,y:topY+292*k,baseSize:13*k,maxWidth:statW-20,font:'mono',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,letterSpacing:1,group:'topscorer'});
-    sx+=statW;
-  }
-  if(el.insight)socialVideoPushText(cmds,{text:el.insight,x:left,y:topY+340*k,baseSize:22*k,maxWidth:w,font:'inter',color:SOCIAL_VIDEO_MUTED,align:'left',opacity:p.opacity,group:'topscorer'});
-}
-
-/** Layout der Gegner-Szene nach Gestaltungskanon 2a (S2c-Auftrag A): Matchup (zentriert, einzige zentrierte
- * Gruppe neben Kopfzeile/Abschluss), Fakt und Topscorer (linke Satzkante). Lücken-Verteilung wie
- * socialVideoLayoutScene, aber mit eigenen, großzügigeren Schlitzhöhen passend zur neuen Dichte. k skaliert
- * alle festen Pixelwerte der drei Gruppen-Layoutfunktionen auf die tatsächliche Bildhöhe (Story 1920px, k=1;
- * Feed 1350px, k≈0,70) — ohne k liefen Topscorer-Inhalte beim schmaleren Feed-Format unten aus dem sicheren
- * Rand heraus (siehe Build-Bericht). */
-function socialVideoLayoutOpponentKanon(spec,scene,sceneMs,height){
-  const cmds=[];
-  const k=height/1920;
-  const topY=SOCIAL_VIDEO_SAFE_TOP+60*k; // Platz für Fortschrittsbalken+Kopfzeile, die socialVideoDrawList davor zeichnet
-  const bottomY=height-SOCIAL_VIDEO_SAFE_BOTTOM;
-  const els=scene.elements||[];
-  const slotH={matchupPair:720*k,duelFact:180*k,topscorerCard:400*k};
-  const totalH=els.reduce((sum,el)=>sum+(slotH[el.type]||160*k),0);
-  const available=bottomY-topY;
-  const gap=Math.min(90*k,Math.max(24*k,(available-totalH)/(els.length+1)));
-  let y=topY+gap;
-  for(const el of els){
-    const slot=slotH[el.type]||160*k;
-    if(el.type==='matchupPair')socialVideoLayoutMatchupGroup(cmds,el,y+slot/2,sceneMs,k);
-    else if(el.type==='duelFact')socialVideoLayoutDuelFactGroup(cmds,el,y,sceneMs,k);
-    else if(el.type==='topscorerCard')socialVideoLayoutTopscorerGroup(cmds,el,y,sceneMs,k);
-    y+=slot+gap;
-  }
-  return cmds;
-}
-
-/** Ein-Szeilen-Elemente (title/meta/stat/result) nacheinander senkrecht gestapelt, zentriert im verfügbaren
- * Bereich der Szene — reicht für die hier vorkommenden Elementzahlen (höchstens 4-5 je Szene) und hält sich
- * an die sicheren Ränder, da jede Textgröße bereits auf maxWidth=Inhaltsbreite begrenzt ist. */
-function socialVideoLayoutScene(spec,scene,sceneMs,height){
-  const cmds=[];
-  const cx=SOCIAL_VIDEO_WIDTH/2;
-  const contentW=socialVideoContentWidth();
-  const topY=SOCIAL_VIDEO_SAFE_TOP;
-  const bottomY=height-SOCIAL_VIDEO_SAFE_BOTTOM;
-  const els=scene.elements||[];
-  // Grobe Schlitzhöhe je Elementtyp, nur für die vertikale Verteilung (keine Schriftmessung).
-  const slotH={logo:220,title:110,meta:56,stat:84,form:76,result:170,playerCard:210};
-  const totalH=els.reduce((sum,el)=>sum+(slotH[el.type]||80),0);
-  const available=bottomY-topY;
-  // Lücken statt reiner Zentrierung (sonst klemmen wenige Elemente mittig mit riesigem Leerraum oben/unten
-  // zusammen, siehe Build-Bericht): verteilt den übrigen Platz als Abstand VOR/ZWISCHEN den Elementen,
-  // gedeckelt auf 100px je Lücke, damit auch sehr kurze Szenen (z. B. nur Logo) nicht grotesk auseinanderreißen.
-  const gap=Math.min(100,Math.max(24,(available-totalH)/(els.length+1)));
-  let y=topY+gap;
-  for(const el of els){
-    const p=socialVideoElementProgress(el.animation,el.delayMs,sceneMs);
-    const riseOffset=(el.animation==='rise'||el.animation==='stagger')?(1-p.eased)*SOCIAL_VIDEO_RISE_PX:0;
-    const slot=slotH[el.type]||80;
-    const centerY=y+slot/2-riseOffset;
-    if(p.opacity>0)switch(el.type){
-      case'logo':{
-        socialVideoPushLogo(cmds,{cx,cy:centerY,r:90,assetKey:el.asset,initials:matchcenterStoryInitials(el.team==='vfb-ulm'?'VfB Ulm':el.team),isUlm:el.team==='vfb-ulm',opacity:p.opacity});
-        break;
-      }
-      case'title':{
-        socialVideoPushText(cmds,{text:el.text,x:cx,y:centerY,baseSize:el.textStage==='tight'?42:56,maxWidth:contentW,font:'syne',color:'#fff',align:'center',opacity:p.opacity});
-        break;
-      }
-      case'meta':{
-        socialVideoPushText(cmds,{text:el.text,x:cx,y:centerY,baseSize:22,maxWidth:contentW,font:'mono',color:'rgba(255,255,255,.7)',align:'center',opacity:p.opacity,letterSpacing:1});
-        break;
-      }
-      case'stat':{
-        socialVideoPushText(cmds,{text:el.label,x:cx,y:centerY-20,baseSize:18,maxWidth:contentW,font:'mono',color:'#ffb1b8',align:'center',opacity:p.opacity});
-        const countP=el.animation==='count'?p.eased:1;
-        const displayText=/^#\d+$/.test(el.text)?`#${Math.max(1,Math.round(parseInt(el.text.slice(1),10)*countP))}`:el.text;
-        socialVideoPushText(cmds,{text:displayText,x:cx,y:centerY+22,baseSize:44,maxWidth:contentW,font:'syne',color:'#fff',align:'center',opacity:p.opacity});
-        break;
-      }
-      case'form':{
-        socialVideoPushText(cmds,{text:el.label,x:cx,y:centerY-24,baseSize:16,maxWidth:contentW,font:'mono',color:'#ffb1b8',align:'center',opacity:p.opacity});
-        socialVideoPushForm(cmds,{letters:el.pills,cx,topY:centerY+16,delayMs:el.delayMs,sceneMs,size:34});
-        break;
-      }
-      case'result':{
-        socialVideoPushText(cmds,{text:el.sub,x:cx,y:centerY-50,baseSize:20,maxWidth:contentW,font:'mono',color:'#ffb1b8',align:'center',opacity:p.opacity});
-        socialVideoPushText(cmds,{text:el.text,x:cx,y:centerY+30,baseSize:96,maxWidth:contentW,font:'syne',color:'#fff',align:'center',opacity:p.opacity*(el.animation==='count'?Math.max(0.01,p.eased):1)});
-        break;
-      }
-      case'playerCard':{
-        const cardY=centerY;
-        cmds.push({type:'rect',x:SOCIAL_VIDEO_SAFE_LEFT,y:cardY-85,w:contentW,h:170,rx:22,fill:{type:'linear',x0:0,y0:0,x1:1,y1:1,stops:[[0,'rgba(204,26,39,.30)'],[1,'rgba(14,3,6,.85)']]},opacity:p.opacity});
-        socialVideoPushText(cmds,{text:el.team==='ulm'?'Ulm-Fokus':'Gegner-Fokus',x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY-50,baseSize:16,maxWidth:contentW-56,font:'mono',color:'#fff0bd',align:'left',opacity:p.opacity});
-        socialVideoPushText(cmds,{text:el.name,x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY-14,baseSize:34,maxWidth:contentW-56,font:'syne',color:'#fff',align:'left',opacity:p.opacity});
-        socialVideoPushText(cmds,{text:el.stat,x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY+22,baseSize:22,maxWidth:contentW-56,font:'mono',color:'#ffd38a',align:'left',opacity:p.opacity});
-        socialVideoPushText(cmds,{text:el.note,x:SOCIAL_VIDEO_SAFE_LEFT+28,y:cardY+54,baseSize:18,maxWidth:contentW-56,font:'inter',color:'rgba(255,255,255,.7)',align:'left',opacity:p.opacity});
-        break;
-      }
-    }
-    y+=slot+gap;
-  }
-  return cmds;
-}
-
-/** Hintergrund + Skyline + Spatzen + (nur Intro/Abschluss) Fahne — Abschnitt 4.4: "zählen nicht in die Grenze
- * von zwei animierten Elementen pro Szene", Deckkraft der Hintergrundebene höchstens 0,35 hinter Textbereichen. */
-function socialVideoBackgroundLayer(spec,timeMs,height,sceneId){
-  const cmds=[];
-  // cacheable:true (Rechenbudget Abschnitt 4.4): Hintergrund, Glow und die Skyline-BASIS ändern sich zwischen
-  // Frames nur durch die kleine Parallaxe (x) — Schicht B rendert sie einmal in ein Offscreen-Canvas und
-  // kopiert/verschiebt sie danach nur noch (billige drawImage-Operation statt erneutem Pfad-/Verlaufsaufbau).
-  // Der Sweep-Highlight-Pfad und alles danach (Spatzen, Fahne) ist NICHT cacheable (ändert sich jeden Frame).
-  cmds.push({type:'background',x:0,y:0,w:SOCIAL_VIDEO_WIDTH,h:height,fill:'#0E0306',cacheable:true});
-  cmds.push({type:'circle',x:SOCIAL_VIDEO_WIDTH*0.72,y:height*0.06,r:SOCIAL_VIDEO_WIDTH*0.5,fill:{type:'radial',cx:0.5,cy:0.5,stops:[[0,'rgba(204,26,39,.5)'],[1,'rgba(204,26,39,0)']]},opacity:1,cacheable:true});
-  const introMs=(spec.scenes?.[0]?.endMs)||2400;
-  const skyline=socialVideoSkylineTransform(timeMs,spec.durationMs||15000,introMs);
-  const scale=SOCIAL_VIDEO_WIDTH/SOCIAL_VIDEO_SKYLINE_VIEWBOX.w;
-  const skylineY=height-SOCIAL_VIDEO_SKYLINE_VIEWBOX.h*scale*0.62;
-  cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'rgba(148,163,184,.3)',strokeWidth:2.4/scale,opacity:0.9,cacheable:true,cacheOffsetX:skyline.parallaxX});
-  if(skyline.sweepProgress<1){
-    cmds.push({type:'path',d:SOCIAL_VIDEO_SKYLINE_PATH_D,x:skyline.parallaxX,y:skylineY,scale,fill:null,stroke:'#ff304d',strokeWidth:3/scale,opacity:1,clipSweepFrac:skyline.sweepProgress});
-  }
-  for(const s of socialVideoSparrowPositions(timeMs,SOCIAL_VIDEO_WIDTH,height)){
-    cmds.push({type:'image',assetKey:'assets/spatz.svg',x:s.x,y:s.y,w:24,h:20,opacity:Math.min(0.48,s.opacity)});
-  }
-  if(sceneId==='intro'||sceneId==='outro'){
-    const flagW=360,flagH=240,flagX=SOCIAL_VIDEO_WIDTH/2-flagW/2,flagY=height*0.5-flagH/2;
-    const stripW=4;
-    for(let sx=0;sx<flagW;sx+=stripW){
-      const dy=socialVideoFlagColumnOffset(sx,flagW,flagH,timeMs);
-      const crestFactor=Math.cos((sx/(flagW*0.5))*2*Math.PI+socialVideoFlagPhase(timeMs));
-      const squeeze=1-Math.max(0,crestFactor)*0.04;
-      const brightness=1+crestFactor*0.12;
-      // srcRect als Anteile (0..1) der tatsächlichen Quellbild-Größe, NICHT als Pixel: Schicht A kennt die
-      // natürlichen Maße von assets/vfb-ulm-logo-mark.png nicht (rein, lädt kein Bild) — Schicht B rechnet
-      // beim Zeichnen mit img.naturalWidth/-Height um (siehe socialVideoDrawCommand, Fall 'image').
-      cmds.push({type:'image',assetKey:'assets/vfb-ulm-logo-mark.png',srcRect:{xFrac:sx/flagW,yFrac:0,wFrac:stripW/flagW,hFrac:1},x:flagX+sx*squeeze,y:flagY+dy,w:stripW*squeeze,h:flagH,opacity:1,brightness});
-    }
-    cmds.push({type:'rect',x:flagX-6,y:flagY-20,w:6,h:flagH+40,fill:'#8a7a52',opacity:1});
-    cmds.push({type:'rect',x:flagX,y:flagY+flagH+4,w:flagW,h:18,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,0)']]},opacity:0.6});
-  }
-  return cmds;
-}
-
-/**
- * socialVideoDrawList(spec, timeMs) — SCHICHT A, Hauptfunktion (Spezifikation Abschnitt 3.2). Reine Funktion:
- * dieselbe spec + dasselbe timeMs liefern immer dieselbe (deep-equal) Liste. Zeichnet nichts selbst.
- * @param {object} spec Ergebnis von buildSocialVideoSpec() (EIN Objekt, nicht das Array bei 'story-9x16')
- * @param {number} timeMs 0..spec.durationMs
- * @returns {Array<object>} Zeichenbefehle in Zeichenreihenfolge (Hintergrund zuerst, Inhalt zuletzt)
- */
-const SOCIAL_VIDEO_KANON_SCENE_IDS=new Set(['opponent','opponentA','opponentB']);
-function socialVideoDrawList(spec,timeMs){
-  const height=socialVideoHeightForFormat(spec?.format);
-  const at=socialVideoSceneAt(spec,timeMs);
-  const sceneId=at?.scene?.id||null;
-  const isKanonScene=SOCIAL_VIDEO_KANON_SCENE_IDS.has(sceneId);
-  const cmds=[...socialVideoBackgroundLayer(spec,timeMs,height,sceneId)];
-  if(!isKanonScene){
-    // Abdunkelnder Verlauf unter dem Inhaltsbereich, NUR für die noch nicht auf Kanon 2a umgestellten Szenen
-    // (intro/lastDuel/playersToWatch/outro) — Kanon 2a verbietet Verlaufsfüllungen hinter Text, siehe
-    // Abschlussbericht ("Prüfbar"-Abschnitt).
-    cmds.push({type:'rect',x:0,y:SOCIAL_VIDEO_SAFE_TOP-40,w:SOCIAL_VIDEO_WIDTH,h:height-SOCIAL_VIDEO_SAFE_TOP-SOCIAL_VIDEO_SAFE_BOTTOM+80,fill:{type:'linear',x0:0,y0:0,x1:0,y1:1,stops:[[0,'rgba(0,0,0,.1)'],[0.5,'rgba(0,0,0,.35)'],[1,'rgba(0,0,0,.1)']]},opacity:0.35});
-  }
-  if(spec?.scenes?.length){
-    const idx=spec.scenes.findIndex(s=>s.id===sceneId);
-    cmds.push(...socialVideoPushProgressBar(spec.scenes.length,idx));
-    cmds.push(...socialVideoPushHeaderBar(spec,at?.scene));
-  }
-  if(at){
-    if(isKanonScene)cmds.push(...socialVideoLayoutOpponentKanon(spec,at.scene,at.sceneMs,height));
-    else cmds.push(...socialVideoLayoutScene(spec,at.scene,at.sceneMs,height));
-  }
-  return cmds;
-}
-
-/** timeMs innerhalb einer Szene (Standardmäßig 85% hinein: alle Fade-/Count-Animationen sind dann sicher
- * abgeschlossen, siehe socialVideoElementProgress — höchste delayMs+Dauer in dieser Spezifikation ist 600ms). */
-function socialVideoSceneTimeMs(spec,sceneId,fraction=0.85){
-  const scene=(spec?.scenes||[]).find(s=>s.id===sceneId);
-  if(!scene)return 0;
-  return scene.startMs+(scene.endMs-scene.startMs)*fraction;
-}
-/** Zeitpunkt für den EINEN Standbild-Export (Umfangspunkt 3 dieser Phase): die informationsdichteste Szene,
- * settled (85% hinein) — Story: Gegner-Szene (Matchup+Form), Feed: letzte vorhandene Gegner-Szene. */
-function socialVideoStandbildTimeMs(spec){
-  const scenes=spec?.scenes||[];
-  if(!scenes.length)return 0;
-  const preferredIds=spec.format==='feed-4x5'?['opponentB','opponentA']:['opponent'];
-  for(const id of preferredIds)if(scenes.some(s=>s.id===id))return socialVideoSceneTimeMs(spec,id);
-  return socialVideoSceneTimeMs(spec,scenes[scenes.length-1].id);
-}
-
-// ═════════════════════════════════════════════════════════════════════════
-// S2 — Canvas2D-Renderer, SCHICHT B (docs/social-video-spezifikation.md Abschnitt 3.2): browserseitig, dünn.
-// Kein Layout, keine Animationslogik hier — nur Übersetzung der von Schicht A gelieferten Befehle in
-// Canvas2D-Aufrufe, plus Asset-Laden/MediaRecorder-Orchestrierung (reines I/O, nicht testbar ohne Browser,
-// deshalb bewusst von Schicht A getrennt).
-// ═════════════════════════════════════════════════════════════════════════
-
-// Gradient-Cache (Performance, Rechenbudget 4.4): dieselbe Form/Position erzeugt bei jedem Frame denselben
-// CanvasGradient — ohne Cache wird bei jedem Frame für jedes gradientgefüllte Element (Pillen, Logokreise,
-// Karten, Verlauf) ein neues Gradient-Objekt angelegt, was messbar GC-Druck erzeugt (vereinzelte
-// Frame-Ausreißer deutlich über 25ms wurden in echten Browser-Messungen beobachtet, siehe Build-Bericht).
-// Pro Canvas-Kontext ein Cache (WeakMap, räumt sich mit dem Context selbst auf).
-const _socialVideoGradientCache=new WeakMap();
-function socialVideoApplyFillStyle(ctx,fill,x,y,w,h){
-  if(!fill)return null;
-  if(typeof fill==='string')return fill;
-  let cache=_socialVideoGradientCache.get(ctx);
-  if(!cache){cache=new Map();_socialVideoGradientCache.set(ctx,cache);}
-  const key=`${fill.type}|${x}|${y}|${w}|${h}|${JSON.stringify(fill.stops)}|${fill.x0}|${fill.y0}|${fill.x1}|${fill.y1}|${fill.cx}|${fill.cy}`;
-  const cached=cache.get(key);
-  if(cached)return cached;
-  let g;
-  if(fill.type==='linear'){
-    g=ctx.createLinearGradient(x+fill.x0*w,y+fill.y0*h,x+fill.x1*w,y+fill.y1*h);
-    for(const[off,c]of fill.stops)g.addColorStop(off,c);
-  }else if(fill.type==='radial'){
-    const cx=x+fill.cx*w,cy=y+fill.cy*h,r=Math.max(w,h)/2;
-    g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
-    for(const[off,c]of fill.stops)g.addColorStop(off,c);
-  }else{
-    g='#000';
-  }
-  cache.set(key,g);
-  return g;
-}
-function socialVideoFontString(cmd){
-  const family=cmd.font==='mono'?"'DM Mono'":cmd.font==='inter'?"'Inter'":"'Syne'";
-  return`${cmd.weight||900} ${Math.round(cmd.size)}px ${family}`;
-}
-/** Führt EINEN Zeichenbefehl aus (reine Übersetzung, kein Layout). assets = {assetKey: HTMLImageElement}, nur
- * erfolgreich geladene Bilder enthalten — fehlt ein Schlüssel, wird der image-Befehl übersprungen, der von
- * Schicht A darunter bereits gezeichnete Fallback (Ring/Initialen) bleibt sichtbar. */
-function socialVideoDrawCommand(ctx,cmd,assets){
-  ctx.save();
-  ctx.globalAlpha=cmd.opacity??1;
-  switch(cmd.type){
-    case'background':
-      ctx.fillStyle=cmd.fill;
-      ctx.fillRect(cmd.x,cmd.y,cmd.w,cmd.h);
-      break;
-    case'rect':{
-      ctx.fillStyle=socialVideoApplyFillStyle(ctx,cmd.fill,cmd.x,cmd.y,cmd.w,cmd.h);
-      if(cmd.rx&&ctx.roundRect){ctx.beginPath();ctx.roundRect(cmd.x,cmd.y,cmd.w,cmd.h,cmd.rx);ctx.fill();}
-      else ctx.fillRect(cmd.x,cmd.y,cmd.w,cmd.h);
-      break;
-    }
-    case'circle':{
-      ctx.beginPath();
-      ctx.arc(cmd.x,cmd.y,cmd.r,0,Math.PI*2);
-      if(cmd.fill){ctx.fillStyle=socialVideoApplyFillStyle(ctx,cmd.fill,cmd.x-cmd.r,cmd.y-cmd.r,cmd.r*2,cmd.r*2);ctx.fill();}
-      if(cmd.stroke){ctx.strokeStyle=cmd.stroke;ctx.lineWidth=cmd.strokeWidth||2;ctx.stroke();}
-      break;
-    }
-    case'path':{
-      const p=new Path2D(cmd.d);
-      ctx.translate(cmd.x,cmd.y);
-      ctx.scale(cmd.scale||1,cmd.scale||1);
-      if(cmd.clipSweepFrac!==undefined){
-        ctx.beginPath();
-        ctx.rect(0,0,SOCIAL_VIDEO_SKYLINE_VIEWBOX.w*cmd.clipSweepFrac,SOCIAL_VIDEO_SKYLINE_VIEWBOX.h);
-        ctx.clip();
-      }
-      if(cmd.fill){ctx.fillStyle=cmd.fill;ctx.fill(p);}
-      if(cmd.stroke){ctx.strokeStyle=cmd.stroke;ctx.lineWidth=cmd.strokeWidth||1;ctx.stroke(p);}
-      break;
-    }
-    case'text':{
-      ctx.font=socialVideoFontString(cmd);
-      ctx.fillStyle=cmd.color;
-      ctx.textAlign=cmd.align||'center';
-      ctx.textBaseline='middle';
-      if(cmd.letterSpacing&&'letterSpacing'in ctx)ctx.letterSpacing=`${cmd.letterSpacing}px`;
-      ctx.fillText(cmd.text,cmd.x,cmd.y);
-      break;
-    }
-    case'image':{
-      const img=assets?.[cmd.assetKey];
-      if(!img)break;
-      // Dunkle Logos lesbar machen (S2c-Auftrag B3): Stufe aus der Asset-Aufbereitung
-      // (scripts/cache-team-logos.mjs --embed, window.SOCIAL_VIDEO_ASSET_TREATMENT = {relPath:{tier,factor?}})
-      // — 'invert' (annähernd einfarbig) hellt per Canvas-Filter auf, 'brighten' (farbig, z. B. Vereinsrot)
-      // hellt farbtonerhaltend per brightness(factor) auf (Invertieren würde Rot zu Cyan verfälschen),
-      // 'silhouette' zeichnet eine einfarbig gebrochen-weiße Form aus der Alpha-Maske des Bildes (kein Ring,
-      // keine Platte dahinter, siehe Kommentar unten).
-      const treatment=window.SOCIAL_VIDEO_ASSET_TREATMENT?.[cmd.assetKey]?.tier||'none';
-      const treatmentFactor=window.SOCIAL_VIDEO_ASSET_TREATMENT?.[cmd.assetKey]?.factor;
-      const filters=[];
-      if(cmd.brightness&&cmd.brightness!==1)filters.push(`brightness(${cmd.brightness})`);
-      if(cmd.desaturate)filters.push('saturate(0.35) brightness(0.92)');
-      if(treatment==='invert')filters.push('invert(1)');
-      else if(treatment==='brighten')filters.push(`brightness(${treatmentFactor||2})`);
-      if(filters.length)ctx.filter=filters.join(' ');
-      if(cmd.clip==='circle'){ctx.beginPath();ctx.arc(cmd.cx,cmd.cy,cmd.cr,0,Math.PI*2);ctx.clip();}
-      if(cmd.srcRect){
-        // srcRect ist in Anteilen (0..1) der tatsächlichen Quellbild-Größe angegeben (siehe
-        // socialVideoBackgroundLayer/Fahne) — erst hier in Pixel umgerechnet, da nur Schicht B das geladene
-        // Image-Objekt (und damit naturalWidth/-Height) kennt.
-        const nw=img.naturalWidth||img.width,nh=img.naturalHeight||img.height;
-        const sr=cmd.srcRect;
-        ctx.drawImage(img,sr.xFrac*nw,sr.yFrac*nh,sr.wFrac*nw,sr.hFrac*nh,cmd.x,cmd.y,cmd.w,cmd.h);
-      }else if(treatment==='silhouette'){
-        // Reicht Aufhellen/Invertieren nicht (Bericht nennt die betroffenen Logos), wird die Alpha-Maske des
-        // Bildes mit einer einfarbigen, gebrochen-weißen Fläche gefüllt ('source-atop': die Füllung erscheint
-        // NUR dort, wo das Bild selbst nicht transparent ist) — keine helle Platte, kein Ring dahinter. WICHTIG:
-        // source-atop auf dem HAUPT-Canvas würde gegen den bereits gezeichneten Hintergrund maskieren (der
-        // deckt die ganze Fläche ab) und die gesamte Bildbox füllen, nicht nur die Logoform — deshalb erst auf
-        // einem transparenten Offscreen-Canvas zusammensetzen und das Ergebnis dann an Ort und Stelle zeichnen.
-        const silCanvas=document.createElement('canvas');
-        silCanvas.width=Math.max(1,Math.round(cmd.w));
-        silCanvas.height=Math.max(1,Math.round(cmd.h));
-        const silCtx=silCanvas.getContext('2d');
-        silCtx.drawImage(img,0,0,cmd.w,cmd.h);
-        silCtx.globalCompositeOperation='source-atop';
-        silCtx.fillStyle=SOCIAL_VIDEO_INK;
-        silCtx.fillRect(0,0,cmd.w,cmd.h);
-        ctx.drawImage(silCanvas,cmd.x,cmd.y,cmd.w,cmd.h);
-      }else ctx.drawImage(img,cmd.x,cmd.y,cmd.w,cmd.h);
-      break;
-    }
-  }
-  ctx.restore();
-}
-
-/** Rechenbudget (Abschnitt 4.4): Hintergrund/Glow/Skyline-Basis (cacheable:true, siehe socialVideoBackgroundLayer)
- * werden EINMAL in ein Offscreen-Canvas gerendert; socialVideoRenderFrame kopiert sie danach nur noch (ein
- * drawImage, um die kleine Parallaxe verschoben) statt Pfad/Verläufe erneut aufzubauen. */
-function socialVideoBuildStaticLayer(baselineDrawList,width,height){
-  const canvas=document.createElement('canvas');
-  canvas.width=width;canvas.height=height;
-  const ctx=canvas.getContext('2d');
-  for(const cmd of baselineDrawList)if(cmd.cacheable)socialVideoDrawCommand(ctx,{...cmd,x:(cmd.x||0)-(cmd.cacheOffsetX||0)},{});
-  return canvas;
-}
-
-/** Führt eine vollständige Zeichenliste aus. staticLayer (optional) ersetzt alle cacheable-Befehle durch
- * einen einzigen verschobenen Blit (siehe socialVideoBuildStaticLayer); ohne staticLayer werden sie regulär
- * (einzeln) gezeichnet — Fallback für den Standbild-/Kontaktbogen-Export, wo sich Prerendering nicht lohnt. */
-function socialVideoRenderFrame(ctx,drawList,assets,staticLayer){
-  let staticBlitted=false;
-  for(const cmd of drawList){
-    if(cmd.cacheable&&staticLayer){
-      if(!staticBlitted){ctx.drawImage(staticLayer,cmd.cacheOffsetX||0,0);staticBlitted=true;}
-      continue;
-    }
-    socialVideoDrawCommand(ctx,cmd,assets);
-  }
-}
-
-/** Lädt alle in einer Story-/Feed-Spec referenzierten Bild-Assets einmal — AUSSCHLIESSLICH aus
- * window.SOCIAL_VIDEO_ASSETS (data:-URIs, siehe social-video-assets.js/scripts/cache-team-logos.mjs --embed),
- * NIE aus einem assets/…-Dateipfad: unter file:// behandelt Chrome jede lokale Datei als eigene fremde
- * Herkunft, auch ein per <img src="assets/…"> von derselben Festplatte geladenes Bild verunreinigt das
- * Canvas (captureStream()/toDataURL() schlagen danach fehl) — data:-URIs haben dieses Problem nicht. Fehlt
- * ein Schlüssel in SOCIAL_VIDEO_ASSETS (z. B. social-video-assets.js nie erzeugt, oder Team-Logo nicht
- * gecacht), enthält das Ergebnis einfach keinen Eintrag dafür; der Initialen-Fallback greift (siehe
- * socialVideoDrawCommand, Fall 'image'). Fehlschläge werden NICHT geworfen. */
-async function socialVideoLoadAssets(spec){
-  const keys=new Set(['assets/spatz.svg','assets/vfb-ulm-logo-mark.png']);
-  for(const scene of spec?.scenes||[])for(const el of scene.elements||[]){
-    if(el.type==='logo'&&el.asset)keys.add(el.asset);
-    if(el.type==='matchupPair'&&el.opp?.asset)keys.add(el.opp.asset);
-  }
-  const source=window.SOCIAL_VIDEO_ASSETS||{};
-  const assets={};
-  await Promise.all([...keys].map(key=>new Promise(resolve=>{
-    const dataUri=source[key];
-    if(!dataUri){resolve();return;}
-    const img=new Image();
-    img.onload=()=>{assets[key]=img;resolve();};
-    img.onerror=()=>resolve();
-    img.src=dataUri;
-  })));
-  return assets;
-}
-
-function socialVideoCreateCanvas(width,height){
-  const canvas=document.createElement('canvas');
-  canvas.width=width;canvas.height=height;
-  canvas.style.position='fixed';
-  canvas.style.left='-99999px';
-  canvas.style.top='0';
-  document.body.appendChild(canvas);
-  return canvas;
-}
-
-/** Erster unterstützter WebM-MimeType (VP9 bevorzugt, sonst VP8, sonst generisches WebM — Spezifikation 3.2). */
-function socialVideoPickMimeType(){
-  const candidates=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
-  for(const c of candidates)if(globalThis.MediaRecorder?.isTypeSupported?.(c))return c;
-  return globalThis.MediaRecorder?'video/webm':null;
-}
-
-/** Reiner Hinweistext bei gescheitertem Canvas-Export (S2-Nachtrag, Umfangspunkt 2: ehrliche Vorprüfung statt
- * Sammelmeldung nach voller Aufnahmedauer) — ohne Canvas/DOM testbar. isFileProtocol kommt von
- * location.protocol==='file:' (einziger DOM-Bezug, bewusst beim Aufrufer belassen). */
-function socialVideoCanvasExportHint(isFileProtocol){
-  if(isFileProtocol){
-    return'Videoerzeugung über file:// nicht möglich, weil der Browser lokale Bilder als fremde Herkunft behandelt. '
-      +'Bitte die App über einen lokalen Server öffnen: node scripts/serve.mjs, dann http://localhost:5173 aufrufen.';
-  }
-  return'Videoerzeugung in diesem Browser nicht möglich (Canvas-Export fehlgeschlagen). Bitte einen aktuellen Chromium-basierten Browser verwenden.';
-}
-
-/** Markiert einen Fehler mit dem Schritt, in dem er auftrat (Umfangspunkt 4: keine Sammelmeldung mehr,
- * sondern Schritt/Fehlername/Fehlermeldung) und, falls es ein Canvas-Taint-Fehler ist (SecurityError), mit
- * dem passenden Hinweistext aus socialVideoCanvasExportHint. Loggt zusätzlich das volle Fehlerobjekt. */
-function socialVideoTagStepError(step,cause){
-  const err=new Error(cause?.message||String(cause));
-  err.name=cause?.name||'Error';
-  err.step=step;
-  err.cause=cause;
-  if(err.name==='SecurityError')err.hint=socialVideoCanvasExportHint(location.protocol==='file:');
-  console.error(`[Social-Video] Schritt "${step}" fehlgeschlagen:`,cause);
-  return err;
-}
-
-/** Baut die Nutzermeldung für einen fehlgeschlagenen Schritt (Umfangspunkt 4: kein Sammel-Alert mehr, der nur
- * "X konnte nicht erzeugt werden" sagt) — nutzt e.hint, falls vorhanden (Canvas-Taint, s.
- * socialVideoTagStepError), sonst Schritt, Fehlername und Fehlermeldung. */
-function socialVideoFormatErrorAlert(prefix,e){
-  if(e?.hint)return e.hint;
-  return`${prefix} (Schritt: ${e?.step||'unbekannt'}, ${e?.name||'Error'}: ${e?.message||e}).`;
-}
-
-/** Zeichnet EIN Standbild aus spec bei timeMs auf einen frischen Canvas und liefert eine PNG-Data-URL.
- * Ersetzt den SVG-foreignObject-Weg für die S1-Standbildausgabe (Spezifikation Umfangspunkt 3 dieser Phase).
- * toDataURL() ist zugleich die ehrliche Vorprüfung (Umfangspunkt 2): schlägt sie fehl (getaintetes Canvas),
- * trägt der geworfene Fehler den passenden Hinweis (.hint, siehe socialVideoTagStepError). */
-async function socialVideoRenderStandbildDataUrl(spec,timeMs){
-  const width=SOCIAL_VIDEO_WIDTH,height=socialVideoHeightForFormat(spec.format);
-  const canvas=document.createElement('canvas');
-  canvas.width=width;canvas.height=height;
-  const ctx=canvas.getContext('2d');
-  const assets=await socialVideoLoadAssets(spec);
-  socialVideoRenderFrame(ctx,socialVideoDrawList(spec,timeMs),assets,null);
-  try{
-    return canvas.toDataURL('image/png');
-  }catch(e){
-    throw socialVideoTagStepError('toDataURL',e);
-  }
-}
-
-/** Orchestriert eine komplette Aufnahme (Spezifikation 3.2/4, Umfangspunkt 4): captureStream(0)+MediaRecorder,
- * Frame-Schleife über die reale Spielzeit (performance.now()-basiert, nicht framegezählt — damit die
- * tatsächliche Dauer auch bei schwankender Bildrate exakt 15000ms trifft), Fortschritt pro Frame über
- * onProgress, Abbruch über AbortSignal. Gibt {blob, mimeType} zurück oder null bei fehlendem MediaRecorder/
- * Abbruch; schlägt der Export fehl (Canvas-Taint), wirft sie einen Fehler mit .step/.hint (siehe
- * socialVideoTagStepError), den die UI-Schicht auswertet.
- *
- * captureStream(0) statt captureStream(30): captureStream(0) liefert KEINE automatischen Frames nach einem
- * internen Timer, sondern ausschließlich auf expliziten track.requestFrame()-Aufruf — ein Frame pro
- * tatsächlich gezeichnetem Bild, exakt an die eigene setTimeout-Schleife gekoppelt statt an einen zweiten,
- * unabhängigen Browser-Timer. Das vermeidet die Möglichkeit, dass der interne Erfassungstimer in einem
- * gedrosselten/hintergründigen Tab anders (oder gar nicht) läuft als die Zeichenschleife selbst. */
-async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
-  if(!globalThis.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)return null;
-  const mimeType=socialVideoPickMimeType();
-  if(!mimeType)return null;
-  const width=SOCIAL_VIDEO_WIDTH,height=socialVideoHeightForFormat(spec.format);
-  const canvas=socialVideoCreateCanvas(width,height);
-  try{
-    const ctx=canvas.getContext('2d');
-    const assets=await socialVideoLoadAssets(spec);
-    const staticLayer=socialVideoBuildStaticLayer(socialVideoDrawList(spec,0),width,height);
-    socialVideoRenderFrame(ctx,socialVideoDrawList(spec,0),assets,staticLayer);
-    let stream;
-    try{
-      stream=canvas.captureStream(0);
-    }catch(e){
-      throw socialVideoTagStepError('captureStream',e);
-    }
-    const track=stream.getVideoTracks()[0];
-    const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:6_000_000});
-    const chunks=[];
-    recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-    const stopped=new Promise(resolve=>{recorder.onstop=resolve;});
-    recorder.start();
-    track.requestFrame?.();
-    const durationMs=spec.durationMs||15000;
-    const startedAt=performance.now();
-    let aborted=false;
-    const onAbort=()=>{aborted=true;};
-    signal?.addEventListener('abort',onAbort);
-    // setTimeout statt requestAnimationFrame: rAF wird von Browsern in nicht sichtbaren/fokussierten Tabs
-    // gedrosselt oder ganz ausgesetzt (beobachtet: eine Aufnahme blieb in einem hintergründigen Tab
-    // vollständig stehen, siehe Build-Bericht) — für eine zeitgetreue Aufnahme, die unabhängig vom
-    // Tab-Fokus weiterlaufen soll, ist setTimeout robuster. Zielintervall ~33ms (30fps); die tatsächliche
-    // Zeitbasis bleibt performance.now()-elapsed, nicht die Anzahl der Schritte, damit die Gesamtdauer auch
-    // bei Timer-Drift exakt stimmt. Hinweis: Chrome kann rendering/Compositing in einem nicht fokussierten
-    // Tab dennoch drosseln (siehe Build-Bericht/UI-Hinweis "Aufnahme läuft") — setTimeout hält nur die
-    // Zeitbasis korrekt, nicht die Bildwiederholrate des Compositors.
-    const frameIntervalMs=1000/SOCIAL_VIDEO_FPS;
-    await new Promise(resolve=>{
-      let nextAt=startedAt;
-      const step=()=>{
-        if(aborted){resolve();return;}
-        const elapsed=performance.now()-startedAt;
-        const t=Math.min(elapsed,durationMs);
-        socialVideoRenderFrame(ctx,socialVideoDrawList(spec,t),assets,staticLayer);
-        track.requestFrame?.();
-        onProgress?.({elapsedMs:t,durationMs});
-        if(t>=durationMs){resolve();return;}
-        nextAt+=frameIntervalMs;
-        setTimeout(step,Math.max(0,nextAt-performance.now()));
-      };
-      setTimeout(step,0);
-    });
-    signal?.removeEventListener('abort',onAbort);
-    recorder.stop();
-    await stopped;
-    stream.getTracks().forEach(t=>t.stop());
-    if(aborted)return null;
-    return{blob:new Blob(chunks,{type:mimeType}),mimeType};
-  }finally{
-    canvas.remove();
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────
 // S2 — Standbild-Export auf den Canvas2D-Renderer umgestellt (Umfangspunkt 3 dieser Phase). Der SVG-

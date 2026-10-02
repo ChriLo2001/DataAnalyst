@@ -39,7 +39,7 @@ function assertTrue(cond, label) {
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 
-const html = (await readFile(process.env.P0B_ROUTING_TEST_INDEX || path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(process.env.P0B_ROUTING_TEST_INDEX || path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
 function fnSource(name) {
   const m = new RegExp(`(^|\\n)(async )?function ${name}\\(`).exec(html);
   if (!m) throw new Error(`Funktion nicht gefunden: ${name}`);

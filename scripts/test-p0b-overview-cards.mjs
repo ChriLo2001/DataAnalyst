@@ -35,7 +35,7 @@ function assertTrue(cond, label) {
   assertEqual(Boolean(cond), true, label);
 }
 
-const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 const stripComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*')).join('\n');
 function fnSource(name) {

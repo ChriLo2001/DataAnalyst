@@ -36,7 +36,7 @@ function assertTrue(cond, label) {
 }
 
 // ── Echte Funktionen aus index.html ────────────────────────────────────
-const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
 function fnSource(name) {
   const m = new RegExp(`(^|\\n)function ${name}\\(`).exec(html);
   if (!m) throw new Error(`Funktion nicht gefunden: ${name}`);

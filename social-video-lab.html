@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social-Video-Werkstatt</title>
+<!--
+  S2e — Renderer-Werkstatt, Stufe 3. Eigenständige Datei, NICHT in index.html eingebunden, kein neuer Tab in
+  der App. Lädt dieselben vier klassischen Skripte wie index.html (season-data-embedded.js,
+  matchcenter-core.js, social-video-assets.js, social-video-renderer.js — die vierte Datei war nötig, weil
+  buildSocialVideoSpec rund 80 geteilte Matchcenter-/Saison-Funktionen braucht, die zu Recht nicht in
+  social-video-renderer.js verschoben wurden, siehe Kopfkommentar dort) und enthält SELBST keine einzige
+  eigene Layout- oder Textberechnung — jede Zeichenentscheidung kommt aus socialVideoDrawList/
+  socialVideoDrawListGroups. Diese Datei ist reine Bedienoberfläche + Export-Verdrahtung.
+-->
+<style>
+  :root{
+    --ink:#EDE7DF; --muted:#8A8A90; --accent:#CC1A27; --bg:#0E0306; --panel:#171012;
+    --hairline:rgba(255,255,255,.14); --warn:#ff5a5a; --ok:#8FB88F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0a0a0c;color:var(--ink);font:14px/1.5 -apple-system,Segoe UI,Inter,sans-serif;}
+  header{padding:16px 20px;border-bottom:1px solid var(--hairline);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header p{margin:0;color:var(--muted);font-size:12px;}
+  .layout{display:flex;gap:0;align-items:flex-start;}
+  .controls{width:320px;flex:none;padding:16px 20px;border-right:1px solid var(--hairline);position:sticky;top:0;max-height:100vh;overflow:auto;}
+  .controls h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 8px;}
+  .controls h2:first-child{margin-top:0;}
+  .field{margin-bottom:10px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px;}
+  select,input[type=number]{width:100%;background:#1a1414;color:var(--ink);border:1px solid var(--hairline);border-radius:4px;padding:6px 8px;font:inherit;}
+  input[type=range]{width:100%;}
+  .row{display:flex;gap:8px;align-items:center;}
+  .row > *{flex:1;}
+  .toggle{display:flex;border:1px solid var(--hairline);border-radius:4px;overflow:hidden;}
+  .toggle button{flex:1;background:#1a1414;color:var(--muted);border:none;padding:6px 0;font:inherit;cursor:pointer;}
+  .toggle button.active{background:var(--accent);color:#fff;}
+  .checkrow{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;color:var(--muted);}
+  .checkrow input{margin:0;}
+  button.action{width:100%;background:#1a1414;color:var(--ink);border:1px solid var(--hairline);border-radius:4px;padding:8px;font:inherit;cursor:pointer;margin-bottom:8px;}
+  button.action:hover{border-color:var(--accent);}
+  button.action:disabled{opacity:.4;cursor:not-allowed;}
+  .main{flex:1;padding:16px 20px;min-width:0;}
+  .canvases{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;}
+  .canvas-box{flex:none;}
+  .canvas-box .meta{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:12px;}
+  .canvas-box .meta .accent-ok{color:var(--ok);}
+  .canvas-box .meta .accent-warn{color:var(--warn);}
+  canvas{display:block;background:#000;border:1px solid var(--hairline);max-width:320px;height:auto;}
+  canvas.feed{max-width:320px;}
+  .diag{margin-top:20px;padding:12px 14px;border:1px solid var(--hairline);border-radius:4px;background:#120d0d;font-size:12px;}
+  .diag h2{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  .diag .deviation.bad{color:var(--warn);font-weight:700;}
+  .diag .deviation.good{color:var(--ok);}
+  .groups-list{font-size:11px;color:var(--muted);margin-top:4px;max-height:120px;overflow:auto;border-top:1px solid var(--hairline);padding-top:6px;}
+  .groups-list div{display:flex;justify-content:space-between;padding:1px 0;}
+  .groups-list .over{color:var(--warn);}
+</style>
+</head>
+<body>
+<header>
+  <h1>Social-Video-Werkstatt</h1>
+  <p>Baut keine eigene Gestaltung — zeigt nur, was socialVideoDrawList/socialVideoDrawListGroups liefern.</p>
+</header>
+<div class="layout">
+  <div class="controls">
+    <h2>Auswahl</h2>
+    <div class="field">
+      <label for="f-season">Saison</label>
+      <select id="f-season"></select>
+    </div>
+    <div class="field">
+      <label for="f-matchday">Spieltag</label>
+      <select id="f-matchday"></select>
+    </div>
+    <div class="field">
+      <label for="f-opponent">Gegner</label>
+      <select id="f-opponent"></select>
+    </div>
+
+    <h2>Zeit</h2>
+    <div class="field">
+      <label for="f-scene">Szene</label>
+      <select id="f-scene"></select>
+    </div>
+    <div class="field">
+      <input type="range" id="f-frame" min="0" max="449" step="1" value="0">
+    </div>
+    <div class="field row">
+      <div><label for="f-ms">Millisekunden</label><input type="number" id="f-ms" min="0" max="15000" step="1" value="0"></div>
+      <div><label for="f-frameno">Einzelbild (1/30 s)</label><input type="number" id="f-frameno" min="0" max="449" step="1" value="0"></div>
+    </div>
+
+    <h2>Ansicht</h2>
+    <div class="field">
+      <div class="toggle" id="f-mode">
+        <button data-mode="scene" class="active" type="button">Szene</button>
+        <button data-mode="baustein" type="button">Baustein</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f-group">Baustein</label>
+      <select id="f-group" disabled></select>
+    </div>
+
+    <h2>Hilfslinien</h2>
+    <label class="checkrow"><input type="checkbox" id="f-safe" checked> Safe-Margins</label>
+    <label class="checkrow"><input type="checkbox" id="f-grid"> Grundlinienraster (40px, Orientierung)</label>
+    <label class="checkrow"><input type="checkbox" id="f-boxes" checked> Bounding-Boxen der Gruppen</label>
+
+    <h2>Export</h2>
+    <button class="action" id="btn-png" disabled>Baustein als PNG</button>
+    <button class="action" id="btn-sheet">Kontaktbogen als PNG</button>
+    <button class="action" id="btn-video">Kurzvideo 3 s (gewählte Szene)</button>
+  </div>
+  <div class="main">
+    <div class="canvases">
+      <div class="canvas-box">
+        <div class="meta"><span>9:16 Story (1080×1920)</span><span id="accent-story">Akzent —</span></div>
+        <canvas id="cv-story" width="1080" height="1920"></canvas>
+      </div>
+      <div class="canvas-box">
+        <div class="meta"><span>4:5 Feed-Höhe (1080×1350, dieselbe Spec)</span><span id="accent-feed">Akzent —</span></div>
+        <canvas id="cv-feed" class="feed" width="1080" height="1350"></canvas>
+      </div>
+    </div>
+    <div class="diag">
+      <h2>Frame-Diagnose (letzte Aufnahme)</h2>
+      <div id="diag-body">Noch keine Aufnahme in dieser Sitzung.</div>
+    </div>
+    <div class="diag" style="margin-top:12px;">
+      <h2>Gruppen in der aktuellen Zeichenliste (Story)</h2>
+      <div class="groups-list" id="groups-readout"></div>
+    </div>
+  </div>
+</div>
+
+<script src="season-data-embedded.js"></script>
+<script src="matchcenter-core.js"></script>
+<script src="social-video-assets.js"></script>
+<script src="social-video-renderer.js"></script>
+<script>
+(async function () {
+  'use strict';
+
+  // ── Bootstrap: dieselben minimalen Stubs wie scripts/test-social-video-render.mjs (node:vm-Kontext),
+  // hier aber im echten Browser als globale var-Deklarationen. Validiert durch die komplette Testsuite, die
+  // exakt dieselben Stubwerte verwendet (cachedAnalysis als Passthrough, kein ACTIVE_SEASON_CONFIG-Inhalt
+  // nötig, SEASON_START/-END leer) — siehe matchcenter-core.js Kopfkommentar.
+  const SEASON_CONFIG = {};
+  const seasonKeys = Object.keys(window.STATIC_SEASON_DATA || {}).sort();
+  for (const key of seasonKeys) SEASON_CONFIG[key] = { label: window.STATIC_SEASON_DATA[key].label || key, seasonId: null, dateRange: null };
+  window.SEASON_CONFIG = SEASON_CONFIG;
+  window.ACTIVE_SEASON_CONFIG = {};
+  window.CURRENT_SEASON_KEY = seasonKeys[seasonKeys.length - 1] || '';
+  window.SEASON_START = '';
+  window.SEASON_END = '';
+  window.cachedAnalysis = (key, fn) => fn();
+  window.analysisCacheKey = () => '';
+  window.detectSide = () => null;
+  const SEASONS = {};
+  for (const key of seasonKeys) {
+    const raw = window.STATIC_SEASON_DATA[key];
+    const games = (raw.games || []).map(normalizeGame);
+    SEASONS[key] = { data: { rawLeagueGames: games, rawGames: games } };
+  }
+  window.SEASONS = SEASONS;
+
+  // ── DOM-Referenzen ──────────────────────────────────────────────────────
+  const el = {
+    season: document.getElementById('f-season'),
+    matchday: document.getElementById('f-matchday'),
+    opponent: document.getElementById('f-opponent'),
+    scene: document.getElementById('f-scene'),
+    frame: document.getElementById('f-frame'),
+    ms: document.getElementById('f-ms'),
+    frameno: document.getElementById('f-frameno'),
+    group: document.getElementById('f-group'),
+    safe: document.getElementById('f-safe'),
+    grid: document.getElementById('f-grid'),
+    boxes: document.getElementById('f-boxes'),
+    modeButtons: [...document.querySelectorAll('#f-mode button')],
+    cvStory: document.getElementById('cv-story'),
+    cvFeed: document.getElementById('cv-feed'),
+    accentStory: document.getElementById('accent-story'),
+    accentFeed: document.getElementById('accent-feed'),
+    diagBody: document.getElementById('diag-body'),
+    groupsReadout: document.getElementById('groups-readout'),
+    btnPng: document.getElementById('btn-png'),
+    btnSheet: document.getElementById('btn-sheet'),
+    btnVideo: document.getElementById('btn-video'),
+  };
+
+  const FRAME_MS = 1000 / SOCIAL_VIDEO_FPS; // 1/30s, exakt wie der Renderer
+  const FRAME_COUNT = Math.round(SOCIAL_VIDEO_DURATION_MS / FRAME_MS); // 450
+
+  const state = {
+    specsForMatchday: [], // Array von Story-Specs (ein Eintrag je Ulm-Gegner), aus buildSocialVideoSpec
+    spec: null,           // gewählte Story-Spec — GLEICHE Spec treibt beide Formate (format wird pro Panel überschrieben)
+    assets: null,         // Promise<{assetKey:Image}>, einmal pro Spec geladen
+    mode: 'scene',
+    frameIndex: 0,
+  };
+
+  // ── Hilfsfunktionen, rein UI-seitig (keine Layout-/Textberechnung — nur Wiring) ──────────────────────
+  function msOfFrame(i) { return Math.round(i * FRAME_MS); }
+  function frameOfMs(ms) { return Math.round(ms / FRAME_MS); }
+
+  function populateSelect(select, items, toLabel, toValue) {
+    select.innerHTML = '';
+    for (const item of items) {
+      const opt = document.createElement('option');
+      opt.value = toValue(item);
+      opt.textContent = toLabel(item);
+      select.appendChild(opt);
+    }
+  }
+
+  // ── Saison/Spieltag/Gegner-Kaskade ──────────────────────────────────────
+  function seasonsWithMatchdays() {
+    return seasonKeys.filter((k) => getSeasonMatchdays(k).some((m) => m.number != null));
+  }
+  function loadMatchdaysFor(seasonKey) {
+    const mds = getSeasonMatchdays(seasonKey).filter((m) => m.number != null);
+    populateSelect(el.matchday, mds, (m) => `Spieltag ${m.number} (${formatDateDE(m.date)})`, (m) => m.key);
+    if (mds.length) el.matchday.value = mds[mds.length - 1].key;
+    loadOpponentsFor(seasonKey, el.matchday.value);
+  }
+  function loadOpponentsFor(seasonKey, matchdayKey) {
+    const specs = buildSocialVideoSpec({ seasonKey, matchdayKey, format: 'story-9x16' }).filter((s) => s.matchday);
+    state.specsForMatchday = specs;
+    populateSelect(el.opponent, specs, (s) => s.opponentDisplay || 'Gegner', (s) => s.opponentDisplay || '');
+    selectSpec(specs[0] || null);
+  }
+  function selectSpec(spec) {
+    state.spec = spec;
+    state.assets = spec ? socialVideoLoadAssets(spec) : Promise.resolve({});
+    if (spec) {
+      populateSelect(el.scene, spec.scenes, (s) => s.id, (s) => s.id);
+      if (spec.scenes.length) el.scene.value = spec.scenes[0].id;
+    } else {
+      el.scene.innerHTML = '<option value="">— kein Ulm-Spiel —</option>';
+    }
+    refreshGroupOptions();
+    render();
+  }
+
+  el.season.addEventListener('change', () => loadMatchdaysFor(el.season.value));
+  el.matchday.addEventListener('change', () => loadOpponentsFor(el.season.value, el.matchday.value));
+  el.opponent.addEventListener('change', () => {
+    const spec = state.specsForMatchday.find((s) => (s.opponentDisplay || '') === el.opponent.value);
+    selectSpec(spec || null);
+  });
+  el.scene.addEventListener('change', () => {
+    if (!state.spec) return;
+    const scene = state.spec.scenes.find((s) => s.id === el.scene.value);
+    if (scene) setFrame(frameOfMs(Math.round(scene.startMs + (scene.endMs - scene.startMs) * 0.5)));
+    refreshGroupOptions();
+  });
+
+  // ── Zeitregler (Frame-exakt, 1/30s) ─────────────────────────────────────
+  function setFrame(i) {
+    i = Math.max(0, Math.min(FRAME_COUNT - 1, i));
+    state.frameIndex = i;
+    el.frame.value = String(i);
+    el.frameno.value = String(i);
+    el.ms.value = String(msOfFrame(i));
+    syncSceneSelectToFrame();
+    render();
+  }
+  function syncSceneSelectToFrame() {
+    if (!state.spec) return;
+    const ms = msOfFrame(state.frameIndex);
+    const at = socialVideoSceneAt(state.spec, ms);
+    if (at?.scene && el.scene.value !== at.scene.id) { el.scene.value = at.scene.id; refreshGroupOptions(); }
+  }
+  el.frame.addEventListener('input', () => setFrame(Number(el.frame.value)));
+  el.frameno.addEventListener('change', () => setFrame(Number(el.frameno.value) || 0));
+  el.ms.addEventListener('change', () => setFrame(frameOfMs(Number(el.ms.value) || 0)));
+
+  // ── Szene/Baustein-Umschalter ────────────────────────────────────────────
+  el.modeButtons.forEach((btn) => btn.addEventListener('click', () => {
+    state.mode = btn.dataset.mode;
+    el.modeButtons.forEach((b) => b.classList.toggle('active', b === btn));
+    el.group.disabled = state.mode !== 'baustein';
+    el.btnPng.disabled = state.mode !== 'baustein';
+    render();
+  }));
+  el.group.addEventListener('change', render);
+  el.safe.addEventListener('change', render);
+  el.grid.addEventListener('change', render);
+  el.boxes.addEventListener('change', render);
+
+  function refreshGroupOptions() {
+    if (!state.spec) { el.group.innerHTML = ''; return; }
+    const ms = msOfFrame(state.frameIndex);
+    const list = socialVideoDrawList(state.spec, ms);
+    const groups = socialVideoDrawListGroups(list).map((g) => g.name).sort();
+    const prev = el.group.value;
+    populateSelect(el.group, groups, (g) => g, (g) => g);
+    if (groups.includes(prev)) el.group.value = prev;
+  }
+
+  // ── Rendern ──────────────────────────────────────────────────────────────
+  function areaOf(c) {
+    if (c.type === 'rect') return Math.max(0, c.w) * Math.max(0, c.h);
+    if (c.type === 'circle') return Math.PI * c.r * c.r;
+    if (c.type === 'text') return Math.max(0, c.maxWidth || 0) * Math.max(0, c.size || 0);
+    return 0;
+  }
+  function accentPercent(list, canvasArea) {
+    const area = list.filter((c) => c.accent).reduce((s, c) => s + areaOf(c), 0);
+    return (area / canvasArea) * 100;
+  }
+
+  function drawOverlays(ctx, list, width, height) {
+    ctx.save();
+    if (el.safe.checked) {
+      ctx.strokeStyle = 'rgba(80,200,255,.65)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.strokeRect(SOCIAL_VIDEO_SAFE_LEFT, SOCIAL_VIDEO_SAFE_TOP, width - SOCIAL_VIDEO_SAFE_LEFT * 2, height - SOCIAL_VIDEO_SAFE_TOP * 2);
+      ctx.setLineDash([]);
+    }
+    if (el.grid.checked) {
+      // Orientierungshilfe, kein vom Renderer erzwungenes Raster (es gibt keine BASELINE_GRID-Konstante) —
+      // 40px ist eine runde Näherung an die in socialVideoLayoutOpponentKanon üblichen Zeilenabstände.
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < height; y += 40) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(width, y + 0.5); ctx.stroke(); }
+    }
+    if (el.boxes.checked) {
+      const groups = socialVideoDrawListGroups(list);
+      const decorative = new Set(['hintergrund', 'skyline', 'spatzen', 'flagge', 'abdunklung']);
+      ctx.font = '20px monospace';
+      ctx.textBaseline = 'bottom';
+      for (const g of groups) {
+        if (decorative.has(g.name)) continue;
+        ctx.strokeStyle = 'rgba(255,210,80,.9)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(g.bbox.x0, g.bbox.y0, g.bbox.x1 - g.bbox.x0, g.bbox.y1 - g.bbox.y0);
+        ctx.fillStyle = 'rgba(255,210,80,.95)';
+        ctx.fillText(g.name, g.bbox.x0, Math.max(18, g.bbox.y0 - 4));
+      }
+    }
+    ctx.restore();
+  }
+
+  // Baustein-Ansicht: voller Frame auf ein Offscreen-Canvas, dann auf die Bounding-Box (+ Rand) der
+  // gewählten Gruppe zugeschnitten und auf die volle Zielfläche hochskaliert — "auf dem echten Hintergrund
+  // des Kanons" (Auftrag Stufe 3), kein isoliertes Neuzeichnen der Gruppen-Kommandos.
+  function drawBausteinCrop(ctx, offscreen, list, width, height) {
+    const groups = socialVideoDrawListGroups(list);
+    const g = groups.find((x) => x.name === el.group.value);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+    if (!g) return;
+    const margin = Math.max(24, (g.bbox.x1 - g.bbox.x0) * 0.08);
+    const sx = Math.max(0, g.bbox.x0 - margin), sy = Math.max(0, g.bbox.y0 - margin);
+    const sw = Math.min(width, g.bbox.x1 + margin) - sx;
+    const sh = Math.min(height, g.bbox.y1 + margin) - sy;
+    if (sw <= 0 || sh <= 0) return;
+    ctx.drawImage(offscreen, sx, sy, sw, sh, 0, 0, width, height);
+  }
+
+  async function renderOne(canvas, spec, assets, list) {
+    const width = SOCIAL_VIDEO_WIDTH, height = socialVideoHeightForFormat(spec.format);
+    const ctx = canvas.getContext('2d');
+    if (state.mode === 'scene') {
+      socialVideoRenderFrame(ctx, list, assets, null);
+      drawOverlays(ctx, list, width, height);
+    } else {
+      const off = document.createElement('canvas');
+      off.width = width; off.height = height;
+      socialVideoRenderFrame(off.getContext('2d'), list, assets, null);
+      drawBausteinCrop(ctx, off, list, width, height);
+    }
+    return width * height;
+  }
+
+  let renderToken = 0;
+  async function render() {
+    if (!state.spec) return;
+    const token = ++renderToken;
+    const assets = await state.assets;
+    if (token !== renderToken) return; // Auswahl hat sich während des Ladens geändert
+    const ms = msOfFrame(state.frameIndex);
+    const storySpec = state.spec;
+    const feedSpec = { ...state.spec, format: 'feed-4x5' };
+    const listStory = socialVideoDrawList(storySpec, ms);
+    const listFeed = socialVideoDrawList(feedSpec, ms);
+    const areaStory = await renderOne(el.cvStory, storySpec, assets, listStory);
+    const areaFeed = await renderOne(el.cvFeed, feedSpec, assets, listFeed);
+
+    const pctStory = accentPercent(listStory, areaStory);
+    const pctFeed = accentPercent(listFeed, areaFeed);
+    el.accentStory.textContent = `Akzent ${pctStory.toFixed(2)}%`;
+    el.accentStory.className = pctStory > 5 ? 'accent-warn' : 'accent-ok';
+    el.accentFeed.textContent = `Akzent ${pctFeed.toFixed(2)}%`;
+    el.accentFeed.className = pctFeed > 5 ? 'accent-warn' : 'accent-ok';
+
+    const groups = socialVideoDrawListGroups(listStory);
+    const decorative = new Set(['hintergrund', 'skyline', 'spatzen', 'flagge', 'abdunklung']);
+    const dataGroups = groups.filter((g) => !decorative.has(g.name));
+    el.groupsReadout.innerHTML = `<div style="font-weight:700;color:${dataGroups.length > 5 ? 'var(--warn)' : 'var(--ink)'}">${dataGroups.length} datentragende Gruppen${dataGroups.length > 5 ? ' — über 5 (Kanon-2a-Befund, siehe Bericht)' : ''}</div>` +
+      groups.map((g) => `<div class="${!decorative.has(g.name) ? '' : ''}"><span>${g.name}${decorative.has(g.name) ? ' (dekorativ)' : ''}</span><span>${g.count}</span></div>`).join('');
+  }
+
+  // ── Export 1: Baustein als PNG ───────────────────────────────────────────
+  function downloadCanvasPng(canvas, filename) {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  el.btnPng.addEventListener('click', () => {
+    if (!state.spec || state.mode !== 'baustein') return;
+    const ms = msOfFrame(state.frameIndex);
+    const group = el.group.value || 'gruppe';
+    downloadCanvasPng(el.cvStory, `lab-story-${group}-${ms}.png`);
+    downloadCanvasPng(el.cvFeed, `lab-feed-${group}-${ms}.png`);
+  });
+
+  // ── Export 2: Kontaktbogen als PNG (alle Bausteine der gewählten Szene, beide Formate, EIN Bild) ──────
+  el.btnSheet.addEventListener('click', async () => {
+    if (!state.spec) return;
+    const sceneId = el.scene.value;
+    const scene = state.spec.scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+    const ms = Math.round(scene.startMs + (scene.endMs - scene.startMs) * 0.5);
+    const assets = await state.assets;
+    const decorative = new Set(['hintergrund', 'skyline', 'spatzen', 'flagge', 'abdunklung']);
+
+    async function tilesFor(spec) {
+      const width = SOCIAL_VIDEO_WIDTH, height = socialVideoHeightForFormat(spec.format);
+      const list = socialVideoDrawList(spec, ms);
+      const off = document.createElement('canvas');
+      off.width = width; off.height = height;
+      socialVideoRenderFrame(off.getContext('2d'), list, assets, null);
+      const groups = socialVideoDrawListGroups(list).filter((g) => !decorative.has(g.name));
+      return groups.map((g) => {
+        const margin = Math.max(24, (g.bbox.x1 - g.bbox.x0) * 0.08);
+        const sx = Math.max(0, g.bbox.x0 - margin), sy = Math.max(0, g.bbox.y0 - margin);
+        const sw = Math.min(width, g.bbox.x1 + margin) - sx, sh = Math.min(height, g.bbox.y1 + margin) - sy;
+        return { name: g.name, off, sx, sy, sw, sh };
+      });
+    }
+    const storyTiles = await tilesFor(state.spec);
+    const feedTiles = await tilesFor({ ...state.spec, format: 'feed-4x5' });
+
+    const tileW = 300, tileH = 340, labelH = 26, pad = 12;
+    const cols = Math.max(storyTiles.length, feedTiles.length, 1);
+    const sheet = document.createElement('canvas');
+    sheet.width = cols * (tileW + pad) + pad;
+    sheet.height = (labelH + tileH) * 2 + pad * 3 + 30;
+    const sctx = sheet.getContext('2d');
+    sctx.fillStyle = '#0a0a0c'; sctx.fillRect(0, 0, sheet.width, sheet.height);
+    sctx.fillStyle = '#EDE7DF'; sctx.font = '16px monospace';
+    sctx.fillText(`Kontaktbogen — Szene "${sceneId}" — t=${ms}ms — ${state.spec.opponentDisplay || ''}`, pad, 20);
+
+    function drawRow(tiles, rowY, rowLabel) {
+      tiles.forEach((t, i) => {
+        const x = pad + i * (tileW + pad);
+        sctx.fillStyle = '#8A8A90'; sctx.font = '12px monospace';
+        sctx.fillText(`${rowLabel}: ${t.name}`, x, rowY + 14);
+        const destH = tileH, destW = Math.min(tileW, destH * (t.sw / t.sh));
+        const dx = x + (tileW - destW) / 2;
+        sctx.fillStyle = '#000'; sctx.fillRect(x, rowY + labelH, tileW, tileH);
+        if (t.sw > 0 && t.sh > 0) sctx.drawImage(t.off, t.sx, t.sy, t.sw, t.sh, dx, rowY + labelH, destW, destH);
+      });
+    }
+    drawRow(storyTiles, 30, '9:16');
+    drawRow(feedTiles, 30 + labelH + tileH + pad, '4:5');
+    downloadCanvasPng(sheet, `lab-kontaktbogen-${sceneId}-${ms}.png`);
+  });
+
+  // ── Export 3: Kurzvideo 3s (gewählte Szene, identischer Aufnahmepfad wie die App) ──────────────────────
+  function setDiag(html) { el.diagBody.innerHTML = html; }
+  let videoAbort = null;
+  el.btnVideo.addEventListener('click', async () => {
+    if (!state.spec) return;
+    if (videoAbort) { videoAbort.abort(); return; }
+    const sceneId = el.scene.value;
+    const scene = state.spec.scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+    const miniSpec = { ...state.spec, durationMs: 3000, scenes: [{ ...scene, startMs: 0, endMs: 3000 }] };
+    const targetFrames = Math.round(3000 / FRAME_MS); // 90
+    videoAbort = new AbortController();
+    el.btnVideo.textContent = 'Abbrechen';
+    setDiag(`Gezeichnet: 0/${targetFrames} &nbsp; In Stream geschoben: 0/${targetFrames} &nbsp; Soll: ${targetFrames}`);
+    try {
+      const result = await socialVideoCaptureVideo(miniSpec, {
+        signal: videoAbort.signal,
+        onProgress: ({ phase, frameIndex, frameCount }) => {
+          const drawn = phase === 'render' ? frameIndex + 1 : frameCount;
+          const pushed = phase === 'capture' ? frameIndex + 1 : 0;
+          setDiag(`Gezeichnet: ${drawn}/${targetFrames} &nbsp; In Stream geschoben: ${pushed}/${targetFrames} &nbsp; Soll: ${targetFrames}`);
+        },
+      });
+      if (result) {
+        const deviation = Math.abs(result.frameCount - targetFrames) / targetFrames * 100;
+        const cls = deviation > 2 ? 'deviation bad' : 'deviation good';
+        setDiag(`Fertig. Tatsächlich im Stream: <b>${result.frameCount}</b>/${targetFrames} Bilder — Abweichung <span class="${cls}">${deviation.toFixed(1)}%</span>${deviation > 2 ? ' (ÜBER 2%)' : ''}`);
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `lab-video-${sceneId}-3s.webm`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        setDiag('Abgebrochen oder Video-Aufnahme in diesem Browser nicht verfügbar.');
+      }
+    } catch (e) {
+      setDiag(`Fehlgeschlagen: ${e?.message || e}`);
+    } finally {
+      videoAbort = null;
+      el.btnVideo.textContent = 'Kurzvideo 3 s (gewählte Szene)';
+    }
+  });
+
+  // ── Start ────────────────────────────────────────────────────────────────
+  await socialVideoCheckFonts();
+  const withGames = seasonsWithMatchdays();
+  populateSelect(el.season, withGames.length ? withGames : seasonKeys, (k) => SEASON_CONFIG[k]?.label || k, (k) => k);
+  if (withGames.length) el.season.value = withGames[withGames.length - 1];
+  loadMatchdaysFor(el.season.value);
+  setFrame(frameOfMs(socialVideoSceneTimeMs(state.spec || { scenes: [] }, el.scene.value, 0.5) || 0));
+})();
+</script>
+</body>
+</html>

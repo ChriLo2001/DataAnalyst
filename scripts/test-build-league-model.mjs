@@ -211,7 +211,7 @@ console.log('== Struktur, Wiederverwendung bestehender Module ==');
 
 console.log('== Drift: Team-Normalisierung gegen die echten Funktionen aus index.html (alle echten Teamnamen) ==');
 {
-  const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+  const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
   const fnSource = (name) => {
     const m = new RegExp(`(^|\\n)function ${name}\\(`).exec(html);
     const from = m.index + m[1].length;

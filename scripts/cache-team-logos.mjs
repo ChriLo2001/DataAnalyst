@@ -117,7 +117,7 @@ async function existingLogoFiles(repoRoot) {
   }
 }
 
-async function writeFileAtomic(filePath, buffer) {
+export async function writeFileAtomic(filePath, buffer) {
   await mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp-${process.pid}`;
   await writeFile(tmpPath, buffer);
@@ -210,7 +210,7 @@ const PNG_CHANNELS_BY_COLOR_TYPE = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
 /** Dekodiert ein PNG zu {width,height,rgba} (ein Uint8/Buffer je R,G,B,A, 0..255), oder
  * {unsupported:'<grund>'}, wenn Bit-Tiefe/Interlacing/Farbtyp außerhalb des unterstützten Teilbereichs liegen,
  * oder null, wenn die Datei keine gültige PNG-Signatur hat. */
-function decodePng(buf) {
+export function decodePng(buf) {
   const chunks = readPngChunks(buf);
   if (!chunks) return null;
   const ihdrChunk = chunks.find((c) => c.type === 'IHDR');
@@ -257,7 +257,7 @@ function decodePng(buf) {
 /** Mittlere relative Luminanz (0..1, Rec.-709-Gewichtung) der NICHT transparenten Bildpunkte. invert=true
  * misst dieselbe Fläche nach RGB-Invertierung, factor misst sie nach Multiplikation jedes Kanals mit factor
  * (auf 255 gekappt) — für die beiden Aufhellungs-Prüfstufen. */
-function meanOpaqueLuminance(rgba, { invert = false, factor = 1 } = {}) {
+export function meanOpaqueLuminance(rgba, { invert = false, factor = 1 } = {}) {
   let sum = 0, count = 0;
   for (let i = 0; i < rgba.length; i += 4) {
     if (rgba[i + 3] === 0) continue;
@@ -286,31 +286,68 @@ function meanOpaqueSaturation(rgba) {
   return count ? sum / count : 0;
 }
 
+/** Kantenanteil (S2d-Nachtrag): Anteil der nicht transparenten Bildpunkte, an denen die Luminanz zum rechten
+ * bzw. unteren Nachbarn merklich springt — ein grobes, aber brauchbares Maß dafür, ob ein Logo überhaupt
+ * erkennbare innere Struktur hat (scharfe Linien/Flächen) oder nur ein verwaschener, konturarmer Fleck ist.
+ * Invertieren verändert den Kantenanteil NICHT (|invert(a)-invert(b)| = |a-b|) — ein Logo mit wenig Struktur
+ * im Original bleibt auch invertiert strukturarm ("grauer Fleck"), dafür ist keine Aufhellungsstufe die
+ * richtige Antwort, sondern die Knockout-Silhouette aus der Alpha-Maske (klare Kontur statt verwaschener
+ * Fläche). */
+function edgeFraction(rgba, width, height) {
+  const lum = (o) => (0.2126 * rgba[o] + 0.7152 * rgba[o + 1] + 0.0722 * rgba[o + 2]) / 255;
+  let edgeCount = 0, total = 0;
+  for (let y = 0; y < height - 1; y++) {
+    for (let x = 0; x < width - 1; x++) {
+      const i = (y * width + x) * 4;
+      if (rgba[i + 3] === 0) continue;
+      const l0 = lum(i);
+      const iR = i + 4, iB = i + width * 4;
+      const lR = rgba[iR + 3] > 0 ? lum(iR) : l0;
+      const lB = rgba[iB + 3] > 0 ? lum(iB) : l0;
+      total += 1;
+      if (Math.abs(l0 - lR) + Math.abs(l0 - lB) > 0.18) edgeCount += 1;
+    }
+  }
+  return total ? edgeCount / total : 0;
+}
+
 const DARK_LOGO_LUMINANCE_THRESHOLD = 0.45;
 const DARK_LOGO_SATURATION_THRESHOLD = 0.2; // darunter gilt ein Logo als annähernd einfarbig (Invertieren ok)
+const DARK_LOGO_EDGE_THRESHOLD = 0.035; // darunter hat das Original zu wenig erkennbare Struktur für invert/lift
+const DARK_LOGO_MAX_LIFT = 0.6; // mehr verwäscht auch bei realer Struktur sichtbare Kanten zu stark
 
-/** Entscheidet die Lesbarkeits-Stufe für EIN PNG (S2c-Auftrag B3): 'none' (hell genug), 'invert' (für
- * annähernd einfarbige dunkle Logos — Invertieren verfälscht dort keinen Farbton), 'brighten' (für farbige
- * dunkle Logos — Kanal-Multiplikation hebt die Helligkeit, OHNE den Farbton zu drehen) oder 'silhouette' (auch
- * aufgehellt/invertiert zu dunkel, oder Datei außerhalb des unterstützten PNG-Teilbereichs — dann zeichnet
- * Schicht B eine einfarbig gebrochen-weiße Form aus der Alpha-Maske statt des Bildes). Nur für .png relevant,
- * .svg bleibt immer 'none'. */
-export function decideLogoTreatment(buf) {
+/** Entscheidet die Lesbarkeits-Stufe für EIN PNG (S2c/S2d-Auftrag B3): 'none' (hell genug), 'invert' (für
+ * annähernd einfarbige dunkle Logos MIT erkennbarer Struktur — Invertieren verfälscht keinen Farbton und
+ * erhält den Kantenanteil unverändert), 'lift' (für farbige dunkle Logos MIT Struktur — Überblendung Richtung
+ * gebrochenes Weiß IM Bild, siehe socialVideoDrawCommand Fall 'image'/Schicht B: anders als eine reine
+ * Kanal-Multiplikation hebt das auch echtes Schwarz an, weil es KEINE Multiplikation ist, sondern eine
+ * Mischung mit Weiß) oder 'silhouette' (zu wenig erkennbare Struktur im Original — dann hilft keine
+ * Aufhellung/Invertierung, siehe edgeFraction — oder Datei außerhalb des unterstützten PNG-Teilbereichs).
+ * forceColorPreserving:true (für das eigene VfB-Wappen, S2d-Auftrag 2: "nie Silhouette, nie invertiert")
+ * überspringt die Silhouette- UND die Invertieren-Stufe und erzwingt 'lift', auch wenn die Struktur-/
+ * Sättigungsprüfung sonst anders entschieden hätte. */
+export function decideLogoTreatment(buf, { forceColorPreserving = false } = {}) {
   const decoded = decodePng(buf);
-  if (!decoded) return { tier: 'silhouette', reason: 'keine gültige PNG-Datei', luminance: null };
-  if (decoded.unsupported) return { tier: 'silhouette', reason: decoded.unsupported, luminance: null };
+  if (!decoded) return { tier: forceColorPreserving ? 'lift' : 'silhouette', reason: 'keine gültige PNG-Datei', luminance: null };
+  if (decoded.unsupported) return { tier: forceColorPreserving ? 'lift' : 'silhouette', reason: decoded.unsupported, luminance: null };
   const luminance = meanOpaqueLuminance(decoded.rgba);
   if (luminance >= DARK_LOGO_LUMINANCE_THRESHOLD) return { tier: 'none', reason: null, luminance };
-  const saturation = meanOpaqueSaturation(decoded.rgba);
-  if (saturation < DARK_LOGO_SATURATION_THRESHOLD) {
-    const invertedLuminance = meanOpaqueLuminance(decoded.rgba, { invert: true });
-    if (invertedLuminance >= DARK_LOGO_LUMINANCE_THRESHOLD) return { tier: 'invert', reason: null, luminance, saturation, invertedLuminance };
-    return { tier: 'silhouette', reason: 'annähernd einfarbig, auch invertiert unter dem Schwellwert', luminance, saturation, invertedLuminance };
+  const edgeFrac = edgeFraction(decoded.rgba, decoded.width, decoded.height);
+  if (edgeFrac < DARK_LOGO_EDGE_THRESHOLD && !forceColorPreserving) {
+    return { tier: 'silhouette', reason: `zu geringer Kantenanteil im Original (${edgeFrac.toFixed(3)}) — Form bliebe nach Aufhellen/Invertieren nicht lesbar`, luminance, edgeFraction: edgeFrac };
   }
-  const factor = Math.min(4, Number((DARK_LOGO_LUMINANCE_THRESHOLD / Math.max(0.02, luminance) * 1.15).toFixed(2)));
-  const brightenedLuminance = meanOpaqueLuminance(decoded.rgba, { factor });
-  if (brightenedLuminance >= DARK_LOGO_LUMINANCE_THRESHOLD) return { tier: 'brighten', reason: null, luminance, saturation, brightenFactor: factor, brightenedLuminance };
-  return { tier: 'silhouette', reason: 'farbig, auch aufgehellt unter dem Schwellwert', luminance, saturation, brightenedLuminance };
+  const saturation = meanOpaqueSaturation(decoded.rgba);
+  if (saturation < DARK_LOGO_SATURATION_THRESHOLD && !forceColorPreserving) {
+    const invertedLuminance = meanOpaqueLuminance(decoded.rgba, { invert: true });
+    if (invertedLuminance >= DARK_LOGO_LUMINANCE_THRESHOLD) return { tier: 'invert', reason: null, luminance, saturation, edgeFraction: edgeFrac, invertedLuminance };
+    return { tier: 'silhouette', reason: 'annähernd einfarbig, auch invertiert unter dem Schwellwert', luminance, saturation, edgeFraction: edgeFrac, invertedLuminance };
+  }
+  // Farbig (oder forceColorPreserving): Richtung gebrochenes Weiß überblenden, bis die Luminanz den
+  // Schwellwert erreicht — Mischung statt Multiplikation hebt auch echtes Schwarz an. a = (T-L)/(1-L), siehe
+  // Herleitung im Build-Bericht; für T<1 und L<1 ist a immer <1, der Schwellwert daher praktisch immer
+  // erreichbar (im Unterschied zur alten Kanal-Multiplikation, bei der echtes Schwarz schwarz blieb).
+  const liftAmount = Math.min(DARK_LOGO_MAX_LIFT, Math.max(0, Number(((DARK_LOGO_LUMINANCE_THRESHOLD - luminance) / Math.max(0.05, 1 - luminance)).toFixed(2))));
+  return { tier: 'lift', reason: null, luminance, saturation, edgeFraction: edgeFrac, liftAmount };
 }
 const EMBED_JS_HEADER =
   '// Automatisch erzeugt von scripts/cache-team-logos.mjs --embed --write. Nicht von Hand bearbeiten.\n' +
@@ -322,20 +359,31 @@ const EMBED_JS_HEADER =
   '// Story-VORSCHAU im Dashboard ist davon unberührt und nutzt weiter die Dateipfade. Klassisches Skript\n' +
   '// (kein type="module"), damit es auch per Doppelklick lädt (siehe <script src="social-video-assets.js">\n' +
   '// vor dem Haupt-<script> in index.html). Siehe docs/social-video-spezifikation.md Abschnitt 3.3.\n' +
-  '// window.SOCIAL_VIDEO_ASSET_TREATMENT (S2c-Auftrag B3, dunkle Logos lesbar machen): {relPath: {tier,\n' +
-  '// factor?}} NUR für Logos unter der Lesbarkeits-Schwelle (mittlere Luminanz der nicht transparenten\n' +
-  '// Bildpunkte) — fehlt ein Schlüssel, bleibt das Bild unverändert. tier "invert" (annähernd einfarbige\n' +
-  '// dunkle Logos) hellt per Canvas-Filter invert(1) auf; tier "brighten" (farbige dunkle Logos, z. B.\n' +
-  '// Vereinsrot — Invertieren würde den Farbton verfälschen) hellt per brightness(factor) auf, OHNE den\n' +
-  '// Farbton zu drehen; tier "silhouette" zeichnet eine einfarbig gebrochen-weiße Form aus der Alpha-Maske\n' +
-  '// (socialVideoDrawCommand, Fall \'image\'). Siehe Abschlussbericht für die betroffenen Logos je Stufe.\n';
+  '// window.SOCIAL_VIDEO_ASSET_TREATMENT (S2c/S2d-Auftrag B3, dunkle Logos lesbar machen): {relPath: {tier,\n' +
+  '// factor?}} NUR für Logos unter der Lesbarkeits-Schwelle UND mit erkennbarer innerer Struktur (Kantenanteil\n' +
+  '// im Original) — fehlt ein Schlüssel, bleibt das Bild unverändert. tier "invert" (annähernd einfarbige\n' +
+  '// dunkle Logos MIT Struktur) hellt per Canvas-Filter invert(1) auf; tier "lift" (farbige dunkle Logos MIT\n' +
+  '// Struktur, z. B. Vereinsrot — Invertieren würde den Farbton verfälschen) überblendet im Bild Richtung\n' +
+  '// gebrochenes Weiß (factor = Mischanteil), OHNE den Farbton zu drehen und OHNE echtes Schwarz schwarz zu\n' +
+  '// lassen (anders als eine reine Kanal-Multiplikation); tier "silhouette" (zu wenig erkennbare Struktur im\n' +
+  '// Original, egal welche Farbe) zeichnet eine einfarbig gebrochen-weiße Form aus der Alpha-Maske\n' +
+  '// (socialVideoDrawCommand, Fall \'image\'). Das eigene VfB-Wappen (assets/vfb-ulm-logo-mark.png,\n' +
+  '// assets/teams/vfb-ulm.png) nimmt NIE die Stufen "invert"/"silhouette" — erzwungen "lift", s. u.\n' +
+  '// Siehe Abschlussbericht für die betroffenen Logos je Stufe.\n';
+
+// VfB Ulm tritt immer unter eigenem Namen an — das eigene Wappen darf NIE als Silhouette oder invertiert
+// erscheinen (S2d-Auftrag 2: "nie Silhouette, nie invertiert... Ist das vorhandene Asset dafür zu dunkel,
+// hebe die Helligkeit an, ohne die Form zu verlieren"), deshalb hier mit forceColorPreserving:true.
+const EMBED_FORCE_COLOR_PRESERVING_PATHS = new Set(['assets/vfb-ulm-logo-mark.png', 'assets/teams/vfb-ulm.png']);
 
 async function embedAssetFile(repoRoot, relPath) {
   const buf = await readFile(path.join(repoRoot, relPath));
   const ext = path.extname(relPath).toLowerCase();
   const mime = EMBED_MIME_BY_EXT[ext];
   if (!mime) throw new Error(`unbekannter Asset-Typ: ${relPath}`);
-  const treatment = ext === '.png' ? decideLogoTreatment(buf) : { tier: 'none', reason: null, luminance: null, invertedLuminance: null };
+  const treatment = ext === '.png'
+    ? decideLogoTreatment(buf, { forceColorPreserving: EMBED_FORCE_COLOR_PRESERVING_PATHS.has(relPath) })
+    : { tier: 'none', reason: null, luminance: null };
   return { relPath, bytes: buf.length, dataUri: `data:${mime};base64,${buf.toString('base64')}`, treatment };
 }
 
@@ -382,9 +430,10 @@ function formatEmbedReport(entries) {
     for (const e of affected) {
       const t = e.treatment;
       const detail = t.tier === 'invert' ? `invertiert ${t.invertedLuminance?.toFixed(2)}`
-        : t.tier === 'brighten' ? `Faktor ${t.brightenFactor}, danach ${t.brightenedLuminance?.toFixed(2)}`
+        : t.tier === 'lift' ? `Mischanteil ${t.liftAmount}`
         : t.reason || '';
-      lines.push(`   · ${e.relPath}: Stufe "${t.tier}" (Luminanz ${t.luminance != null ? t.luminance.toFixed(2) : 'n/a'}, Sättigung ${t.saturation != null ? t.saturation.toFixed(2) : 'n/a'}, ${detail})`);
+      const edge = t.edgeFraction != null ? `, Kantenanteil ${t.edgeFraction.toFixed(3)}` : '';
+      lines.push(`   · ${e.relPath}: Stufe "${t.tier}" (Luminanz ${t.luminance != null ? t.luminance.toFixed(2) : 'n/a'}, Sättigung ${t.saturation != null ? t.saturation.toFixed(2) : 'n/a'}${edge}, ${detail})`);
     }
   } else {
     lines.push('Dunkle Logos (S2c-Auftrag B3): keine betroffen (alle über dem Schwellwert).');
@@ -401,7 +450,7 @@ async function writeEmbeddedAssetsFile(repoRoot, entries) {
   const treatmentObj = {};
   for (const e of ok) {
     if (!e.treatment?.tier || e.treatment.tier === 'none') continue;
-    treatmentObj[e.relPath] = e.treatment.tier === 'brighten' ? { tier: 'brighten', factor: e.treatment.brightenFactor } : { tier: e.treatment.tier };
+    treatmentObj[e.relPath] = e.treatment.tier === 'lift' ? { tier: 'lift', factor: e.treatment.liftAmount } : { tier: e.treatment.tier };
   }
   const body = `${EMBED_JS_HEADER}window.SOCIAL_VIDEO_ASSETS=${JSON.stringify(obj)};\nwindow.SOCIAL_VIDEO_ASSET_TREATMENT=${JSON.stringify(treatmentObj)};\n`;
   await writeFileAtomic(path.join(repoRoot, 'social-video-assets.js'), Buffer.from(body, 'utf8'));

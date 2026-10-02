@@ -12,6 +12,7 @@
 // Aufruf: node scripts/test-social-video.mjs
 
 import { readFile, mkdir, rm, writeFile } from 'node:fs/promises';
+import { deflateSync } from 'node:zlib';
 import path from 'node:path';
 import vm from 'node:vm';
 import os from 'node:os';
@@ -22,6 +23,52 @@ import * as cacheLogos from './cache-team-logos.mjs';
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 let failures = 0;
 
+// Minimaler PNG-ENCODER, nur für Abschnitt I (deckt den forceColorPreserving-Zweig von decideLogoTreatment
+// mit einem garantiert strukturlosen, einfarbigen Testbild ab) — reiner node:zlib, kein Paket, Gegenstück zum
+// Decoder in cache-team-logos.mjs. 8-Bit RGBA, kein Interlacing, ein IDAT-Chunk.
+function crc32(buf) {
+  let c;
+  const table = crc32.table || (crc32.table = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })());
+  c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = table[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function pngChunk(type, data) {
+  const typeBuf = Buffer.from(type, 'ascii');
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length, 0);
+  const crcBuf = Buffer.alloc(4);
+  crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+  return Buffer.concat([len, typeBuf, data, crcBuf]);
+}
+async function makeSolidColorPng(width, height, [r, g, b, a]) {
+  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr.writeUInt8(8, 8); // bitDepth
+  ihdr.writeUInt8(6, 9); // colorType RGBA
+  const raw = Buffer.alloc(height * (1 + width * 4));
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * (1 + width * 4);
+    raw[rowStart] = 0; // Filtertyp None
+    for (let x = 0; x < width; x++) {
+      const o = rowStart + 1 + x * 4;
+      raw[o] = r; raw[o + 1] = g; raw[o + 2] = b; raw[o + 3] = a;
+    }
+  }
+  const idat = deflateSync(raw);
+  return Buffer.concat([sig, pngChunk('IHDR', ihdr), pngChunk('IDAT', idat), pngChunk('IEND', Buffer.alloc(0))]);
+}
+
 function assertEqual(actual, expected, label) {
   const a = JSON.stringify(actual);
   const e = JSON.stringify(expected);
@@ -30,20 +77,31 @@ function assertEqual(actual, expected, label) {
 }
 function assertTrue(cond, label) { assertEqual(Boolean(cond), true, label); }
 
+// Seit der Renderer-Werkstatt Stufe 1 (S2e) liegen buildSocialVideoSpec/Schicht A/Schicht B in
+// social-video-renderer.js, nicht mehr in index.html — rendererSrc wird deshalb VOR html durchsucht, der Rest
+// (Teamnormalisierung, Matchcenter-Bausteine) bleibt unverändert in index.html.
 const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const rendererSrc = (await readFile(path.join(REPO_ROOT, 'social-video-renderer.js'), 'utf8')).replace(/\r\n/g, '\n');
+const coreSrc = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8')).replace(/\r\n/g, '\n');
 function fnSource(name) {
-  const m = new RegExp(`(^|\\n)(async )?function ${name}\\(`).exec(html);
-  if (!m) throw new Error(`Funktion nicht gefunden: ${name}`);
-  const from = m.index + m[1].length;
-  return html.slice(from, html.indexOf('\n}', from) + 2);
+  for (const src of [rendererSrc, coreSrc, html]) {
+    const m = new RegExp(`(^|\\n)(async )?function ${name}\\(`).exec(src);
+    if (!m) continue;
+    const from = m.index + m[1].length;
+    return src.slice(from, src.indexOf('\n}', from) + 2);
+  }
+  throw new Error(`Funktion nicht gefunden: ${name}`);
 }
 function constSource(name) {
-  const m = new RegExp(`(^|\\n)const ${name}=`).exec(html);
-  if (!m) throw new Error(`Konstante nicht gefunden: ${name}`);
-  const from = m.index + m[1].length;
-  const head = html.slice(from, html.indexOf('\n', from));
-  if (/[[{]$/.test(head)) { const close = head.endsWith('[') ? '\n];' : '\n};'; return html.slice(from, html.indexOf(close, from) + close.length); }
-  return head;
+  for (const src of [rendererSrc, coreSrc, html]) {
+    const m = new RegExp(`(^|\\n)const ${name}=`).exec(src);
+    if (!m) continue;
+    const from = m.index + m[1].length;
+    const head = src.slice(from, src.indexOf('\n', from));
+    if (/[[{]$/.test(head)) { const close = head.endsWith('[') ? '\n];' : '\n};'; return src.slice(from, src.indexOf(close, from) + close.length); }
+    return head;
+  }
+  throw new Error(`Konstante nicht gefunden: ${name}`);
 }
 
 const FUNCTIONS = [
@@ -363,27 +421,39 @@ console.log('== H) cache-team-logos.mjs ohne --fetch verändert nichts ==');
 }
 
 // ═════════════════════════════════════════════════════════════════════════
-console.log('== I) decideLogoTreatment (S2c-Auftrag B3, dunkle Logos lesbar machen) — echte Dateien ==');
+console.log('== I) decideLogoTreatment (S2c/S2d-Auftrag B3, dunkle Logos lesbar machen) — echte Dateien ==');
 {
-  // Regressions-Pins auf den tatsächlich im Repo vorhandenen Logos: belegt zugleich die Hue-Unterscheidung
-  // (annähernd einfarbig -> invert, farbig -> brighten/silhouette) mit echten Daten statt synthetischer PNGs.
+  // Regressions-Pins auf den tatsächlich im Repo vorhandenen Logos: belegt zugleich die Kantenanteil-/
+  // Hue-Unterscheidung (zu wenig Struktur -> silhouette, annähernd einfarbig -> invert, farbig -> lift) mit
+  // echten Daten statt synthetischer PNGs.
   const expected = {
-    'assets/vfb-ulm-logo-mark.png': 'silhouette', // farbig (Vereinsrot), auch aufgehellt zu dunkel
-    'assets/teams/tv-schriesheim.png': 'invert', // annähernd einfarbig
-    'assets/teams/breisgau-bandits.png': 'invert',
-    'assets/teams/floorball-mannheim.png': 'invert',
-    'assets/teams/fbc-heidelberg.png': 'silhouette', // farbig, auch aufgehellt zu dunkel
-    'assets/teams/vfb-ulm.png': 'silhouette',
+    'assets/vfb-ulm-logo-mark.png': 'lift', // farbig (Vereinsrot), erzwungen (forceColorPreserving)
+    'assets/teams/tv-schriesheim.png': 'invert', // annähernd einfarbig, genug Kantenanteil
+    'assets/teams/breisgau-bandits.png': 'silhouette', // zu wenig Kantenanteil im Original
+    'assets/teams/floorball-mannheim.png': 'silhouette', // zu wenig Kantenanteil im Original
+    'assets/teams/fbc-heidelberg.png': 'lift', // farbig, genug Kantenanteil
+    'assets/teams/vfb-ulm.png': 'lift', // farbig, erzwungen (forceColorPreserving)
     'assets/teams/sportvg-feuerbach.png': 'none', // bereits hell genug
     'assets/teams/sv-tuebingen-sharks.png': 'none',
   };
+  const forceColorPreserving = new Set(['assets/vfb-ulm-logo-mark.png', 'assets/teams/vfb-ulm.png']);
   for (const [relPath, tier] of Object.entries(expected)) {
     const buf = await readFile(path.join(REPO_ROOT, relPath));
-    const result = cacheLogos.decideLogoTreatment(buf);
+    const result = cacheLogos.decideLogoTreatment(buf, { forceColorPreserving: forceColorPreserving.has(relPath) });
     assertEqual(result.tier, tier, `${relPath}: Lesbarkeits-Stufe "${tier}"`);
     if (tier === 'none') assertTrue(result.luminance >= 0.45, `${relPath}: Luminanz (${result.luminance?.toFixed(2)}) über dem Schwellwert`);
     if (tier === 'invert') assertTrue(result.saturation < 0.2, `${relPath}: annähernd einfarbig (Sättigung ${result.saturation?.toFixed(2)} < 0,2)`);
+    if (tier === 'silhouette' && !forceColorPreserving.has(relPath)) assertTrue(result.edgeFraction < 0.035, `${relPath}: zu geringer Kantenanteil (${result.edgeFraction?.toFixed(3)} < 0,035)`);
+    if (tier === 'lift') assertTrue(result.liftAmount > 0 && result.liftAmount <= 0.6, `${relPath}: Mischanteil (${result.liftAmount}) innerhalb 0 < x <= 0,6`);
   }
+  // forceColorPreserving übergeht Kantenanteil- UND Sättigungsprüfung (nicht nur eine davon) — mit einem
+  // synthetischen "zu wenig Struktur"-Bild belegt, bei dem die Funktion ohne Erzwingung 'silhouette' liefern
+  // würde (Kantenanteil 0 bei voller, gleichmäßiger Deckkraft).
+  const flatPng = await makeSolidColorPng(40, 40, [40, 30, 90, 255]); // dunkles, einfarbiges Blau, keine Kanten
+  const flatUnforced = cacheLogos.decideLogoTreatment(flatPng);
+  assertEqual(flatUnforced.tier, 'silhouette', 'Gegenprobe: ohne Erzwingung liefert ein strukturloses dunkles Bild "silhouette"');
+  const flatForced = cacheLogos.decideLogoTreatment(flatPng, { forceColorPreserving: true });
+  assertEqual(flatForced.tier, 'lift', 'forceColorPreserving übergeht die Kantenanteil-Prüfung und erzwingt "lift"');
 }
 
 console.log('');
