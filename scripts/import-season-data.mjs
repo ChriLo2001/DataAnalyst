@@ -38,7 +38,10 @@
 //     -> liest die BEREITS AUF DER PLATTE liegende season-data/<key>.json
 //        (kein <inputFile>!) und aktualisiert nur den betroffenen
 //        window.STATIC_SEASON_DATA-Block in season-data-embedded.js
-//        (file://-Fallback; index.html bleibt unberührt).
+//        (file://-Fallback; index.html bleibt unberührt). Zieht dabei IMMER
+//        zusätzlich window.STATIC_CURRENT_SEASON_KEY aus season-data/seasons.json
+//        nach (Aufgabe 13) — der einzige Weg, wie index.html die aktuelle
+//        Saison auch unter file:// ohne fetch() kennt.
 //   node scripts/import-season-data.mjs <seasonKey> <inputFile> --write --update-embedded
 //     -> beides in einem Lauf: erst schreiben (wie oben), danach exakt die
 //        soeben geschriebenen Daten einbetten.
@@ -729,6 +732,41 @@ export function embedSeasonInEmbeddedFile(fileText, seasonKey, seasonData) {
   return { text: before + newObjText + after, mode };
 }
 
+/**
+ * Aufgabe 13: bettet die laut season-data/seasons.json aktuelle Saison (status:"current") als
+ * `window.STATIC_CURRENT_SEASON_KEY='…';` synchron in season-data-embedded.js ein — direkt nach der
+ * window.STATIC_SEASON_DATA-Zuweisung. Das ist der einzige Weg, wie index.html den bisher hartcodierten
+ * CURRENT_SEASON_KEY-Fallback korrekt auflösen kann, OHNE fetch() — also auch unter file:// (Doppelklick),
+ * wo das bisherige, rein asynchrone resolveCurrentSeasonKey() (fetch auf season-data/seasons.json) nie
+ * ankommt. Reine String-Funktion, kein fetch/fs; wird von runUpdateEmbedded() bei JEDEM --update-embedded
+ * aufgerufen (unabhängig davon, welche einzelne Saison dabei eingebettet wird), damit der Wert nie hinter
+ * dem echten Manifest zurückbleibt.
+ * @param {string} fileText vollständiger Inhalt von season-data-embedded.js (nach embedSeasonInEmbeddedFile)
+ * @param {string} currentKey z.B. "26/27" — der Key mit status:"current" im Manifest
+ * @returns {string} neuer Dateiinhalt
+ * @throws {Error} wenn window.STATIC_SEASON_DATA nicht gefunden/nicht balanciert ist
+ */
+export function embedCurrentSeasonKeyInEmbeddedFile(fileText, currentKey) {
+  const lineRe = /window\.STATIC_CURRENT_SEASON_KEY\s*=\s*'[^']*';\n?/;
+  const line = `window.STATIC_CURRENT_SEASON_KEY='${currentKey}';\n`;
+  if (lineRe.test(fileText)) {
+    return fileText.replace(lineRe, line);
+  }
+  const marker = 'window.STATIC_SEASON_DATA=';
+  const markerIdx = fileText.indexOf(marker);
+  if (markerIdx === -1) {
+    throw new Error('window.STATIC_SEASON_DATA-Zuweisung nicht gefunden — kann STATIC_CURRENT_SEASON_KEY nicht einfügen.');
+  }
+  const objStart = markerIdx + marker.length;
+  const objEnd = findMatchingBrace(fileText, objStart);
+  if (objEnd === -1) {
+    throw new Error('Kein balanciertes Ende für das window.STATIC_SEASON_DATA-Objekt gefunden — kann STATIC_CURRENT_SEASON_KEY nicht einfügen.');
+  }
+  // objEnd ist die Position von '}'; direkt danach kommt noch ';' — dahinter einfügen.
+  const afterSemi = fileText[objEnd + 1] === ';' ? objEnd + 2 : objEnd + 1;
+  return `${fileText.slice(0, afterSemi)}\n${line}${fileText.slice(afterSemi)}`;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // I/O + CLI (main)
 // ─────────────────────────────────────────────────────────────────────────
@@ -809,10 +847,22 @@ async function runUpdateEmbedded(seasonKey) {
     return;
   }
 
-  await writeTextAtomic(EMBEDDED_JS_PATH, embedResult.text);
+  // Aufgabe 13: bei jedem --update-embedded zusätzlich STATIC_CURRENT_SEASON_KEY aus dem echten Manifest
+  // nachziehen — unabhängig davon, welche einzelne Saison gerade eingebettet wurde. Fehlt das Manifest oder
+  // hat keine Saison status:"current", bleibt der zuletzt eingebettete Wert stehen (kein Rateversuch).
+  let finalText = embedResult.text;
+  let currentKeyNote = '';
+  const manifestResult = await readJsonFile(MANIFEST_PATH);
+  const currentEntry = manifestResult.ok ? (manifestResult.data?.seasons || []).find((s) => s?.status === 'current') : null;
+  if (currentEntry?.key) {
+    finalText = embedCurrentSeasonKeyInEmbeddedFile(finalText, currentEntry.key);
+    currentKeyNote = ` STATIC_CURRENT_SEASON_KEY='${currentEntry.key}' (aus season-data/seasons.json).`;
+  }
+
+  await writeTextAtomic(EMBEDDED_JS_PATH, finalText);
   console.log(
     `--update-embedded: window.STATIC_SEASON_DATA['${seasonKey}'] in season-data-embedded.js ${embedResult.mode === 'inserted' ? 'neu eingefügt' : 'ersetzt'} ` +
-      `(${seasonResult.data.games.length} Spiele). Alle anderen Saison-Blöcke wurden geprüft und blieben unverändert. index.html wurde nicht angefasst.`,
+      `(${seasonResult.data.games.length} Spiele). Alle anderen Saison-Blöcke wurden geprüft und blieben unverändert. index.html wurde nicht angefasst.${currentKeyNote}`,
   );
   process.exitCode = 0;
 }

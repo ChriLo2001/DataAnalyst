@@ -26,7 +26,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 
-import { buildDryRunReport, validateSeasonKey, validateWrapperFormat, embedSeasonInEmbeddedFile, buildManifestEntryUpdate, mergeGamesById, buildMergeDryRunReport, detectGameDowngrades } from './import-season-data.mjs';
+import { buildDryRunReport, validateSeasonKey, validateWrapperFormat, embedSeasonInEmbeddedFile, embedCurrentSeasonKeyInEmbeddedFile, buildManifestEntryUpdate, mergeGamesById, buildMergeDryRunReport, detectGameDowngrades } from './import-season-data.mjs';
 
 /** Führt season-data-embedded.js als klassisches Skript aus (kein
  * regex/Textparsing) und gibt das gesetzte window.STATIC_SEASON_DATA zurück —
@@ -316,6 +316,56 @@ console.log('== Fall H (Gegenprobe): mehrdeutiger Treffer -> harter Abbruch, kei
     threw = true;
   }
   assertTrue(threw, 'bei mehrdeutigem "25/26"-Treffer wird hart abgebrochen (kein Ergebnis, keine Datei würde geschrieben)');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fall I: Aufgabe 13 — embedCurrentSeasonKeyInEmbeddedFile (STATIC_CURRENT_SEASON_KEY).
+// ─────────────────────────────────────────────────────────────────────────
+console.log('');
+console.log('== Fall I: embedCurrentSeasonKeyInEmbeddedFile ==');
+{
+  const originalText = await readFile(path.join(REPO_ROOT, 'season-data-embedded.js'), 'utf8');
+
+  console.log('-- Erstmaliges Einfügen (noch keine STATIC_CURRENT_SEASON_KEY-Zeile vorhanden) --');
+  {
+    const result = embedCurrentSeasonKeyInEmbeddedFile(originalText, '26/27');
+    assertTrue(result.includes("window.STATIC_CURRENT_SEASON_KEY='26/27';"), 'neue Zeile wurde eingefügt');
+    assertTrue(result.includes('window.STATIC_SEASON_DATA='), 'STATIC_SEASON_DATA bleibt vorhanden');
+    const dataBefore = loadEmbeddedStaticSeasonData(originalText);
+    const dataAfter = loadEmbeddedStaticSeasonData(result);
+    assertEqual(JSON.stringify(dataAfter), JSON.stringify(dataBefore), 'STATIC_SEASON_DATA selbst bleibt inhaltlich exakt unverändert');
+  }
+
+  console.log('-- Erneutes Einbetten ersetzt die bestehende Zeile, statt sie zu duplizieren --');
+  {
+    const once = embedCurrentSeasonKeyInEmbeddedFile(originalText, '26/27');
+    const twice = embedCurrentSeasonKeyInEmbeddedFile(once, '27/28');
+    const occurrences = (twice.match(/window\.STATIC_CURRENT_SEASON_KEY\s*=/g) || []).length;
+    assertEqual(occurrences, 1, 'genau eine STATIC_CURRENT_SEASON_KEY-Zeile, auch nach mehrfachem Einbetten');
+    assertTrue(twice.includes("window.STATIC_CURRENT_SEASON_KEY='27/28';"), 'der neueste Wert gewinnt');
+    assertTrue(!twice.includes("'26/27';\nwindow.STATIC_CURRENT_SEASON_KEY"), 'der alte Wert ist wirklich ersetzt, nicht nur ergänzt');
+  }
+
+  console.log('-- Ergebnis bleibt gültiges, ausführbares JavaScript --');
+  {
+    const result = embedCurrentSeasonKeyInEmbeddedFile(originalText, '26/27');
+    const sandbox = { window: {} };
+    vm.createContext(sandbox);
+    vm.runInContext(result, sandbox);
+    assertEqual(sandbox.window.STATIC_CURRENT_SEASON_KEY, '26/27', 'window.STATIC_CURRENT_SEASON_KEY ist nach Ausführung korrekt gesetzt');
+    assertTrue(!!sandbox.window.STATIC_SEASON_DATA, 'window.STATIC_SEASON_DATA bleibt nach Ausführung ebenfalls gesetzt');
+  }
+
+  console.log('-- Gegenprobe: fehlende STATIC_SEASON_DATA-Zuweisung -> harter Abbruch --');
+  {
+    let threw = false;
+    try {
+      embedCurrentSeasonKeyInEmbeddedFile('// leer, keine Zuweisung', '26/27');
+    } catch (e) {
+      threw = true;
+    }
+    assertTrue(threw, 'ohne window.STATIC_SEASON_DATA wird hart abgebrochen, nicht stillschweigend etwas Falsches eingefügt');
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────

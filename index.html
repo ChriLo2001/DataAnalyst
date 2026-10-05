@@ -1666,7 +1666,20 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 //  CONFIG
 // ═══════════════════════════════════════════════════════
 const LOGO_B64='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';
-const CURRENT_SEASON_KEY='25/26';
+/**
+ * Aufgabe 13 (S2e-Kaltstart-Phase): vorher fest "25/26" — unabhängig davon, was
+ * season-data/seasons.json als status:"current" führte. window.STATIC_CURRENT_SEASON_KEY
+ * (gesetzt von scripts/import-season-data.mjs --update-embedded, synchron aus dem echten
+ * Manifest, siehe season-data-embedded.js) ist der einzige synchrone Weg dahin — wichtig,
+ * weil ACTIVE_SEASON_CONFIG/SEASON_ID/SEASON_START/SEASON_END direkt im Anschluss SYNCHRON
+ * aus dieser Konstante abgeleitet werden (ein nachträgliches, asynchrones Überschreiben
+ * würde diese Werte nicht rückwirkend aktualisieren, siehe RESOLVED_CURRENT_SEASON_KEY
+ * weiter unten, das genau deshalb separat bleibt). '25/26' bleibt der sichere Fallback,
+ * falls die eingebettete Datei fehlt oder noch nie mit --update-embedded aktualisiert wurde.
+ * Nur ein Format-Sanity-Check (kein SEASON_CONFIG-Abgleich): SEASON_CONFIG ist an dieser
+ * Stelle im Skript noch nicht deklariert (const, keine nutzbare Hoisting-Reihenfolge).
+ */
+const CURRENT_SEASON_KEY=(typeof window.STATIC_CURRENT_SEASON_KEY==='string'&&/^\d{2}\/\d{2}$/.test(window.STATIC_CURRENT_SEASON_KEY))?window.STATIC_CURRENT_SEASON_KEY:'25/26';
 
 const PRE_CLUB_HISTORY={
   '19/20':{
@@ -1776,15 +1789,16 @@ const SEASON_CONFIG={
     features:{teamSeasonLookup:false},
     skipGameIds:[44393,44394,44395,44404],
   },
-  // Noch ohne Spielplan (Saisonmanager führt 26/27 bereits als Saison, siehe
-  // Bericht) — bewusst NICHT isCurrent:true, CURRENT_SEASON_KEY bleibt '25/26'.
-  // loaderStrategy:'embeddedStatic' ist hier entscheidend: dadurch behandelt
-  // loadSeasonData() sie wie die Archiv-Saisons (nur season-data/26-27.json
-  // bzw. STATIC_SEASON_DATA, nie ein Live-Fetch) und hasSeasonSource() lässt
-  // sie öffnen, obwohl aktuell 0 Spiele vorhanden sind. hasEmbeddedSeasonData()
-  // verlangt zusätzlich mindestens 1 Spiel, bevor die globale Alltime-/Hall-of-
-  // Fame-Aggregation sie einbezieht — genau das schützt Alltime automatisch vor
-  // einer leeren Saison, ganz ohne Änderung an dieser Funktion.
+  // Seit dem Kalender-Spielplanimport (Aufgabe 3, S2e-Kaltstart-Phase) hat 26/27 56 echte, terminierte
+  // Spiele in season-data/26-27.json — die ursprüngliche Notiz hier ("noch ohne Spielplan") ist seitdem
+  // überholt, korrigiert bei Aufgabe 13. isCurrent/seasonId bleiben bewusst wie unten: isCurrent wird im
+  // ganzen Projekt nirgends gelesen (toter Wert, siehe createSeasonBucket), seasonId:null ist hier
+  // sachlich richtig — der Kalender-Feed liefert keine numerische Saisonmanager-Season-ID, die echten
+  // Spielobjekte haben kein season_id/league_season_id-Feld (per grep bestätigt), der darauf aufbauende
+  // Filter in buildStandings()/loadSeasonData() bleibt dadurch einfach inaktiv, nicht falsch.
+  // loaderStrategy:'embeddedStatic' bleibt entscheidend: dadurch behandelt loadSeasonData() diese Saison
+  // wie die Archiv-Saisons (nur season-data/26-27.json bzw. STATIC_SEASON_DATA, nie ein Live-Fetch) —
+  // korrekt, da es für 26/27 ohnehin keinen Saisonmanager-API-Zugang gibt (siehe docs/season-data-import.md).
   '26/27':{
     label:'2026/27',isCurrent:false,isArchive:false,sourceType:'static',seasonId:null,
     gameIds:[],knownUlmGameIds:[],sourceUrl:'',
@@ -1815,7 +1829,7 @@ const SEASONS=Object.keys(SEASON_CONFIG).reduce((acc,key)=>{
 },{});
 window.STATIC_SEASON_DATA=STATIC_SEASON_DATA;
 const ACTIVE_SEASON_CONFIG=SEASON_CONFIG[CURRENT_SEASON_KEY];
-const SEASON_ID=ACTIVE_SEASON_CONFIG.seasonId; // Verbandsliga BW KF 2025/2026
+const SEASON_ID=ACTIVE_SEASON_CONFIG.seasonId; // aktuelle Saison, abgeleitet aus CURRENT_SEASON_KEY (Aufgabe 13)
 const SEASON_START=ACTIVE_SEASON_CONFIG.dateRange.start; // First possible Verbandsliga game
 const SEASON_END=ACTIVE_SEASON_CONFIG.dateRange.end;   // Last possible Verbandsliga game (Süddeutsche starts May)
 const CORS='https://corsproxy.io/?url=';
@@ -6030,17 +6044,16 @@ function loadSeasonManifest(){
 }
 
 // ═══ Dynamische "aktuelle Saison" aus dem Manifest ══════════════════════
-// CURRENT_SEASON_KEY bleibt bewusst unangetastet: Aus ihr werden beim Parsen
-// synchron ACTIVE_SEASON_CONFIG/SEASON_ID/SEASON_START/SEASON_END abgeleitet
-// (index.html:~1552) — ein nachträgliches Überschreiben dieser Konstante würde
-// diese Werte NICHT rückwirkend aktualisieren und eine stille Inkonsistenz
-// erzeugen. CURRENT_SEASON_KEY dient daher weiterhin als statischer
-// Default/Fallback (u.a. für alle bestehenden Funktionsparameter), während
-// RESOLVED_CURRENT_SEASON_KEY separat und rein additiv die tatsächlich aus
-// season-data/seasons.json ("status":"current") ermittelte Saison hält, für
-// die zwei tatsächlichen UI-Stellen, die "welche Saison ist aktuell" anzeigen
-// (Cover-Button, rSeasonLandingPage). Kein bestehender Aufrufer von
-// CURRENT_SEASON_KEY wird verändert.
+// Seit Aufgabe 13 weitgehend redundant: CURRENT_SEASON_KEY selbst löst die aktuelle Saison bereits
+// SYNCHRON und file://-fähig über window.STATIC_CURRENT_SEASON_KEY auf (siehe Definition oben,
+// ~Zeile 1669) — der async fetch()-Weg hier (resolveCurrentSeasonKey) kommt unter file:// ohnehin nie an
+// und lieferte, wenn er ankam, bisher nur zwei kosmetische UI-Stellen nach (Cover-Button-Highlight,
+// rSeasonLandingPage-Titelfarbe). Bewusst NICHT entfernt: zusätzliches, unabhängiges Netz für den Fall,
+// dass season-data-embedded.js veraltet ist (kein --update-embedded seit dem letzten Saisonwechsel
+// gelaufen) UND ein Server mit funktionierendem fetch() verfügbar ist — dann korrigiert dieser Pfad die
+// zwei UI-Stellen trotzdem. CURRENT_SEASON_KEY selbst bleibt unverändert vom Ergebnis hier (kein
+// nachträgliches Überschreiben, siehe Begründung an dessen Definition: ACTIVE_SEASON_CONFIG/SEASON_ID/
+// SEASON_START/SEASON_END sind davon bereits synchron abgeleitet).
 let RESOLVED_CURRENT_SEASON_KEY=CURRENT_SEASON_KEY;
 let _resolvedCurrentSeasonKeyPromise=null;
 function resolveCurrentSeasonKey(){
