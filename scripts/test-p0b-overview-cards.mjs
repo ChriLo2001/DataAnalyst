@@ -271,8 +271,9 @@ console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
     rToolMenu: ['fn', '762229fde03b2031'], toolMenuOnKeydown: ['fn', 'ab4998be9b395079'],
     detectOverviewPhase: ['fn', 'feca652a76e5e822'], overviewOpponentPreviewHtml: ['fn', '2a51e05ee239fe3f'], overviewMatchcenterLinkHtml: ['fn', 'c1201a1504d64034'],
     // rMatchdayDetailPage seit Aufgabe 7b neu gepinnt: zusätzliche vollständige Ansetzungsliste (siehe
-    // test-p0b-matchday-headline.mjs für die genaue Begründung).
-    overviewLineupLinkHtml: ['fn', '06e2392960b9368d'], overviewRankChangeTile: ['fn', 'e31f57e9e108d871'], rMatchdayDetailPage: ['fn', '6b72cd9172349968'], rOverviewPage: ['fn', '477ae2f11e11a794'],
+    // test-p0b-matchday-headline.mjs für die genaue Begründung). Erneut seit Aufgabe 12: übergibt
+    // seasonKey an matchdayGameCardHtml (Einsatz-Center-Aufstellungsanzeige, siehe dort).
+    overviewLineupLinkHtml: ['fn', '06e2392960b9368d'], overviewRankChangeTile: ['fn', 'e31f57e9e108d871'], rMatchdayDetailPage: ['fn', '3196dbd49cf3167d'], rOverviewPage: ['fn', '477ae2f11e11a794'],
     uiNotiz: ['fn', '8794f37984dad161'], uiRangliste: ['fn', '87bad31d1b07438c'], uiVerlauf: ['fn', '1860fc97704b31af'], uiHinweisKarte: ['fn', '4b4ab6d5f2b46c2c'], uiObjektseite: ['fn', '390b5f722db20998'],
     goToMainNavPoint: ['win', '59d2de50a5f03cda'], openOverview: ['win', 'ee906a0518a9ecf0'], openMatchdayTimeline: ['win', '0baa2da1fa964990'], openMatchday: ['win', 'bca49420ab804f79'],
     openGlobalSearch: ['win', 'f9764bf44087ed75'], openToolMenu: ['win', 'b816957ddf35608f'],

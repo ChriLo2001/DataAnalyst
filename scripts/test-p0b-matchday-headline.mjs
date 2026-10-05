@@ -82,6 +82,12 @@ function makeEnv(src) {
     uiNotiz: (t) => `<note>${t}</note>`,
     uiHinweisKarte: () => '<card/>',
     overviewRankChangeTile: () => null,
+    // Aufgabe 12: matchdayGameCardHtml ruft jetzt matchdayLineupCardHtml() auf (Einsatz-Center-Aufstellung
+    // auf der Spieltagsseite) — eigenständige Funktionalität mit eigener Datenbasis (LINEUP_DATA/
+    // EINSATZ_CENTER_DRAFT), hier bewusst gestubbt statt extrahiert, analog zu den anderen UI-Bausteinen
+    // oben: dieser Test prüft die Kernaussage der Seite, nicht die Aufstellungsanzeige (eigener Test siehe
+    // scripts/test-p0b-matchday-lineup.mjs).
+    matchdayLineupCardHtml: () => '',
     formatDateDE: (d) => d,
     escAttr: (s) => String(s),
     escHtml: (s) => String(s),
@@ -232,7 +238,10 @@ console.log('== Quelltext: Entscheidung über ulmGames.length - playedGames.leng
   // Hash seit Aufgabe 7b aktualisiert: rMatchdayDetailPage bekam zusätzlich die vollständige
   // Ansetzungsliste (allGames/fixtureHtml, siehe Build-Bericht) — die "bisher"-Prüfung oben bleibt davon
   // unberührt, nur dieser Baseline-Hash musste neu gepinnt werden.
-  assertEqual(sha(detail.replace('\n  const openUlmGames=ulmGames.length-playedGames.length;', '').replace("${openUlmGames>0?' bisher':''}", '')), '06539e0d22bd239e', 'Ohne die beiden neuen Fragmente ist rMatchdayDetailPage byte-identisch zum Stand davor (nur diese Änderung)');
+  // Erneut seit Aufgabe 12 aktualisiert: ulmGames.map(matchdayGameCardHtml) übergibt jetzt zusätzlich
+  // seasonKey (für die Einsatz-Center-Aufstellungsanzeige, siehe matchdayGameCardHtml) — wieder nur dieser
+  // Baseline-Hash betroffen, die "bisher"-Prüfung bleibt unverändert.
+  assertEqual(sha(detail.replace('\n  const openUlmGames=ulmGames.length-playedGames.length;', '').replace("${openUlmGames>0?' bisher':''}", '')), '58c248cac8daf6ef', 'Ohne die beiden neuen Fragmente ist rMatchdayDetailPage byte-identisch zum Stand davor (nur diese Änderung)');
   assertTrue(!/setState|localStorage|sessionStorage|indexedDB|fetch\(|window\.|document\./.test(detail), 'rMatchdayDetailPage: kein setState, Storage, Netzwerk, DOM');
   assertTrue(!/^\s*(let|var)\s+\w*[Oo]pen/m.test(html.slice(html.indexOf('function rMatchdayDetailPage'), html.indexOf('function rMatchdayPage'))), 'keine neue globale/äußere Variable im Spieltagsbereich');
 }
@@ -267,7 +276,10 @@ console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
     // vorbei, Ergebnis noch nicht importiert) statt direkt auf "unplayed" zurückzufallen — sonst kippt der
     // Status am Tag nach einem Spieltag automatisch zurück und reaktiviert die fehlende Nullzeile sowie die
     // individuellen Datenwarnungen, die 7a/7c beheben sollten (siehe Build-Bericht Aufgabe 10).
-    matchdayUlmGames: ['fn', '966c0c7bd06f8678'], matchdayGameCardHtml: ['fn', '63010b0b94d76157'], isGamePlayed: ['fn', '1653d9f28e9a79f9'],
+    // matchdayGameCardHtml erneut seit Aufgabe 12 neu gepinnt: ruft bei einem noch nicht ausgetragenen
+    // Spiel jetzt zusätzlich matchdayLineupCardHtml(seasonKey,g.id) auf (Einsatz-Center-Aufstellung auf der
+    // Spieltagsseite, gestubbt siehe makeEnv oben) und erhält dafür seasonKey als zweiten Parameter.
+    matchdayUlmGames: ['fn', '966c0c7bd06f8678'], matchdayGameCardHtml: ['fn', 'a081524fed38d019'], isGamePlayed: ['fn', '1653d9f28e9a79f9'],
     classifyGameForStats: ['fn', '86d6c3c26336c6c9'], normalizeGame: ['fn', '6cfce341c7770cfb'], buildMatchdays: ['fn', '4c25a4b71e44a455'],
     getSeasonMatchdays: ['fn', 'b2b355055a74fa77'], gameScore: ['fn', 'dbc449c9d328bb2d'], compareGamesChronologically: ['fn', '78671745e559f76a'],
     rMatchdayPage: ['fn', '6ae63d600fc7f61f'], rMatchdayTimelinePage: ['fn', 'f611b4956227c98c'], rMatchdayTimelineRow: ['fn', '66a5a41878bade8e'],

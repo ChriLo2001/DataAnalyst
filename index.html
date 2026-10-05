@@ -22412,7 +22412,32 @@ window.switchMatchdaySeason=async function(value){
 function matchdayUlmGames(matchday){
   return(matchday?.games||[]).filter(g=>detectSide(g));
 }
-function matchdayGameCardHtml(g){
+/**
+ * Aufgabe 12: liest AUSSCHLIESSLICH die bereits vorhandene Einsatz-Center-Datenbasis
+ * (getEffectiveLineupData — Entwurf+importiert zusammengeführt, exakt wie im Einsatz-Center selbst zu
+ * sehen) für EIN Spiel. Keine neue Logik, keine Auswertung/Kennzahl — nur Anzahl + Namen, wie beauftragt.
+ * Liefert null, wenn für dieses Spiel keine Aufstellung eingetragen ist (leerer oder fehlender Eintrag).
+ */
+function matchdayLineupInfo(seasonKey,gameId){
+  const games=getEffectiveLineupData(seasonKey)?.games;
+  const entry=Array.isArray(games)?games.find(e=>Number(e?.gameId)===Number(gameId)):null;
+  const field=entry?.roster?.field||[];
+  const goalies=entry?.roster?.goalies||[];
+  if(!field.length&&!goalies.length)return null;
+  return{
+    fieldCount:field.length,goalieCount:goalies.length,
+    fieldNames:field.map(resolveLineupPlayerName),goalieNames:goalies.map(resolveLineupPlayerName),
+  };
+}
+/** Aufgabe 12: reine Anzeige-Karte aus matchdayLineupInfo() — Anzahl und Namen, keine Auswertung. */
+function matchdayLineupCardHtml(seasonKey,gameId){
+  const info=matchdayLineupInfo(seasonKey,gameId);
+  if(!info)return'';
+  const parts=[`${info.fieldCount} Feldspieler`,`${info.goalieCount} Torwart`];
+  const names=[...info.fieldNames,...info.goalieNames];
+  return uiHinweisKarte({observation:`Aufstellung aus dem Einsatz-Center: ${parts.join(', ')}${names.length?` — ${names.join(', ')}`:''}.`});
+}
+function matchdayGameCardHtml(g,seasonKey){
   const side=detectSide(g);
   if(!side)return null;
   const homeLabel=side==='home'?'Heimspiel':'Auswärtsspiel';
@@ -22420,7 +22445,13 @@ function matchdayGameCardHtml(g){
   // Aufgabe 7b: bei einem geplanten Spiel steht dort, wo sonst das Ergebnis steht, das Spieldatum mit
   // Uhrzeit — jetzt zusätzlich mit Gegner und Halle, damit die Zeile genauso aussagekräftig ist wie die
   // Ergebniszeile eines ausgetragenen Spiels (vorher fehlten beide).
-  if(!isGamePlayed(g))return uiNotiz(`${homeLabel} gegen ${opp||'?'} am ${formatDateDE(g.date||'')}${g.start_time?` (${g.start_time} Uhr)`:''}${g.arena_name?` in ${g.arena_name}`:''}: noch nicht ausgetragen.`);
+  if(!isGamePlayed(g)){
+    const notice=uiNotiz(`${homeLabel} gegen ${opp||'?'} am ${formatDateDE(g.date||'')}${g.start_time?` (${g.start_time} Uhr)`:''}${g.arena_name?` in ${g.arena_name}`:''}: noch nicht ausgetragen.`);
+    // Aufgabe 12: Aufstellung nur anzeigen, solange kein Ergebnis vorliegt — sobald ein echter Endstand
+    // importiert ist, zeigt der andere Zweig unten den echten, gemeldeten Kader (rawGames[].players), der
+    // dann die verbindliche Quelle ist, nicht mehr der Einsatz-Center-Entwurf.
+    return seasonKey?notice+matchdayLineupCardHtml(seasonKey,g.id):notice;
+  }
   const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
   if(isNaN(hg)||isNaN(gg))return uiNotiz('Für dieses Spiel liegt noch kein Endstand vor.');
   const us=side==='home'?hg:gg,os=side==='home'?gg:hg;
@@ -22489,7 +22520,7 @@ function rMatchdayDetailPage(seasonKey,number){
     tiles:rankTile?[rankTile]:[],
   });
   const themenkarten=[
-    ...ulmGames.map(matchdayGameCardHtml),
+    ...ulmGames.map(g=>matchdayGameCardHtml(g,seasonKey)),
     uiNotiz('Spieler des Tages (Game Score) ist noch nicht implementiert.'),
     uiNotiz('Weitere Veränderungen durch diesen Spieltag (Power Ranking, Formkurve, Auffälligkeiten) folgen mit den Liga-Analytics-Modulen (M1–M10).'),
     `<div class="ia-overview-card">${uiNotiz('Aufstellung eintragen oder planen:')}<a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`,
