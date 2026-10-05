@@ -117,14 +117,21 @@ const PLAYERS = [
   ['api:6', 'Daniel Schröder'], ['api:7', 'Loser Lars'], ...Array.from({ length: 10 }, (_, i) => [`api:${20 + i}`, `Max Muster ${String.fromCharCode(65 + i)}`]),
 ].map(([playerId, name]) => ({ playerId, name }));
 const OPP = ['FBC Heidelberg', 'Karlsruhe Giants', 'SV Tuebingen Sharks', 'Breisgau Bandits'];
-const md = (number, date, opp, status = 'abgeschlossen') => ({ number, date, status, teamGames: { 'VfB Ulm': [number * 10], [opp]: [number * 10] }, games: [] });
+// S2e-Kaltstart-Audit (Aufgabe 4): overviewOpponentLabel liest seit dem Fix matchday.games (echte Ulm-Spiele,
+// über matchcenterDetectUlmSide ermittelt) statt matchday.teamGames (das bei einem vollen Spieltag ALLE
+// anderen Teams gelistet hätte, nicht nur Ulms tatsächlichen Gegner — siehe Abschlussbericht). Die Fixture
+// braucht deshalb echte games-Einträge UND matchday.seasonKey (genau wie buildMatchdays() es liefert).
+const md = (number, date, opp, status = 'abgeschlossen', seasonKey = '25/26') => ({
+  number, date, status, seasonKey,
+  games: [{ id: number * 10, date, home_team_name: 'VfB Ulm', guest_team_name: opp }],
+});
 const MATCHDAYS = {
   '25/26': [
     ...Array.from({ length: 8 }, (_, i) => md(i + 1, i === 7 ? '2026-04-11' : `2025-10-${String(10 + i).padStart(2, '0')}`, OPP[i % 2 === 0 ? 0 : 1])),
     md(9, '2026-05-02', OPP[2], 'geplant'),
-    { number: null, date: '2026-06-06', status: 'geplant', teamGames: { 'VfB Ulm': [1], [OPP[3]]: [1] }, games: [] },
+    { number: null, date: '2026-06-06', status: 'geplant', seasonKey: '25/26', games: [{ id: 1, date: '2026-06-06', home_team_name: 'VfB Ulm', guest_team_name: OPP[3] }] },
   ],
-  '24/25': [md(1, '2025-01-05', 'Alt Team'), md(2, '2025-01-12', 'Alt Team')],
+  '24/25': [md(1, '2025-01-05', 'Alt Team', 'abgeschlossen', '24/25'), md(2, '2025-01-12', 'Alt Team', 'abgeschlossen', '24/25')],
 };
 
 function boot({ players = PLAYERS, matchdays = MATCHDAYS, screen = 'main', activeSeasonKey = '25/26', rejectMatchday = false } = {}) {
@@ -149,6 +156,14 @@ function boot({ players = PLAYERS, matchdays = MATCHDAYS, screen = 'main', activ
     getSeasonMatchdays: (k) => matchdays[k] || [],
     getActiveSeasonKey: () => S.activeSeasonKey,
     isUlmTeamName: (n) => /ulm/i.test(String(n)),
+    // S2e-Kaltstart-Audit: overviewOpponentLabel nutzt seit dem Fix diese vier Bausteine aus
+    // matchcenter-core.js, um NUR Ulms tatsächliche Spiele zu finden (statt wie vorher ALLE Teams eines
+    // Spieltags zu listen) — hier bewusst genauso einfach gestubbt wie das bestehende isUlmTeamName oben,
+    // nicht die echte Alias-/Saison-Logik (die hat ihre eigenen Tests, siehe test-social-video.mjs).
+    matchcenterGameTeamName: (g, side) => g?.[`${side}_team_name`] || '',
+    matchcenterIsUlmTeamName: (n) => /ulm/i.test(String(n)),
+    matchcenterDetectUlmSide: (g) => (/ulm/i.test(String(g?.home_team_name)) ? 'home' : /ulm/i.test(String(g?.guest_team_name)) ? 'guest' : null),
+    matchcenterTeamDisplay: (n) => String(n ?? ''),
     setState: () => { calls.setState++; },
     fetch: () => { calls.net++; return Promise.reject(new Error('kein Netzwerk')); },
     console: { warn: (...a) => calls.warn.push(a.join(' ')), log() {}, error() {} },

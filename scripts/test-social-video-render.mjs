@@ -151,8 +151,15 @@ function sceneTimeMs(ctx, spec, sceneId, fraction) {
 
 const SAFE_LEFT = 64, SAFE_RIGHT = 64, SAFE_TOP = 120, SAFE_BOTTOM = 120, WIDTH = 1080;
 const CONTENT_W = WIDTH - SAFE_LEFT - SAFE_RIGHT;
+// S2e-Aufgabe 1 (Schriftfrage): dieselben Faktoren wie der neu kalibrierte Default in socialVideoPushText
+// (social-video-renderer.js) — gegen die tatsächlich geladenen lokalen Schriften gemessen, nicht geraten.
+// WICHTIGE EINSCHRÄNKUNG (siehe Abschlussbericht Aufgabe 1): diese Funktion prüft nur, ob die SCHÄTZUNG
+// intern konsistent mit maxWidth ist (socialVideoEstimateFontSize wurde ja genau mit demselben Faktor
+// berechnet) — das beweist NICHT, dass die TATSÄCHLICH gezeichnete Breite in einem echten Browser ebenfalls
+// unter maxWidth bleibt. Das kann nur ein echter Browser mit geladener Schrift messen (siehe
+// Browser-Stichprobe im Abschlussbericht), node:vm hat kein Canvas/keine Schriftmessung.
 function estimateTextWidth(cmd) {
-  const factor = cmd.font === 'mono' ? 0.6 : (cmd.font === 'inter' ? 0.55 : 0.66);
+  const factor = cmd.font === 'mono' ? 0.6 : (cmd.font === 'inter' ? 0.58 : 1.35);
   return String(cmd.text).length * factor * cmd.size;
 }
 function heightForFormat(format) { return format === 'feed-4x5' ? 1350 : 1920; }

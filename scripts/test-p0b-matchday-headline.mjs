@@ -53,8 +53,9 @@ function winSource(name) {
 }
 const HELPERS = [
   'cleanText', 'normalizeTeamName', 'isUlmTeamName', 'detectUlmSide', 'gameStatusText', 'gameScore', 'isYouthGame',
+  'todayDateString', 'formatGermanDateFromIso',
   'isGameAtOrBeforeAsOf', 'classifyGameForStats', 'isGamePlayed', 'compareGamesChronologically', 'buildMatchdays',
-  'normalizeGame', 'matchdayUlmGames', 'matchdayGameCardHtml',
+  'normalizeGame', 'matchdayUlmGames', 'matchdayGameCardHtml', 'matchdayFixtureCardHtml',
 ];
 const aliasStart = html.indexOf('const ULM_TEAM_ALIASES=[');
 const ULM_ALIASES_SRC = html.slice(aliasStart, html.indexOf('];', aliasStart) + 2);
@@ -228,7 +229,10 @@ console.log('== Quelltext: Entscheidung über ulmGames.length - playedGames.leng
   assertTrue(/const kernaussage=playedGames\.length\n {4}\?/.test(detail), 'Bedingung des Zweigs bleibt playedGames.length');
   const bisherLine = detail.split('\n').find((l) => l.includes("' bisher'"));
   assertTrue(bisherLine && !/status|statusLabel|ended/.test(bisherLine.replace(/`Spieltag[^`]*`/, (m) => m.replace(/\$\{number\}|\$\{openUlmGames>0\?' bisher':''\}|\$\{points\}|\$\{gf-ga>=0\?'\+':''\}|\$\{gf-ga\}/g, ''))), 'Die "bisher"-Zeile verwendet weder Matchday-Status noch ended');
-  assertEqual(sha(detail.replace('\n  const openUlmGames=ulmGames.length-playedGames.length;', '').replace("${openUlmGames>0?' bisher':''}", '')), '247d6f9b129d4adc', 'Ohne die beiden neuen Fragmente ist rMatchdayDetailPage byte-identisch zum Stand davor (nur diese Änderung)');
+  // Hash seit Aufgabe 7b aktualisiert: rMatchdayDetailPage bekam zusätzlich die vollständige
+  // Ansetzungsliste (allGames/fixtureHtml, siehe Build-Bericht) — die "bisher"-Prüfung oben bleibt davon
+  // unberührt, nur dieser Baseline-Hash musste neu gepinnt werden.
+  assertEqual(sha(detail.replace('\n  const openUlmGames=ulmGames.length-playedGames.length;', '').replace("${openUlmGames>0?' bisher':''}", '')), '06539e0d22bd239e', 'Ohne die beiden neuen Fragmente ist rMatchdayDetailPage byte-identisch zum Stand davor (nur diese Änderung)');
   assertTrue(!/setState|localStorage|sessionStorage|indexedDB|fetch\(|window\.|document\./.test(detail), 'rMatchdayDetailPage: kein setState, Storage, Netzwerk, DOM');
   assertTrue(!/^\s*(let|var)\s+\w*[Oo]pen/m.test(html.slice(html.indexOf('function rMatchdayDetailPage'), html.indexOf('function rMatchdayPage'))), 'keine neue globale/äußere Variable im Spieltagsbereich');
 }
@@ -255,10 +259,18 @@ console.log('== Mutationsnachweis (die Prüfungen schlagen bei veränderter Logi
 console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
 {
   const pinned = {
-    matchdayUlmGames: ['fn', '966c0c7bd06f8678'], matchdayGameCardHtml: ['fn', '848b2810ff229d0f'], isGamePlayed: ['fn', '1653d9f28e9a79f9'],
-    classifyGameForStats: ['fn', '72aa0c85c70824e0'], normalizeGame: ['fn', '6cfce341c7770cfb'], buildMatchdays: ['fn', '4c25a4b71e44a455'],
+    // matchdayGameCardHtml/classifyGameForStats seit Aufgabe 7a/7b neu gepinnt: matchdayGameCardHtml zeigt
+    // bei einem geplanten Spiel jetzt auch Gegner und Halle (vorher nur Datum/Uhrzeit); classifyGameForStats
+    // kennt jetzt den eigenen Status "scheduled" statt alles ohne Endstand als "unplayed" mit der
+    // irreführenden Begründung "Kein Endstand und keine Events vorhanden" zu behandeln (siehe Build-Bericht).
+    // classifyGameForStats erneut seit Aufgabe 10 neu gepinnt: dritter Zustand "awaitingResult" (Datum
+    // vorbei, Ergebnis noch nicht importiert) statt direkt auf "unplayed" zurückzufallen — sonst kippt der
+    // Status am Tag nach einem Spieltag automatisch zurück und reaktiviert die fehlende Nullzeile sowie die
+    // individuellen Datenwarnungen, die 7a/7c beheben sollten (siehe Build-Bericht Aufgabe 10).
+    matchdayUlmGames: ['fn', '966c0c7bd06f8678'], matchdayGameCardHtml: ['fn', '63010b0b94d76157'], isGamePlayed: ['fn', '1653d9f28e9a79f9'],
+    classifyGameForStats: ['fn', '86d6c3c26336c6c9'], normalizeGame: ['fn', '6cfce341c7770cfb'], buildMatchdays: ['fn', '4c25a4b71e44a455'],
     getSeasonMatchdays: ['fn', 'b2b355055a74fa77'], gameScore: ['fn', 'dbc449c9d328bb2d'], compareGamesChronologically: ['fn', '78671745e559f76a'],
-    rMatchdayPage: ['fn', '6ae63d600fc7f61f'], rMatchdayTimelinePage: ['fn', 'de87c6c74645849f'], rMatchdayTimelineRow: ['fn', '66a5a41878bade8e'],
+    rMatchdayPage: ['fn', '6ae63d600fc7f61f'], rMatchdayTimelinePage: ['fn', 'f611b4956227c98c'], rMatchdayTimelineRow: ['fn', '66a5a41878bade8e'],
     uiObjektseite: ['fn', '390b5f722db20998'], overviewRankChangeTile: ['fn', 'e31f57e9e108d871'],
     rContextBar: ['fn', '8efff4b4a0d75054'], rMainNav: ['fn', '5d960fde923cc354'], rMainNavBottom: ['fn', '1ade76645df4da89'], rIaShell: ['fn', '16a2d20a6a21ed7e'],
     syncHashFromState: ['fn', '588739234de47a4b'], computeCurrentAppHash: ['fn', '3c9bad5a17ccbdfe'], parseAppHash: ['fn', 'a41f0760de39e83c'], saveLastView: ['fn', '154e4e3394c4f032'],
@@ -271,7 +283,7 @@ console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
   const style = html.slice(a, html.indexOf('</style>', a));
   // Fingerprint-Basiswert zuletzt nach S1 aktualisiert (neue .mc-feed-*-Regeln, siehe
   // docs/social-video-spezifikation.md) — unabhängig von diesem Fix.
-  assertEqual([sha(style), style.length], ['5132a0633d50f579', 173243], 'CSS-Block unverändert (kein CSS in diesem Fix; Fingerprint seit S1 aktualisiert)');
+  assertEqual([sha(style), style.length], ['3c1aff76071131dc', 173580], 'CSS-Block unverändert (kein CSS in diesem Fix; Fingerprint seit S2e aktualisiert: ui-datenstand-band-Regel ergänzt)');
 }
 
 console.log('');

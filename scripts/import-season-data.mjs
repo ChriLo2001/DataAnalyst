@@ -42,6 +42,28 @@
 //   node scripts/import-season-data.mjs <seasonKey> <inputFile> --write --update-embedded
 //     -> beides in einem Lauf: erst schreiben (wie oben), danach exakt die
 //        soeben geschriebenen Daten einbetten.
+//   node scripts/import-season-data.mjs <seasonKey> <teilDatei> --merge
+//     -> Aufgabe 14 — NUR Dry-Run: <teilDatei> muss NICHT die komplette Saison
+//        enthalten, sondern darf nur die Spiele EINES Spieltags (oder
+//        beliebig weniger Spiele) tragen (gleicher Wrapper {season,label,
+//        games:[...]}). Spiele mit bereits bekannter ID werden ERSETZT
+//        (z.B. Postponed -> echter Endstand), neue IDs werden ANGEHÄNGT —
+//        kein bestehendes Spiel verschwindet je. Siehe docs/season-data-import.md,
+//        Abschnitt "Ein Spieltag ist gespielt" für den vollständigen Weg.
+//   node scripts/import-season-data.mjs <seasonKey> <teilDatei> --merge --write --update-embedded
+//     -> schreibt das Merge-Ergebnis (nur mit grünem Dry-Run) und bettet es
+//        anschließend ein — der in der Praxis verwendete Befehl nach einem
+//        Spieltag.
+//   ... --merge --allow-downgrade [--write] [--update-embedded]
+//     -> Aufgabe 14b: --merge bricht normalerweise ab, wenn ein ERSETZTES
+//        Spiel (bekannte ID) inhaltlich ärmer würde als der bisherige Stand
+//        (weniger Events, weniger gemeldete Spieler je Seite, oder ein
+//        verschwindender Endstand) — Schutz gegen eine versehentlich über
+//        ein vollständiges Spiel gelegte ältere/halbfertige Teildatei. Rein
+//        additive/verbessernde Ersetzungen sind davon nie betroffen.
+//        --allow-downgrade erzwingt die Übernahme trotzdem (für eine bewusste
+//        Korrektur), gilt nur für diesen einen Lauf und wird im Bericht als
+//        Warnung genannt, nie stillschweigend.
 //
 // Bewusste CLI-Entscheidung (siehe Auftrag "entscheide dich für die sicherste
 // und klarste Struktur"): --update-embedded braucht NIE ein <inputFile> und
@@ -58,6 +80,7 @@ import {
   findDuplicateGameIds,
   validateSeasonGames,
   diffGameIds,
+  getGameId,
 } from './season-data-validators.mjs';
 
 // Wiederverwendung der bestehenden, bereits getesteten Sicherheitsfunktionen
@@ -254,6 +277,241 @@ export function buildDryRunReport(seasonKey, newData, existingData) {
     warnings,
     writeWouldBeSafe: ok,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Aufgabe 14 — Teilimport (--merge): die Eingabedatei muss NICHT mehr die
+// komplette Saison enthalten, sondern darf nur die Spiele EINES Spieltags
+// (oder beliebig weniger Spiele) tragen. Reine Ergänzung zum bestehenden
+// Vollimport-Pfad oben (buildDryRunReport/main ohne --merge bleiben
+// unverändert, byte-identisches Verhalten) — kein bestehender Codepfad wird
+// geändert, nur ein neuer, paralleler hinzugefügt.
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Führt bestehende Saison-Spiele mit einer Teildatei zusammen: Spiele mit
+ * bereits bekannter ID werden durch die Version aus der Teildatei ERSETZT
+ * (z.B. ein zuvor als "Postponed" importiertes Spiel, das jetzt den echten
+ * Endstand trägt), Spiele mit neuer ID werden ANGEHÄNGT. Kein bestehendes
+ * Spiel wird je entfernt — die bestehende Reihenfolge bleibt für alle
+ * unveränderten/aktualisierten Spiele erhalten, neue Spiele kommen ans Ende
+ * (Anzeige-Reihenfolge ist an keiner Stelle der App von der Reihenfolge in
+ * der Rohdatei abhängig, siehe compareGamesChronologically in index.html).
+ * Rein, kein fs/Zeitabhängigkeit.
+ * @param {Array<object>} existingGames
+ * @param {Array<object>} partialGames
+ * @returns {{mergedGames:object[], addedIds:string[], updatedIds:string[]}}
+ */
+export function mergeGamesById(existingGames, partialGames) {
+  const byId = new Map((existingGames ?? []).map((g) => [getGameId(g), g]));
+  const addedIds = [];
+  const updatedIds = [];
+  for (const g of partialGames ?? []) {
+    const id = getGameId(g);
+    if (id === null) continue; // Strukturfehler ohne ID wird separat per validateSeasonGames gemeldet
+    if (byId.has(id)) updatedIds.push(id);
+    else addedIds.push(id);
+    byId.set(id, g); // Version aus der Teildatei gewinnt bei bekannter ID
+  }
+  const addedIdSet = new Set(addedIds);
+  const mergedGames = [
+    ...(existingGames ?? []).map((g) => byId.get(getGameId(g))),
+    ...(partialGames ?? []).filter((g) => addedIdSet.has(getGameId(g))),
+  ];
+  return { mergedGames, addedIds: addedIds.sort(), updatedIds: updatedIds.sort() };
+}
+
+/** Misst den "Reichtum" eines Spielobjekts anhand der Felder, die ein echter
+ * Spielbericht füllt — rein lesend, keine Bewertung von Inhalt/Richtigkeit. */
+function gameRichness(game) {
+  return {
+    events: Array.isArray(game?.events) ? game.events.length : 0,
+    homePlayers: Array.isArray(game?.players?.home) ? game.players.home.length : 0,
+    guestPlayers: Array.isArray(game?.players?.guest) ? game.players.guest.length : 0,
+    hasResult: !!(game?.result || game?.result_string),
+  };
+}
+
+/**
+ * Aufgabe 14b: die bestehende "keine ID verschwindet"-Prüfung sichert nicht,
+ * dass ein ERSETZTES Spiel inhaltlich nicht ärmer wird — eine ältere oder
+ * halbfertige Teildatei könnte über einem bereits vollständig importierten
+ * Spiel landen, ohne dass sich die Spielanzahl ändert. Prüft für jede ID, die
+ * sowohl in existingGames als auch in partialGames vorkommt (= würde ersetzt
+ * werden), ob Events, Spieler je Seite oder ein vorhandener Endstand
+ * zurückgehen bzw. verschwinden. Rein additive Ergänzungen (gleich viel oder
+ * mehr überall) lösen NICHTS aus. Reine Prüf-Funktion, keine Entscheidung,
+ * was mit einem Fund geschieht (siehe buildMergeDryRunReport).
+ * @returns {Array<{id:string, problems:string[], before:object, after:object}>}
+ */
+export function detectGameDowngrades(existingGames, partialGames) {
+  const byId = new Map((existingGames ?? []).map((g) => [getGameId(g), g]));
+  const downgrades = [];
+  for (const newGame of partialGames ?? []) {
+    const id = getGameId(newGame);
+    if (id === null) continue;
+    const oldGame = byId.get(id);
+    if (!oldGame) continue; // neue ID -> kein "Vorher" zum Vergleichen
+    const before = gameRichness(oldGame);
+    const after = gameRichness(newGame);
+    const problems = [];
+    if (after.events < before.events) problems.push(`Events: ${before.events} -> ${after.events}`);
+    if (after.homePlayers < before.homePlayers) problems.push(`Heim-Spieler: ${before.homePlayers} -> ${after.homePlayers}`);
+    if (after.guestPlayers < before.guestPlayers) problems.push(`Gast-Spieler: ${before.guestPlayers} -> ${after.guestPlayers}`);
+    if (before.hasResult && !after.hasResult) problems.push('Endstand verschwindet (war vorhanden, ist es in der Teildatei nicht mehr)');
+    if (problems.length) downgrades.push({ id, problems, before, after });
+  }
+  return downgrades;
+}
+
+/**
+ * Dry-Run-Kernlogik für den Teilimport-Pfad (--merge) — Pendant zu
+ * buildDryRunReport, aber: die Sicherheitsprüfung "keine bekannte Game-ID
+ * darf verschwinden" wird gegen das TATSÄCHLICHE Merge-Ergebnis geprüft
+ * (existingGames ∪ partialGames-by-id), nicht gegen die Teildatei allein —
+ * sonst würde jeder Teilimport fälschlich an "fehlende IDs" scheitern, weil
+ * die Teildatei naturgemäß nur einen Bruchteil der Saison enthält. Da Merge
+ * ausschließlich ergänzt/aktualisiert, kann dabei konstruktionsbedingt keine
+ * bestehende ID verschwinden — die Prüfung bleibt trotzdem aktiv (siehe
+ * Auftrag: "Die bestehende Sicherheitsprüfung... bleibt dabei unverändert"),
+ * als Netz gegen einen Fehler in mergeGamesById selbst, nicht als Vertrauen
+ * auf die eigene Korrektheit.
+ * @param {{allowDowngrade?:boolean}} [options] allowDowngrade (Aufgabe 14b):
+ *   lässt inhaltlich ärmere Ersatz-Spiele dennoch zu (Warnung statt Fehler) —
+ *   gilt nur für diesen einen Aufruf, siehe formatMergeReport().
+ * @returns {object} Bericht, siehe formatMergeReport()
+ */
+export function buildMergeDryRunReport(seasonKey, newData, existingData, options = {}) {
+  const allowDowngrade = !!options.allowDowngrade;
+  const errors = [];
+  const warnings = [];
+
+  const wrapperCheck = validateWrapperFormat(newData);
+  if (!wrapperCheck.ok) errors.push(...wrapperCheck.problems);
+
+  if (wrapperCheck.ok && newData.season !== seasonKey) {
+    errors.push(`Feld "season" ("${newData.season}") passt nicht zum angegebenen Season-Key ("${seasonKey}")`);
+  }
+
+  const partialGames = wrapperCheck.ok ? newData.games : [];
+  const existedBefore = existingData !== null && existingData !== undefined;
+  const existingGames = Array.isArray(existingData?.games) ? existingData.games : [];
+  if (existedBefore && !Array.isArray(existingData?.games)) {
+    warnings.push('bestehende season-data/<key>.json ist vorhanden, aber strukturell ungültig — wird wie "keine Datei" behandelt');
+  }
+  if (!existedBefore) {
+    warnings.push('Für diese Saison existiert noch keine season-data/<key>.json — der Teilimport entspricht hier einem Vollimport (alle Spiele der Teildatei sind neu).');
+  }
+
+  // Duplikat-/Strukturprüfung gilt nur für die Teildatei — das ist alles, was
+  // an neuem Inhalt hereinkommt.
+  const duplicates = findDuplicateGameIds(partialGames);
+  if (duplicates.length > 0) {
+    errors.push(`Doppelte Game-ID(s) in der Teildatei: ${duplicates.map((d) => `${d.id} (${d.count}×)`).join(', ')}`);
+  }
+  const structure = validateSeasonGames(partialGames);
+  const invalidGames = structure.invalidGames ?? [];
+  for (const bad of invalidGames) {
+    errors.push(`Spiel an Index ${bad.index}${bad.id !== null ? ` (id=${bad.id})` : ''}: ${bad.problems.join('; ')}`);
+  }
+
+  const merge = mergeGamesById(existingGames, partialGames);
+
+  // Sicherheitsnetz: nach dem Merge darf keine zuvor bekannte ID fehlen (siehe
+  // Dokumentationskommentar oben an der Funktion).
+  const diff = diffGameIds(existingGames, merge.mergedGames);
+  if (diff.removed.length > 0) {
+    errors.push(`Interner Fehler: Merge hätte bekannte Game-ID(s) entfernt (${diff.removed.join(', ')}) — Abbruch, nichts wird geschrieben.`);
+  }
+
+  // Unveränderte, bestehende Sicherheitslogik — geprüft gegen das Merge-
+  // Ergebnis, nicht gegen die (naturgemäß viel kleinere) Teildatei.
+  const mergedCheck = validateMergedSeason(existingGames, merge.mergedGames);
+  if (!mergedCheck.ok) errors.push(`validateMergedSeason: ${mergedCheck.reason}`);
+
+  // Aufgabe 14b: Verschlechterungsschutz — eine ältere/halbfertige Teildatei
+  // darf ein bereits vollständig importiertes Spiel nicht stillschweigend
+  // ärmer machen (gleiche Spielanzahl, aber weniger Inhalt wäre sonst
+  // unsichtbar). Rein additive/verbessernde Ersetzungen lösen nichts aus.
+  const downgrades = detectGameDowngrades(existingGames, partialGames);
+  if (downgrades.length) {
+    if (allowDowngrade) {
+      for (const d of downgrades) {
+        warnings.push(`--allow-downgrade: Spiel ${d.id} wurde trotz inhaltlicher Verarmung übernommen (${d.problems.join('; ')}).`);
+      }
+    } else {
+      for (const d of downgrades) {
+        errors.push(`Spiel ${d.id} würde durch die Teildatei inhaltlich ärmer werden (${d.problems.join('; ')}) — Abbruch. Nur mit --allow-downgrade erzwingbar (für eine bewusste Korrektur).`);
+      }
+    }
+  }
+
+  const ok = errors.length === 0;
+
+  return {
+    ok,
+    season: seasonKey,
+    label: wrapperCheck.ok ? newData.label : null,
+    existedBefore,
+    previousGameCount: existingGames.length,
+    partialFileGameCount: partialGames.length,
+    mergedGameCount: merge.mergedGames.length,
+    addedIds: merge.addedIds,
+    updatedIds: merge.updatedIds,
+    downgrades,
+    allowDowngrade,
+    duplicates,
+    invalidGames,
+    mergedGames: merge.mergedGames,
+    errors,
+    warnings,
+    writeWouldBeSafe: ok,
+  };
+}
+
+/** Formatiert den Teilimport-Bericht für die Konsole (Pendant zu formatReport). */
+export function formatMergeReport(report, { seasonKey, inputFile, existingFile, mode = 'dry-run' }) {
+  const lines = [];
+  lines.push('─'.repeat(70));
+  lines.push(`${mode === 'write' ? 'Schreib-' : 'Dry-Run-'}Bericht: Teilimport (--merge) für ${seasonKey}`);
+  lines.push('─'.repeat(70));
+  lines.push(`Eingabedatei (Teildatei): ${inputFile}`);
+  lines.push(`Bestehende Datei:         ${existingFile}${report.existedBefore ? '' : ' (existiert nicht — Teilimport entspricht Vollimport)'}`);
+  lines.push(`Saison:                   ${report.season}`);
+  lines.push(`Label:                    ${report.label ?? '(unbekannt, Wrapper ungültig)'}`);
+  lines.push(`Bisherige Spielanzahl:    ${report.previousGameCount}`);
+  lines.push(`Spiele in der Teildatei:  ${report.partialFileGameCount}`);
+  lines.push(`Spielanzahl nach Merge:   ${report.mergedGameCount}`);
+  lines.push(`Neue Game-ID(s):          ${report.addedIds.length}${report.addedIds.length ? ` -> ${report.addedIds.join(', ')}` : ''}`);
+  lines.push(`Aktualisierte Game-ID(s): ${report.updatedIds.length}${report.updatedIds.length ? ` -> ${report.updatedIds.join(', ')}` : ''}`);
+  lines.push(`Inhaltlich ärmer ersetzt: ${report.downgrades.length}${report.downgrades.length ? ` -> ${report.downgrades.map((d) => d.id).join(', ')}${report.allowDowngrade ? ' (mit --allow-downgrade zugelassen)' : ''}` : ''}`);
+  lines.push(`Doppelte IDs (Teildatei): ${report.duplicates.length}${report.duplicates.length ? ` -> ${report.duplicates.map((d) => d.id).join(', ')}` : ''}`);
+  lines.push(`Strukturell ungültig:     ${report.invalidGames.length}`);
+  lines.push(`Validierungsstatus:       ${report.ok ? 'OK' : 'FEHLER'}`);
+  lines.push(`Schreiben wäre sicher:    ${report.writeWouldBeSafe ? 'JA' : 'NEIN'}`);
+  if (report.warnings.length) {
+    lines.push('Warnungen:');
+    for (const w of report.warnings) lines.push(`  - ${w}`);
+  }
+  if (report.errors.length) {
+    lines.push('Fehler:');
+    for (const e of report.errors) lines.push(`  - ${e}`);
+  }
+  lines.push('─'.repeat(70));
+  if (mode === 'write') {
+    lines.push(
+      report.ok
+        ? 'Ergebnis: Validierung OK — season-data/<key>.json wird jetzt mit dem Merge-Ergebnis überschrieben.'
+        : 'Ergebnis: Validierung FEHLGESCHLAGEN — es wurde NICHTS geschrieben.',
+    );
+  } else {
+    lines.push(
+      report.ok
+        ? 'Ergebnis: Dry-Run OK — ein Schreibvorgang wäre nach aktuellem Stand sicher (nur mit --write).'
+        : 'Ergebnis: Dry-Run FEHLGESCHLAGEN — es würde NICHTS geschrieben.',
+    );
+  }
+  return lines.join('\n');
 }
 
 /** Formatiert den Bericht für die Konsole (deckt alle geforderten Angaben ab). */
@@ -564,10 +822,12 @@ export async function main(argv = process.argv.slice(2)) {
   const positional = argv.filter((a) => !a.startsWith('--'));
   const wantsWrite = flags.has('--write');
   const wantsEmbed = flags.has('--update-embedded');
+  const wantsMerge = flags.has('--merge');
+  const allowDowngrade = flags.has('--allow-downgrade');
 
   const [seasonKeyArg, inputFileArg] = positional;
   if (!seasonKeyArg) {
-    console.error('Aufruf: node scripts/import-season-data.mjs <seasonKey> <inputFile> [--write] [--update-embedded]');
+    console.error('Aufruf: node scripts/import-season-data.mjs <seasonKey> <inputFile> [--write] [--update-embedded] [--merge]');
     console.error('    oder: node scripts/import-season-data.mjs <seasonKey> --update-embedded   (ohne <inputFile>)');
     process.exitCode = 1;
     return;
@@ -598,8 +858,9 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   if (!inputFileArg) {
-    console.error('Aufruf: node scripts/import-season-data.mjs <seasonKey> <inputFile> [--write] [--update-embedded]');
+    console.error('Aufruf: node scripts/import-season-data.mjs <seasonKey> <inputFile> [--write] [--update-embedded] [--merge]');
     console.error('Beispiel: node scripts/import-season-data.mjs 25/26 ./entwurf/25-26-neu.json');
+    console.error('Beispiel (Teilimport eines Spieltags): node scripts/import-season-data.mjs 26/27 ./entwurf/26-27-spieltag1.json --merge');
     process.exitCode = 1;
     return;
   }
@@ -618,6 +879,53 @@ export async function main(argv = process.argv.slice(2)) {
   // Saison) behandeln, nicht als fataler Fehler — das entspricht dem
   // Verhalten von loadSeasonFile() in update-season-data.mjs.
   const existingData = existingResult.ok ? existingResult.data : null;
+
+  // Aufgabe 14: --merge nimmt eine Teildatei (z.B. nur ein Spieltag) entgegen
+  // und ergänzt/aktualisiert statt zu ersetzen — ansonsten (ohne --merge)
+  // bleibt der bestehende Vollimport-Pfad unten unverändert.
+  if (wantsMerge) {
+    const mergeReport = buildMergeDryRunReport(seasonKeyArg, inputResult.data, existingData, { allowDowngrade });
+    console.log(formatMergeReport(mergeReport, { seasonKey: seasonKeyArg, inputFile: inputFileArg, existingFile: existingPath, mode: wantsWrite ? 'write' : 'dry-run' }));
+
+    if (!wantsWrite) {
+      process.exitCode = mergeReport.ok ? 0 : 1;
+      return;
+    }
+    if (!mergeReport.ok) {
+      console.error('Abbruch: --write wurde angegeben, aber die Merge-Validierung ist fehlgeschlagen. Es wurde NICHTS geschrieben.');
+      process.exitCode = 1;
+      return;
+    }
+
+    // Label: die bestehende Saison-Beschriftung hat Vorrang (eine Teildatei
+    // für einen einzelnen Spieltag definiert die Saison nicht neu) — nur wenn
+    // es noch keine bestehende Datei gibt, kommt das Label aus der Teildatei.
+    const mergedLabel = existingData?.label || inputResult.data.label;
+    const dataToWrite = { season: seasonKeyArg, label: mergedLabel, games: mergeReport.mergedGames };
+    await writeJsonAtomic(existingPath, dataToWrite);
+    console.log(`--write: season-data/${existingFile} geschrieben (${dataToWrite.games.length} Spiele, davon ${mergeReport.addedIds.length} neu/${mergeReport.updatedIds.length} aktualisiert durch diesen Teilimport). Kein Commit, kein Push.`);
+
+    const manifestResult = await readJsonFile(MANIFEST_PATH);
+    const currentManifest = manifestResult.ok && Array.isArray(manifestResult.data?.seasons) ? manifestResult.data : { seasons: [] };
+    const manifestUpdate = buildManifestEntryUpdate(currentManifest, { key: seasonKeyArg, label: dataToWrite.label, file: existingFile });
+    if (manifestUpdate.changed) {
+      await writeJsonAtomic(MANIFEST_PATH, manifestUpdate.manifest);
+      console.log(
+        manifestUpdate.isNewEntry
+          ? `--write: season-data/seasons.json ergänzt — neuer Eintrag "${seasonKeyArg}" mit status:"archived" (sicherer Default; ` +
+              `manuell auf "current" umstellen, falls diese Saison jetzt aktuell ist, siehe docs/season-data-import.md).`
+          : `--write: season-data/seasons.json aktualisiert (Label von "${seasonKeyArg}" geändert). Andere Einträge unverändert.`,
+      );
+    } else {
+      console.log('--write: season-data/seasons.json war bereits konsistent, keine Änderung nötig.');
+    }
+
+    if (wantsEmbed) {
+      await runUpdateEmbedded(seasonKeyArg);
+    }
+    process.exitCode = 0;
+    return;
+  }
 
   const report = buildDryRunReport(seasonKeyArg, inputResult.data, existingData);
   console.log(formatReport(report, { seasonKey: seasonKeyArg, inputFile: inputFileArg, existingFile: existingPath, mode: wantsWrite ? 'write' : 'dry-run' }));

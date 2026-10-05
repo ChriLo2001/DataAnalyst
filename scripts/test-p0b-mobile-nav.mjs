@@ -260,7 +260,10 @@ console.log('== Einbau in rIaShell und unveränderte Bestandteile ==');
   assertEqual(sha(activeSrc), 'b3625d372ebad81e', 'MAIN_NAV_ACTIVE_PAGES unverändert');
   const a = html.indexOf('  const hdrHtml=`');
   const endMarker = '</div>\n  </div>`;';
-  assertEqual(sha(html.slice(a, html.indexOf(endMarker, a) + endMarker.length).replace('${rIaShell()}', '')), 'f6e68cf15548d02e', 'Legacy-Kopfzeile (.hdr) unverändert');
+  // Hash seit Aufgabe 7b aktualisiert: die Kopfzeile zeigt bei einer frisch importierten Saison ohne
+  // ausgetragene Spiele jetzt "0 von N Spielen ausgetragen" statt irreführend "0 Spiele geladen" (siehe
+  // gamesLoadedLabel, Build-Bericht).
+  assertEqual(sha(html.slice(a, html.indexOf(endMarker, a) + endMarker.length).replace('${rIaShell()}', '')), '8e98840a1fd2052c', 'Legacy-Kopfzeile (.hdr) unverändert');
   assertEqual(sha(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), '8381155d5a8c43a4', 'HASH_GLOBAL_PAGES unverändert (keine neue Route)');
   const s4 = html.indexOf('/* ═══ P0b-Fix 4');
   const e4 = '  .ia-search-overlay{padding-top:8vh}\n}';

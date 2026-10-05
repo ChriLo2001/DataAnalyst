@@ -13,6 +13,9 @@
   eigene Layout- oder Textberechnung — jede Zeichenentscheidung kommt aus socialVideoDrawList/
   socialVideoDrawListGroups. Diese Datei ist reine Bedienoberfläche + Export-Verdrahtung.
 -->
+<!-- S2e-Aufgabe 1 (Schriftfrage): dieselbe Schrift-Deklaration wie index.html — EINE gemeinsame Datei,
+     nicht zwei eigene (siehe deren Kopfkommentar). -->
+<link rel="stylesheet" href="social-video-fonts.css">
 <style>
   :root{
     --ink:#EDE7DF; --muted:#8A8A90; --accent:#CC1A27; --bg:#0E0306; --panel:#171012;
@@ -383,7 +386,9 @@
   async function render() {
     if (!state.spec) return;
     const token = ++renderToken;
-    const assets = await state.assets;
+    // S2e-Aufgabe 1: vor jedem Zeichnen warten (socialVideoEnsureFontsReady ist gecacht — nach dem ersten
+    // echten Laden kehrt dieser Aufruf sofort zurück, siehe social-video-renderer.js).
+    const [assets] = await Promise.all([state.assets, socialVideoEnsureFontsReady()]);
     if (token !== renderToken) return; // Auswahl hat sich während des Ladens geändert
     const ms = msOfFrame(state.frameIndex);
     const storySpec = state.spec;
@@ -429,7 +434,7 @@
     const scene = state.spec.scenes.find((s) => s.id === sceneId);
     if (!scene) return;
     const ms = Math.round(scene.startMs + (scene.endMs - scene.startMs) * 0.5);
-    const assets = await state.assets;
+    const [assets] = await Promise.all([state.assets, socialVideoEnsureFontsReady()]);
     const decorative = new Set(['hintergrund', 'skyline', 'spatzen', 'flagge', 'abdunklung']);
 
     async function tilesFor(spec) {
@@ -519,7 +524,7 @@
   });
 
   // ── Start ────────────────────────────────────────────────────────────────
-  await socialVideoCheckFonts();
+  await socialVideoEnsureFontsReady();
   const withGames = seasonsWithMatchdays();
   populateSelect(el.season, withGames.length ? withGames : seasonKeys, (k) => SEASON_CONFIG[k]?.label || k, (k) => k);
   if (withGames.length) el.season.value = withGames[withGames.length - 1];

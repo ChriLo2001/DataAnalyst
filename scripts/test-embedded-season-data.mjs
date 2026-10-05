@@ -141,11 +141,20 @@ async function main() {
     assertTrue(newData && typeof newData === 'object', 'season-data-embedded.js setzt window.STATIC_SEASON_DATA auf ein Objekt');
 
     if (oldData && newData) {
-      assertEqual(Object.keys(newData).sort(), Object.keys(oldData).sort(), 'dieselben Saison-Schlüssel');
-      assertEqual(canonicalJson(newData), canonicalJson(oldData), 'kanonisch serialisiert wertgleich (nicht nur "sieht ähnlich aus")');
-      for (const key of Object.keys(oldData)) {
-        assertEqual(canonicalJson(newData[key]), canonicalJson(oldData[key]), `Saison "${key}" für sich genommen wertgleich`);
+      // Die Referenz ist der Stand VOR der Token-Diät-Auslagerung — damals gab
+      // es nur die 5 ursprünglichen Saisons. Seit der S2e-Kaltstart-Phase
+      // (Aufgabe 3) ist per --update-embedded echt 26/27 hinzugekommen — eine
+      // beabsichtigte, spätere Ergänzung, kein Migrationsfehler. Geprüft wird
+      // deshalb: (a) kein ursprünglicher Schlüssel ist verschwunden, (b) jede
+      // ursprüngliche Saison ist für sich genommen weiterhin exakt wertgleich
+      // zur Referenz, (c) 26/27 ist als bewusste Ergänzung zusätzlich da.
+      const oldKeys = Object.keys(oldData).sort();
+      const newKeys = Object.keys(newData).sort();
+      assertTrue(oldKeys.every((k) => newKeys.includes(k)), 'alle ursprünglichen Saison-Schlüssel sind weiterhin vorhanden');
+      for (const key of oldKeys) {
+        assertEqual(canonicalJson(newData[key]), canonicalJson(oldData[key]), `Saison "${key}" für sich genommen wertgleich zum Vor-Migrations-Stand`);
       }
+      assertEqual(newKeys, [...oldKeys, '26/27'].sort(), 'die einzige zusätzliche Saison gegenüber dem Vor-Migrations-Stand ist 26/27 (S2e-Kaltstart-Import)');
     }
   }
 

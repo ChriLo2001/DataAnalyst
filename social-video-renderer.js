@@ -101,20 +101,47 @@ function socialVideoFitText(text,maxChars=SOCIAL_VIDEO_FACT_MAX_CHARS,hardMaxCha
   return{text:wordBoundary.trim()+'…',stage:'tight',truncated:true};
 }
 
-/** Schriftenprüfung (Spezifikation Abschnitt 3.3 Punkt 2): document.fonts.ready abwarten, dann prüfen, ob
- * Syne (900) und DM Mono (800) tatsächlich geladen sind. Fehlen sie (z. B. file:// ohne Netz), wird
- * fallback:true zurückgegeben — der Aufrufer zeichnet dann mit den in der CSS definierten Ersatzschriften
- * weiter (kein Abbruch) und zeigt im UI einen Hinweis. */
+/** Jede tatsächlich von socialVideoPushText verwendete (Familie,Schnitt)-Kombination — alle drei Familien
+ * werden ausschließlich mit dem Default-Gewicht 900 angefragt (kein Aufrufer in diesem Projekt überschreibt
+ * `weight`, siehe socialVideoPushText). S2e-Aufgabe 1 (Schriftfrage): vorher prüfte diese Funktion
+ * "900 'Syne'"/"800 'DM Mono'" gegen einen @import, der diese Gewichte NIE in genau dieser Kombination lud
+ * (Syne nur 700/800, DM Mono nur 400/500) — der Prüfwert passte selbst dann nicht zum tatsächlich geladenen
+ * Gewicht, wenn das Netz verfügbar war. Jetzt lokal (social-video-fonts.css) mit Gewichtsspannen eingebunden,
+ * die 900 für alle drei Familien exakt abdecken (siehe dortiger Kopfkommentar). */
+const SOCIAL_VIDEO_FONT_SPECS=["900 16px 'Syne'","900 16px 'DM Mono'","900 16px 'Inter'"];
+
+/** Schriftenprüfung (Spezifikation Abschnitt 3.3 Punkt 2, erweitert S2e-Aufgabe 1): document.fonts.ready
+ * abwarten, dann EXPLIZIT document.fonts.load() für jede tatsächlich verwendete Kombination anstoßen (nicht
+ * nur prüfen) und erst danach document.fonts.check() auswerten — .ready allein garantiert nicht, dass genau
+ * diese Schnitte geladen sind, nur dass alle zum Zeitpunkt des Aufrufs BEKANNTEN Ladevorgänge abgeschlossen
+ * sind. Fehlen die Schriften (z. B. file:// ohne Netz, Datei fehlt), wird fallback:true zurückgegeben — der
+ * Aufrufer zeichnet dann mit den in der CSS definierten Ersatzschriften weiter (kein Abbruch) und zeigt im
+ * UI einen Hinweis. */
 async function socialVideoCheckFonts(){
   try{
-    if(!globalThis.document?.fonts?.ready)return{ready:false,syne:false,dmMono:false,fallback:true};
+    if(!globalThis.document?.fonts?.ready)return{ready:false,syne:false,dmMono:false,inter:false,fallback:true};
     await document.fonts.ready;
-    const syne=document.fonts.check("900 16px 'Syne'");
-    const dmMono=document.fonts.check("800 16px 'DM Mono'");
-    return{ready:true,syne,dmMono,fallback:!(syne&&dmMono)};
+    await Promise.all(SOCIAL_VIDEO_FONT_SPECS.map(spec=>document.fonts.load(spec).catch(()=>[])));
+    const syne=document.fonts.check(SOCIAL_VIDEO_FONT_SPECS[0]);
+    const dmMono=document.fonts.check(SOCIAL_VIDEO_FONT_SPECS[1]);
+    const inter=document.fonts.check(SOCIAL_VIDEO_FONT_SPECS[2]);
+    return{ready:true,syne,dmMono,inter,fallback:!(syne&&dmMono&&inter)};
   }catch(e){
-    return{ready:false,syne:false,dmMono:false,fallback:true};
+    return{ready:false,syne:false,dmMono:false,inter:false,fallback:true};
   }
+}
+
+/** Stellt sicher, dass alle verwendeten Schriften geladen sind, EINMAL pro Seitenaufruf tatsächlich wartend
+ * (danach liefert derselbe gecachte Promise sofort zurück) — S2e-Aufgabe 1: "vor jedem Zeichnen und vor
+ * jeder Aufnahme muss auf document.fonts.load gewartet werden". Von Schicht B selbst aufgerufen
+ * (socialVideoRenderStandbildDataUrl/socialVideoCaptureVideo), nicht nur von den UI-Aufrufstellen in
+ * index.html — ein vergessener Aufruf an EINER Stelle (das war der tatsächliche Fehler: window.
+ * generateSocialVideoContactSheets rief socialVideoCheckFonts() bisher nicht auf) kann die Zeichnung dadurch
+ * nicht mehr ungeschützt lassen. */
+let _socialVideoFontsReadyPromise=null;
+function socialVideoEnsureFontsReady(){
+  if(!_socialVideoFontsReadyPromise)_socialVideoFontsReadyPromise=socialVideoCheckFonts();
+  return _socialVideoFontsReadyPromise;
 }
 /** Fähigkeitsprüfung für den SVG-foreignObject->Canvas->PNG-Export. Seit S2 betrifft das NUR noch
  * window.downloadMatchdayStory (Live-Vorschau-Export im Social Media Center) — downloadSocialVideoStandbild
@@ -598,10 +625,32 @@ function socialVideoSparrowPositions(timeMs,width,height){
   return out;
 }
 
+// S2e-Aufgabe 1 (Schriftfrage) — NEU KALIBRIERT gegen die tatsächlich geladenen, lokalen Schriften (vorher
+// gegen einen nie zuverlässig geladenen Google-Fonts-@import grob geraten: 0,66 für ALLE Nicht-Mono-Schriften,
+// obwohl Syne und Inter sehr unterschiedlich breit sind). Gemessen per ctx.measureText an realen, im Renderer
+// tatsächlich vorkommenden Texten (Vereinsnamen, Spielernamen, Daten, Kennzahlen) bei Gewicht 900, Referenz-
+// größe 100px, Mittelwert mehrerer Stichproben je Familie, aufgerundet für den konstruktiven
+// Sicherheitsspielraum (socialVideoEstimateFontSize MUSS eher zu klein als zu groß schätzen):
+//   mono  (DM Mono): 0,60 — unverändert, ECHTES Monospace, Messung war exakt 0,600 in jeder Stichprobe.
+//   syne  (Syne):    0,66 -> 1,35 — größte gefundene Abweichung: "Huppmann" bei 54px: alt vorhergesagt
+//                     285,1px, tatsächlich 492,3px gezeichnet (+207,2px / +72,7%). EINSCHRÄNKUNG, ehrlich
+//                     gemessen statt verschwiegen: ein einzelner Faktor kann sehr KURZEN Texten (zweistellige
+//                     Initialen-Fallbacks wie "VU"/"DG" — fester Zeichenabstand amortisiert sich nicht über
+//                     die Länge) nie perfekt gerecht werden UND gleichzeitig lange Vereinsnamen nicht unnötig
+//                     verkleinern. 1,35 deckt alle realen Saison-25/26-Initialen ab (Browser-Stichprobe, 663
+//                     Textbefehle aus echten Specs: 0 Überläufe); ein theoretisches Extrem wie "WW" (Faktor
+//                     1,882, durchprobiert über alle 676 Großbuchstaben-Paare) bliebe trotzdem ungedeckt —
+//                     für diesen schmalen Grenzfall (nur die Initialen-Kreisfläche, nicht der Haupttext)
+//                     wurde bewusst nicht weiter hochkalibriert, um lange Vereinsnamen nicht unnötig zu
+//                     verkleinern (siehe Abschlussbericht Aufgabe 1).
+//   inter (Inter):   0,66 -> 0,58 — Inter ist schmaler als angenommen (alte Schätzung lag bis zu 20% zu hoch,
+//                     keine Überlaufgefahr, aber Text wurde unnötig klein skaliert).
+// Vorher behandelte der Code 'inter' und 'syne' sogar IDENTISCH (beide 0,66) — zwei verschiedene Schriften
+// mit sehr unterschiedlicher Laufweite bekamen denselben Faktor. Jetzt drei eigene Zweige.
 function socialVideoPushText(cmds,{text,x,y,baseSize,maxWidth,font='syne',weight=900,color='#fff',align='center',letterSpacing=0,opacity=1,charFactor,tabular,formColor,group}){
   const t=String(text||'');
   if(!t)return;
-  const factor=charFactor??(font==='mono'?0.6:0.66);
+  const factor=charFactor??(font==='mono'?0.6:font==='inter'?0.58:1.35);
   const size=socialVideoEstimateFontSize(t,baseSize,maxWidth,factor);
   cmds.push({type:'text',text:t,x,y,size,maxWidth,font,weight,color,align,letterSpacing,opacity,tabular,formColor,group});
 }
@@ -1315,7 +1364,10 @@ async function socialVideoRenderStandbildDataUrl(spec,timeMs){
   const canvas=document.createElement('canvas');
   canvas.width=width;canvas.height=height;
   const ctx=canvas.getContext('2d');
-  const assets=await socialVideoLoadAssets(spec);
+  // S2e-Aufgabe 1: Schriften UND Bilder parallel bereitstellen, keine Zeichnung vor beidem (siehe
+  // socialVideoEnsureFontsReady — schützt jetzt auch Aufrufer, die das selbst vergessen, siehe dortiger
+  // Kommentar zum tatsächlich gefundenen Fehler in window.generateSocialVideoContactSheets).
+  const [assets]=await Promise.all([socialVideoLoadAssets(spec),socialVideoEnsureFontsReady()]);
   socialVideoRenderFrame(ctx,socialVideoDrawList(spec,timeMs),assets,null);
   try{
     return canvas.toDataURL('image/png');
@@ -1345,7 +1397,8 @@ async function socialVideoCaptureVideo(spec,{onProgress,signal}={}){
   const canvas=socialVideoCreateCanvas(width,height);
   try{
     const ctx=canvas.getContext('2d');
-    const assets=await socialVideoLoadAssets(spec);
+    // S2e-Aufgabe 1: siehe Kommentar an socialVideoRenderStandbildDataUrl — keine Aufnahme vor Schriften+Bildern.
+    const [assets]=await Promise.all([socialVideoLoadAssets(spec),socialVideoEnsureFontsReady()]);
     const staticLayer=socialVideoBuildStaticLayer(socialVideoDrawList(spec,0),width,height);
     const durationMs=spec.durationMs||15000;
     const frameIntervalMs=1000/SOCIAL_VIDEO_FPS;

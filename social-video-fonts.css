@@ -1,0 +1,39 @@
+/* S2e — Renderer-Werkstatt, Aufgabe 1 (Schriftfrage). EINE gemeinsame @font-face-Deklaration für index.html
+   UND social-video-lab.html (nicht zwei eigene) — siehe scripts/cache-fonts.mjs für Herkunft/Lizenz-Quelle
+   (Google Fonts, latin-Subset, lokal zwischengespeichert unter assets/fonts/). Ersetzt den bisherigen
+   @import von https://fonts.googleapis.com/css2?... in index.html, der unter file:// (kein Netz) nie lud und
+   Canvas2D dadurch still auf die Browser-Standardschrift zurückfallen ließ (sichtbar erst im exportierten
+   Bild, kein Fehler). Lokale Schriftdateien unterliegen — anders als Bilder auf einem Canvas — keiner
+   Same-Origin-Einschränkung; deshalb genügen relative Pfade, keine data:-URI-Einbettung nötig.
+
+   Syne und Inter liefert Google Fonts aktuell nur als EINE Binärdatei für alle abgefragten Schnitte aus
+   (geprüft, siehe cache-fonts.mjs) — die Gewichtsspanne 400 900 deckt deshalb jede im Renderer angefragte
+   Stärke mit genau dieser einen Datei ab. DM Mono hat zwei echte, unterschiedliche statische Schnitte. */
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('assets/fonts/dm-mono-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'DM Mono';
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: block;
+  src: url('assets/fonts/dm-mono-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: block;
+  src: url('assets/fonts/syne.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: block;
+  src: url('assets/fonts/inter.woff2') format('woff2');
+}

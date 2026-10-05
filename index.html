@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>VfB Ulm - Analytics Center</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- S2e-Aufgabe 1 (Schriftfrage): lokal zwischengespeicherte Schriften statt Google-Fonts-@import — siehe
+     social-video-fonts.css und scripts/cache-fonts.mjs. Funktioniert ohne Netzzugriff, auch unter file://. -->
+<link rel="stylesheet" href="social-video-fonts.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap');
 :root{
   --bg:#0a0e1a;--surf:#111827;--surf2:#1a2235;--brd:#243050;
   --red:#c41e3a;--red2:#e8273f;
@@ -1399,6 +1401,10 @@ table{font-size:12px}thead th{font-size:10px;padding:8px 10px}tbody td{padding:8
 
 .ui-notiz{font-size:11.5px;color:var(--text-muted);font-style:italic}
 
+/* S2e-Kaltstart-Audit (Aufgabe 4a/4b): volle Breite, deutlich sichtbar, kein Schließen-Button — sitzt direkt
+   über der ersten Kennzahl der jeweiligen Ansicht (siehe rMatchcenterPage/rLineupBuilderPage/rTeamPage). */
+.ui-datenstand-band{display:block;width:100%;box-sizing:border-box;margin:0 0 14px;padding:11px 16px;border-radius:10px;border:1px solid rgba(245,158,11,.5);background:rgba(245,158,11,.16);color:#fde8c0;font:700 13px/1.5 'DM Mono',monospace;letter-spacing:.01em}
+
 .ui-platzhalter{display:grid;gap:8px}
 .ui-platzhalter-line{display:block;height:11px;border-radius:6px;background:linear-gradient(90deg,rgba(148,163,184,.08),rgba(148,163,184,.18),rgba(148,163,184,.08));background-size:200% 100%;animation:ui-platzhalter-shimmer 1.6s ease-in-out infinite}
 @keyframes ui-platzhalter-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -2536,12 +2542,28 @@ function gameClassificationStatusLabel(g,classification=null){
   ].map(v=>cleanText(v||'').trim()).filter(Boolean);
   return fields.length?fields.join(' / '):c.status;
 }
-function appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,failedGameLoads,errors,dbg}){
+function appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,scheduledGames,awaitingResultGames,flaggedSuspiciousGames,failedGameLoads,errors,dbg}){
   const label=seasonConfig.label||seasonKey;
   const failedEntries=failedGameLoads instanceof Map?[...failedGameLoads.entries()]:[];
   const excludedRows=excludedScheduledGames||[];
+  const scheduledRows=scheduledGames||[];
+  const awaitingResultRows=awaitingResultGames||[];
   const suspiciousRows=flaggedSuspiciousGames||[];
   const duplicateIds=diagnoseGameDuplicates(rawGamesData||leagueGamesData);
+  // Aufgabe 7c: ein geplantes Spiel ohne Endstand ist zum Saisonstart erwartbar, keine Auffälligkeit — eine
+  // einzelne Zeile pro Spiel wäre Rauschen (56 Zeilen für 56 geplante Spiele). Eine zusammenfassende Zeile
+  // genügt, UND sie gehört bewusst in S.dbg (neutrales, bereits vorhandenes "🔍 API-Debug-Log"), nicht in
+  // S.errors (die rot hervorgehobene "⚠ N Datenwarnungen"-Badge) — diese Zweiteilung existierte im Projekt
+  // schon, wurde hier nur noch nicht genutzt (siehe CLAUDE.md-Hausregeln-Notiz).
+  if(scheduledRows.length){
+    dbg.push(`${label}: ${scheduledRows.length} Spiele terminiert, noch keines ausgetragen.`);
+  }
+  // Aufgabe 10: eigene, ebenfalls neutrale Zeile für "Datum vorbei, Ergebnis noch nicht importiert" — bewusst
+  // von der obigen Zeile getrennt (unterschiedliche fachliche Bedeutung: hier wartet ein Import, nicht der
+  // Spieltermin selbst) und genau wie diese in dbg statt errors.
+  if(awaitingResultRows.length){
+    dbg.push(`${label}: ${awaitingResultRows.length} Spiele ausgetragen, Ergebnis noch nicht importiert.`);
+  }
   for(const dup of duplicateIds){
     const msg=`Doppelte Game-ID ${dup.id} in ${label} erkannt (${dup.count}x). Es wird nur ein Eintrag geladen; Details: ${dup.games.join(' | ')}`;
     errors.push(msg);
@@ -8149,10 +8171,21 @@ async function loadSeasonData(seasonKey=CURRENT_SEASON_KEY,options={}){
   const classifiedLeagueGames=leagueGamesData.map(game=>({game,classification:classifyGameForStats(game,{seasonKey,seasonConfig})}));
   const relevantLeagueGames=classifiedLeagueGames.filter(row=>row.classification.countsForStats).map(row=>row.game);
   const excludedScheduledGames=classifiedLeagueGames.filter(row=>!row.classification.countsForStats&&['cancelled','postponed','unplayed'].includes(row.classification.status));
+  // Aufgabe 7a: eigener Zustand "geplant" (status:'scheduled', siehe classifyGameForStats in
+  // matchcenter-core.js) — zählt nicht für Statistiken, ist aber KEINE Auffälligkeit und bleibt deshalb
+  // bewusst außerhalb von excludedScheduledGames (das Feld für "abgesagt/verschoben/nicht ausgetragen").
+  const scheduledGames=classifiedLeagueGames.filter(row=>row.classification.status==='scheduled');
+  // Aufgabe 10: dritter Zustand neben 'scheduled' — Datum ist vorbei, aber noch kein Ergebnis importiert
+  // (der Zustand am Spieltagnachmittag zwischen Schlusspfiff und Import). Zählt wie 'scheduled' nicht für
+  // Statistiken und ist KEINE Auffälligkeit, bleibt deshalb ebenfalls außerhalb von excludedScheduledGames.
+  const awaitingResultGames=classifiedLeagueGames.filter(row=>row.classification.status==='awaitingResult');
   const flaggedSuspiciousGames=classifiedLeagueGames.filter(row=>row.classification.status==='suspicious');
-  dbg.push(`📌 Relevante Liga-Spiele für Statistiken: ${relevantLeagueGames.length}/${leagueGamesData.length}; ausgeschlossen: ${excludedScheduledGames.length}; auffällig: ${flaggedSuspiciousGames.length}`);
-  appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,flaggedSuspiciousGames,failedGameLoads,errors,dbg});
-  const standings=buildStandings(relevantLeagueGames,seasonConfig);
+  dbg.push(`📌 Relevante Liga-Spiele für Statistiken: ${relevantLeagueGames.length}/${leagueGamesData.length}; geplant: ${scheduledGames.length}; Ergebnis ausstehend: ${awaitingResultGames.length}; ausgeschlossen: ${excludedScheduledGames.length}; auffällig: ${flaggedSuspiciousGames.length}`);
+  appendSeasonGameDiagnostics({seasonKey,seasonConfig,rawGamesData,leagueGamesData,relevantLeagueGames,excludedScheduledGames,scheduledGames,awaitingResultGames,flaggedSuspiciousGames,failedGameLoads,errors,dbg});
+  // Aufgabe 7b: Tabelle aus ALLEN Liga-Spielen bauen (nicht nur relevantLeagueGames) — buildStandings()
+  // nimmt jetzt selbst jedes Team mit einer Nullzeile auf, sobald es ein geplantes Spiel hat (siehe dort),
+  // auch wenn noch kein Spiel für Statistiken zählt.
+  const standings=buildStandings(leagueGamesData,seasonConfig);
   dbg.push(`🏆 Tabelle: ${standings.length} Teams`);
   if(standings.length)dbg.push(`📊 SP-Check: `+standings.slice(0,4).map(t=>`${t.name.split(' ').pop()}=${t.sp}`).join(', '));
 
@@ -10611,11 +10644,14 @@ function buildBestThirdManOptions(duoPlayerIds,context={}){
       experienceFitScore:pctValue(evaluated.experienceFitScore),
       opponentFitScore:pctValue(projected.opponentFit),
       scorerCounts,
+      // Aufgabe 4m2: keine eigene Konfidenzstufe fuer den Trio-Kandidaten vorhanden — aus der Spiele-
+      // Stichprobe des Kandidaten abgeleitet (DATENSTAND_SCHWELLEN), statt neuer Logik.
+      confidence:confidenceFromSampleSize(evaluated.candidateGames,'spiele'),
       reasons:reasons.slice(0,4),
       risks:(evaluated.risks||[]).slice(0,3),
       projectedTrioSummary:projected.recommendationSummary||'Vorsichtige Trio-Bewertung aus Rollenmix und Chemie.'
     };
-  }).sort((a,b)=>b.fitScore-a.fitScore||b.hiddenFitScore-a.hiddenFitScore||b.scorerCounts.totalWithDuo-a.scorerCounts.totalWithDuo||a.playerName.localeCompare(b.playerName,'de')).slice(0,5);
+  }).sort((a,b)=>CONFIDENCE_RANK[b.confidence]-CONFIDENCE_RANK[a.confidence]||b.fitScore-a.fitScore||b.hiddenFitScore-a.hiddenFitScore||b.scorerCounts.totalWithDuo-a.scorerCounts.totalWithDuo||a.playerName.localeCompare(b.playerName,'de')).slice(0,5);
 }
 function getDuoDirectScorerGameCounts(duoPlayerIds,context={}){
   const ids=(duoPlayerIds||[]).map(String).filter(Boolean).slice(0,2);
@@ -11204,13 +11240,24 @@ function buildDuoGapAnalysis(playerAId,playerBId,context={}){
     explanation:missing.length?`Dem Duo fehlt vor allem ${strongestNeed}. Ein ${suggestedThirdManProfile} koennte die Kombination runder machen.`:'Das Duo wirkt in den wichtigsten Dimensionen bereits recht ausgeglichen.',
   };
 }
+/**
+ * Aufgabe 4L (Performance-Fund): die Anti-Synergy-Gegenprüfung (antiA/antiB) ruft buildRosterImpactAnalysis
+ * auf, das für JEDEN Mitspieler im Kader eine volle Mit/Ohne-Auswertung baut (~170ms, gemessen) — nur um
+ * danach EINEN einzigen Eintrag (den fürs jeweils andere Duo-Mitglied) daraus herauszusuchen. Bei der
+ * Ersatzkandidaten-Suche (buildDuoReplacementOptions, siehe dort) läuft das für bis zu 28 Kandidaten × 2
+ * Seiten × 2 Aufrufe = 112× — das ist die gemessene ~28s-Hänge-Ursache. context._skipReplacements markiert
+ * genau diese Tiefe ("wir bewerten hier einen Kandidaten FÜR ein Duo, nicht das angezeigte Duo selbst") und
+ * überspringt die Gegenprüfung an dieser Stelle (antiPenalty bleibt 0) — inhaltlich eine Rekursionsstufe
+ * ohne Aussagewert für die Kandidaten-Rangliste, siehe Build-Bericht. Das angezeigte Hauptduo bekommt die
+ * Gegenprüfung weiterhin vollständig (context._skipReplacements ist dort nie gesetzt).
+ */
 function buildDuoCompatibility(playerAId,playerBId,context={}){
   const direct=buildDuoDirectProduction(playerAId,playerBId,context);
   const floor=buildDuoFloorCeiling([playerAId,playerBId],context);
   const impact=buildDuoWithWithoutImpact(playerAId,playerBId,context);
   const line=buildLineAnalysis([playerAId,playerBId],context);
-  const antiA=(buildRosterImpactAnalysis(playerAId,{...context,limit:20,minTogetherGames:3,minWithoutGames:3})||[]).find(r=>String(r.partnerId)===String(playerBId));
-  const antiB=(buildRosterImpactAnalysis(playerBId,{...context,limit:20,minTogetherGames:3,minWithoutGames:3})||[]).find(r=>String(r.partnerId)===String(playerAId));
+  const antiA=context._skipReplacements?null:(buildRosterImpactAnalysis(playerAId,{...context,limit:20,minTogetherGames:3,minWithoutGames:3})||[]).find(r=>String(r.partnerId)===String(playerBId));
+  const antiB=context._skipReplacements?null:(buildRosterImpactAnalysis(playerBId,{...context,limit:20,minTogetherGames:3,minWithoutGames:3})||[]).find(r=>String(r.partnerId)===String(playerAId));
   const antiPenalty=Math.max(Number(antiA?.antiSynergyScore)||0,Number(antiB?.antiSynergyScore)||0);
   const productionScore=clampScore(lineupScore(direct.directDuoScorers,0,12)*.55+lineupScore(direct.directDuoScorersPerSharedFieldGame,0,.8)*.45);
   const hiddenFitScore=clampScore(((Number(line.scoringPotential)||0)+(Number(line.playmakingPotential)||0)+(Number(line.balanceScore)||0))/3);
@@ -11254,11 +11301,13 @@ function buildDuoUsageRate(playerAId,playerBId,context={}){
 function buildDuoReplacementOptions(playerAId,playerBId,context={}){
   const candidates=getDuoFieldPlayerRows(context).filter(row=>![String(playerAId),String(playerBId)].includes(String(row.playerId))).slice(0,28);
   const optionFor=(fixedId,missingName)=>candidates.map(row=>{
-    const compatibility=buildDuoCompatibility(fixedId,row.playerId,context);
+    const compatibility=buildDuoCompatibility(fixedId,row.playerId,{...context,_skipReplacements:true});
     const direct=buildDuoDirectProduction(fixedId,row.playerId,context);
     const score=Number(compatibility?.score)||0;
-    return{playerId:row.playerId,playerName:row.name,duoName:`${duoProPlayer(fixedId)?.name||'Spieler'} + ${row.name}`,score,reason:`Aehnlichste Alternative, wenn ${missingName} fehlt: ${compatibility?.reasons?.[0]||`${direct.directDuoScorers} direkte Scorer, Rollenmix vorsichtig bewertet.`}`};
-  }).sort((a,b)=>b.score-a.score||a.playerName.localeCompare(b.playerName,'de')).slice(0,3);
+    // Aufgabe 4m2: compatibility.confidence ist bereits vorhanden (=direct.confidence, buildDuoDirectProduction)
+    // — hier nur wiederverwendet, keine neue Logik.
+    return{playerId:row.playerId,playerName:row.name,duoName:`${duoProPlayer(fixedId)?.name||'Spieler'} + ${row.name}`,score,confidence:compatibility?.confidence||'klein',reason:`Aehnlichste Alternative, wenn ${missingName} fehlt: ${compatibility?.reasons?.[0]||`${direct.directDuoScorers} direkte Scorer, Rollenmix vorsichtig bewertet.`}`};
+  }).sort((a,b)=>CONFIDENCE_RANK[b.confidence]-CONFIDENCE_RANK[a.confidence]||b.score-a.score||a.playerName.localeCompare(b.playerName,'de')).slice(0,3);
   return{ifPlayerAMissing:optionFor(playerBId,duoProPlayer(playerAId)?.name||'Spieler A'),ifPlayerBMissing:optionFor(playerAId,duoProPlayer(playerBId)?.name||'Spieler B')};
 }
 function buildDuoProAnalysis(playerAId,playerBId,context={}){
@@ -11310,10 +11359,15 @@ function rDuoCenterPro(duoPlayerIds,context={}){
   if(ids.length!==2)return'';
   const rowMap=lineupRowMap();
   const names=ids.map(id=>rowMap.get(id)?.name||getPlayerRegistryProfile(id)?.name||'Spieler');
-  const floor=buildDuoFloorCeiling(ids,context);
-  const third=buildBestThirdManOptions(ids,context).slice(0,3);
-  const warnings=buildDuoWarnings(ids,context);
   const analysis=buildDuoProAnalysis(ids[0],ids[1],context);
+  // Aufgabe 4L (Performance-Fund): floor/third/warnings NICHT mehr separat berechnen — buildDuoProAnalysis
+  // liefert sie mit identischen Argumenten bereits mit (floorCeiling/bestThirdMan/warnings). Vorher wurden
+  // buildDuoFloorCeiling/buildBestThirdManOptions/buildDuoWarnings hier UND erneut innerhalb von
+  // buildDuoProAnalysis berechnet — reine Verdopplung, buildBestThirdManOptions allein iteriert den ganzen
+  // Kader.
+  const floor=analysis.floorCeiling||{};
+  const third=(analysis.bestThirdMan||[]).slice(0,3);
+  const warnings=analysis.warnings||[];
   const direct=analysis.directProduction||{};
   const compatibility=analysis.compatibility||{};
   const impact=analysis.withWithoutImpact||{};
@@ -11351,8 +11405,8 @@ function rDuoCenterPro(duoPlayerIds,context={}){
       </div>
       <div class="duo-pro-block">
         <div class="duo-pro-title">With / Without Impact</div>
-        <div class="lineup-builder-card-text">Team mit Duo: ${impact.teamWith?.winRate||0}% Winrate · ${comparisonFmt(impact.teamWith?.gfPerGame||0,2)}:${comparisonFmt(impact.teamWith?.gaPerGame||0,2)} Tore/Spiel</div>
-        <div class="lineup-builder-card-text">Ohne gemeinsames Duo: ${impact.teamWithout?.winRate||0}% Winrate · ${comparisonFmt(impact.teamWithout?.gfPerGame||0,2)}:${comparisonFmt(impact.teamWithout?.gaPerGame||0,2)} Tore/Spiel</div>
+        <div class="lineup-builder-card-text">Team mit Duo: ${rAntiSynergyWinrateText(impact.teamWith)} Winrate · ${comparisonFmt(impact.teamWith?.gfPerGame||0,2)}:${comparisonFmt(impact.teamWith?.gaPerGame||0,2)} Tore/Spiel</div>
+        <div class="lineup-builder-card-text">Ohne gemeinsames Duo: ${rAntiSynergyWinrateText(impact.teamWithout)} Winrate · ${comparisonFmt(impact.teamWithout?.gfPerGame||0,2)}:${comparisonFmt(impact.teamWithout?.gaPerGame||0,2)} Tore/Spiel</div>
         <div class="lineup-builder-player-list"><span class="lineup-builder-mini-player">Winrate ${delta(impact.deltas?.winRate||0,0,'%')}</span><span class="lineup-builder-mini-player">Tor-Diff ${delta(impact.deltas?.diffPerGame||0,2)}</span><span class="lineup-builder-mini-player">GF ${delta(impact.deltas?.gfPerGame||0,2)}</span></div>
       </div>
       <div class="duo-pro-block">
@@ -11640,52 +11694,111 @@ function getRosterImpactPlayerEventLookup(profile,seasonKeys=[]){
   }
   return lookup;
 }
-function getRosterImpactPlayerGames(profile,seasonKey=null){
-  const rows=seasonKey?getAllLoadedSeasonGames().filter(row=>row.seasonKey===seasonKey):getAllLoadedSeasonGames();
-  const seasonKeys=[...new Set(rows.map(row=>row.seasonKey).filter(Boolean))];
-  const eventLookup=getRosterImpactPlayerEventLookup(profile,seasonKeys);
-  const out=[],seen=new Set();
-  if(!profile)return out;
-  for(const row of rows){
-    const scopeSeasonKey=row.seasonKey;
-    const game=row.game;
-    if(!isGamePlayed(game)||!isFieldAppearance(profile,game,scopeSeasonKey))continue;
-    const side=detectSide(game);if(!side)continue;
-    const gameKey=`${scopeSeasonKey}:${gameStableId(game)}`;
-    if(seen.has(gameKey))continue;
-    seen.add(gameKey);
-    const eventStats=eventLookup.get(gameKey)||{goals:0,assists:0,points:0};
-    const teamName=game[`${side}_team_name`]||'';
-    const partners=[];
-    const partnerSeen=new Set();
-    for(const entry of game.players?.[side]||[]){
-      if(isGoalieRosterEntry(entry)||rosterPlayerMatches(profile,entry))continue;
-      const partner=getRosterEntryRegistryProfile(entry,scopeSeasonKey,teamName);
-      if(!partner||partner.playerId===profile.playerId)continue;
-      if(!isFieldAppearance(partner,game,scopeSeasonKey))continue;
-      const pid=String(partner.playerId);
-      if(partnerSeen.has(pid))continue;
-      partnerSeen.add(pid);
-      partners.push({partnerId:partner.playerId,partnerName:partner.name||pFull(entry)||'Mitspieler'});
+/**
+ * Aufgabe 4L2: echter Index Spieler -> Spiele, einmal über alle geladenen Spiele gebaut (nicht pro Aufruf
+ * neu). Löst eine Kaderzeile über genau denselben Weg auf, den getRosterImpactPlayerGames() unten bereits
+ * für MITSPIELER verwendet (getRosterEntryRegistryProfile() + isFieldAppearance()-Gegenprobe) — bewusst
+ * NICHT rosterPlayerMatches() direkt, damit die Auflösung für den Hauptspieler und seine Mitspieler
+ * konsistent bleibt (dieselbe Methode, nur jetzt auch für den Hauptspieler genutzt statt nur für Partner).
+ * Hält zusätzlich resolvedRosterByGame: die teure Auflösung JEDER Kaderzeile (getRosterEntryRegistryProfile
+ * + isFieldAppearance) passiert hier EINMAL pro Spiel, nicht erneut für jeden einzelnen abgefragten
+ * Hauptspieler in getRosterImpactPlayerGames() — vorher wurde dieselbe Kaderzeile für jeden der bis zu 28
+ * Ersatzkandidaten erneut aufgelöst. Über denselben analysisCache memoisiert wie alle anderen Analysen —
+ * ein einziger Eintrag für alle Spieler zusammen, nicht einer pro Spieler.
+ */
+function buildRosterImpactGameIndex(){
+  return cachedAnalysis('roster-impact-game-index',()=>{
+    const playerIndex=new Map();
+    const resolvedRosterByGame=new Map();
+    for(const row of getAllLoadedSeasonGames()){
+      const game=row.game,scopeSeasonKey=row.seasonKey;
+      if(!isGamePlayed(game))continue;
+      const side=detectSide(game);if(!side)continue;
+      const teamName=game[`${side}_team_name`]||'';
+      const gameKey=`${scopeSeasonKey}:${gameStableId(game)}`;
+      if(resolvedRosterByGame.has(gameKey))continue;
+      const resolved=[];
+      for(const entry of game.players?.[side]||[]){
+        if(isGoalieRosterEntry(entry))continue;
+        const candidate=getRosterEntryRegistryProfile(entry,scopeSeasonKey,teamName);
+        if(!candidate||!isFieldAppearance(candidate,game,scopeSeasonKey))continue;
+        resolved.push({entry,candidate});
+        const key=String(candidate.playerId);
+        if(!playerIndex.has(key))playerIndex.set(key,[]);
+        playerIndex.get(key).push(row);
+      }
+      resolvedRosterByGame.set(gameKey,resolved);
     }
-    out.push({
-      key:gameKey,
-      seasonKey:scopeSeasonKey,
-      game,
-      result:gameResult(game,side),
-      goals:eventStats.goals||0,
-      assists:eventStats.assists||0,
-      points:eventStats.points||0,
-      partners,
-    });
-  }
-  return out;
+    return{playerIndex,resolvedRosterByGame};
+  });
+}
+/**
+ * Aufgabe 4L (Performance-Fund) / 4L2 (Fortsetzung): ursprünglich lief diese Funktion bei JEDEM Aufruf
+ * linear über ALLE geladenen Spiele (~160ms, ohne Memoisierung). 4L fügte Memoisierung hinzu (wiederholte
+ * denselben linearen Durchlauf seltener, ersetzte ihn aber nicht) — bei 20-48s für eine Duo-Center-Pro-Karte
+ * war das nicht genug: der verbleibende Flaschenhals war die Partner-Auflösung je Spiel
+ * (getRosterEntryRegistryProfile + isFieldAppearance je Kaderzeile), die für jeden abgefragten Hauptspieler
+ * erneut lief. 4L2 ersetzt BEIDES durch Nachschlag im Index aus buildRosterImpactGameIndex() (siehe dort):
+ * "welche Spiele hat dieser Spieler bestritten" UND "wer waren in diesem Spiel die aufgelösten Mitspieler"
+ * passieren jetzt je einmal für alle Spieler zusammen, nicht mehr pro Spieler erneut. Die
+ * Konstruktion je Spiel (Events, Ergebnis, Partnerliste) bleibt inhaltlich unverändert — reine
+ * Wiederverwendung bereits berechneter Werte statt erneuter Berechnung.
+ */
+function getRosterImpactPlayerGames(profile,seasonKey=null){
+  const cacheKey=analysisCacheKey('roster-impact-games',{playerId:profile?.playerId??null,seasonKey:seasonKey||''});
+  return cachedAnalysis(cacheKey,()=>{
+    if(!profile)return[];
+    const{playerIndex,resolvedRosterByGame}=buildRosterImpactGameIndex();
+    const indexedRows=playerIndex.get(String(profile.playerId))||[];
+    const rows=seasonKey?indexedRows.filter(row=>row.seasonKey===seasonKey):indexedRows;
+    const seasonKeys=[...new Set(rows.map(row=>row.seasonKey).filter(Boolean))];
+    const eventLookup=getRosterImpactPlayerEventLookup(profile,seasonKeys);
+    const out=[],seen=new Set();
+    for(const row of rows){
+      const scopeSeasonKey=row.seasonKey;
+      const game=row.game;
+      const side=detectSide(game);if(!side)continue;
+      const gameKey=`${scopeSeasonKey}:${gameStableId(game)}`;
+      if(seen.has(gameKey))continue;
+      seen.add(gameKey);
+      const eventStats=eventLookup.get(gameKey)||{goals:0,assists:0,points:0};
+      const partners=[];
+      const partnerSeen=new Set();
+      for(const{entry,candidate:partner}of resolvedRosterByGame.get(gameKey)||[]){
+        if(rosterPlayerMatches(profile,entry))continue;
+        if(!partner||partner.playerId===profile.playerId)continue;
+        const pid=String(partner.playerId);
+        if(partnerSeen.has(pid))continue;
+        partnerSeen.add(pid);
+        partners.push({partnerId:partner.playerId,partnerName:partner.name||pFull(entry)||'Mitspieler'});
+      }
+      out.push({
+        key:gameKey,
+        seasonKey:scopeSeasonKey,
+        game,
+        result:gameResult(game,side),
+        goals:eventStats.goals||0,
+        assists:eventStats.assists||0,
+        points:eventStats.points||0,
+        partners,
+      });
+    }
+    return out;
+  });
 }
 function rosterImpactConfidence(togetherGames,withoutGames){
   const min=Math.min(Number(togetherGames)||0,Number(withoutGames)||0);
   if(min>=10&&togetherGames>=12)return'stark';
   if(min>=6&&togetherGames>=6)return'mittel';
   return'klein';
+}
+/** Aufgabe 4m: Rang für die zweistufige Anti-Synergy-Sortierung (buildRosterImpactAnalysis) — höher sortiert zuerst. */
+const CONFIDENCE_RANK={stark:2,mittel:1,klein:0};
+/** Aufgabe 4m2: wandelt datenstandQuoteState (4f-Schwellen, DATENSTAND_SCHWELLEN) in CONFIDENCE_RANK-Stufen
+ * um — fuer Empfehlungslisten, die keine eigene Konfidenzstufe mitbringen, statt neuer Logik. */
+function confidenceFromSampleSize(n,kind='spiele'){
+  const state=datenstandQuoteState(n,kind);
+  return state==='ok'?'stark':state==='band'?'mittel':'klein';
 }
 function rosterImpactConfidenceWeight(togetherGames,withoutGames){
   const min=Math.min(Number(togetherGames)||0,Number(withoutGames)||0);
@@ -11763,7 +11876,16 @@ function buildRosterImpactAnalysis(playerId,options={}){
       note:`Mit ${item.partnerName} sinkt die Punktequote um ${Math.abs(Math.min(0,deltas.pointsPerGame)).toFixed(2)} P/Spiel.`,
     };
   }).filter(Boolean)
-    .sort((a,b)=>b.antiSynergyScore-a.antiSynergyScore||a.deltas.pointsPerGame-b.deltas.pointsPerGame||a.deltas.winRate-b.deltas.winRate||a.deltas.goalsPerGame-b.deltas.goalsPerGame||b.togetherGames-a.togetherGames||a.partnerName.localeCompare(b.partnerName))
+    /**
+     * Aufgabe 4m: primär die vorhandene Konfidenzstufe (rosterImpactConfidence), antiSynergyScore nur noch
+     * als Entscheid INNERHALB derselben Stufe. Vorher sortierte antiSynergyScore allein — der Score ist
+     * zwar bereits über rosterImpactConfidenceWeight sample-size-gewichtet (Faktor 0,45–1,0), aber ein
+     * Ausreisser aus wenigen Spielen (z. B. togetherGames=3) kann trotz Gewichtung immer noch vor einem
+     * soliden, besser abgesicherten Befund (z. B. togetherGames=24) stehen. Mit dieser Stufung steht eine
+     * Duo der Stufe "klein" nie vor einer der Stufe "mittel"/"stark", unabhängig vom Rohwert. Die
+     * Scoring-Formel (antiSynergyImpactScore) bleibt unangetastet.
+     */
+    .sort((a,b)=>CONFIDENCE_RANK[b.confidence]-CONFIDENCE_RANK[a.confidence]||b.antiSynergyScore-a.antiSynergyScore||a.deltas.pointsPerGame-b.deltas.pointsPerGame||a.deltas.winRate-b.deltas.winRate||a.deltas.goalsPerGame-b.deltas.goalsPerGame||b.togetherGames-a.togetherGames||a.partnerName.localeCompare(b.partnerName))
     .slice(0,limit);
 }
 function buildDuoAntiSynergy(playerId,options={}){
@@ -11800,6 +11922,28 @@ function rAntiSynergyMetricRow(label,withValue,withoutValue,delta,{decimals=2,su
     <div class="difficult-metric-row-value"><span>Mit</span><strong>${escHtml(Number(withValue||0).toFixed(decimals)+suffix)}</strong></div>
     <div class="difficult-metric-row-value"><span>Ohne</span><strong>${escHtml(Number(withoutValue||0).toFixed(decimals)+suffix)}</strong></div>
     <div class="difficult-metric-row-value delta"><span>Delta</span><strong class="${escAttr(deltaCls)}">${escHtml(antiSynergySigned(delta,decimals,suffix))}</strong></div>
+  </div>`;
+}
+/** Aufgabe 4i: Winrate ist die einzige der vier Anti-Synergy-Metriken, deren Nenner (Spiele) klein genug
+ * wird, dass ein einzelnes Spiel die Quote auf 0/50/100% springen lässt — "Mit"/"Ohne" haben dabei je eine
+ * EIGENE Spielanzahl, also je eine eigene Schwelle (4d/4f, Einheit Spiele). Punkte/Tore/Assists pro Spiel
+ * bleiben unverändert (rAntiSynergyMetricRow), weil es dort keinen Nenner-Bruch gibt, den man alternativ
+ * zeigen könnte. Die vorhandene Confidence-Badge der Zeile (r.confidence, siehe rosterImpactConfidence)
+ * deckt bereits die 4f-Band-Stufe ab — hier deshalb nur der Bruch-statt-Prozent-Teil (4d), kein zusätzliches,
+ * mit der Badge überlappendes Band. */
+function rAntiSynergyWinrateText(stats){
+  const games=stats?.games||0;
+  if(!games)return'–';
+  if(datenstandQuoteState(games,'spiele')==='bruch')return`${stats.wins||0}/${games}`;
+  return`${stats.winRate}%`;
+}
+function rAntiSynergyWinrateRow(withStats,withoutStats,delta){
+  const deltaCls=antiSynergyDeltaClass(delta);
+  return`<div class="difficult-metric-row">
+    <div class="difficult-metric-row-label">Winrate</div>
+    <div class="difficult-metric-row-value"><span>Mit</span><strong>${escHtml(rAntiSynergyWinrateText(withStats))}</strong></div>
+    <div class="difficult-metric-row-value"><span>Ohne</span><strong>${escHtml(rAntiSynergyWinrateText(withoutStats))}</strong></div>
+    <div class="difficult-metric-row-value delta"><span>Delta</span><strong class="${escAttr(deltaCls)}">${escHtml(antiSynergySigned(delta,0,'%'))}</strong></div>
   </div>`;
 }
 function rRosterImpactStatLine(stats){
@@ -11905,8 +12049,8 @@ function rDifficultConnectionListCompact(rows,title,emptyText='Keine belastbare 
         </div>
       </div>
       <div class="difficult-compact-compare">
-        ${rAntiSynergyCompareChip(`Mit ${r.partnerName}`,`${r.withStats.pointsPerGame.toFixed(2)} P/Sp`,`${r.withStats.games} Spiele · ${r.withStats.winRate}% Winrate`)}
-        ${rAntiSynergyCompareChip(`Ohne ${r.partnerName}`,`${r.withoutStats.pointsPerGame.toFixed(2)} P/Sp`,`${r.withoutStats.games} Spiele · ${r.withoutStats.winRate}% Winrate`)}
+        ${rAntiSynergyCompareChip(`Mit ${r.partnerName}`,`${r.withStats.pointsPerGame.toFixed(2)} P/Sp`,`${r.withStats.games} Spiele · ${rAntiSynergyWinrateText(r.withStats)} Winrate`)}
+        ${rAntiSynergyCompareChip(`Ohne ${r.partnerName}`,`${r.withoutStats.pointsPerGame.toFixed(2)} P/Sp`,`${r.withoutStats.games} Spiele · ${rAntiSynergyWinrateText(r.withoutStats)} Winrate`)}
         ${rAntiSynergyCompareChip('Differenz',`${main.label}: ${antiSynergySigned(main.value,main.decimals,main.suffix)}`,main.label!=='Winrate'?`Winrate ${antiSynergySigned(r.deltas.winRate,0,'%')}`:'',mainCls||winCls)}
       </div>
       <div class="difficult-direct-context">${r.togetherGames} gemeinsame Feldspieler-Spiele · ${r.withoutGames} Vergleichsspiele · ${r.directDuoScorers} direkte Duo-Scorer</div>
@@ -11917,7 +12061,7 @@ function rDifficultConnectionListCompact(rows,title,emptyText='Keine belastbare 
           ${rAntiSynergyMetricRow('Punkte/Spiel',r.withStats.pointsPerGame,r.withoutStats.pointsPerGame,r.deltas.pointsPerGame)}
           ${rAntiSynergyMetricRow('Tore/Spiel',r.withStats.goalsPerGame,r.withoutStats.goalsPerGame,r.deltas.goalsPerGame)}
           ${rAntiSynergyMetricRow('Assists/Spiel',r.withStats.assistsPerGame,r.withoutStats.assistsPerGame,r.deltas.assistsPerGame)}
-          ${rAntiSynergyMetricRow('Winrate',r.withStats.winRate,r.withoutStats.winRate,r.deltas.winRate,{decimals:0,suffix:'%'})}
+          ${rAntiSynergyWinrateRow(r.withStats,r.withoutStats,r.deltas.winRate)}
         </div>
         <div class="difficult-direct-context">${r.assistsToPartner} Assists zu ${escHtml(r.partnerName)} · ${r.assistsFromPartner} Assists von ${escHtml(r.partnerName)} · ${r.directDuoScorersPerSharedFieldGame.toFixed(2)} direkte Scorer pro gemeinsamem Spiel</div>
       </details>
@@ -12018,7 +12162,19 @@ function rmTerm(label,key=''){
   const tip=responseMomentumTooltipFor(label,key);
   return`<span class="th-tip rm-term" title="${escAttr(tip)}" data-tip="${escAttr(tip)}">${escHtml(label)}</span>`;
 }
-function rRmKpi(label,value,sub='',color='#f59e0b',termKey=''){
+/** Aufgabe 4d: Response Rate zeigt unterhalb der Ereignis-Schwelle den Bruch statt Prozent. Der große
+ * Wert-Slot der Karte ist auf kurze, nicht umbrechende Zahlen ausgelegt (.response-momentum-value,
+ * white-space:nowrap) — der volle Satz ("2 von 3 Gegentoren beantwortet") gehört deshalb in die Unterzeile
+ * (.response-momentum-sub, bricht normal um), nicht in den Wert-Slot, sonst läuft er über Nachbarkarten
+ * hinaus. */
+function rResponseRateDisplay(concededGoals,nextResponses,responseRate){
+  if(!concededGoals)return{value:'-',sub:''};
+  if(datenstandQuoteState(concededGoals,'ereignisse')==='bruch'){
+    return{value:`${nextResponses||0}/${concededGoals}`,sub:`${nextResponses||0} von ${concededGoals} Gegentoren beantwortet`};
+  }
+  return{value:`${Math.round((responseRate||0)*100)}%`,sub:`${nextResponses||0}/${concededGoals} Gegentore beantwortet`};
+}
+function rRmKpi(label,value,sub='',color='#f59e0b',termKey='',note=''){
   const tip=responseMomentumTooltipFor(label,termKey);
   return`<div class="response-momentum-card" style="--rm-color:${escAttr(color)}">
     <div class="response-momentum-top">
@@ -12027,7 +12183,14 @@ function rRmKpi(label,value,sub='',color='#f59e0b',termKey=''){
     </div>
     <div class="response-momentum-label">${escHtml(label)}</div>
     ${sub?`<div class="response-momentum-sub">${escHtml(sub)}</div>`:''}
+    ${note}
   </div>`;
+}
+/** Aufgabe 4e: Ø Antwortzeit ist ein Mittelwert, kein Bruch möglich — unterhalb der Ereignis-Gut-Schwelle
+ * bleibt es beim Hinweisband (mit der echten Einheit: Antworten, nicht Spiele), ohne die 4d-Bruch-Stufe. */
+function rAvgResponseTimeNote(responseCount){
+  if(!Number.isFinite(responseCount)||responseCount<=0)return'';
+  return uiDatenstandBand({count:responseCount,unit:'Antworten',unitSingular:'Antwort',threshold:DATENSTAND_SCHWELLEN.ereignisseGut});
 }
 function rRmTopList(rows,formatter,empty='Keine Daten verfuegbar.'){
   const data=(rows||[]).slice(0,4);
@@ -12051,8 +12214,8 @@ function rResponseMomentumOverviewCard(response,momentum,{title='Response & Mome
     <div class="${cardClass==='team-card'?'team-card-title':'at-card-title'}" style="color:#38bdf8">${escHtml(title)} <span class="th-tip" data-tip="${escAttr('Response Goals sind Tore nach Gegentoren. Momentum Runs sind mindestens zwei Tore desselben Teams in Folge. Clutch bleibt eine separate Logik.')}">?</span></div>
     <div class="difficult-note">Clutch, Response und Momentum werden getrennt gelesen. Ein Tor kann mehrere Bedeutungen gleichzeitig haben.</div>
     <div class="response-momentum-grid">
-      ${rRmKpi('Response Rate',rs.concededGoals?`${Math.round((rs.responseRate||0)*100)}%`:'-',`${rs.nextResponses||0}/${rs.concededGoals||0} Gegentore beantwortet`,'#38bdf8','response rate')}
-      ${rRmKpi('Ø Antwortzeit',Number.isFinite(rs.avgResponseSeconds)?responseMomentumTime(rs.avgResponseSeconds):'-',`${rs.within5||0} Antworten unter 5 Minuten`,'#f59e0b','antwortzeit')}
+      ${(()=>{const rrd=rResponseRateDisplay(rs.concededGoals,rs.nextResponses,rs.responseRate);return rRmKpi('Response Rate',rrd.value,rrd.sub,'#38bdf8','response rate');})()}
+      ${rRmKpi('Ø Antwortzeit',Number.isFinite(rs.avgResponseSeconds)?responseMomentumTime(rs.avgResponseSeconds):'-',`${rs.within5||0} Antworten unter 5 Minuten`,'#f59e0b','antwortzeit',rAvgResponseTimeNote(rs.nextResponses))}
       ${rRmKpi('Schnelle Antworten',`${rs.within2||0} / ${rs.within5||0}`,'2-Min / 5-Min Fenster','#10b981','schnelle antwort')}
       ${rRmKpi('Ulm-Torlaeufe',`${ms.targetRuns2||0}`,`${ms.targetRuns3||0} mit 3+ Toren`,'#c41e3a','momentum run')}
       ${rRmKpi('Doppelschlaege',`${ms.targetDoubleStrikes||0}`,`${ms.againstDoubleStrikes||0} gegen Ulm`,'#8b5cf6','doppelschlag')}
@@ -12130,8 +12293,8 @@ function rMatchcenterResponseMomentum(opponentKey,context,seasonKey,opponentLabe
       <div class="mc-card">
         <div class="mc-card-title">Ulm / SG</div>
         <div class="response-momentum-grid">
-          ${rRmKpi('Response Rate',ur.concededGoals?`${Math.round((ur.responseRate||0)*100)}%`:'-',`${ur.nextResponses||0}/${ur.concededGoals||0} Gegentore`,'#38bdf8','response rate')}
-          ${rRmKpi('Ø Antwort',Number.isFinite(ur.avgResponseSeconds)?responseMomentumTime(ur.avgResponseSeconds):'-',`${ur.within5||0} unter 5 Minuten`,'#f59e0b','antwortzeit')}
+          ${(()=>{const rrd=rResponseRateDisplay(ur.concededGoals,ur.nextResponses,ur.responseRate);return rRmKpi('Response Rate',rrd.value,rrd.sub,'#38bdf8','response rate');})()}
+          ${rRmKpi('Ø Antwort',Number.isFinite(ur.avgResponseSeconds)?responseMomentumTime(ur.avgResponseSeconds):'-',`${ur.within5||0} unter 5 Minuten`,'#f59e0b','antwortzeit',rAvgResponseTimeNote(ur.nextResponses))}
           ${rRmKpi('Torlaeufe',um.targetRuns2||0,`laengster Lauf ${um.longestTargetRun||0}`,'#c41e3a','momentum run')}
         </div>
         ${rRmTopList(ulmResponse.playerResponseStats,row=>`${row.responsePoints||0} Response-Punkte · ${row.responseGoals||0} Tore`,'Keine Ulmer Response-Spieler.')}
@@ -12139,8 +12302,8 @@ function rMatchcenterResponseMomentum(opponentKey,context,seasonKey,opponentLabe
       <div class="mc-card">
         <div class="mc-card-title">${escHtml(opponentLabel)}</div>
         <div class="response-momentum-grid">
-          ${rRmKpi('Response Rate',or.concededGoals?`${Math.round((or.responseRate||0)*100)}%`:'-',`${or.nextResponses||0}/${or.concededGoals||0} Gegentore`,'#f59e0b','response rate')}
-          ${rRmKpi('Ø Antwort',Number.isFinite(or.avgResponseSeconds)?responseMomentumTime(or.avgResponseSeconds):'-',`${or.within5||0} unter 5 Minuten`,'#38bdf8','antwortzeit')}
+          ${(()=>{const rrd=rResponseRateDisplay(or.concededGoals,or.nextResponses,or.responseRate);return rRmKpi('Response Rate',rrd.value,rrd.sub,'#f59e0b','response rate');})()}
+          ${rRmKpi('Ø Antwort',Number.isFinite(or.avgResponseSeconds)?responseMomentumTime(or.avgResponseSeconds):'-',`${or.within5||0} unter 5 Minuten`,'#38bdf8','antwortzeit',rAvgResponseTimeNote(or.nextResponses))}
           ${rRmKpi('Torlaeufe',om.targetRuns2||0,`laengster Lauf ${om.longestTargetRun||0}`,'#8b5cf6','momentum run')}
         </div>
         ${rRmTopList(oppResponse.playerResponseStats,row=>`${row.responsePoints||0} Response-Punkte · ${row.responseGoals||0} Tore`,'Keine gegnerischen Response-Spieler.')}
@@ -13194,12 +13357,12 @@ function rDuoComparisonImpact(model){
     <div class="duo-impact-grid">${duos.map(d=>{const impact=d.analysis?.withWithoutImpact||{};const withStats=impact.teamWith||{},withoutStats=impact.teamWithout||{};return`<div class="duo-impact-card" style="--duo-color:${d.color}">
       <div class="duo-profile-head"><strong>${escHtml(d.label)}</strong><span>${withStats.games||0} Spiele mit Duo</span></div>
       <div class="duo-impact-stats">
-        <div><span>Winrate</span><strong>${withStats.winRate||0}%</strong><em>${delta((impact.deltas||{}).winRate,0,'%')}</em></div>
+        <div><span>Winrate</span><strong>${rAntiSynergyWinrateText(withStats)}</strong><em>${delta((impact.deltas||{}).winRate,0,'%')}</em></div>
         <div><span>Tore/Spiel</span><strong>${comparisonFmt(withStats.gfPerGame||0,1)}</strong><em>${delta((impact.deltas||{}).gfPerGame,1)}</em></div>
         <div><span>Gegentore/Spiel</span><strong>${comparisonFmt(withStats.gaPerGame||0,1)}</strong><em>${delta((impact.deltas||{}).gaPerGame,1)}</em></div>
         <div><span>Diff/Spiel</span><strong>${comparisonFmt(withStats.diffPerGame||0,1)}</strong><em>${delta((impact.deltas||{}).diffPerGame,1)}</em></div>
       </div>
-      <div class="compare-sub">Ohne gemeinsames Duo: ${withoutStats.games||0} Spiele, ${withoutStats.winRate||0}% Winrate.</div>
+      <div class="compare-sub">Ohne gemeinsames Duo: ${withoutStats.games||0} Spiele, ${rAntiSynergyWinrateText(withoutStats)} Winrate.</div>
     </div>`;}).join('')}</div>
   </div>`;
 }
@@ -15461,6 +15624,16 @@ function rEmptyState(type,context={}){
   const state=getEmptyState(type,context);
   return`<div class="p1-empty-state ${escAttr(state.severity||'neutral')}"><div class="p1-empty-title">${escHtml(state.title)}</div><div>${escHtml(state.message)}</div>${state.hint?`<div class="p1-empty-hint">${escHtml(state.hint)}</div>`:''}</div>`;
 }
+/** S2e-Kaltstart-Audit (Aufgabe 4h): die Höchststufe von getScoreLabel ("aussergewoehnlich") behauptet eine
+ * Sicherheit, die eine nicht-starke Datenbasis nicht hergibt — "DATENBASIS: MITTEL" und "AUSSERGEWOEHNLICH"
+ * nebeneinander, das lautere Prädikat gewinnt beim Lesen. Der Zahlenwert bleibt immer sichtbar, nur DIESES
+ * eine Prädikat wird unterdrückt (nicht durch ein schwächeres ersetzt — das wäre genauso erfunden), solange
+ * buildConfidence().level nicht 'stark' ist. Alle anderen Stufen (niedrig/solide/gut/stark) bleiben
+ * unverändert, die sind keine Höchststufe.
+ */
+function capSuperlativeLabel(label,confidenceLevel){
+  return label==='aussergewoehnlich'&&confidenceLevel!=='stark'?'':label;
+}
 function rScoreBreakdown(title,explanation){
   if(!explanation)return'';
   const factors=[
@@ -15470,8 +15643,9 @@ function rScoreBreakdown(title,explanation){
     ...(explanation.caveats||[]).map(f=>({kind:'!',text:f})),
   ].filter(f=>f.text).slice(0,8);
   if(!factors.length&&!explanation.summary)return'';
+  const scoreLabel=capSuperlativeLabel(explanation.label||getScoreLabel(explanation.score),explanation.confidence?.level);
   return`<details class="p1-score-breakdown">
-    <summary>${escHtml(title||'Warum?')} ${Number.isFinite(Number(explanation.score))?`- ${clampScore(explanation.score)} (${escHtml(explanation.label||getScoreLabel(explanation.score))})`:''}</summary>
+    <summary>${escHtml(title||'Warum?')} ${Number.isFinite(Number(explanation.score))?`- ${clampScore(explanation.score)}${scoreLabel?` (${escHtml(scoreLabel)})`:''}`:''}</summary>
     ${explanation.summary?`<div class="mc-coach-card-text">${escHtml(explanation.summary)}</div>`:''}
     <div class="p1-score-breakdown-list">${factors.map(f=>`<div class="p1-score-factor"><span>${escHtml(f.text)}</span><span>${escHtml(f.kind)}</span></div>`).join('')}</div>
     ${explanation.confidence?.label?`<span class="mc-confidence-badge ${escAttr(matchcenterConfidenceClass(explanation.confidence.level||explanation.confidence.label))}">${escHtml(explanation.confidence.label)}</span>`:''}
@@ -16364,8 +16538,11 @@ function matchcenterBuildGoalieMatchup(opponentKey,context,seasonKey){
     const fitScore=matchcenterGoalieFitScore(row.stats);
     const limited=(row.stats.games||0)<2;
     const reason=Number(row.stats.games)===1?'kleine Datenbasis - bisher auffällig':'niedrige Gegentore, Low-Goal-Werte und Stabilitaet gegen diesen Gegner';
-    return{...row,seasons:[...row.seasons].sort((a,b)=>seasonOrderIndex(a)-seasonOrderIndex(b)),fitScore,limited,reason,pk};
-  }).sort((a,b)=>b.fitScore-a.fitScore||a.stats.goalsAgainstPerGame-b.stats.goalsAgainstPerGame||a.name.localeCompare(b.name));
+    // Aufgabe 4m2: Konfidenz aus der Spiele-Stichprobe gegen diesen Gegner (DATENSTAND_SCHWELLEN,
+    // keine eigene Konfidenzstufe fuer den Goalie-Matchup vorhanden) — Empfehlung sortiert zuerst danach.
+    const confidence=confidenceFromSampleSize(row.stats.games,'spiele');
+    return{...row,seasons:[...row.seasons].sort((a,b)=>seasonOrderIndex(a)-seasonOrderIndex(b)),fitScore,limited,reason,confidence,pk};
+  }).sort((a,b)=>CONFIDENCE_RANK[b.confidence]-CONFIDENCE_RANK[a.confidence]||b.fitScore-a.fitScore||a.stats.goalsAgainstPerGame-b.stats.goalsAgainstPerGame||a.name.localeCompare(b.name));
   const best=rows[0]||null;
   const insights=[];
   if(best){
@@ -18767,6 +18944,7 @@ function lineupEvaluateComplementCandidate(basePlayerIds,candidateId,context={})
     experienceFitScore,
     directChemistryScore,
     roleDnaScore,
+    candidateGames:candidate.games||0,
     reasons:reasons.slice(0,4),
     addedStrengths:[...new Set(addedStrengths)].slice(0,3),
     risks:[...new Set(risks)].slice(0,3),
@@ -18790,6 +18968,13 @@ function lineupPlayerAnchorScore(id,context={}){
     roleBoost+
     experienceBoost
   ));
+}
+/** Aufgabe 4m2: keine eigene Konfidenzstufe fuer den Anker-Score vorhanden — aus der Spiele-Stichprobe
+ * des Spielers abgeleitet (DATENSTAND_SCHWELLEN), statt neuer Logik. */
+function lineupPlayerAnchorConfidence(id,context={}){
+  const row=lineupRowMap().get(String(id));
+  if(!row)return'klein';
+  return confidenceFromSampleSize(lineupPlayerProfile(row,context).games,'spiele');
 }
 function buildTeamLineBalance(lines,context={}){
   const analyses=(lines||[]).filter(line=>line?.length>=2).map(line=>buildLineAnalysis(line,context));
@@ -18836,7 +19021,9 @@ function buildTeamLineBalance(lines,context={}){
   };
 }
 function buildBalancedLineupSet(ranked,context={},lineCount=1,lineSize=3){
-  const anchors=[...ranked].sort((a,b)=>lineupPlayerAnchorScore(b,context)-lineupPlayerAnchorScore(a,context)).slice(0,lineCount);
+  // Aufgabe 4m2: Konfidenz (aus Spiele-Stichprobe) vor dem rohen Anker-Score — eine Empfehlung, wer
+  // eine Reihe anfuehren soll, nicht nur eine Anzeige.
+  const anchors=[...ranked].sort((a,b)=>CONFIDENCE_RANK[lineupPlayerAnchorConfidence(b,context)]-CONFIDENCE_RANK[lineupPlayerAnchorConfidence(a,context)]||lineupPlayerAnchorScore(b,context)-lineupPlayerAnchorScore(a,context)).slice(0,lineCount);
   const lines=anchors.map(id=>[id]);
   const used=new Set(anchors);
   while(lines.some(line=>line.length<lineSize)&&used.size<ranked.length){
@@ -18888,7 +19075,10 @@ function buildLineupRecommendations(context={}){
     const analysis=buildLineAnalysis(ids,context);
     const score=matchcenterClamp((Number(analysis.balanceScore)||0)*.78+(Number(analysis.chemistryScore)||0)*.12+(Number(analysis.formScore)||0)*.06-Math.max(0,(Number(analysis.disciplineRisk)||0)-60)*.04);
     return{ids,analysis,score};
-  }).sort((a,b)=>b.score-a.score||b.analysis.chemistryScore-a.analysis.chemistryScore);
+  })
+    // Aufgabe 4m2: analysis.confidence (buildLineAnalysis, bereits vorhanden) vor dem rohen Score — eine
+    // Empfehlung, welche Reihe gespielt werden soll, nicht nur eine Anzeige.
+    .sort((a,b)=>CONFIDENCE_RANK[b.analysis.confidence?.level]-CONFIDENCE_RANK[a.analysis.confidence?.level]||b.score-a.score||b.analysis.chemistryScore-a.analysis.chemistryScore);
   const offensiveUsed=new Set();
   const offensiveLines=[];
   const target=Math.max(1,lineCount);
@@ -19176,7 +19366,7 @@ function rMatchcenterOpponentDNA(dna){
     <div class="mc-intel-tags">
       <span class="mc-intel-tag">${escHtml(dna?.typeLabel||'Unberechenbar')}</span>
       ${(dna?.secondaryTags||[]).map(tag=>`<span class="mc-intel-tag">${escHtml(tag)}</span>`).join('')}
-      <span class="mc-intel-tag th-tip" data-tip="${escAttr('Einheitliche Score-Skala: niedrig, solide, gut, stark, aussergewoehnlich.')}">Gefahr ${clampScore(dna?.overallThreatScore||0)} - ${escHtml(getScoreLabel(dna?.overallThreatScore))}</span>
+      <span class="mc-intel-tag th-tip" data-tip="${escAttr('Einheitliche Score-Skala: niedrig, solide, gut, stark, aussergewoehnlich.')}">Gefahr ${clampScore(dna?.overallThreatScore||0)}${(()=>{const l=capSuperlativeLabel(getScoreLabel(dna?.overallThreatScore),dna?.confidence);return l?` - ${escHtml(l)}`:'';})()}</span>
     </div>
     <div class="mc-intel-dna">${rows.map(row=>{
       const value=Math.round(matchcenterClamp(dna?.[row.key]||0));
@@ -19619,6 +19809,11 @@ window.generateSocialVideoContactSheets=async(button,seasonKey,matchdayKey)=>{
   const oldText=button?.textContent;
   try{
     if(button){button.disabled=true;button.textContent='Erzeuge Kontaktbogen...';}
+    // S2e-Aufgabe 1: fehlte hier (anders als in generateSocialVideoVideos/-Standbilder) — ohne diesen Schritt
+    // konnte der Kontaktbogen als allererste Aktion nach dem Laden gezeichnet werden, bevor die Schriften
+    // bereitstanden (Canvas2D fällt dann still auf die Browser-Standardschrift zurück).
+    const fonts=await socialVideoCheckFonts();
+    if(fonts.fallback&&!S.socialVideoFontsFallback)setState({socialVideoFontsFallback:true});
     const stories=buildSocialVideoSpec({seasonKey,matchdayKey,format:'story-9x16'});
     const feed=buildSocialVideoSpec({seasonKey,matchdayKey,format:'feed-4x5'});
     const names=[];
@@ -20009,6 +20204,7 @@ function rLineupBuilderPage(){
         </div>
       </div>
     </div>
+    ${uiDatenstandBand({shownSeasonKey:seasonKey,selectedSeasonKey:getActiveSeasonKey()})}
     <div class="lineup-builder-grid">
       ${rLineupBuilderAvailablePanel(pool,availableIds,lines,S.lineupActiveLine||0,mode,seasonKey)}
       ${mode==='recommend'?rLineupRecommendationMode(context,availableIds):rLineupTestMode(context,availableIds,lines)}
@@ -21033,6 +21229,7 @@ function rMatchcenterPage(){
         </div>
       </div>
     </section>
+    ${uiDatenstandBand({shownSeasonKey:seasonKey,selectedSeasonKey:getActiveSeasonKey(),count:seasonKey===getActiveSeasonKey()?(S.gamesData||[]).length:undefined})}
     ${S.matchcenterStoryOpen?rMatchcenterStoryPreview(getStoryData()):''}
     ${rMatchcenterTabs(activeTab)}
     ${tabContent}
@@ -21130,8 +21327,17 @@ function rTeamPage(){
     return !!key&&teams.some(t=>teamKey(t)===key);
   };
   const teamMeta=teams=>teams.length?teams.map(t=>`Pl. ${t.rank} ${t.name}`).join(' · '):'kein Tabellenkontext';
+  /** Aufgabe 4g: "Topteam" ist eine Klassifikation nach aktuellem Tabellenrang — bei wenigen Spielen ist der
+   * Rang selbst noch kein verlässliches Urteil (ein Team kann nach 1 Spiel Tabellenerster sein). Gilt die
+   * Klassifikation für IRGENDEIN verglichenes Team nicht als tragfähig, wird das ganze Modul verborgen statt
+   * mit einem Hinweis versehen — eine falsche Prämisse wird nicht captioniert, siehe uiDatenstandBand-Prinzip
+   * aus 4a, hier aber als vollständiges Ausblenden (4f: "wenn ein Teilnehmer unter der Schwelle liegt, die
+   * ganze Rangliste verbergen"). Schwelle: DATENSTAND_SCHWELLEN.spieleGut (ab hier gilt ein Rang als tragfähig).
+   */
+  const rankingTrustworthy=teams=>teams.every(t=>Number.isFinite(t.sp)&&t.sp>=DATENSTAND_SCHWELLEN.spieleGut);
 
   function rOpponentTraitCard(title,color,teams,description){
+    if(teams.length&&!rankingTrustworthy(teams))return'';
     const rows=playerRows.map(p=>({
       name:p.shortName,
       val:p.goalsEv.filter(e=>inTeamGroup(e.opponent,teams)).length,
@@ -21144,27 +21350,39 @@ function rTeamPage(){
   }
 
   function rOpponentTraits(){
+    const cards=[rOpponentTraitCard('Favoritenschreck','#fbbf24',topTeams,'Saisonbezogene Tore gegen aktuelle Topteams.')].filter(Boolean).join('');
+    if(!cards)return'';
     return`
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:22px">
-        ${rOpponentTraitCard('Favoritenschreck','#fbbf24',topTeams,'Saisonbezogene Tore gegen aktuelle Topteams.')}
+        ${cards}
       </div>`;
   }
 
   // Team ranking metrics
-  function rankList(title,icon,keyFn,unit,color,tip=''){
-    const sorted=S.players.map(p=>({name:p.label,val:keyFn(p)})).sort((a,b)=>b.val-a.val);
+  // S2e-Kaltstart-Audit (Aufgabe 4d): keyFn darf statt einer reinen Zahl {val,display} liefern — val bleibt
+  // für Sortierung/Balkenbreite maßgeblich, display überschreibt nur die angezeigte Beschriftung (für den
+  // Bruch-statt-Prozent-Fall). preNote (Aufgabe 4e) setzt uiDatenstandBand direkt über DIESE eine Kachel,
+  // wenn ihr eigener Nenner (nicht die Spielanzahl der Seite) im Band-Bereich liegt.
+  function rankList(title,icon,keyFn,unit,color,tip='',preNote=''){
+    const sorted=S.players.map(p=>{
+      const r=keyFn(p);
+      return(typeof r==='object'&&r!==null)?{name:p.label,val:r.val,display:r.display}:{name:p.label,val:r,display:null};
+    }).sort((a,b)=>b.val-a.val);
     const max=sorted[0]?.val||1;
     const bars=sorted.map((r,i)=>`<div class="rank-bar">
       <div class="rank-num">${i+1}</div>
       <div class="rank-name">${r.name.split(' ').pop()}</div>
       <div class="rank-bg"><div class="rank-fill" style="width:${(r.val/max)*100}%;background:${color}"></div></div>
-      <div class="rank-val">${typeof r.val==='number'&&!Number.isInteger(r.val)?r.val.toFixed(2):r.val}${unit}</div>
+      <div class="rank-val">${r.display??`${typeof r.val==='number'&&!Number.isInteger(r.val)?r.val.toFixed(2):r.val}${unit}`}</div>
     </div>`).join('');
     const titleHtml=tip?`${icon} <span class="th-tip" data-tip="${tip}">${title}</span>`:`${icon} ${title}`;
-    return`<div class="team-card"><div class="team-card-title" style="color:${color}">${titleHtml}</div>${bars}</div>`;
+    return`<div class="team-card">${preNote}<div class="team-card-title" style="color:${color}">${titleHtml}</div>${bars}</div>`;
   }
 
   const totalTeam=Object.values(S.teamGoalsPerGame).reduce((s,v)=>s+v,0);
+  // Aufgabe 4d/4f: Team-Anteil % ist eine Quote über EREIGNISSE (Teamtore), nicht über Spiele — eigene
+  // Schwelle (DATENSTAND_SCHWELLEN.ereignisseBruch/-Gut), getrennt von der Spiele-Schwelle oben auf der Seite.
+  const teamAnteilState=datenstandQuoteState(totalTeam,'ereignisse');
 
   const rankings=[
     rankList('Scorer-Punkte','🏆',p=>(S.events[p.key]||[]).length,'',PCOLS[0],'Tore + Vorlagen zusammen'),
@@ -21172,7 +21390,12 @@ function rTeamPage(){
     rankList('Vorlagen','🎯',p=>(S.events[p.key]||[]).filter(e=>e.type==='Vorlage').length,'','#10b981','Anzahl Torvorlagen'),
     rankList('Solo-Tore','🔥',p=>(S.events[p.key]||[]).filter(e=>e.type==='Tor'&&e.partner==='Solo').length,'','#f59e0b','Tore ohne Vorlagengeber'),
     rankList('Clutch-Tore','⚡',p=>(S.events[p.key]||[]).filter(e=>e.type==='Tor'&&e.clutch).length,'','#ef4444','Ausgleich / Führung / Entscheidend / Erstes Tor'),
-    rankList('Team-Anteil %','🎖',p=>{const t=(S.events[p.key]||[]).length;return totalTeam>0?+(t/totalTeam*100).toFixed(1):0;},'%','#c41e3a','Anteil an allen Teamtoren (Tore + Vorlagen)'),
+    rankList('Team-Anteil %','🎖',p=>{
+      const t=(S.events[p.key]||[]).length;
+      const pct=totalTeam>0?+(t/totalTeam*100).toFixed(1):0;
+      return teamAnteilState==='bruch'?{val:pct,display:`${t}/${totalTeam}`}:pct;
+    },'%','#c41e3a','Anteil an allen Teamtoren (Tore + Vorlagen)',
+      teamAnteilState==='band'?uiDatenstandBand({count:totalTeam,unit:'Teamtore',unitSingular:'Teamtor',threshold:DATENSTAND_SCHWELLEN.ereignisseGut}):''),
     rankList('Strafminuten','⚠',p=>(S.penalties[p.key]||[]).reduce((s,x)=>s+x.minutes,0),'min','#8b5cf6','Summe aller Strafminuten in der Saison'),
     rankList('Einsätze','📅',p=>p.metrics?.gamesPlayed||0,'','#14b8a6','Anzahl der Spiele, in denen der Spieler im Kader war'),
   ].join('');
@@ -21309,6 +21532,7 @@ function rTeamPage(){
   return`
   <div class="stitle" style="font-size:18px;margin-bottom:18px">🏒 Team-Übersicht VfB Ulm</div>
 
+  ${uiDatenstandBand({shownSeasonKey:S.activeSeasonKey,selectedSeasonKey:S.activeSeasonKey,count:wins+draws+losses})}
   <!-- Team quick stats -->
   <div class="stats" style="margin-bottom:18px">
     <div class="sc c2"><div class="sv">${wins}</div><div class="sl">Siege</div></div>
@@ -21410,6 +21634,11 @@ function _render(root){
   const activeSeasonCfg=SEASON_CONFIG[activeSeasonKey]||ACTIVE_SEASON_CONFIG;
   const totalTeam=Object.values(S.teamGoalsPerGame).reduce((s,v)=>s+v,0);
   const pd=S.players.find(p=>p.key===S.activeP);
+  // Aufgabe 7b: "0 Spiele geladen" ist bei einer frisch importierten Saison mit terminierten, aber noch
+  // nicht ausgetragenen Spielen irreführend — die Daten SIND geladen (siehe rawLeagueGames), nur noch kein
+  // Spiel ausgetragen. Zeigt deshalb den Spielplanumfang, sobald bekannt, statt stillschweigend 0 zu sagen.
+  const seasonScheduleTotal=(SEASONS[activeSeasonKey]?.data?.rawLeagueGames||[]).length;
+  const gamesLoadedLabel=S.gamesData.length?`${S.gamesData.length} Spiele geladen`:seasonScheduleTotal?`0 von ${seasonScheduleTotal} Spielen ausgetragen`:`${S.gamesData.length} Spiele geladen`;
 
   // ── HEADER ──
   // P0b.5: rIaShell() wird VOR dem bestehenden, unveränderten hdr-Block
@@ -21422,7 +21651,7 @@ function _render(root){
       <img class="hdr-logo" src="data:image/png;base64,${LOGO_B64}" alt="VfB Ulm">
       <div>
         <div class="hdr-title">VfB Ulm <span>Analytics</span></div>
-        <div class="hdr-sub">${S.gamesData.length} Spiele geladen · ${S.players.length} Scorer · ${totalTeam} Teamtore · Saison ${activeSeasonCfg.label||activeSeasonKey} · Verbandsliga BW (KF)</div>
+        <div class="hdr-sub">${gamesLoadedLabel} · ${S.players.length} Scorer · ${totalTeam} Teamtore · Saison ${activeSeasonCfg.label||activeSeasonKey} · Verbandsliga BW (KF)</div>
       </div>
     </div>
     <div class="hdr-nav">
@@ -21807,6 +22036,74 @@ function uiNotiz(text){
 }
 
 /**
+ * S2e-Kaltstart-Audit, Aufgabe 4f — EINE Stelle für alle Schwellwerte, statt verstreuter Zahlen. Gestaffelt
+ * statt einheitlich:
+ *   - Zählwerte (Tore, Vorlagen, Punkte, Spiele): NIE betroffen, keine Konstante nötig — unverändert anzeigen.
+ *   - Quoten über SPIELE als Nenner (z. B. Siegquote): <5 Bruch statt %, 5-9 Band, ab 10 ohne Band.
+ *   - Quoten über EREIGNISSE als Nenner (z. B. Team-Anteil %, Response Rate — Tore/Gegentore/Schüsse/Einsätze):
+ *     <10 Bruch statt %, 10-24 Band, ab 25 ohne Band.
+ *   - Modellwerte (Match Intelligence, Confidence-Badges): modellSpiele=3, siehe docs/spec/module/M5.md "nur
+ *     anzeigen, wenn mindestens 3 Spiele vorliegen" — die einzige im Projekt bereits festgelegte Schwelle für
+ *     eine vergleichbare kleine Stichprobe (M10 "mind. 30 Spiele" ist ein saisonübergreifendes
+ *     Regressionsmodell, nicht auf eine einzelne Saison übertragbar). Module mit eigener Regel (z. B. M5
+ *     selbst) wenden ihre eigene Zahl an, nicht diese.
+ */
+const DATENSTAND_SCHWELLEN={
+  spieleBruch:5,spieleGut:10,
+  ereignisseBruch:10,ereignisseGut:25,
+  modellSpiele:3,
+};
+/** Liefert 'bruch' (Prozent durch Bruch ersetzen), 'band' (Prozent zeigen, aber mit Hinweisband) oder 'ok'
+ * (Prozent ohne Hinweis) — rein aus der Nennergröße, siehe DATENSTAND_SCHWELLEN. kind: 'spiele'|'ereignisse'. */
+function datenstandQuoteState(n,kind='spiele'){
+  if(!Number.isFinite(n)||n<=0)return'bruch';
+  const bruch=kind==='ereignisse'?DATENSTAND_SCHWELLEN.ereignisseBruch:DATENSTAND_SCHWELLEN.spieleBruch;
+  const gut=kind==='ereignisse'?DATENSTAND_SCHWELLEN.ereignisseGut:DATENSTAND_SCHWELLEN.spieleGut;
+  if(n<bruch)return'bruch';
+  if(n<gut)return'band';
+  return'ok';
+}
+/** Aufgabe 4d: "Bruch statt Prozent, als allgemeine Regel" — EIN Ort, der genau das tut. Gibt bei 'bruch'
+ * den Bruch als Text zurück ("6 von 7" bzw. mit customText einen eigenen Wortlaut), sonst die Prozentzahl. */
+function uiQuoteText(numerator,denominator,{kind='spiele',decimals=0,fractionText}={}){
+  if(!Number.isFinite(denominator)||denominator<=0)return'–';
+  const state=datenstandQuoteState(denominator,kind);
+  if(state==='bruch')return fractionText||`${numerator} von ${denominator}`;
+  const pct=numerator/denominator*100;
+  return`${pct.toFixed(decimals)}%`;
+}
+
+/**
+ * S2e-Kaltstart-Audit, Aufgabe 4a/4b/4e — EIN wiederverwendetes, nicht wegklickbares Hinweisband für zwei
+ * verwandte Fälle, nie beide gleichzeitig (mismatch hat Vorrang, siehe Begründung unten):
+ *   1. mismatch: eine Ansicht mit eigener Saisonauswahl (Matchcenter/Lineup Builder) zeigt Zahlen aus einer
+ *      ANDEREN Saison als der global in der Kopfzeile gewählten (stiller Rückfall über
+ *      matchcenterDefaultSeasonKey, siehe dort — das Rückfallverhalten selbst bleibt unverändert, nur seine
+ *      Offenlegung wird hier deutlich gemacht statt in einer kleinen Nebenzeile).
+ *   2. thinSample: die gewählte Saison hat zwar Daten, aber weniger als ein Schwellwert — UND NENNT DIE
+ *      EINHEIT, AUF DER DIE KENNZAHL BERUHT (Aufgabe 4e: "Basis: 2 Spiele" über einer aus 7 Gegentoren
+ *      berechneten Kennzahl wäre selbst irreführend). unit/unitSingular benennt sie explizit (Spiele,
+ *      Gegentore, Schüsse, Einsätze, …), Default 'Spiele'/'Spiel'.
+ * mismatch hat Vorrang vor thinSample, weil bei einem Rückfall auf eine andere Saison die ANGEZEIGTE Saison
+ * selbst meist genug Spiele hat — die Unklarheit ist dann, AUS WELCHER Saison die Zahlen stammen, nicht wie
+ * tragfähig sie sind.
+ */
+function uiDatenstandBand({shownSeasonKey,selectedSeasonKey,count,unit='Spiele',unitSingular='Spiel',threshold=DATENSTAND_SCHWELLEN.modellSpiele}={}){
+  if(shownSeasonKey&&selectedSeasonKey&&shownSeasonKey!==selectedSeasonKey){
+    const shownLabel=SEASON_CONFIG[shownSeasonKey]?.label||shownSeasonKey;
+    const selectedLabel=SEASON_CONFIG[selectedSeasonKey]?.label||selectedSeasonKey;
+    const selectedHasAnyGames=matchcenterSeasonHasGames(selectedSeasonKey);
+    const reason=selectedHasAnyGames?`Für ${escHtml(selectedLabel)} reichen die vorhandenen Daten für diese Auswertung noch nicht aus.`:`Für ${escHtml(selectedLabel)} liegen noch keine Spiele vor.`;
+    return`<div class="ui-datenstand-band" role="note">Diese Auswertung stammt aus der Saison ${escHtml(shownLabel)}. ${reason}</div>`;
+  }
+  if(Number.isFinite(count)&&count>0&&count<threshold){
+    const label=count===1?unitSingular:unit;
+    return`<div class="ui-datenstand-band" role="note">Basis: ${count} ${escHtml(label)} — noch nicht aussagekräftig.</div>`;
+  }
+  return'';
+}
+
+/**
  * Platzhalter (6.5): "Skelett während der Berechnung, keine blockierenden
  * Ladebildschirme nach dem Start". Rein dekoratives Markup ohne Timer oder
  * Sichtbarkeitslogik — der spätere Aufrufer entscheidet, wann er diesen
@@ -22106,12 +22403,29 @@ function matchdayGameCardHtml(g){
   const side=detectSide(g);
   if(!side)return null;
   const homeLabel=side==='home'?'Heimspiel':'Auswärtsspiel';
-  if(!isGamePlayed(g))return uiNotiz(`${homeLabel} am ${formatDateDE(g.date||'')}${g.start_time?` (${g.start_time} Uhr)`:''}: noch nicht ausgetragen.`);
+  const opp=side==='home'?g.guest_team_name:g.home_team_name;
+  // Aufgabe 7b: bei einem geplanten Spiel steht dort, wo sonst das Ergebnis steht, das Spieldatum mit
+  // Uhrzeit — jetzt zusätzlich mit Gegner und Halle, damit die Zeile genauso aussagekräftig ist wie die
+  // Ergebniszeile eines ausgetragenen Spiels (vorher fehlten beide).
+  if(!isGamePlayed(g))return uiNotiz(`${homeLabel} gegen ${opp||'?'} am ${formatDateDE(g.date||'')}${g.start_time?` (${g.start_time} Uhr)`:''}${g.arena_name?` in ${g.arena_name}`:''}: noch nicht ausgetragen.`);
   const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
   if(isNaN(hg)||isNaN(gg))return uiNotiz('Für dieses Spiel liegt noch kein Endstand vor.');
   const us=side==='home'?hg:gg,os=side==='home'?gg:hg;
-  const opp=side==='home'?g.guest_team_name:g.home_team_name;
   return uiHinweisKarte({observation:`${homeLabel} gegen ${opp}: ${us}:${os}${g.arena_name?` in ${g.arena_name}`:''}.`});
+}
+/**
+ * Aufgabe 7b: vollständige Ansetzung EINES Spiels der Liga (beide Mannschaften, nicht nur Ulms Perspektive)
+ * — für die komplette Spieltags-Fixture-Liste, die matchdayGameCardHtml() (nur Ulms eigene Spiele) nicht
+ * abdeckt. Zeigt bei einem geplanten Spiel Datum/Uhrzeit/Halle statt eines Ergebnisses.
+ */
+function matchdayFixtureCardHtml(g){
+  const home=g.home_team_name||'?',guest=g.guest_team_name||'?';
+  const when=`${formatDateDE(g.date||'')}${g.start_time?` (${g.start_time} Uhr)`:''}`;
+  const where=g.arena_name?` · ${g.arena_name}`:'';
+  if(!isGamePlayed(g))return uiHinweisKarte({observation:`${home} - ${guest}: ${when}${where}.`});
+  const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
+  if(isNaN(hg)||isNaN(gg))return uiHinweisKarte({observation:`${home} - ${guest}: noch kein Endstand · ${when}${where}.`});
+  return uiHinweisKarte({observation:`${home} - ${guest}: ${hg}:${gg}${where}.`});
 }
 /** Zeitleisten-Zeile pro Spieltag — Klick öffnet die Detailseite (b). */
 function rMatchdayTimelineRow(seasonKey,matchday){
@@ -22127,7 +22441,7 @@ function rMatchdayTimelinePage(seasonKey){
   const shell=uiObjektseite({
     title:'Spieltage',
     contextLine:`${SEASON_CONFIG[seasonKey]?.label||seasonKey}`,
-    headline:matchdays.length?`${matchdays.length} Spieltage in dieser Saison.`:'Für diese Saison sind noch keine Spieltage bekannt.',
+    headline:matchdays.length?`${matchdays.length} ${matchdays.length===1?'Spieltag':'Spieltage'} in dieser Saison.`:'Für diese Saison sind noch keine Spieltage bekannt.',
   });
   const prepHtml=`<div class="ia-overview-card">${uiNotiz('Vorbereitung auf den nächsten Spieltag:')}<a class="ia-overview-link" href="#/matchcenter">Zum Matchcenter</a><a class="ia-overview-link" href="#/lineupBuilder">Zum Lineup Builder</a><a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`;
   const timelineHtml=matchdays.length?`<div class="ia-matchday-timeline">${matchdays.map(m=>rMatchdayTimelineRow(seasonKey,m)).join('')}</div>`:'';
@@ -22167,7 +22481,11 @@ function rMatchdayDetailPage(seasonKey,number){
     uiNotiz('Weitere Veränderungen durch diesen Spieltag (Power Ranking, Formkurve, Auffälligkeiten) folgen mit den Liga-Analytics-Modulen (M1–M10).'),
     `<div class="ia-overview-card">${uiNotiz('Aufstellung eintragen oder planen:')}<a class="ia-overview-link" href="#/einsatzCenter">Zum Einsatz-Center</a></div>`,
   ].filter(Boolean).slice(0,6);
-  return`<div class="ia-overview">${shell}${backRow}${themenkarten.length?`<div class="ia-overview-cards">${themenkarten.join('')}</div>`:''}</div>`;
+  // Aufgabe 7b: vollständige Ansetzung ALLER Liga-Spiele dieses Spieltags (nicht nur Ulms eigene) — eigene,
+  // nicht auf 6 Karten begrenzte Liste, damit auch ein Spieltag mit 8 Spielen vollständig sichtbar bleibt.
+  const allGames=(matchday.games||[]).slice().sort(compareGamesChronologically);
+  const fixtureHtml=allGames.length?`<div class="stitle" style="margin-top:18px">Alle Ansetzungen (${allGames.length})</div><div class="ia-overview-cards">${allGames.map(matchdayFixtureCardHtml).join('')}</div>`:'';
+  return`<div class="ia-overview">${shell}${backRow}${themenkarten.length?`<div class="ia-overview-cards">${themenkarten.join('')}</div>`:''}${fixtureHtml}</div>`;
 }
 function rMatchdayPage(seasonKey){
   if(S.activeMatchday!=null){
@@ -22278,19 +22596,49 @@ function recordOverviewVisit(seasonKey){
   einsatzCenterStorageWrite(key,JSON.stringify({v:1,...current}));
   return OVERVIEW_SESSION_DATA_STATE[seasonKey]={previous,current,isNew:isNewSeasonDataState(previous,current)};
 }
+/** S2e-Kaltstart-Audit (Aufgabe 4): NICHT mehr über matchday.teamGames (das listet bei einem vollen Spieltag
+ * ALLE anderen Teams, nicht nur Ulms tatsächliche Gegner — an mehreren Stellen geprüft, siehe Abschlussbericht;
+ * derselbe Fehler, den socialVideoUlmGamesForMatchday schon immer bewusst vermieden hat, siehe dortiger
+ * Kommentar). Ermittelt stattdessen über matchcenterDetectUlmSide NUR die Spiele, in denen Ulm tatsächlich
+ * antritt, und liefert deren Gegnernamen (mehrere bei zwei Ulm-Spielen am selben Spieltag). */
 function overviewOpponentLabel(matchday){
   if(!matchday)return null;
-  const names=Object.keys(matchday.teamGames||{}).filter(name=>!isUlmTeamName(name));
-  return names.length?names.join(' / '):null;
+  const seasonKey=matchday.seasonKey; // von buildMatchdays() immer gesetzt, siehe dort
+  const ulmGames=(matchday.games||[]).filter(g=>matchcenterDetectUlmSide(g,seasonKey));
+  if(!ulmGames.length)return null;
+  const names=ulmGames.map(g=>{
+    const side=matchcenterDetectUlmSide(g,seasonKey);
+    const oppSide=side==='home'?'guest':'home';
+    return matchcenterTeamDisplay(matchcenterGameTeamName(g,oppSide),seasonKey);
+  }).filter(Boolean);
+  return names.length?[...new Set(names)].join(' / '):null;
 }
 function overviewLastMatchdayText(lastMatchday){
   if(!lastMatchday)return'Für diese Saison liegt noch kein abgeschlossener Spieltag vor.';
   return`Spieltag ${lastMatchday.number} wurde am ${formatDateDE(lastMatchday.date)} ausgetragen.`;
 }
+/**
+ * Aufgabe 7b: "nächster Spieltag, nächster Gegner, Termin und Halle müssen stehen" — vorher fehlte die
+ * Halle, und bei zwei Ulm-Spielen an einem Spieltag (Turnierformat: jedes Team spielt pro Spieltag genau
+ * zweimal) wurden Uhrzeit/Halle beider Spiele gar nicht unterschieden. Baut je Ulm-Spiel dieses Spieltags
+ * eine eigene "gegen X, HH:MM Uhr, Halle"-Zeile, mit denselben Helfern wie overviewOpponentLabel() oben.
+ */
 function overviewNextMatchdayHtml(nextMatchday){
   if(!nextMatchday)return uiNotiz('Für diese Saison ist kein weiterer Spieltag terminiert.');
-  const opp=overviewOpponentLabel(nextMatchday);
-  return uiHinweisKarte({observation:`Nächster Spieltag: Spieltag ${nextMatchday.number} am ${formatDateDE(nextMatchday.date)}${opp?` gegen ${opp}`:''}.`});
+  const seasonKey=nextMatchday.seasonKey;
+  const ulmGames=(nextMatchday.games||[]).filter(g=>matchcenterDetectUlmSide(g,seasonKey));
+  if(!ulmGames.length){
+    const opp=overviewOpponentLabel(nextMatchday);
+    return uiHinweisKarte({observation:`Nächster Spieltag: Spieltag ${nextMatchday.number} am ${formatDateDE(nextMatchday.date)}${opp?` gegen ${opp}`:''}.`});
+  }
+  const parts=ulmGames.map(g=>{
+    const side=matchcenterDetectUlmSide(g,seasonKey);
+    const oppSide=side==='home'?'guest':'home';
+    const opp=matchcenterTeamDisplay(matchcenterGameTeamName(g,oppSide),seasonKey);
+    const when=g.start_time?`${g.start_time} Uhr`:'';
+    return[opp?`gegen ${opp}`:'',when,g.arena_name||''].filter(Boolean).join(', ');
+  }).filter(Boolean);
+  return uiHinweisKarte({observation:`Nächster Spieltag: Spieltag ${nextMatchday.number} am ${formatDateDE(nextMatchday.date)}${parts.length?` — ${parts.join(' · ')}`:''}.`});
 }
 // P0b-Fix 7 (6.2 Punkt 5 / 6.11: "Keine leere Karte in keinem Datenzustand"): Themenkarten der Übersicht, deren
 // Hauptinhalt bei fehlenden Daten nur ein "noch keine …"-Leerzustand wäre, liefern '' und werden von
@@ -22355,7 +22703,7 @@ function overviewCrossSeasonTrendHtml(){
     return row?{label:SEASON_CONFIG[k]?.label||k,value:row.rank}:null;
   }).filter(Boolean);
   if(points.length<2)return'';
-  return uiVerlauf({points,unit:'. Platz'});
+  return uiVerlauf({points,unit:'Tabellenplatz je Saison'});
 }
 function overviewOpponentPreviewHtml(nextMatchday){
   if(!nextMatchday)return uiNotiz('Kein bevorstehender Spieltag bekannt.');

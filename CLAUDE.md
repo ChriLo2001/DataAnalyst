@@ -22,7 +22,7 @@ Gelten für jede Phase, unabhängig vom jeweiligen Auftrag:
 - Rohdaten (`season-data/`, `lineup-data/`) inhaltlich unverändert; Korrekturen nur über die vorgesehenen Importer, nie durch direktes Editieren.
 - `STATIC_SEASON_DATA` (eingebetteter `file://`-Fallback, seit Token-Diät Teil 2 in `season-data-embedded.js`, nicht mehr in `index.html`) bleibt byte-identisch, außer eine Phase verlangt die Aktualisierung ausdrücklich — dafür ausschließlich `scripts/import-season-data.mjs --update-embedded` verwenden, nie von Hand editieren.
 - Keine neuen npm-Abhängigkeiten. Alle Skripte bleiben ESM ohne externe Pakete.
-- Kein Netzwerkzugriff, außer wo ein Skript ihn ausdrücklich und mit Begründung vorsieht (bisher einzige Ausnahme: `scripts/cache-team-logos.mjs --fetch`).
+- Kein Netzwerkzugriff, außer wo ein Skript ihn ausdrücklich und mit Begründung vorsieht (bisher einzige Ausnahmen: `scripts/cache-team-logos.mjs --fetch`, `scripts/cache-fonts.mjs --fetch`).
 - Dry-Run ist der Standard jedes schreibenden Skripts; Schreiben nur mit explizitem `--write`.
 - Schreiben ist atomar (Temp-Datei + `rename`), nie direktes Überschreiben.
 - Ein Branch pro Phase (`feature/<phasen-name>`). Kein Merge nach `main`, kein Force-Push — beides nur nach expliziter Ansage durch Chris.

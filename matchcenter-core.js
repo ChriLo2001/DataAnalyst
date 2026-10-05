@@ -238,6 +238,28 @@ function isGameAtOrBeforeAsOf(game,asOf){
   const asOfTime=String(asOf.startTime);
   return gameTime<=asOfTime;
 }
+/** Heutiges Datum als "YYYY-MM-DD", lokale Zeit — für den Vergleich mit game.date (Aufgabe 7a). */
+function todayDateString(){
+  const d=new Date();
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+/** Deutsches Datumsformat TT.MM.JJJJ aus einem "YYYY-MM-DD"-String, für Begründungstexte. */
+function formatGermanDateFromIso(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));
+  return m?`${m[3]}.${m[2]}.${m[1]}`:String(iso||'');
+}
+/**
+ * Aufgabe 7a (S2e-Kaltstart-Phase): "zählt für Statistiken" (countsForStats) und "wird angezeigt" sind zwei
+ * getrennte Fragen — vorher landete jedes Spiel ohne Endstand/Events im selben status:'unplayed', egal ob
+ * es abgesagt wurde oder erst in der Zukunft stattfindet, mit der irreführenden Begründung "Kein Endstand
+ * und keine Events vorhanden". Ein Spiel mit Datum in der Zukunft (oder heute) ist "geplant"
+ * (status:'scheduled') — ein eigener, dritter Zustand neben 'cancelled'/'postponed'. countsForStats bleibt
+ * für 'scheduled' false (korrekt: zählt nicht für Statistiken), aber die Unterscheidung von 'unplayed'
+ * erlaubt Aufrufern wie buildStandings(), ein geplantes Spiel trotzdem zu berücksichtigen (siehe dort) —
+ * genau die Trennung, die diese Aufgabe verlangt. isEffectivelyEnded() in scripts/game-status.mjs löst den
+ * umgekehrten Fall (ended fälschlich false trotz echtem Ergebnis); hier geht es um das Gegenstück (kein
+ * Ergebnis, weil das Spiel einfach noch nicht stattgefunden hat).
+ */
 function classifyGameForStats(game,season=null,asOf=null){
   if(asOf&&!isGameAtOrBeforeAsOf(game,asOf)){
     return{isRelevantLeagueGame:false,status:'future',reason:'Spielzeitpunkt liegt nach dem gewählten asOf-Zeitpunkt',countsForStats:false};
@@ -270,6 +292,22 @@ function classifyGameForStats(game,season=null,asOf=null){
     return{isRelevantLeagueGame:true,status:'suspicious',reason:'Verschoben-Flag vorhanden, aber Endstand/Events deuten auf ausgetragenes Spiel hin',countsForStats:true};
   }
   if(!score.hasScore&&!eventCount){
+    const gameDate=String(game?.date??'');
+    // Aufgabe 10: ergebnisbasiert statt datumsbasiert. Ein Vergleich gegen das echte Kalenderdatum
+    // (todayDateString()) würde den Status am Tag NACH dem Spiel automatisch zurück auf 'unplayed' kippen
+    // lassen, sobald niemand das Ergebnis importiert hat — geprüft mit gesetztem Datum: am 12.10. (Spiel war
+    // am 11.10.) kippt 'scheduled' sonst zurück auf 'unplayed', und 'unplayed' landet in
+    // excludedScheduledGames([...,'unplayed']) — das reaktiviert sowohl die fehlende Nullzeile in
+    // buildStandings als auch die individuelle "56 Warnungen"-Zeile pro Spiel, die 7a/7c beheben sollten.
+    // Drei Zustände statt zwei: 'scheduled' (Datum liegt noch nicht hinter uns), 'awaitingResult' (Datum ist
+    // vorbei, aber noch kein Ergebnis — der Zustand am Spieltagnachmittag zwischen Schlusspfiff und Import),
+    // 'unplayed' bleibt reserviert für den echten Datenfehler "gar kein Datum vorhanden".
+    if(gameDate){
+      if(gameDate>=todayDateString()){
+        return{isRelevantLeagueGame:false,status:'scheduled',reason:`Spiel findet am ${formatGermanDateFromIso(gameDate)} statt`,countsForStats:false};
+      }
+      return{isRelevantLeagueGame:false,status:'awaitingResult',reason:`Spiel fand am ${formatGermanDateFromIso(gameDate)} statt — Ergebnis steht noch aus`,countsForStats:false};
+    }
     return{isRelevantLeagueGame:false,status:'unplayed',reason:'Kein Endstand und keine Events vorhanden',countsForStats:false};
   }
   if(hasPlayedEvidence){
@@ -306,7 +344,11 @@ function getSeasonStatsAsOf(seasonKey,asOf=deriveAsOfForSeason(seasonKey,S.asOf)
   const seasonConfig=SEASON_CONFIG[seasonKey]||SEASON_CONFIG[CURRENT_SEASON_KEY];
   return cachedAnalysis(analysisCacheKey('season-stats-asof',{seasonKey},asOf),()=>{
     const relevantLeagueGames=getRelevantSeasonGames(bucket.data.rawLeagueGames||[],asOf);
-    const standings=buildStandings(relevantLeagueGames,seasonConfig);
+    // Aufgabe 7b: Tabelle aus ALLEN Liga-Spielen (nicht nur den für Statistik zählenden) — buildStandings()
+    // nimmt jedes Team mit einer Nullzeile auf, sobald es ein geplantes Spiel hat (siehe dort). asOf MUSS
+    // durchgereicht werden, sonst zählen Spiele nach dem gewählten Zeitpunkt fälschlich mit (siehe
+    // Kommentar an buildStandings()).
+    const standings=buildStandings(bucket.data.rawLeagueGames||[],seasonConfig,asOf);
     const relevantLeagueGameKeys=new Set(relevantLeagueGames.map(g=>String(g.id||gameStableId(g))));
     const statGamesData=(bucket.data.rawGames||[]).filter(g=>detectSide(g)&&classifyGameForStats(g,null,asOf).countsForStats&&relevantLeagueGameKeys.has(String(g.id||gameStableId(g))));
     return{seasonKey,asOf,relevantLeagueGames,standings,statGamesData};
@@ -386,31 +428,52 @@ function formatDateDE(isoDate){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate||''));
   return m?`${m[3]}.${m[2]}.${m[1]}`:String(isoDate||'');
 }
-function buildStandings(gamesData,seasonConfig=ACTIVE_SEASON_CONFIG){
+/**
+ * Aufgabe 7b: eine Tabelle vor dem ersten Spieltag ist nicht leer, sie ist auf null — genau wie der
+ * Saisonmanager selbst sie zeigt. Ein geplantes Spiel (status:'scheduled', siehe classifyGameForStats)
+ * zählt weiterhin nicht für Statistiken, sorgt aber dafür, dass beide beteiligten Mannschaften mit einer
+ * Nullzeile erscheinen. Betrifft ausschließlich künftig datierte Spiele — an archivierten Saisons (dort
+ * hat kein Spiel mehr den Status 'scheduled') ändert sich dadurch nichts.
+ *
+ * asOf (optional): muss durchgereicht werden, sobald gamesData NICHT mehr auf den asOf-Zeitpunkt
+ * vorgefiltert ist (siehe getSeasonStatsAsOf in index.html, das seit 7b die vollständige rawLeagueGames-
+ * Liste statt der bereits gefilterten relevantLeagueGames übergibt, damit geplante Spiele Nullzeilen
+ * bekommen) — sonst zählen Spiele NACH dem gewählten asOf-Zeitpunkt fälschlich für eine historische
+ * Tabellen-Momentaufnahme mit (gefunden über test-social-video.mjs, siehe Build-Bericht).
+ */
+function buildStandings(gamesData,seasonConfig=ACTIVE_SEASON_CONFIG,asOf=null){
   const seasonId=seasonConfig.seasonId;
   const seasonStart=seasonConfig.dateRange?.start||SEASON_START;
   const seasonEnd=seasonConfig.dateRange?.end||SEASON_END;
   const map={};
   const seenIds=new Set(); // deduplicate: same game may appear from season-API + team-API fetch
   for(const g of gamesData){
-    if(!classifyGameForStats(g,seasonConfig).countsForStats)continue;
-    // ── Deduplication by game ID ──────────────────────────
-    const gid=Number(g.id||0);
-    if(gid){if(seenIds.has(gid))continue;seenIds.add(gid);}
+    // classifyGameForStats() selbst wertet asOf aus (liefert status:'future' statt 'scheduled' für Spiele
+    // nach dem gewählten Zeitpunkt) — kein zusätzlicher Vorab-Filter nötig, nur durchreichen.
+    const classification=classifyGameForStats(g,seasonConfig,asOf);
+    // Aufgabe 10: 'awaitingResult' (Datum vorbei, Ergebnis noch nicht importiert) bekommt dieselbe
+    // Nullzeilen-Behandlung wie 'scheduled' — sonst verliert ein Team seine Zeile genau in dem Fenster
+    // zwischen Spielende und Import, obwohl am Status selbst nichts "falsch" ist.
+    const isScheduled=classification.status==='scheduled'||classification.status==='awaitingResult';
+    if(!classification.countsForStats&&!isScheduled)continue;
     // ── Date range guard (this season only) ──────────────
     const gd=g.date||g.game_date||'';
     const _bsid=Number(g.season_id??g.league_season_id??g.season?.id??0);
     if(seasonId&&_bsid&&_bsid!==seasonId)continue;
     if(!gd&&seasonId&&_bsid!==seasonId)continue; // no date + no season_id → Süddeutsche
     if(gd&&((seasonStart&&gd<seasonStart)||(seasonEnd&&gd>seasonEnd)))continue;
+    const hn=g.home_team_name||'?',gn=g.guest_team_name||'?';
+    if(!map[hn])map[hn]={name:hn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
+    if(!map[gn])map[gn]={name:gn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
+    if(isScheduled)continue; // Nullzeile existiert jetzt, aber kein Spiel zum Auszählen
+    // ── Deduplication by game ID ──────────────────────────
+    const gid=Number(g.id||0);
+    if(gid){if(seenIds.has(gid))continue;seenIds.add(gid);}
     // ── Score validity ────────────────────────────────────
     const hg=parseInt(g.home_goals),gg=parseInt(g.guest_goals);
     if(isNaN(hg)||isNaN(gg))continue;
     // ── Reject postponed/cancelled ────────────────────────
     // ── 0:0 requires real events (not just a placeholder) ─
-    const hn=g.home_team_name||'?',gn=g.guest_team_name||'?';
-    if(!map[hn])map[hn]={name:hn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
-    if(!map[gn])map[gn]={name:gn,sp:0,w:0,d:0,l:0,gf:0,ga:0,gameIds:new Set()};
     // Safety: skip if game ID already counted for this team
     if(gid&&(map[hn].gameIds.has(gid)||map[gn].gameIds.has(gid)))continue;
     if(gid){map[hn].gameIds.add(gid);map[gn].gameIds.add(gid);}

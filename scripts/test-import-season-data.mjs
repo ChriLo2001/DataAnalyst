@@ -26,7 +26,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
 
-import { buildDryRunReport, validateSeasonKey, validateWrapperFormat, embedSeasonInEmbeddedFile, buildManifestEntryUpdate } from './import-season-data.mjs';
+import { buildDryRunReport, validateSeasonKey, validateWrapperFormat, embedSeasonInEmbeddedFile, buildManifestEntryUpdate, mergeGamesById, buildMergeDryRunReport, detectGameDowngrades } from './import-season-data.mjs';
 
 /** Führt season-data-embedded.js als klassisches Skript aus (kein
  * regex/Textparsing) und gibt das gesetzte window.STATIC_SEASON_DATA zurück —
@@ -353,20 +353,30 @@ console.log('== Fall J (Variante): tatsächlich geändertes Label wird übernomm
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Fall K: neue Saison (26/27) -> korrekter neuer Eintrag, Rest unverändert
+// Fall K: neue, im echten Manifest noch unbekannte Saison -> korrekter neuer
+// Eintrag, Rest unverändert.
+//
+// Ursprünglich testete dieser Fall mit dem Schlüssel "26/27" als Beispiel für
+// "noch nicht vorhanden" — seit der S2e-Kaltstart-Phase (Aufgabe 3, Kalender-
+// Import) ist 26/27 jetzt echte, reale season-data und steht im echten
+// Manifest als status:"current" (25/26 entsprechend "archived"). Der Test
+// prüft deshalb weiterhin denselben Code-Pfad, aber mit "99/00" — einem
+// Schlüssel, der nach validateSeasonKey() formal gültig ist (99 -> 00 ist ein
+// aufeinanderfolgendes Jahrespaar modulo 100) und niemals mit einer echten
+// Saison dieses Vereins kollidieren wird.
 // ─────────────────────────────────────────────────────────────────────────
 console.log('');
-console.log('== Fall K: buildManifestEntryUpdate für neue Saison 26/27 ==');
+console.log('== Fall K: buildManifestEntryUpdate für eine neue, unbekannte Saison (99/00) ==');
 {
-  assertTrue(!realManifest.seasons.some((s) => s.key === '26/27'), 'Ausgangslage bestätigt: 26/27 ist im echten Manifest noch nicht vorhanden');
-  const result = buildManifestEntryUpdate(realManifest, { key: '26/27', label: '2026/27', file: '26-27.json' });
+  assertTrue(!realManifest.seasons.some((s) => s.key === '99/00'), 'Ausgangslage bestätigt: 99/00 ist im echten Manifest nicht vorhanden');
+  const result = buildManifestEntryUpdate(realManifest, { key: '99/00', label: '1999/00', file: '99-00.json' });
   assertTrue(result.changed, 'neue Saison erzeugt eine Änderung');
   assertTrue(result.isNewEntry, 'wird korrekt als neuer Eintrag erkannt');
   assertEqual(result.manifest.seasons.length, realManifest.seasons.length + 1, 'genau ein neuer Eintrag wurde angehängt');
-  const newEntry = result.manifest.seasons.find((s) => s.key === '26/27');
-  assertEqual(newEntry, { key: '26/27', label: '2026/27', file: '26-27.json', status: 'archived' }, 'neuer Eintrag hat exakt Key/Label/Dateiname und den sicheren Default status:"archived"');
+  const newEntry = result.manifest.seasons.find((s) => s.key === '99/00');
+  assertEqual(newEntry, { key: '99/00', label: '1999/00', file: '99-00.json', status: 'archived' }, 'neuer Eintrag hat exakt Key/Label/Dateiname und den sicheren Default status:"archived"');
   assertTrue(
-    !result.manifest.seasons.some((s) => s.key !== '26/27' && s.status === 'current' && realManifest.seasons.find((r) => r.key === s.key)?.status !== 'current'),
+    !result.manifest.seasons.some((s) => s.key !== '99/00' && s.status === 'current' && realManifest.seasons.find((r) => r.key === s.key)?.status !== 'current'),
     'keine bestehende Saison wurde durch das Hinzufügen versehentlich auf "current" umgestellt',
   );
   for (const original of realManifest.seasons) {
@@ -407,6 +417,185 @@ console.log('== Fall L: Sicherheitsabbruch -> report.ok bleibt false (Vorbedingu
   incoming.games.push(clone(incoming.games[0])); // Duplikat, wie Fall E
   const report = buildDryRunReport('25/26', incoming, existing);
   assertTrue(!report.ok, 'Duplikat -> ebenfalls kein Schreiben in main() möglich');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fall M: Aufgabe 14 — Teilimport (--merge / mergeGamesById / buildMergeDryRunReport).
+// Dieselbe reale 25/26-Datei als Ausgangsbasis; die "Teildatei" ist jeweils
+// nur ein kleiner Ausschnitt — genau das, was buildDryRunReport (Vollimport-
+// Pfad) als "verschwundene bekannte IDs" ablehnen würde.
+// ─────────────────────────────────────────────────────────────────────────
+console.log('');
+console.log('== Fall M: Teilimport (--merge) ==');
+{
+  // Gegenprobe zuerst: belegt den eigentlichen Engpass, den --merge löst —
+  // eine Datei mit nur den ersten 6 Spielen würde der bestehende Vollimport-
+  // Pfad wegen "fehlender bekannter IDs" hart ablehnen.
+  const existing = clone(real2526);
+  const firstMatchday = { season: '25/26', label: '2025/26', games: clone(real2526.games.slice(0, 6)) };
+  const fullImportReport = buildDryRunReport('25/26', firstMatchday, existing);
+  assertTrue(!fullImportReport.ok, 'Vollimport-Pfad lehnt eine Spieltag-Datei zu Recht ab (54 "fehlende" IDs)');
+  assertTrue(fullImportReport.removedIds.length === real2526.games.length - 6, 'genau die nicht enthaltenen 54 IDs würden als "verschwunden" gemeldet');
+}
+console.log('== Fall M1: reine Teilmenge bereits bekannter Spiele -> OK, nichts geändert außer Inhalt ==');
+{
+  const existing = clone(real2526);
+  const firstMatchday = { season: '25/26', label: '2025/26', games: clone(real2526.games.slice(0, 6)) };
+  const report = buildMergeDryRunReport('25/26', firstMatchday, existing);
+  assertTrue(report.ok, 'Merge-Dry-Run OK für eine reine Teilmenge bekannter Spiele');
+  assertEqual(report.previousGameCount, real2526.games.length, 'bisherige Spielanzahl korrekt gemeldet');
+  assertEqual(report.partialFileGameCount, 6, 'Teildatei-Anzahl korrekt gemeldet');
+  assertEqual(report.mergedGameCount, real2526.games.length, 'Spielanzahl nach Merge unverändert (nur bereits bekannte IDs)');
+  assertEqual(report.addedIds, [], 'keine neuen IDs');
+  assertEqual(report.updatedIds, real2526.games.slice(0, 6).map((g) => String(g.id)).sort(), 'genau die 6 Spiele der Teildatei als aktualisiert erkannt');
+}
+console.log('== Fall M2: ein bekanntes Spiel bekommt echten Inhalt (z.B. Postponed -> Endstand) -> Inhalt wird übernommen ==');
+{
+  const existing = clone(real2526);
+  const targetId = real2526.games[0].id;
+  const updatedGame = { ...clone(real2526.games[0]), ended: true, result_string: '7:4', home_goals: 7, guest_goals: 4 };
+  const partial = { season: '25/26', label: '2025/26', games: [updatedGame] };
+  const report = buildMergeDryRunReport('25/26', partial, existing);
+  assertTrue(report.ok, 'Merge-Dry-Run OK');
+  assertEqual(report.updatedIds, [String(targetId)], 'die aktualisierte ID wird erkannt');
+  assertEqual(report.mergedGameCount, real2526.games.length, 'Spielanzahl bleibt gleich (reine Aktualisierung)');
+  const mergedTarget = report.mergedGames.find((g) => String(g.id) === String(targetId));
+  assertEqual(mergedTarget.result_string, '7:4', 'der neue Inhalt (Endstand) landet im Merge-Ergebnis');
+  const otherIds = real2526.games.slice(1).map((g) => String(g.id));
+  const mergedOtherIds = report.mergedGames.filter((g) => String(g.id) !== String(targetId)).map((g) => String(g.id));
+  assertEqual(mergedOtherIds, otherIds, 'alle anderen Spiele bleiben in Reihenfolge und Inhalt unangetastet');
+}
+console.log('== Fall M3: brandneue Game-ID in der Teildatei -> wird angehängt, nichts verschwindet ==');
+{
+  const existing = clone(real2526);
+  const partial = { season: '25/26', label: '2025/26', games: [samplePostponedGame(999010)] };
+  const report = buildMergeDryRunReport('25/26', partial, existing);
+  assertTrue(report.ok, 'Merge-Dry-Run OK für eine neue ID');
+  assertEqual(report.addedIds, ['999010'], 'die neue ID wird als Zugang erkannt');
+  assertEqual(report.updatedIds, [], 'keine Aktualisierung, nur ein Zugang');
+  assertEqual(report.mergedGameCount, real2526.games.length + 1, 'Spielanzahl wächst um genau 1');
+  assertEqual(report.mergedGames.at(-1).id, 999010, 'die neue ID steht am Ende (Anhänge-Reihenfolge)');
+}
+console.log('== Fall M4: Sicherheitsnetz — keine bekannte ID verschwindet je durch einen Merge ==');
+{
+  const existing = clone(real2526);
+  // Realistische Mischung: 3 bekannte (davon 1 aktualisiert) + 1 neue ID.
+  const partial = {
+    season: '25/26',
+    label: '2025/26',
+    games: [
+      clone(real2526.games[0]),
+      clone(real2526.games[1]),
+      { ...clone(real2526.games[2]), ended: true },
+      samplePostponedGame(999011),
+    ],
+  };
+  const report = buildMergeDryRunReport('25/26', partial, existing);
+  assertTrue(report.ok, 'Merge-Dry-Run OK für eine realistische Mischung');
+  const { mergedGames } = mergeGamesById(existing.games, partial.games);
+  const mergedIds = new Set(mergedGames.map((g) => String(g.id)));
+  assertTrue(existing.games.every((g) => mergedIds.has(String(g.id))), 'JEDE zuvor bekannte ID ist nach dem Merge weiterhin vorhanden');
+  assertEqual(mergedGames.length, existing.games.length + 1, 'genau ein echter Zugang (999011), der Rest ist Aktualisierung');
+}
+console.log('== Fall M5: Teildatei mit Duplikat/Strukturfehler -> FEHLER, wie beim Vollimport ==');
+{
+  const existing = clone(real2526);
+  const withDup = { season: '25/26', label: '2025/26', games: [clone(real2526.games[0]), clone(real2526.games[0])] };
+  const dupReport = buildMergeDryRunReport('25/26', withDup, existing);
+  assertTrue(!dupReport.ok, 'Merge-Dry-Run FEHLER bei doppelter ID in der Teildatei');
+
+  const withBadStructure = { season: '25/26', label: '2025/26', games: [{ ...clone(real2526.games[0]), date: undefined }] };
+  const structReport = buildMergeDryRunReport('25/26', withBadStructure, existing);
+  assertTrue(!structReport.ok, 'Merge-Dry-Run FEHLER bei strukturell ungültigem Spiel in der Teildatei');
+}
+console.log('== Fall M6: neue Saison (noch keine bestehende Datei) -> Teilimport entspricht Vollimport ==');
+{
+  const partial = { season: '99/00', label: '1999/00', games: [samplePostponedGame(999012), samplePostponedGame(999013)] };
+  const report = buildMergeDryRunReport('99/00', partial, null);
+  assertTrue(report.ok, 'Merge-Dry-Run OK, wenn es die Saison noch nicht gibt');
+  assertEqual(report.addedIds, ['999012', '999013'], 'beide Spiele sind "neu" (keine bestehende Datei)');
+  assertEqual(report.mergedGameCount, 2, 'Ergebnis enthält genau die beiden Spiele der Teildatei');
+  assertTrue(report.warnings.some((w) => w.includes('entspricht hier einem Vollimport')), 'Hinweis, dass dies de facto ein Vollimport ist');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fall M7: Aufgabe 14b — Verschlechterungsschutz (detectGameDowngrades /
+// buildMergeDryRunReport mit allowDowngrade). Basis: das echte, bereits
+// vollständig importierte Spiel 44372 aus 25/26 (16 Events, 13 Heim-/6
+// Gast-Spieler, Endstand "10:3").
+// ─────────────────────────────────────────────────────────────────────────
+console.log('');
+console.log('== Fall M7: Verschlechterungsschutz beim Ersetzen einer bekannten ID ==');
+{
+  const richGame = real2526.games.find((g) => g.id === 44372);
+  assertTrue(!!richGame, 'Ausgangslage: Spiel 44372 real vorhanden (16 Events, 13/6 Spieler, Endstand 10:3)');
+
+  const poorerGame = {
+    ...clone(richGame),
+    events: clone(richGame.events).slice(0, 5), // 16 -> 5 Events
+    players: { home: clone(richGame.players.home).slice(0, 3), guest: clone(richGame.players.guest) }, // 13 -> 3 Heim-Spieler
+    result: null,
+    result_string: null, // Endstand verschwindet
+  };
+  const richerGame = {
+    ...clone(richGame),
+    events: [...clone(richGame.events), { event_id: 99, event_type: 'goal', event_team: 'home', period: 2, home_goals: 11, guest_goals: 3, time: '39:00', sortkey: '2-39:00', number: 24, assist: 0, goal_type: 'regular', goal_type_string: 'Tor' }],
+    result_string: '11:3',
+  };
+
+  console.log('-- detectGameDowngrades direkt --');
+  {
+    const existing = clone(real2526);
+    const downgrades = detectGameDowngrades(existing.games, [poorerGame]);
+    assertEqual(downgrades.length, 1, 'genau ein Downgrade erkannt');
+    assertEqual(downgrades[0].id, String(richGame.id), 'die korrekte ID wird gemeldet');
+    assertTrue(downgrades[0].problems.some((p) => p.includes('Events: 16 -> 5')), 'Events-Rückgang wird mit beiden Werten genannt');
+    assertTrue(downgrades[0].problems.some((p) => p.includes('Heim-Spieler: 13 -> 3')), 'Heim-Spieler-Rückgang wird mit beiden Werten genannt');
+    assertTrue(downgrades[0].problems.some((p) => p.includes('Endstand verschwindet')), 'verschwindender Endstand wird genannt');
+
+    const noDowngrades = detectGameDowngrades(existing.games, [richerGame]);
+    assertEqual(noDowngrades, [], 'eine rein additive/verbessernde Ersetzung löst keinen Downgrade aus');
+  }
+
+  console.log('-- buildMergeDryRunReport: ärmerer Ersatz bricht ohne Flag ab --');
+  {
+    const existing = clone(real2526);
+    const partial = { season: '25/26', label: '2025/26', games: [poorerGame] };
+    const report = buildMergeDryRunReport('25/26', partial, existing);
+    assertTrue(!report.ok, 'Merge-Dry-Run FEHLER bei inhaltlich ärmerem Ersatz (ohne --allow-downgrade)');
+    assertEqual(report.downgrades.length, 1, 'Downgrade wird im Bericht aufgeführt');
+    assertTrue(report.errors.some((e) => e.includes(String(richGame.id)) && e.includes('ärmer')), 'Fehlermeldung nennt die betroffene ID konkret');
+  }
+
+  console.log('-- buildMergeDryRunReport: derselbe Fall mit --allow-downgrade läuft durch --');
+  {
+    const existing = clone(real2526);
+    const partial = { season: '25/26', label: '2025/26', games: [poorerGame] };
+    const report = buildMergeDryRunReport('25/26', partial, existing, { allowDowngrade: true });
+    assertTrue(report.ok, 'Merge-Dry-Run OK mit --allow-downgrade trotz Verarmung');
+    assertEqual(report.downgrades.length, 1, 'der Downgrade wird weiterhin erkannt und gemeldet');
+    assertTrue(report.warnings.some((w) => w.includes('--allow-downgrade') && w.includes(String(richGame.id))), 'Warnung nennt Flag und betroffene ID (kein stillschweigendes Zulassen)');
+    const mergedTarget = report.mergedGames.find((g) => String(g.id) === String(richGame.id));
+    assertEqual(mergedTarget.events.length, 5, 'der ärmere Inhalt wird mit --allow-downgrade tatsächlich übernommen');
+  }
+
+  console.log('-- buildMergeDryRunReport: reicherer Ersatz läuft immer durch, auch ohne Flag --');
+  {
+    const existing = clone(real2526);
+    const partial = { season: '25/26', label: '2025/26', games: [richerGame] };
+    const report = buildMergeDryRunReport('25/26', partial, existing);
+    assertTrue(report.ok, 'Merge-Dry-Run OK für eine rein additive/verbessernde Ersetzung, ohne Flag');
+    assertEqual(report.downgrades, [], 'kein Downgrade gemeldet');
+  }
+
+  console.log('-- Gegenprobe: unveränderte Wiederholung desselben Spiels ist kein Downgrade --');
+  {
+    const existing = clone(real2526);
+    const partial = { season: '25/26', label: '2025/26', games: [clone(richGame)] };
+    const report = buildMergeDryRunReport('25/26', partial, existing);
+    assertTrue(report.ok, 'identische Wiederholung ist kein Downgrade');
+    assertEqual(report.downgrades, [], 'keine Downgrades bei exakt gleichem Inhalt');
+  }
 }
 
 console.log('');

@@ -13,9 +13,10 @@
 //
 // Aufruf: node scripts/test-build-league-model.mjs
 
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readFile, readdir, mkdir, writeFile, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
+import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 
@@ -44,15 +45,34 @@ function assertTrue(cond, label) {
 
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
-/** Fingerabdruck des Repos (ohne .git/node_modules): Pfad, Größe, mtime. */
-async function repoSnapshot() {
-  const entries = await readdir(REPO_ROOT, { recursive: true });
+/**
+ * Aufgabe 10c: Inhalts-Fingerabdruck NUR von model-data/ — der einzige Ort, den
+ * build-league-model.mjs selbst beschreiben könnte (hinter --write gated). Bewusst NICHT mehr ein
+ * mtime-Schnappschuss des GESAMTEN Repos (frühere Fassung): der Test flackerte, sobald irgendein
+ * unbeteiligter paralleler Schreiber (z.B. `build-index-map.mjs --write` in einem anderen Terminal)
+ * irgendeine Datei irgendwo im Repo berührte — die mtime jeder Datei zählte mit, auch völlig
+ * unbeteiligter. Der eigentliche Prüfzweck ("Dry-Run schreibt nichts") ist korrekt NUR mit model-data/
+ * verknüpft, nicht mit dem gesamten Repo-Zustand — wird jetzt auch nur noch so geprüft, zusätzlich zum
+ * bereits bestehenden, gezielten Inhalts-Hash-Vergleich der GUARDED-Dateien unten (das war schon vorher
+ * robust: SHA-256 über Dateiinhalt, nicht mtime). Reiner Inhaltsvergleich (SHA-256 je Datei + Dateiliste),
+ * keine mtime — ein Touch ohne Inhaltsänderung lässt diesen Vergleich bewusst unverändert durchgehen.
+ */
+async function modelDataSnapshot() {
+  const dir = path.join(REPO_ROOT, 'model-data');
+  let entries;
+  try {
+    entries = await readdir(dir, { recursive: true });
+  } catch (e) {
+    if (e.code === 'ENOENT') return [];
+    throw e;
+  }
   const out = [];
   for (const rel of entries.sort()) {
     const norm = rel.replace(/\\/g, '/');
-    if (norm === '.git' || norm.startsWith('.git/') || norm.startsWith('node_modules')) continue;
-    const s = await stat(path.join(REPO_ROOT, rel));
-    if (s.isFile()) out.push(`${norm}|${s.size}|${s.mtimeMs}`);
+    const full = path.join(dir, rel);
+    const content = await readFile(full).catch((e) => { if (e.code === 'EISDIR') return null; throw e; });
+    if (content === null) continue; // Verzeichniseintrag, keine Datei
+    out.push(`${norm}|${sha(content)}`);
   }
   return out;
 }
@@ -61,10 +81,17 @@ async function fileHashes(rels) {
   for (const rel of rels) out[rel] = sha(await readFile(path.join(REPO_ROOT, rel)));
   return out;
 }
-const SEASON_FILES = ['21-22', '22-23', '23-24', '24-25', '25-26'].map((k) => `season-data/${k}.json`);
+// Aufgabe 3c: Saisonanzahl/-liste nicht mehr fest verdrahtet, sondern aus dem echten Manifest abgeleitet —
+// sonst bricht dieser Test nach jedem künftigen Spieltagsimport der laufenden Saison erneut (die Saison
+// selbst verschwindet ja nicht, nur ihre Spielanzahl wächst). "archived" bekommt weiterhin exakte
+// Zahlen-Pins (siehe P unten), "current" nur strukturelle Prüfungen (siehe eigener Block).
+const realManifest = JSON.parse(await readFile(path.join(REPO_ROOT, 'season-data', 'seasons.json'), 'utf8'));
+const ARCHIVED_SEASON_KEYS = realManifest.seasons.filter((s) => s.status === 'archived').map((s) => s.key);
+const CURRENT_SEASON_KEYS = realManifest.seasons.filter((s) => s.status !== 'archived').map((s) => s.key);
+const SEASON_FILES = realManifest.seasons.map((s) => `season-data/${s.file}`);
 const GUARDED = [...SEASON_FILES, 'season-data/seasons.json', 'index.html', 'scripts/p0a-baseline-golden-values.json', 'scripts/game-ordering.mjs', 'scripts/matchday-derivation.mjs'];
 
-const snapBefore = await repoSnapshot();
+const modelDataBefore = await modelDataSnapshot();
 const hashBefore = await fileHashes(GUARDED);
 const capture = () => { let text = ''; return { stream: { write: (s) => { text += s; } }, get text() { return text; } }; };
 
@@ -75,9 +102,14 @@ globalThis.fetch = () => { fetchCalls++; throw new Error('Netzwerkzugriff im Tes
 const model = await buildLeagueModel();
 const bySeason = Object.fromEntries(model.seasons.map((s) => [s.seasonKey, s]));
 
-console.log('== Qualitätskennzahlen der fünf echten Saisons (Pins aus der READ-ONLY-Analyse) ==');
+console.log('== Qualitätskennzahlen der archivierten Saisons (Pins aus der READ-ONLY-Analyse) ==');
 {
-  assertEqual(model.seasons.map((s) => s.seasonKey), ['21/22', '22/23', '23/24', '24/25', '25/26'], 'fünf Saisons in Manifest-Reihenfolge');
+  assertEqual(model.seasons.map((s) => s.seasonKey), realManifest.seasons.map((s) => s.key), 'Saisons in Manifest-Reihenfolge (abgeleitet aus season-data/seasons.json, nicht fest verdrahtet)');
+  // Exakte Werte-Pins gelten bewusst NUR für abgeschlossene ("archived") Saisons (Aufgabe 3c: "Werte einer
+  // Saison werden erst dann auf exakte Zahlen festgenagelt, wenn die Saison abgeschlossen ist"). Die
+  // Cross-Prüfung direkt darunter stellt sicher, dass P nie stillschweigend von ARCHIVED_SEASON_KEYS abweicht
+  // (z. B. wenn eine Saison künftig archiviert wird, ohne P zu ergänzen — dann schlägt DIES hier laut fehl,
+  // statt die neue Saison einfach ungeprüft zu lassen).
   const P = {
     '21/22': { games: 42, ended: 42, notEnded: 0, model: 42, goals: 619, cum: 14, mixed: 3, own: [6, 6, 1], assists: { number: 430, zero: 0, null: 0, missing: 172, placeholder: 17, nullish: 172 }, host: [42, 0], noGoalie: [0, 0], two: 5, notTwo: 0, timeouts: 22, ps: 4, pen: 51, na: 2, mismatch: [25663] },
     '22/23': { games: 42, ended: 42, notEnded: 0, model: 42, goals: 613, cum: 13, mixed: 1, own: [4, 4, 2], assists: { number: 430, zero: 183, null: 0, missing: 0, placeholder: 0, nullish: 0 }, host: [42, 0], noGoalie: [1, 0], two: 14, notTwo: 0, timeouts: 19, ps: 5, pen: 69, na: 1, mismatch: [] },
@@ -85,6 +117,7 @@ console.log('== Qualitätskennzahlen der fünf echten Saisons (Pins aus der READ
     '24/25': { games: 51, ended: 42, notEnded: 9, model: 40, goals: 576, cum: 13, mixed: 0, own: [3, 3, 1], assists: { number: 383, zero: 193, null: 0, missing: 0, placeholder: 0, nullish: 0 }, host: [42, 0], noGoalie: [5, 4], two: 17, notTwo: 0, timeouts: 29, ps: 4, pen: 31, na: 0, mismatch: [40512, 40514] },
     '25/26': { games: 60, ended: 56, notEnded: 4, model: 56, goals: 860, cum: 7, mixed: 0, own: [4, 4, 1], assists: { number: 611, zero: 249, null: 0, missing: 0, placeholder: 0, nullish: 0 }, host: [0, 56], noGoalie: [0, 0], two: 7, notTwo: 0, timeouts: 36, ps: 6, pen: 66, na: 0, mismatch: [] },
   };
+  assertEqual(Object.keys(P).sort(), [...ARCHIVED_SEASON_KEYS].sort(), 'P (exakte Werte-Pins) deckt genau die archivierten Saisons ab, weder mehr noch weniger — eine neu archivierte Saison ohne ergänzten Pin fällt hier auf, statt ungeprüft durchzulaufen');
   for (const [key, p] of Object.entries(P)) {
     const q = bySeason[key].quality;
     assertEqual([q.games, q.ended, q.notEnded, q.modelGames], [p.games, p.ended, p.notEnded, p.model], `${key}: Spiele / beendet / nicht beendet / Modell-Spiele`);
@@ -134,7 +167,39 @@ console.log('== Qualitätskennzahlen der fünf echten Saisons (Pins aus der READ
     assertTrue(goals.filter((e) => e.period === 1).every((e) => e.absSec < 1200) && goals.filter((e) => e.period === 2).every((e) => e.absSec >= 1200), `${s.seasonKey}: Halbzeit-1-Tore < 1200 s, Halbzeit-2-Tore (normal und kumuliert) ≥ 1200 s`);
   }
   assertEqual(bySeason['24/25'].quality.excluded, { forfeit: 2, postponed: 0, youth: 0, noResult: 0 }, '24/25: 2 Forfait-Spiele vom Modell ausgeschlossen (die 2 Torsumme-Abweichungen)');
-  assertEqual(model.seasons.map((s) => s.quality.placeholderNumbers), [[1000, 2000], [1000, 2000], [1000], [1000], [1000]], 'Platzhalter-Nummern der Quelldaten je Saison');
+  assertEqual(ARCHIVED_SEASON_KEYS.map((k) => bySeason[k].quality.placeholderNumbers), [[1000, 2000], [1000, 2000], [1000], [1000], [1000]], 'Platzhalter-Nummern der Quelldaten je archivierter Saison');
+}
+
+/** Sammelt rekursiv alle Zahlenwerte aus einem (verschachtelten) Objekt/Array — für generische
+ * NaN/Negativ-Prüfungen, ohne jedes Feld einzeln aufzählen zu müssen (bleibt gültig, auch wenn quality
+ * künftig neue Felder bekommt). */
+function collectNumbers(value, out = []) {
+  if (typeof value === 'number') out.push(value);
+  else if (Array.isArray(value)) for (const v of value) collectNumbers(v, out);
+  else if (value && typeof value === 'object') for (const v of Object.values(value)) collectNumbers(v, out);
+  return out;
+}
+
+console.log('== Laufende Saison(en): nur Struktur/Plausibilität, keine exakten Werte-Pins (Aufgabe 3c) ==');
+{
+  // Grundsatz (Aufgabe 3c): Werte einer Saison werden erst dann auf exakte Zahlen festgenagelt, wenn die
+  // Saison abgeschlossen ist. Für die laufende Saison genügt: Eintrag vorhanden, Zähler untereinander
+  // stimmig, keine NaN, keine negativen Werte — das bleibt auch nach jedem künftigen Spieltagsimport gültig,
+  // ohne diesen Test jedes Mal anzufassen.
+  for (const key of CURRENT_SEASON_KEYS) {
+    const season = bySeason[key];
+    assertTrue(!!season, `${key} (laufende Saison): Eintrag im Modell vorhanden`);
+    if (!season) continue;
+    const q = season.quality;
+    assertEqual(q.games, q.ended + q.notEnded, `${key}: Zähler stimmig — games = ended + notEnded (${q.games} = ${q.ended} + ${q.notEnded})`);
+    assertTrue(q.modelGames <= q.ended, `${key}: modelGames (${q.modelGames}) nicht größer als ended (${q.ended})`);
+    assertEqual(season.teamGames.length, q.modelGames * 2, `${key}: zwei Team-Spiele je Modell-Spiel (${season.teamGames.length} = ${q.modelGames} × 2)`);
+    assertEqual([season.goalEvents.length, season.timeoutEvents.length, season.penaltyShotEvents.length], [q.goals, q.timeouts, q.penaltyShots], `${key}: normalisierte Ereignisse entsprechen den quality-Zählern`);
+    const numbers = collectNumbers(q);
+    assertTrue(numbers.length > 0, `${key}: quality enthält überhaupt Zahlenwerte (Vorbedingung für die folgenden zwei Prüfungen)`);
+    assertTrue(numbers.every((n) => Number.isFinite(n)), `${key}: keine NaN/Infinity in quality (${numbers.length} Zahlenwerte geprüft)`);
+    assertTrue(numbers.every((n) => n >= 0), `${key}: keine negativen Werte in quality`);
+  }
 }
 
 console.log('== Spielfilter ended === true + Datenqualitäts-Ausnahme: Spiel 26644 (21/22 MD11) ==');
@@ -163,7 +228,10 @@ console.log('== Spielfilter ended === true + Datenqualitäts-Ausnahme: Spiel 266
   assertEqual(s.quality.endedFalseIncludedByException.filter((e) => e.ulmInvolved).map((e) => [e.gameId, e.date, e.score, e.events, e.ended]).sort((a, b) => a[0] - b[0]), [[25677, '2022-03-19', '9:10', 23, false], [26613, '2022-03-19', '17:3', 20, false], [26644, '2022-04-03', '2:17', 22, false]], 'die drei per Ausnahme einbezogenen Ulm-Spiele 21/22 (25677, 26613, 26644) sind in endedFalseIncludedByException eindeutig auffindbar');
   for (const id of [25677, 26613, 26644]) assertTrue((report.split(String.fromCharCode(10)).find((l) => l.includes(`Spiel ${id} (21/22,`)) || '').includes(', Ulm)'), `Bericht: Spiel ${id} mit Ulm-Markierung`);
   const ex = Object.fromEntries(model.seasons.map((x) => [x.seasonKey, x.quality.excludedGames]));
-  assertEqual(Object.values(ex).map((l) => l.length), [0, 0, 0, 11, 4], 'Ausgeschlossene Spiele je Saison: 0 / 0 / 0 / 11 / 4 (21/22 vormals 8, jetzt per Ausnahme einbezogen statt ausgeschlossen)');
+  assertEqual(ARCHIVED_SEASON_KEYS.map((k) => ex[k].length), [0, 0, 0, 11, 4], 'Ausgeschlossene Spiele je archivierter Saison: 0 / 0 / 0 / 11 / 4 (21/22 vormals 8, jetzt per Ausnahme einbezogen statt ausgeschlossen)');
+  // laufende Saison: kein exakter Zahlen-Pin (Aufgabe 3c), nur die strukturelle Erwartung, dass jedes noch
+  // nicht beendete Spiel in excludedGames auftaucht — bleibt nach jedem Spieltagsimport automatisch gültig.
+  for (const key of CURRENT_SEASON_KEYS) assertEqual(ex[key].length, bySeason[key].quality.notEnded, `${key} (laufende Saison): jedes nicht beendete Spiel erscheint in excludedGames (${ex[key].length} = ${bySeason[key].quality.notEnded})`);
   assertEqual(ex['24/25'].filter((e) => e.reason === 'forfeit').map((e) => [e.gameId, e.ended, e.resultForfait, e.score, e.events]).sort(), [[40512, true, true, '0:8', 0], [40514, true, true, '8:0', 0]], '24/25: die zwei Forfait-Spiele mit Rohmarkern');
   const notices = (l) => l.filter((e) => e.reason === 'not_ended').map((e) => e.noticeType).sort().join(',');
   assertEqual([notices(ex['24/25']), notices(ex['25/26'])], ['Canceled,Canceled,Postponed,Postponed,Postponed,Postponed,Postponed,Postponed,Postponed', 'Postponed,Postponed,Postponed,Postponed'], 'nicht beendete Spiele 24/25 und 25/26: notice_type-Rohwerte im Ausschlussbericht');
@@ -199,8 +267,8 @@ console.log('== Struktur, Wiederverwendung bestehender Module ==');
     assertTrue(s.goalEvents.every((e) => e.absSec === null || (e.absSec >= 0 && e.absSec <= 2400)), `${s.seasonKey}: absSec im Bereich 0–2400 oder null`);
     assertTrue(s.teamGames.every((t) => t.teamKey && t.opponentKey && t.goalsFor !== null), `${s.seasonKey}: Team-Spiele vollständig (Schlüssel, Tore)`);
   }
-  assertEqual(model.seasons.map((s) => s.teamGames.filter((t) => t.isUlm).length), [12, 12, 12, 12, 14], 'Ulm-Team-Spiele im Modell: 12 / 12 / 12 / 12 / 14 (SG Sparks bis 23/24 als Ulm; 21/22 vormals 9, +3 durch die Datenqualitäts-Ausnahme: 25677, 26613, 26644)');
-  assertEqual(model.seasons.map((s) => [...new Set(s.teamGames.map((t) => t.teamKey))].length), [7, 7, 7, 7, 8], 'Teams je Saison: 7 / 7 / 7 / 7 / 8');
+  assertEqual(ARCHIVED_SEASON_KEYS.map((k) => bySeason[k].teamGames.filter((t) => t.isUlm).length), [12, 12, 12, 12, 14], 'Ulm-Team-Spiele im Modell (archivierte Saisons): 12 / 12 / 12 / 12 / 14 (SG Sparks bis 23/24 als Ulm; 21/22 vormals 9, +3 durch die Datenqualitäts-Ausnahme: 25677, 26613, 26644)');
+  assertEqual(ARCHIVED_SEASON_KEYS.map((k) => [...new Set(bySeason[k].teamGames.map((t) => t.teamKey))].length), [7, 7, 7, 7, 8], 'Teams je archivierter Saison: 7 / 7 / 7 / 7 / 8');
   assertTrue(bySeason['22/23'].teamGames.some((t) => t.teamKey === 'sportvg-feuerbach') && bySeason['22/23'].teamGames.some((t) => t.teamKey === 'sportvg-feuerbach-2'), '22/23: Feuerbach 1 und 2 sind getrennte Teams');
   assertTrue(model.seasons.every((s) => s.teamGames.filter((t) => t.isUlm).every((t) => t.teamKey === 'vfb-ulm')), 'Ulm und SG Sparks Ulm-Tübingen laufen unter demselben Teamschlüssel vfb-ulm');
   const src = await readFile(path.join(REPO_ROOT, 'scripts', 'model', 'normalize.mjs'), 'utf8');
@@ -308,7 +376,7 @@ console.log('== Verlustfreiheit und Ebenen an den echten Daten (unabhängig aus 
   assertTrue(!all.includes('penaltyMinutes'), 'kein penaltyMinutes im gesamten Modell');
   const types = new Set(model.seasons.flatMap((x) => x.penaltyEvents.map((e) => e.penaltyType)));
   assertEqual([...types].sort(), ['penalty_10', 'penalty_2', 'penalty_2and2', 'penalty_ms_full'], 'echte Strafarten bleiben als Rohwerte erhalten (keine Umrechnung)');
-  assertEqual(model.seasons.map((x) => x.goalEvents.filter((e) => e.isOwnGoal).length), [6, 4, 5, 3, 4], 'Eigentor-Events bleiben als goalType/isOwnGoal erhalten (6/4/5/3/4)');
+  assertEqual(ARCHIVED_SEASON_KEYS.map((k) => bySeason[k].goalEvents.filter((e) => e.isOwnGoal).length), [6, 4, 5, 3, 4], 'Eigentor-Events bleiben als goalType/isOwnGoal erhalten (archivierte Saisons, 6/4/5/3/4)');
   const own = model.seasons.flatMap((x) => x.goalEvents.filter((e) => e.isOwnGoal));
   assertTrue(own.every((e) => e.teamSide === 'home' || e.teamSide === 'guest') && own.every((e) => e.derived.scorerPlayerId === null && e.derived.scorerMatch === 'placeholder'), 'Eigentore: teamSide roh, kein Spieler zugeordnet');
 }
@@ -326,7 +394,7 @@ console.log('== Determinismus ==');
   await main(['--json'], { stdout: b.stream });
   assertEqual(a.text, b.text, '--json: zwei Läufe byte-identisch');
   const parsed = JSON.parse(a.text);
-  assertEqual([parsed.seasons.length, parsed.inputHash], [5, model.inputHash], '--json: fünf Saisons, Eingabe-Hash');
+  assertEqual([parsed.seasons.length, parsed.inputHash], [realManifest.seasons.length, model.inputHash], '--json: Saisonanzahl (aus dem Manifest abgeleitet, nicht fest verdrahtet) und Eingabe-Hash stimmen mit dem direkt gebauten Modell überein');
 }
 
 console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==');
@@ -461,22 +529,50 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   // bestehende CLI-Pfade (M0/M1/M2/M3) bleiben nach der M4-Integration funktionsfähig (Ausgabe verworfen, nur Exit-Code geprüft)
   const discard = capture();
   assertEqual([await main([], { stdout: discard.stream }), await main(['--only', 'M1'], { stdout: discard.stream }), await main(['--only', 'M2'], { stdout: discard.stream }), await main(['--only', 'M3'], { stdout: discard.stream })], [0, 0, 0, 0], 'bestehende CLI-Pfade M0 (Standard), --only M1, --only M2 und --only M3 bleiben nach der M4-Integration funktionsfähig (Exit 0)');
-  // M0/M1/M2-Ausgaben sind byte-identisch zum Stand vor M3 (SHA-256 der Ausgabe von HEAD c5ef6d0)
+  // Aufgabe 3c: M0/M1/M2-Ausgaben werden NICHT mehr über "alle Saisons im Manifest" gehasht — dieser Bericht
+  // fasst heute zwangsläufig auch die laufende Saison mit ein, deren Spielanzahl sich nach jedem
+  // Spieltagsimport ändert, und würde den Hash damit regelmäßig brechen, OBWOHL an den archivierten
+  // Saisons nichts geändert wurde. Gewählt: EIN Gesamt-Hash pro Modul, aber gebildet aus einem Sandbox-Lauf,
+  // dessen season-data/ NUR die archivierten Saisons enthält (derselbe main()/loadSeasonFiles()-Code, nur
+  // mit gefiltertem Manifest) — nicht "ein Hash pro archivierter Saison einzeln", weil M1/M2 ein
+  // zeitgewichtetes Fit ÜBER alle eingehenden Saisons ZUSAMMEN sind (anders als M0s Quality-Block lässt sich
+  // das nicht verlustfrei in unabhängige Pro-Saison-Teile zerlegen, ohne das Fit selbst zu verändern).
+  const archivedSandbox = path.join(os.tmpdir(), 'p1a-archived-only-sandbox');
+  await rm(archivedSandbox, { recursive: true, force: true });
+  await mkdir(path.join(archivedSandbox, 'season-data'), { recursive: true });
+  const archivedManifest = { seasons: realManifest.seasons.filter((s) => s.status === 'archived') };
+  await writeFile(path.join(archivedSandbox, 'season-data', 'seasons.json'), JSON.stringify(archivedManifest), 'utf8');
+  for (const entry of archivedManifest.seasons) {
+    await writeFile(path.join(archivedSandbox, 'season-data', entry.file), await readFile(path.join(REPO_ROOT, 'season-data', entry.file), 'utf8'), 'utf8');
+  }
+  const archivedModel = await buildLeagueModel(archivedSandbox);
+  // Eigene, dedizierte Prüfung (Aufgabe 3c, 3. Punkt): der Eingabe-Hash der archivierten Saisons für sich
+  // genommen ist die Aussage, die wirklich schützt ("an abgeschlossenen Saisons hat sich nichts geändert") —
+  // unabhängig von jeder Berichtsformatierung oder Modul-Rechenlogik. Empirisch verifiziert: identisch zum
+  // inputHash, den buildLeagueModel() vor dieser Phase für genau diese 5 Saisons lieferte.
+  assertEqual(archivedModel.inputHash, '310da620e44dc0e68465efe0422dbd26e12fcdc67ce9e866e8b413f1e6b8308c', 'Eingabe-Hash NUR der archivierten Saisons ist byte-identisch geblieben (unabhängig von M0/M1/M2-Berichtsformatierung)');
+
   const m0t = capture(); const m0j = capture(); const m1t = capture(); const m1j = capture(); const m2t = capture(); const m2j = capture();
-  await main([], { stdout: m0t.stream }); await main(['--json'], { stdout: m0j.stream }); await main(['--only', 'M1'], { stdout: m1t.stream }); await main(['--only', 'M1', '--json'], { stdout: m1j.stream }); await main(['--only', 'M2'], { stdout: m2t.stream }); await main(['--only', 'M2', '--json'], { stdout: m2j.stream });
-  // SHA-256-Pins NEU aufgenommen (Datenqualitäts-Phase): M0 (Text/JSON), M1 (Text/JSON) und
-  // M2 (Text/JSON) ändern sich alle, weil 21/22 jetzt 8 zusätzliche Spiele einschließt (siehe
-  // Build-Bericht) — das ist die erwartete, dokumentierte Golden-Master-Neuaufnahme dieser Phase,
-  // keine stille Übernahme. Rechenlogik unverändert; nur mehr Eingabe-Spiele fließen ein.
-  assertEqual([sha(m0t.text), sha(m0j.text), sha(m1t.text), sha(m1j.text), sha(m2t.text), sha(m2j.text)], ['2bfd97dfb5c2b97490a7565dd40f2beec11682c026a5617a09968011580b022d', '9d5ad538cf16e1c89aca86e807bee7be57dde38741b75ff8b8205ae282b63ea1', '9f3afe72d0f3cbd7f2eb7dec86d1aada3f31bbddff378b816fc4568fbcbb02e4', '6bd384ef69ddfb1ef093b0261b97f7c864eda62f95b4c0c2606a9fc23d7efcfd', '7c25988fe82c4b2523dff56c786bdff53cae50138842746e02f17ff17bb32c64', 'd559b1b2853b709db6181a3e52cbb449e3cfbaf95d3eafeb63283ca8b91b7d9f'], 'M0-Bericht (Text/JSON), M1-Bericht (Text/JSON) und M2-Bericht (Text/JSON) sind byte-identisch zum neuen Datenqualitäts-Stand (SHA-256, neu gepinnt)');
-  const snapAfter = await repoSnapshot();
-  assertEqual(snapAfter, snapBefore, 'Repository unverändert (Dateiliste, Größen, Änderungszeiten) — Dry-Run schreibt nichts');
+  await main([], { stdout: m0t.stream, repoRoot: archivedSandbox });
+  await main(['--json'], { stdout: m0j.stream, repoRoot: archivedSandbox });
+  await main(['--only', 'M1'], { stdout: m1t.stream, repoRoot: archivedSandbox });
+  await main(['--only', 'M1', '--json'], { stdout: m1j.stream, repoRoot: archivedSandbox });
+  await main(['--only', 'M2'], { stdout: m2t.stream, repoRoot: archivedSandbox });
+  await main(['--only', 'M2', '--json'], { stdout: m2j.stream, repoRoot: archivedSandbox });
+  // SHA-256-Pins ursprünglich aus der Datenqualitäts-Phase (HEAD c5ef6d0), seither unverändert — jetzt über
+  // den archivierten Sandbox-Lauf statt über den vollen Repo-Lauf gebildet, Werte bewusst identisch belassen
+  // (empirisch verifiziert: beide Wege liefern exakt dieselben sechs Hashes, solange 26/27 keine
+  // archivierten Daten beisteuert).
+  assertEqual([sha(m0t.text), sha(m0j.text), sha(m1t.text), sha(m1j.text), sha(m2t.text), sha(m2j.text)], ['2bfd97dfb5c2b97490a7565dd40f2beec11682c026a5617a09968011580b022d', '9d5ad538cf16e1c89aca86e807bee7be57dde38741b75ff8b8205ae282b63ea1', '9f3afe72d0f3cbd7f2eb7dec86d1aada3f31bbddff378b816fc4568fbcbb02e4', '6bd384ef69ddfb1ef093b0261b97f7c864eda62f95b4c0c2606a9fc23d7efcfd', '7c25988fe82c4b2523dff56c786bdff53cae50138842746e02f17ff17bb32c64', 'd559b1b2853b709db6181a3e52cbb449e3cfbaf95d3eafeb63283ca8b91b7d9f'], 'M0-Bericht (Text/JSON), M1-Bericht (Text/JSON) und M2-Bericht (Text/JSON) für NUR die archivierten Saisons bleiben byte-identisch — übersteht künftige Spieltagsimporte der laufenden Saison');
+  await rm(archivedSandbox, { recursive: true, force: true });
+  // Aufgabe 10c: Dry-Run-Garantie ("schreibt nichts") jetzt ausschließlich über den Inhalt der beiden
+  // tatsächlich betroffenen Bereiche geprüft — model-data/ (per SHA-256, siehe modelDataSnapshot()) und die
+  // GUARDED-Dateien direkt darunter. Kein mtime-Schnappschuss des gesamten Repos mehr (siehe Begründung an
+  // modelDataSnapshot()) — dieser Test kann jetzt nicht mehr fehlschlagen, nur weil irgendwo sonst im Repo
+  // parallel geschrieben wurde.
+  const modelDataAfter = await modelDataSnapshot();
+  assertEqual(modelDataAfter, modelDataBefore, 'model-data/ ist inhaltlich unverändert (SHA-256 je Datei + Dateiliste) — Dry-Run schreibt nichts');
   assertEqual(await fileHashes(GUARDED), hashBefore, 'season-data, index.html, Golden-Baseline und die wiederverwendeten Module sind unverändert (SHA-256)');
-  // Seit P4b ist model-data/ committet (siehe docs/league-model.md, Abschnitt "Modelldaten-Persistenz"); die
-  // ursprüngliche Prüfung "kein model-data/ erzeugt" ging von einem generell fehlenden Verzeichnis aus. Die
-  // eigentliche Garantie — Dry-Run verändert model-data/ nicht — ist bereits durch die volle repoSnapshot()-
-  // Gleichheit oben (Zeile 454) abgedeckt; diese Zeile macht dieselbe Garantie zusätzlich explizit für model-data/.
-  assertEqual(snapAfter.filter((l) => l.startsWith('model-data/')), snapBefore.filter((l) => l.startsWith('model-data/')), 'model-data/ (Dateiliste, Größen, Änderungszeiten) durch Dry-Run-Läufe unverändert');
   assertEqual(fetchCalls, 0, 'kein fetch-Aufruf');
   const NETWORK_RE = /\bfetch\(|node:http|node:https|node:net|node:dns|WebSocket|XMLHttpRequest/;
   const WRITE_RE = /writeFile|appendFile|createWriteStream|rename\(|mkdir/;
@@ -485,7 +581,7 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
     assertTrue(!NETWORK_RE.test(s) && !WRITE_RE.test(s), `${f}: kein Netzwerk- und kein Schreibzugriff im Code`);
   }
   // build-league-model.mjs hat seit P4b (Modelldaten-Persistenz) legitimen, hinter --write gated Schreibzugriff
-  // (model-data/) — die Dry-Run-Garantie "nichts geschrieben" ist oben bereits über repoSnapshot() (Zeile 453/454)
+  // (model-data/) — die Dry-Run-Garantie "nichts geschrieben" ist oben bereits über modelDataSnapshot()
   // verhaltensbasiert geprüft (kein statischer Ersatz nötig); hier bleibt ausschließlich der Netzwerk-Check bestehen.
   const cliSrc = (await readFile(path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), 'utf8')).replace(/\/\/.*$/gm, '');
   assertTrue(!NETWORK_RE.test(cliSrc), 'scripts/build-league-model.mjs: kein Netzwerkzugriff im Code');

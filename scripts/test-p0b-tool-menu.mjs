@@ -326,7 +326,8 @@ console.log('== Einbindung und unveränderte Bestandteile ==');
   const a = html.indexOf('  const hdrHtml=`');
   const endMarker = '</div>\n  </div>`;';
   const hdr = html.slice(a, html.indexOf(endMarker, a) + endMarker.length);
-  assertEqual(sha(hdr.replace('${rIaShell()}', '')), 'f6e68cf15548d02e', 'Legacy-Kopfzeile (hdr/hdr-nav) unverändert');
+  // Hash seit Aufgabe 7b aktualisiert: siehe test-p0b-mobile-nav.mjs (gamesLoadedLabel).
+  assertEqual(sha(hdr.replace('${rIaShell()}', '')), '8e98840a1fd2052c', 'Legacy-Kopfzeile (hdr/hdr-nav) unverändert');
   assertTrue(hdr.includes('<button class="btn-back" onclick="backToHome()">&larr; Cover</button>') && hdr.includes('<button class="btn-exp" onclick="exportExcel()">📥 Excel</button>'), 'Legacy-Buttons Cover und Excel weiterhin vorhanden');
   assertEqual(sha(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), '8381155d5a8c43a4', 'HASH_GLOBAL_PAGES unverändert (keine neue Route)');
   assertTrue(!/tool|werkzeug/i.test(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), 'keine Werkzeugmenü-Route');
