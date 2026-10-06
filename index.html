@@ -13688,6 +13688,20 @@ function rKpiCards(dataset){
   ];
   return`<div class="kpi-cards">${cards.map(([label,get,dec,suffix])=>`<div class="kpi-card"><div class="kpi-card-label">${label}</div><div class="kpi-multi-values">${dataset.map((d,i)=>`<div class="kpi-multi-value"><i style="background:${kpiItemColor(d,i)}"></i><span>${escHtml(d.label)}</span><strong style="color:${kpiItemColor(d,i)}">${kpiValueText(get(d),dec,suffix)}</strong></div>`).join('')}</div></div>`).join('')}</div>`;
 }
+/**
+ * Aufgabe 4k, geprüft und bewusst NICHT geändert: "Team Share"/"Goal Share"/"Assist Share"/
+ * "Top-Partner-Anteil" sind Quoten über Ereignisse — grundsätzlich Kandidaten für dieselbe
+ * datenstandQuoteState()/uiQuoteText()-Regel wie andernorts (z.B. Team-Anteil % auf der Team-Seite). Hier
+ * aber NICHT saisonbezogen im Sinne dieser Regel: jedes dataset-Element entsteht in
+ * buildComparisonDataset() unabhängig als entweder 'seasonPerformance' (eine konkrete Saison) ODER
+ * 'playerAlltime' (Alltime-Nenner, z.B. getComparisonAlltimeTeamGoals()) — per Zeile wählbar über
+ * comparisonSelectedVariant, BEIDE Varianten können gleichzeitig im selben Ranglisten-Balkendiagramm
+ * nebeneinanderstehen (z.B. "Christian Loser 25/26" neben "Christian Loser Alltime"). Eine einzige
+ * Bruch/Prozent-Schwelle pro Metrik würde hier entweder uneinheitlich wirken (manche Zeilen als Bruch,
+ * andere als Prozent, INNERHALB derselben Rangliste) oder müsste sich am dünnsten Element orientieren und
+ * würde dann Alltime-Werte unnötig verstecken, nur weil eine verglichene Einzelsaison dünn ist. Bleibt
+ * deshalb unverändert bei reiner Prozentanzeige.
+ */
 function rKpiMirrorRows(dataset){
   const groups=[
     {label:'Basis',items:[
@@ -21607,7 +21621,11 @@ function exportExcel(){
     XLSX.utils.book_append_sheet(wb,ws,pd.label.substring(0,31));
     const goals=ev.filter(e=>e.type==='Tor');
     const assists=ev.filter(e=>e.type==='Vorlage');
-    sumRows.push({'Spieler':pd.label,'Punkte':ev.length,'Tore':goals.length,'Vorlagen':assists.length,'Solo':goals.filter(e=>e.partner==='Solo').length,'Clutch':goals.filter(e=>e.clutch).length,'Team%':totalTeam>0?((goals.length+assists.length)/totalTeam*100).toFixed(1)+'%':'—','Konstanz':(m.consistency*100||0).toFixed(0)+'%','Typ':CORE_ROLE_LABELS[pd.analysisProfile?.coreRole]||'Balanced','Status':(pd.analysisProfile?.traits||[]).map(t=>roleTraitLabel(t)).join(', ')});
+    // Aufgabe 4k: Team% im Excel-Export rechnete bisher unabhängig vom Bildschirm (immer Prozent, nie
+    // Bruch) — dieselbe Kennzahl (Team-Anteil, siehe rTeamPage()/uiQuoteText an derselben Stelle) hatte
+    // dadurch im Export eine andere "Wahrheit" bei dünner Datenbasis als auf dem Bildschirm. Jetzt
+    // dieselbe Regel (datenstandQuoteState über uiQuoteText), 'ereignisse' wie beim Bildschirm-Pendant.
+    sumRows.push({'Spieler':pd.label,'Punkte':ev.length,'Tore':goals.length,'Vorlagen':assists.length,'Solo':goals.filter(e=>e.partner==='Solo').length,'Clutch':goals.filter(e=>e.clutch).length,'Team%':uiQuoteText(goals.length+assists.length,totalTeam,{kind:'ereignisse',decimals:1,fractionText:`${goals.length+assists.length}/${totalTeam}`}),'Konstanz':(m.consistency*100||0).toFixed(0)+'%','Typ':CORE_ROLE_LABELS[pd.analysisProfile?.coreRole]||'Balanced','Status':(pd.analysisProfile?.traits||[]).map(t=>roleTraitLabel(t)).join(', ')});
   }
   const wsS=XLSX.utils.json_to_sheet(sumRows);
   wsS['!cols']=[{wch:24},{wch:8},{wch:8},{wch:10},{wch:7},{wch:8},{wch:8},{wch:10},{wch:28},{wch:20}];
