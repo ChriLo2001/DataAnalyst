@@ -15872,7 +15872,7 @@ function matchcenterAnalyzeForm(teamKey,seasonKey){
     const defPart=matchcenterClamp((1-(gapg/8))*10,0,10);
     score=Math.round(matchcenterClamp(resultPart+diffPart+offPart+defPart,0,100));
   }
-  return{teamGames,last5,totals,gpg,gapg,score,limited:totals.games>0&&totals.games<5,sourceLimited:teamKey!=='ulm'&&!hasLeagueBreadth};
+  return{teamGames,last5,totals,gpg,gapg,score,limited:totals.games>0&&totals.games<5,sourceLimited:teamKey!=='ulm'&&!hasLeagueBreadth,ownSeasonGames:teamGames.length};
 }
 
 
@@ -17436,7 +17436,20 @@ function matchcenterBuildPlanConfidence(ctx){
     Math.min(goalieRows,2)*4,
     0,100
   );
-  const label=score>=72?'starke Datenbasis':score>=42?'mittlere Datenbasis':'kleine Datenbasis';
+  // Aufgabe (c): dieselbe Deckelung wie in matchcenterBuildIntelligenceDataQuality (siehe dort) — diese
+  // Funktion rechnet unabhängig (kein buildConfidence()-Aufruf, eigene Score-Formel), speist aber
+  // rMatchcenterScoutingSummary's "DATENBASIS: ..."-Badge auf derselben Matchcenter-Seite und muss daher
+  // derselben Regel folgen. Deckel-Größe ist ctx.ulmForm.ownSeasonGames (Ulms eigene gespielte Spiele in der
+  // gezeigten Saison) — NICHT directGames (direkte Duelle gegen GENAU diesen Gegner): Letzteres bleibt bei
+  // einem doppelten Rundenbetrieb saisonlang bei ca. 2 und würde die Stufe auch bei vollständiger Saison
+  // dauerhaft kappen. ownSeasonGames ist exakt die Größe, die der sichtbare Datenstandsband oben auf der
+  // Matchcenter-Seite zeigt (uiDatenstandBand in rMatchcenterPage, count:S.gamesData.length) — am echten
+  // Widerspruch gemessen: "Basis: 2 Spiele" nach dem 1. Spieltag (2 Ulmer Spiele) traf exakt diese Größe.
+  const rawLevel=score>=72?'stark':score>=42?'mittel':'klein';
+  const ownSeasonGames=Number(ctx.ulmForm?.ownSeasonGames)||0;
+  const datenstandCap=confidenceFromSampleSize(ownSeasonGames,'spiele');
+  const level=CONFIDENCE_RANK[rawLevel]>CONFIDENCE_RANK[datenstandCap]?datenstandCap:rawLevel;
+  const label=level==='stark'?'starke Datenbasis':level==='mittel'?'mittlere Datenbasis':'kleine Datenbasis';
   const details=[
     `${directGames} direkte Spiele`,
     `${ulmFormGames}/${oppFormGames} Formspiele`,
@@ -17533,12 +17546,31 @@ function matchcenterBuildIntelligenceDataQuality(ctx){
     timingAvailable:timingDataAvailable
   });
   const score=confidence.score;
-  const level=confidence.level;
+  // Aufgabe (c), S2e-Kaltstart-Phase: diese Funktion ist der EINE Punkt, über den die Gegner-DNA, alle
+  // Gegner-Alarme (matchcenterIntelAddAlarm liest confidence:dataQuality.level), die Scouting-Badges
+  // (rMatchcenterIntelOverview) und der Coach-Hinweistext (rMatchcenterDigitalCoach, q.label) ihre
+  // Konfidenzstufe beziehen — "eine Stelle statt dreizehn", siehe getOppStrength-Zentralisierung im
+  // selben Zug. buildConfidence() selbst bleibt unverändert (Neukalibrierung folgt mit der
+  // Schrumpfungsphase nach dem Spieltag) — hier wird nur die ANGEZEIGTE Stufe gedeckelt. Deckel-Größe ist
+  // ownSeasonGames (ctx.ulmForm.ownSeasonGames, Ulms eigene gespielte Spiele in der gezeigten Saison) —
+  // NICHT directGames (direkte Duelle gegen GENAU diesen Gegner): Letzteres bleibt bei doppeltem
+  // Rundenbetrieb saisonlang bei ca. 2 und würde die Stufe auch am Saisonende dauerhaft kappen.
+  // ownSeasonGames ist exakt die Größe, die der sichtbare Datenstandsband oben auf der Matchcenter-Seite
+  // zeigt (uiDatenstandBand in rMatchcenterPage, count:S.gamesData.length — "nur Ulm-Spiele") — am echten
+  // Widerspruch gemessen: "Basis: 2 Spiele" nach dem 1. Spieltag (2 Ulmer Spiele an diesem Tag) traf
+  // exakt diese Größe, nicht die 1 direkte Begegnung mit dem jeweiligen Gegner. Die strengere Aussage
+  // gewinnt, immer — nie umgekehrt (ein von buildConfidence als "klein" eingestuftes Ergebnis wird hier
+  // NIE auf "stark" angehoben, auch wenn ownSeasonGames hoch wäre).
+  const ownSeasonGames=Number(ctx.ulmForm?.ownSeasonGames)||0;
+  const datenstandCap=confidenceFromSampleSize(ownSeasonGames,'spiele');
+  const level=CONFIDENCE_RANK[confidence.level]>CONFIDENCE_RANK[datenstandCap]?datenstandCap:confidence.level;
+  const label=level===confidence.level?confidence.label:(level==='stark'?'starke Datenbasis':level==='mittel'?'mittlere Datenbasis':'kleine Datenbasis');
   return{
     level,
-    label:confidence.label,
+    label,
     score,
     directGames,
+    ownSeasonGames,
     formGames,
     playerEvents,
     duoEvents,
