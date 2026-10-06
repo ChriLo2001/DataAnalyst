@@ -1762,24 +1762,26 @@ const SEASON_CONFIG={
     },
     features:{teamSeasonLookup:false,extraIdScan:false},
   },
-  // Saison ist abgeschlossen und wird ausschließlich über season-data/25-26.json
-  // geladen (ensureExternalSeasonData(), siehe Bericht) — kein Live-Fetch mehr.
-  // Bewusst NICHT loaderStrategy:'embeddedStatic': hasEmbeddedSeasonData()/
-  // getGlobalLoadableSeasonKeys() würden dann synchron beim allerersten Aufruf
-  // prüfen, ob STATIC_SEASON_DATA['25/26'] schon Spiele enthält — das ist beim
-  // Start von ensureGlobalDataLoaded() aber immer noch der leere Embedded-Stub,
-  // da die externe Datei erst asynchron NACH diesem Check geladen wird (anders
-  // als bei 21/22–24/25, deren Daten synchron im Skript eingebettet sind).
-  // 25/26 würde dadurch fälschlich wie eine leere Saison übersprungen. Der
-  // eigene Wert 'archivedExternal' fällt stattdessen weiterhin in den
-  // bestehenden, bereits funktionierenden Fallback-Zweig (key===CURRENT_SEASON_KEY
-  // && hasSeasonSource(key)) und entfernt zugleich die 'currentApi'-Spezialbehandlung
-  // (Zeile ~6062: Live-Fetch-Fehlschlag-Reset), die für eine dateibasierte Saison
-  // ohnehin nicht mehr zutrifft.
+  // Saison ist abgeschlossen und wird über season-data/25-26.json bzw. die eingebettete Kopie geladen
+  // (ensureExternalSeasonData(), kein Live-Fetch mehr).
+  //
+  // Korrektur bei Aufgabe 4j (Messung, Nebenbefund): stand hier vorher bewusst NICHT auf
+  // loaderStrategy:'embeddedStatic', mit der Begründung, STATIC_SEASON_DATA['25/26'] sei beim ersten
+  // synchronen Check in getGlobalLoadableSeasonKeys() noch der leere Embedded-Stub (die externe Datei
+  // werde erst asynchron danach geladen). Diese Prämisse stimmt inzwischen nicht mehr — empirisch
+  // geprüft: STATIC_SEASON_DATA['25/26'] enthält heute synchron alle 60 Spiele (season-data-embedded.js
+  // wurde seither mit --update-embedded aktuell gehalten). Der alte Fallback-Zweig
+  // (key===CURRENT_SEASON_KEY && hasSeasonSource(key)) in getGlobalLoadableSeasonKeys() hing dadurch
+  // STILLSCHWEIGEND an CURRENT_SEASON_KEY — solange der hartcodiert '25/26' war (vor Aufgabe 13), fiel das
+  // nie auf. Seit Aufgabe 13 CURRENT_SEASON_KEY korrekt '26/27' liefert, griff dieser Zweig für 25/26 nicht
+  // mehr: 25/26 wurde beim Start NICHT MEHR in die globale Alltime-/Hall-of-Fame-Aggregation geladen (per
+  // getSeasonMatchdays('25/26') leer bestätigt — Regressionsfund, hier mit korrigiert). loaderStrategy
+  // jetzt wie bei 21/22–24/25: 'embeddedStatic', technisch korrekt für eine abgeschlossene Saison mit
+  // synchron vorhandenen Daten, unabhängig von CURRENT_SEASON_KEY.
   '25/26':{
-    label:'2025/26',isCurrent:true,sourceType:'saisonmanager',seasonId:1897,
+    label:'2025/26',isCurrent:false,sourceType:'saisonmanager',seasonId:1897,
     gameIds:CURRENT_SEASON_GAME_IDS,knownUlmGameIds:CURRENT_SEASON_ULM_GAME_IDS,sourceUrl:'',
-    loaderStrategy:'archivedExternal',
+    loaderStrategy:'embeddedStatic',
     dateRange:{start:'2025-08-01',end:'2026-04-30'},
     urls:{
       table:'',
