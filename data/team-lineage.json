@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "_readme": "Schema und Regeln: docs/spec/module/M1v.md. Von Hand gepflegt, nie automatisch ergänzt (siehe dort). team_id ist für Nachfolge nicht nutzbar (jede Saison neu vergeben) — teamKey ist ein stabiler, von Hand vergebener Slug, keine API-ID. Geprüft an den echten Team-Namen aus season-data/25-26.json und season-data/26-27.json (Aufgabe 5, S2e-Kaltstart-Phase).",
+  "lineage": [
+    {
+      "teamKey": "ptsv-freiburg",
+      "sinceSeason": "26/27",
+      "predecessors": [
+        { "teamKey": "breisgau-bandits", "weight": 1.0, "scope": { "models": true, "display": true } }
+      ],
+      "note": "Umbenennung, gleiches Vereinslogo (von Chris bestätigt). Unmittelbar vorangehende Saison -> scope.display zulässig."
+    },
+    {
+      "teamKey": "sg-heidelberg-mannheim",
+      "sinceSeason": "26/27",
+      "predecessors": [
+        { "teamKey": "fbc-heidelberg", "weight": 0.5, "scope": { "models": true, "display": true } },
+        { "teamKey": "floorball-mannheim", "weight": 0.5, "scope": { "models": true, "display": true } }
+      ],
+      "note": "Zusammenschluss zweier Vorgänger, je 14 Spiele Historie in 25/26 (von Chris bestätigt). Gewichte 0,5/0,5 mangels anderer Information — bei besserer Begründung (z. B. Kaderanteil) von Hand anpassen, Summe muss 1 bleiben."
+    }
+  ],
+  "pending": [
+    {
+      "teamKeys": ["sportvg-feuerbach-biber", "sportvg-feuerbach-roessle"],
+      "candidatePredecessor": "sportvg-feuerbach",
+      "status": "offen",
+      "reason": "Aufspaltung EIN Vorgänger (Sportvg Feuerbach, 25/26) auf ZWEI Nachfolger — welches Team welchen Kaderanteil/welche Spielstärke erbt, ist ohne 26/27-Kaderdaten nicht entscheidbar. Bewusst NICHT in \"lineage\" aufgenommen: beide Teams gelten bis zur Entscheidung als \"neu in der Liga\", keine geschätzten Werte, kein stilles Erben (siehe M1v.md Akzeptanzkriterien).",
+      "decidesWhen": "Sobald 26/27-Kaderdaten für mindestens einen Spieltag vorliegen, liefert scripts/suggest-team-lineage.mjs (sobald gebaut) Überschneidungsquoten gegen den Sportvg-Feuerbach-Kader aus 25/26 als Entscheidungsgrundlage — ein Mensch bestätigt, das Skript entscheidet nicht selbst."
+    }
+  ]
+}

@@ -28,6 +28,7 @@ Anlass: In 26/27 tritt „SG Heidelberg-Mannheim" an, offenbar als Zusammenschlu
 
 - Gewichte je Vorgänger summieren sich zu 1. Bei einer Umbenennung ein Vorgänger mit Gewicht 1.
 - Die Tabelle wird **nie automatisch** ergänzt. Ein unbekanntes neues Team erzeugt eine Warnung im Build-Bericht und im UI, nie eine geratene Zuordnung.
+- **Zweites, gleichrangiges Feld `pending`** (Aufgabe 5, S2e-Kaltstart-Phase, erstmals befüllt): Teams, deren Nachfolge **geprüft, aber bewusst noch nicht entschieden** ist — unterscheidet sich von einem einfach fehlenden Eintrag ("niemand hat hingeschaut") dadurch, dass Grund und Entscheidungsweg dokumentiert sind. Ein Eintrag dort hat **keine** Wirkung auf Berechnung oder Anzeige — exakt wie ein komplett fehlender Eintrag (ein Team ohne `lineage`-Eintrag zeigt "neu in der Liga", nie geschätzte Werte). Felder: `teamKeys` (betroffene neue Teams), `candidatePredecessor`, `status` (`"offen"`), `reason`, `decidesWhen`.
 - **`scope` je Vorgänger — verbindlich:** `{"models": true|false, "display": true|false}`.
   - `models`: Vererbung in Berechnungen (M1 und die davon abhängigen Module). Hier ist auch eine weit zurückliegende Vorgeschichte zulässig; die bestehende Zeitgewichtung entwertet sie ohnehin automatisch.
   - `display`: Vererbung in allem, was nach außen sichtbar wird (Form, letztes Duell, Vorschauvideos, Social-Media-Inhalte). **Erlaubt nur, wenn die Vorgängersaison unmittelbar vorangeht** (höchstens eine Saison Lücke). Alles Ältere bleibt `display: false`.
