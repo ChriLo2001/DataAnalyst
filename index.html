@@ -3598,6 +3598,17 @@ function gameResult(game,side){
 
 
 function getOppStrength(oppName,standings){
+  if(!Array.isArray(standings)||!standings.length)return null;
+  // Aufgabe 4j, S2e-Kaltstart-Phase: zentrale Übernahme der vorher lokalen rankingTrustworthy-Prüfung aus
+  // rTeamPage (dort nur für die "Favoritenschreck"-Karte) — "eine Stelle statt dreizehn Aufrufer", wie bei
+  // der Matchcenter-Konfidenz (siehe matchcenterBuildIntelligenceDataQuality). Ein Tabellenrang ist bei
+  // wenigen Spielen kein verlässliches Urteil (nach 1 Spiel kann jedes Team Tabellenerster sein). Liegt
+  // IRGENDEIN Team in der übergebenen Tabelle unter der 4f-Schwelle (DATENSTAND_SCHWELLEN.spieleGut),
+  // liefert diese Funktion für JEDEN Gegner null ("unbekannt") statt einer Einstufung. Alle Aufrufer
+  // behandeln ein null-Ergebnis bereits als neutral/unbekannt (kein Bonus, kein Malus, keine Badge) — siehe
+  // Abschlussbericht 4j für die geprüfte Liste.
+  const trustworthy=standings.every(t=>Number.isFinite(t.sp)&&t.sp>=DATENSTAND_SCHWELLEN.spieleGut);
+  if(!trustworthy)return null;
   const t=standings.find(s=>s.name===oppName);
   if(!t)return null;
   if(t.rank<=2)return{label:`Spitze (Pl.${t.rank})`,cls:'str-top',color:'#fbbf24',tier:'top'};
@@ -21388,17 +21399,18 @@ function rTeamPage(){
     return !!key&&teams.some(t=>teamKey(t)===key);
   };
   const teamMeta=teams=>teams.length?teams.map(t=>`Pl. ${t.rank} ${t.name}`).join(' · '):'kein Tabellenkontext';
-  /** Aufgabe 4g: "Topteam" ist eine Klassifikation nach aktuellem Tabellenrang — bei wenigen Spielen ist der
-   * Rang selbst noch kein verlässliches Urteil (ein Team kann nach 1 Spiel Tabellenerster sein). Gilt die
-   * Klassifikation für IRGENDEIN verglichenes Team nicht als tragfähig, wird das ganze Modul verborgen statt
-   * mit einem Hinweis versehen — eine falsche Prämisse wird nicht captioniert, siehe uiDatenstandBand-Prinzip
-   * aus 4a, hier aber als vollständiges Ausblenden (4f: "wenn ein Teilnehmer unter der Schwelle liegt, die
-   * ganze Rangliste verbergen"). Schwelle: DATENSTAND_SCHWELLEN.spieleGut (ab hier gilt ein Rang als tragfähig).
+  /** Aufgabe 4g, seit Aufgabe 4j zentral in getOppStrength (siehe dort): "Topteam" ist eine Klassifikation
+   * nach aktuellem Tabellenrang — bei wenigen Spielen ist der Rang selbst noch kein verlässliches Urteil
+   * (ein Team kann nach 1 Spiel Tabellenerster sein). Gilt die Klassifikation für IRGENDEIN verglichenes
+   * Team nicht als tragfähig, wird das ganze Modul verborgen statt mit einem Hinweis versehen — eine
+   * falsche Prämisse wird nicht captioniert, siehe uiDatenstandBand-Prinzip aus 4a, hier aber als
+   * vollständiges Ausblenden (4f: "wenn ein Teilnehmer unter der Schwelle liegt, die ganze Rangliste
+   * verbergen"). Keine eigene Prüfung mehr hier (4j: "rankingTrustworthy gehört in getOppStrength selbst,
+   * nicht an die Aufrufer") — getOppStrength liefert für jeden Gegner null, sobald IRGENDEIN Team in `st`
+   * unter der Schwelle liegt; ein beliebiger Name aus den verglichenen teams genügt als Prüfpunkt.
    */
-  const rankingTrustworthy=teams=>teams.every(t=>Number.isFinite(t.sp)&&t.sp>=DATENSTAND_SCHWELLEN.spieleGut);
-
   function rOpponentTraitCard(title,color,teams,description){
-    if(teams.length&&!rankingTrustworthy(teams))return'';
+    if(teams.length&&!getOppStrength(teams[0].name,st))return'';
     const rows=playerRows.map(p=>({
       name:p.shortName,
       val:p.goalsEv.filter(e=>inTeamGroup(e.opponent,teams)).length,
