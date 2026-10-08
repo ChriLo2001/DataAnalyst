@@ -18,15 +18,14 @@
         { "teamKey": "floorball-mannheim", "weight": 0.5, "scope": { "models": true, "display": true } }
       ],
       "note": "Zusammenschluss zweier Vorgänger, je 14 Spiele Historie in 25/26 (von Chris bestätigt). Gewichte 0,5/0,5 mangels anderer Information — bei besserer Begründung (z. B. Kaderanteil) von Hand anpassen, Summe muss 1 bleiben. Annahme, zu überprüfen, sobald eigene 26/27-Daten vorliegen: Ligamittel-Gewichtung unterstellt, dass der Zusammenschluss genau so stark ist wie der Durchschnitt seiner Vorgänger — ein fusioniertes Team kann tatsächlich stärker (oder schwächer) sein als dieser Durchschnitt (von Chris angemerkt, S2e-Kaltstart-Phase)."
-    }
-  ],
-  "pending": [
+    },
     {
-      "teamKeys": ["sportvg-feuerbach-biber", "sportvg-feuerbach-roessle"],
-      "candidatePredecessor": "sportvg-feuerbach",
-      "status": "offen",
-      "reason": "Aufspaltung EIN Vorgänger (Sportvg Feuerbach, 25/26) auf ZWEI Nachfolger — welches Team welchen Kaderanteil/welche Spielstärke erbt, ist ohne 26/27-Kaderdaten nicht entscheidbar. Bewusst NICHT in \"lineage\" aufgenommen: beide Teams gelten bis zur Entscheidung als \"neu in der Liga\", keine geschätzten Werte, kein stilles Erben (siehe M1v.md Akzeptanzkriterien).",
-      "decidesWhen": "Sobald 26/27-Kaderdaten für mindestens einen Spieltag vorliegen, liefert scripts/suggest-team-lineage.mjs (sobald gebaut) Überschneidungsquoten gegen den Sportvg-Feuerbach-Kader aus 25/26 als Entscheidungsgrundlage — ein Mensch bestätigt, das Skript entscheidet nicht selbst."
+      "teamKey": "sportvg-feuerbach-roessle",
+      "sinceSeason": "26/27",
+      "predecessors": [
+        { "teamKey": "sportvg-feuerbach", "weight": 1.0, "scope": { "models": true, "display": true } }
+      ],
+      "note": "Rössle ist die offizielle erste Mannschaft von Sportvg Feuerbach (25/26) — offizielle Einstufung, vom Verein bestätigt (nicht aus Kaderüberschneidung abgeleitet). \"Biber\" bleibt bewusst ohne Eintrag: neu in der Liga, keine Vererbung (siehe M1v.md: ein Team ohne lineage-Eintrag verhält sich wie heute)."
     }
   ]
 }
