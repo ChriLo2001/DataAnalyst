@@ -49,11 +49,18 @@ function winSource(name) {
   if (from === -1) throw new Error(`window.${name} nicht gefunden`);
   return html.slice(from, html.indexOf('\n};', from) + 3);
 }
+function constBlock(name) {
+  const from = html.indexOf(`const ${name}=`);
+  if (from === -1) throw new Error(`const ${name} nicht gefunden`);
+  return html.slice(from, html.indexOf('\n};', from) + 3);
+}
 const lineOf = (re) => re.exec(html)?.[0] ?? (() => { throw new Error(`Zeile fehlt: ${re}`); })();
 
 const CARD_FUNCTIONS = ['overviewMatchdayStartMs', 'overviewMatchdayEndMs', 'matchdayAsOfCutoff', 'formatDateDE', 'detectOverviewPhase', 'overviewOpponentLabel', 'overviewLastMatchdayText', 'overviewNextMatchdayHtml', 'overviewCompactTableHtml', 'overviewFormHtml', 'overviewSeasonBilanzHtml', 'overviewSeasonAwardHtml', 'overviewRecordHtml', 'overviewCrossSeasonTrendHtml', 'overviewOpponentPreviewHtml', 'overviewMatchcenterLinkHtml', 'overviewLineupLinkHtml', 'buildOverviewCards', 'rOverviewPage', 'rMatchdayTimelineRow', 'rMatchdayTimelinePage'];
 const overviewSource = CARD_FUNCTIONS.map(fnSource).join('\n');
-const consts = [lineOf(/^const OVERVIEW_PHASE_LABELS=.*$/m), lineOf(/^const OVERVIEW_SESSION_DATA_STATE=.*$/m), lineOf(/^const MATCHDAY_STATUS_LABELS=.*$/m)].join('\n');
+// DATENSTAND_SCHWELLEN seit Aufgabe (b), S2e-Kaltstart-Audit: overviewCompactTableHtml blendet eine
+// Rangliste mit zu wenigen Spielen aus (siehe dortiger Kommentar) und braucht dafür die echte Schwelle.
+const consts = [lineOf(/^const OVERVIEW_PHASE_LABELS=.*$/m), lineOf(/^const OVERVIEW_SESSION_DATA_STATE=.*$/m), lineOf(/^const MATCHDAY_STATUS_LABELS=.*$/m), constBlock('DATENSTAND_SCHWELLEN')].join('\n');
 
 // ── Fixtures ────────────────────────────────────────────────────────────
 const g = (id, date, ended, hg = 0, gg = 0, time = '12:00') => ({ id, date, start_time: time, ended, home_goals: ended ? hg : null, guest_goals: ended ? gg : null });
@@ -64,8 +71,12 @@ const md = (number, date, status, games) => ({
   number, date, status, seasonKey: '25/26',
   games: games.map((x) => ({ home_team_name: 'VfB Ulm', guest_team_name: 'FBC Heidelberg', ...x })),
 });
-const ulmRow = { rank: 3, name: 'VfB Ulm', w: 4, d: 1, l: 2, gf: 30, ga: 20, pts: 13, sp: 7 };
-const table = [{ rank: 1, name: 'A', pts: 20 }, { rank: 2, name: 'B', pts: 15 }, ulmRow];
+// sp:11 bei allen drei Zeilen (S2e-Kaltstart-Audit, Aufgabe (b)): overviewCompactTableHtml blendet die
+// Rangliste jetzt aus, wenn eine gezeigte Zeile unter DATENSTAND_SCHWELLEN.spieleGut (10) liegt — siehe
+// eigener Testfall "Aufgabe (b)" unten. Dieses Fixture testet Kartenreihenfolge/-inhalt allgemein, nicht
+// diese Schwelle, darum hier bewusst oberhalb der Schwelle.
+const ulmRow = { rank: 3, name: 'VfB Ulm', w: 4, d: 1, l: 2, gf: 30, ga: 20, pts: 13, sp: 11 };
+const table = [{ rank: 1, name: 'A', pts: 20, sp: 11 }, { rank: 2, name: 'B', pts: 15, sp: 11 }, ulmRow];
 
 function boot({ matchdays = [], standings = [], statGames = [], players = [], events = {}, records = { bestWin: { us: 12, os: 4, opp: 'DJK', seasonKey: '25/26' } }, otherSeasonStandings = 0, seasonKey = '25/26', previewCard = true } = {}) {
   const SEASONS = { [seasonKey]: { data: { players, events, standings } } };
@@ -188,6 +199,30 @@ console.log('== B: Saison mit Spielen: relevante Karten bleiben, Reihenfolge unv
   assertEqual(kinds(cBefore.themenkarten), ['gegner', 'matchcenterLink', 'lineupLink', 'verlauf', 'tabelle', 'letzterSpieltag'], 'vorDemSpieltag: Reihenfolge und Inhalt unverändert');
   for (const c of [cPause, after, cWeek, cBefore]) assertTrue(c.themenkarten.length <= 6, `${c.phase}: höchstens 6 Karten (6.2)`);
   assertTrue(![cPause, after, cWeek, cBefore].some((c) => c.themenkarten.some(EMPTY_ONLY)), 'Datenzustand mit Spielen: keine Leerzustandskarte');
+}
+
+// ── B2: Aufgabe (b), S2e-Kaltstart-Audit — Top-5-Rangliste ohne Datenstand-Schutz ──────────
+// Vorher zeigte overviewCompactTableHtml eine Platzierung ungeprüft an, auch direkt nach dem 1. Spieltag
+// (ein Team steht dann zufällig ganz oben). Jetzt gilt dieselbe Regel wie bei rOpponentTraitCard/
+// rankingTrustworthy (Aufgabe 4g): liegt eine gezeigte Zeile unter DATENSTAND_SCHWELLEN.spieleGut (10),
+// wird die GANZE Rangliste ausgeblendet statt mit einem Hinweis gezeigt.
+console.log('== B2: Aufgabe (b) — Rangliste ohne Datenstand-Schutz wird unterhalb der Schwelle ausgeblendet ==');
+{
+  const thinTable = [{ rank: 1, name: 'VfB Ulm', pts: 3, sp: 1 }, { rank: 2, name: 'A', pts: 0, sp: 1 }];
+  const thin = boot({ standings: thinTable });
+  assertEqual(thin.run('overviewCompactTableHtml("25/26")'), '', 'Rangliste nach 1 Spiel (unter der Schwelle): leerer String statt Platzierung');
+
+  const days = [md(1, '2026-03-01', 'abgeschlossen', [g(1, '2026-03-01', true, 3, 1)])];
+  const thinAfter = boot({ matchdays: days, standings: thinTable, statGames: days[0].games });
+  const cThin = thinAfter.cards('2026-03-02T12:00:00');
+  assertEqual(cThin.phase, 'nachDemSpieltag', 'Vorbedingung: Phase "Nach dem Spieltag" (Generalprobe-Fall)');
+  assertEqual(kinds(cThin.themenkarten), ['platzhalter', 'platzhalter', 'keinNaechster'], 'nachDemSpieltag nach 1 Spieltag: Tabellenkarte entfällt, übrige Karten bleiben');
+  assertTrue(!cThin.themenkarten.some(EMPTY_ONLY), 'keine Leerzustandskarte statt der ausgeblendeten Tabelle');
+
+  // Gegenprobe: dieselbe Form, aber alle Zeilen über der Schwelle -> Rangliste bleibt
+  const fullTable = [{ rank: 1, name: 'VfB Ulm', pts: 30, sp: 14 }, { rank: 2, name: 'A', pts: 28, sp: 14 }];
+  const full = boot({ standings: fullTable });
+  assertTrue(full.run('overviewCompactTableHtml("25/26")').length > 0, 'Gegenprobe: dieselbe Form bei Saisonende (sp über der Schwelle) zeigt die Rangliste weiterhin');
 }
 
 // ── C: unvollständiger Spieltag ────────────────────────────────────────

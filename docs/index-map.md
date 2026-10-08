@@ -1,10 +1,10 @@
 # Code-Karte: index.html
 
-<!-- index-map: source-sha256=df1ffcfbbc01d107a7c19a9c5cefa0ccb0975f1943dbfffc9460bfea52d23ac2 source-lines=23406 -->
+<!-- index-map: source-sha256=f1d0a5f1efe66fa1e146b4abe5578847b29bf5c3f94f960eb77f7e51214d7a22 source-lines=23416 -->
 
 Automatisch erzeugt von `scripts/build-index-map.mjs`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: `node scripts/build-index-map.mjs --write`. Vor gezieltem Lesen prüfen, ob die Karte noch aktuell ist: `node scripts/build-index-map.mjs --check`.
 
-index.html: 23406 Zeilen gesamt (SHA-256 `df1ffcfbbc01d107a7c19a9c5cefa0ccb0975f1943dbfffc9460bfea52d23ac2`). Statischer `<style>`-Block: Zeile 11–1550. Haupt-`<script>`-Block: Zeile 1664–23402.
+index.html: 23416 Zeilen gesamt (SHA-256 `f1d0a5f1efe66fa1e146b4abe5578847b29bf5c3f94f960eb77f7e51214d7a22`). Statischer `<style>`-Block: Zeile 11–1550. Haupt-`<script>`-Block: Zeile 1664–23412.
 
 **Leseregel (siehe CLAUDE.md):** index.html nie vollständig laden. Diese Karte nennen, den gesuchten Namen im Register unten finden, dann nur den genannten Zeilenbereich lesen.
 
@@ -195,7 +195,7 @@ Top-Level-Blöcke (Funktionen oder Daten-consts) ab 30 Zeilen oder 2000 Zeichen 
 | `_render` | function | 21690–21859 | 170 |
 | `uiObjektseite` | function | 22245–22278 | 34 |
 | `rMatchdayDetailPage` | function | 22546–22585 | 40 |
-| `buildOverviewCards` | function | 22857–22897 | 41 |
+| `buildOverviewCards` | function | 22867–22907 | 41 |
 
 ## CSS-Regelgruppen
 
@@ -1852,55 +1852,55 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `overviewOpponentLabel` | function | 22700–22711 | 12 |
 | `overviewLastMatchdayText` | function | 22712–22715 | 4 |
 | `overviewNextMatchdayHtml` | function | 22722–22738 | 17 |
-| `overviewCompactTableHtml` | function | 22746–22752 | 7 |
-| `overviewFormHtml` | function | 22754–22768 | 15 |
-| `overviewSeasonBilanzHtml` | function | 22769–22775 | 7 |
-| `overviewSeasonAwardHtml` | function | 22777–22786 | 10 |
-| `overviewRecordHtml` | function | 22788–22793 | 6 |
-| `overviewCrossSeasonTrendHtml` | function | 22795–22803 | 9 |
-| `overviewOpponentPreviewHtml` | function | 22804–22808 | 5 |
-| `overviewMatchcenterLinkHtml` | function | 22809–22811 | 3 |
-| `overviewLineupLinkHtml` | function | 22812–22814 | 3 |
-| `overviewRankChangeTile` | function | 22831–22848 | 18 |
-| `buildOverviewCards` | function | 22857–22897 | 41 |
-| `rOverviewPage` | function | 22907–22918 | 12 |
-| `openLigaGegner` | window | 22919–22922 | 4 |
-| `rLigaGegnerPlaceholderPage` | function | 22923–22928 | 6 |
-| `rAsOfSelector` | function | 22940–22952 | 13 |
-| `setContextAsOf` | window | 22953–22964 | 12 |
-| `rSeasonDataPreviewContextHint` | function | 22975–22983 | 9 |
-| `rSeasonDataStateContextHint` | function | 22992–22998 | 7 |
-| `rContextBar` | function | 23023–23041 | 19 |
-| `rIaShell` | function | 23043–23045 | 3 |
-| `globalSearchTokens` | function | 23062–23065 | 4 |
-| `globalSearchEntries` | function | 23067–23080 | 14 |
-| `globalSearchPlayerScore` | function | 23081–23088 | 8 |
-| `globalSearchMatchdayScore` | function | 23090–23102 | 13 |
-| `globalSearchMatch` | function | 23104–23115 | 12 |
-| `globalSearchIsEditableTarget` | function | 23116–23120 | 5 |
-| `globalSearchKeyAction` | function | 23122–23136 | 15 |
-| `rGlobalSearchToggle` | function | 23137–23139 | 3 |
-| `rGlobalSearchResultsHtml` | function | 23140–23150 | 11 |
-| `rGlobalSearchPanelHtml` | function | 23151–23153 | 3 |
-| `paintGlobalSearchResults` | function | 23154–23161 | 8 |
-| `openGlobalSearch` | window | 23162–23186 | 25 |
-| `closeGlobalSearch` | window | 23187–23194 | 8 |
-| `onGlobalSearchInput` | window | 23195–23200 | 6 |
-| `moveGlobalSearch` | function | 23201–23206 | 6 |
-| `activateGlobalSearchResult` | window | 23207–23216 | 10 |
-| `globalSearchOnKeydown` | function | 23217–23238 | 22 |
-| `initGlobalSearch` | function | 23239–23243 | 5 |
-| `rToolMenu` | function | 23265–23268 | 4 |
-| `toolMenuElements` | function | 23269–23271 | 3 |
-| `toolMenuItemElements` | function | 23272–23274 | 3 |
-| `isToolMenuOpen` | function | 23275–23278 | 4 |
-| `openToolMenu` | window | 23279–23286 | 8 |
-| `closeToolMenu` | window | 23287–23293 | 7 |
-| `toggleToolMenu` | window | 23294–23297 | 4 |
-| `activateToolMenuItem` | window | 23298–23305 | 8 |
-| `toolMenuOnKeydown` | function | 23306–23329 | 24 |
-| `toolMenuOnClick` | function | 23330–23336 | 7 |
-| `initToolMenu` | function | 23337–23340 | 4 |
+| `overviewCompactTableHtml` | function | 22746–22762 | 17 |
+| `overviewFormHtml` | function | 22764–22778 | 15 |
+| `overviewSeasonBilanzHtml` | function | 22779–22785 | 7 |
+| `overviewSeasonAwardHtml` | function | 22787–22796 | 10 |
+| `overviewRecordHtml` | function | 22798–22803 | 6 |
+| `overviewCrossSeasonTrendHtml` | function | 22805–22813 | 9 |
+| `overviewOpponentPreviewHtml` | function | 22814–22818 | 5 |
+| `overviewMatchcenterLinkHtml` | function | 22819–22821 | 3 |
+| `overviewLineupLinkHtml` | function | 22822–22824 | 3 |
+| `overviewRankChangeTile` | function | 22841–22858 | 18 |
+| `buildOverviewCards` | function | 22867–22907 | 41 |
+| `rOverviewPage` | function | 22917–22928 | 12 |
+| `openLigaGegner` | window | 22929–22932 | 4 |
+| `rLigaGegnerPlaceholderPage` | function | 22933–22938 | 6 |
+| `rAsOfSelector` | function | 22950–22962 | 13 |
+| `setContextAsOf` | window | 22963–22974 | 12 |
+| `rSeasonDataPreviewContextHint` | function | 22985–22993 | 9 |
+| `rSeasonDataStateContextHint` | function | 23002–23008 | 7 |
+| `rContextBar` | function | 23033–23051 | 19 |
+| `rIaShell` | function | 23053–23055 | 3 |
+| `globalSearchTokens` | function | 23072–23075 | 4 |
+| `globalSearchEntries` | function | 23077–23090 | 14 |
+| `globalSearchPlayerScore` | function | 23091–23098 | 8 |
+| `globalSearchMatchdayScore` | function | 23100–23112 | 13 |
+| `globalSearchMatch` | function | 23114–23125 | 12 |
+| `globalSearchIsEditableTarget` | function | 23126–23130 | 5 |
+| `globalSearchKeyAction` | function | 23132–23146 | 15 |
+| `rGlobalSearchToggle` | function | 23147–23149 | 3 |
+| `rGlobalSearchResultsHtml` | function | 23150–23160 | 11 |
+| `rGlobalSearchPanelHtml` | function | 23161–23163 | 3 |
+| `paintGlobalSearchResults` | function | 23164–23171 | 8 |
+| `openGlobalSearch` | window | 23172–23196 | 25 |
+| `closeGlobalSearch` | window | 23197–23204 | 8 |
+| `onGlobalSearchInput` | window | 23205–23210 | 6 |
+| `moveGlobalSearch` | function | 23211–23216 | 6 |
+| `activateGlobalSearchResult` | window | 23217–23226 | 10 |
+| `globalSearchOnKeydown` | function | 23227–23248 | 22 |
+| `initGlobalSearch` | function | 23249–23253 | 5 |
+| `rToolMenu` | function | 23275–23278 | 4 |
+| `toolMenuElements` | function | 23279–23281 | 3 |
+| `toolMenuItemElements` | function | 23282–23284 | 3 |
+| `isToolMenuOpen` | function | 23285–23288 | 4 |
+| `openToolMenu` | window | 23289–23296 | 8 |
+| `closeToolMenu` | window | 23297–23303 | 7 |
+| `toggleToolMenu` | window | 23304–23307 | 4 |
+| `activateToolMenuItem` | window | 23308–23315 | 8 |
+| `toolMenuOnKeydown` | function | 23316–23339 | 24 |
+| `toolMenuOnClick` | function | 23340–23346 | 7 |
+| `initToolMenu` | function | 23347–23350 | 4 |
 
 ## Alphabetisches Register
 
@@ -1908,8 +1908,8 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 |---|---|---|
 | `_render` | function | 21690 |
 | `acceptEinsatzCenterRosterSuggestion` | window | 7611 |
-| `activateGlobalSearchResult` | window | 23207 |
-| `activateToolMenuItem` | window | 23298 |
+| `activateGlobalSearchResult` | window | 23217 |
+| `activateToolMenuItem` | window | 23308 |
 | `addComparisonDuo` | window | 13261 |
 | `addComparisonDuoFromSelection` | window | 13253 |
 | `addComparisonItem` | window | 13161 |
@@ -2005,7 +2005,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `buildMomentumSwingStats` | function | 11027 |
 | `buildMomentumSwingStatsRaw` | function | 10956 |
 | `buildOpponentIntelligence` | function | 10434 |
-| `buildOverviewCards` | function | 22857 |
+| `buildOverviewCards` | function | 22867 |
 | `buildPlayerDataFoundation` | function | 4866 |
 | `buildPlayerEvents` | function | 4920 |
 | `buildPlayerExplanation` | function | 15096 |
@@ -2044,9 +2044,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `clearLineupPlayers` | window | 2292 |
 | `clearlyAboveAverage` | function | 5366 |
 | `clonePlain` | function | 4083 |
-| `closeGlobalSearch` | window | 23187 |
+| `closeGlobalSearch` | window | 23197 |
 | `closeMatchcenterStoryPreview` | window | 2257 |
-| `closeToolMenu` | window | 23287 |
+| `closeToolMenu` | window | 23297 |
 | `clutchText` | function | 5250 |
 | `collectAssistEventRefs` | function | 2881 |
 | `comparisonDuoContext` | function | 13194 |
@@ -2326,14 +2326,14 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `getTeamLogoUrlForStory` | function | 20363 |
 | `getUlmTeamStatus` | function | 2505 |
 | `getUniqueAllTimeOpponentNames` | function | 2500 |
-| `globalSearchEntries` | function | 23067 |
-| `globalSearchIsEditableTarget` | function | 23116 |
-| `globalSearchKeyAction` | function | 23122 |
-| `globalSearchMatch` | function | 23104 |
-| `globalSearchMatchdayScore` | function | 23090 |
-| `globalSearchOnKeydown` | function | 23217 |
-| `globalSearchPlayerScore` | function | 23081 |
-| `globalSearchTokens` | function | 23062 |
+| `globalSearchEntries` | function | 23077 |
+| `globalSearchIsEditableTarget` | function | 23126 |
+| `globalSearchKeyAction` | function | 23132 |
+| `globalSearchMatch` | function | 23114 |
+| `globalSearchMatchdayScore` | function | 23100 |
+| `globalSearchOnKeydown` | function | 23227 |
+| `globalSearchPlayerScore` | function | 23091 |
+| `globalSearchTokens` | function | 23072 |
 | `goalieApplySampleConfidence` | function | 9545 |
 | `goalieBucketLooseSum` | function | 9553 |
 | `goalieBucketRows` | function | 9465 |
@@ -2385,9 +2385,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `identityPointsVsTeams` | function | 5268 |
 | `incGoalieBucket` | function | 3996 |
 | `incrementUniqueCounter` | function | 3685 |
-| `initGlobalSearch` | function | 23239 |
+| `initGlobalSearch` | function | 23249 |
 | `initHashRouting` | function | 3566 |
-| `initToolMenu` | function | 23337 |
+| `initToolMenu` | function | 23347 |
 | `invalidateGlobalIdentityCache` | function | 2243 |
 | `isActiveAlltimeSeasonStats` | function | 10339 |
 | `isComebackRelevantGoal` | function | 5264 |
@@ -2413,7 +2413,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `isSgOnlyAlltimePlayer` | function | 9344 |
 | `isSgOnlyHallOfFameExcluded` | function | 10146 |
 | `isSyntheticLineupPlayerId` | function | 18356 |
-| `isToolMenuOpen` | function | 23275 |
+| `isToolMenuOpen` | function | 23285 |
 | `isTwoPlusTwoPenaltyEvent` | function | 4135 |
 | `isUsableExternalSeasonData` | function | 6098 |
 | `isValidAsOfDate` | function | 3146 |
@@ -2599,7 +2599,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `mergeDuoSet` | function | 4820 |
 | `mergeGoalieSpecialTeamsStats` | function | 4452 |
 | `mergeSpecialTeamsStats` | function | 4096 |
-| `moveGlobalSearch` | function | 23201 |
+| `moveGlobalSearch` | function | 23211 |
 | `normalizeAssistPlayerName` | function | 2878 |
 | `normalizeComparisonItem` | function | 12946 |
 | `normalizeDuoComparisonItem` | function | 13190 |
@@ -2607,15 +2607,15 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `normalizeLineupLines` | function | 2303 |
 | `normalizePlayerName` | function | 2520 |
 | `normalizeSecondaryTraits` | function | 5367 |
-| `onGlobalSearchInput` | window | 23195 |
+| `onGlobalSearchInput` | window | 23205 |
 | `openAllTimePlayers` | window | 8423 |
 | `openComparisonCenter` | window | 8593 |
 | `openDuoProPicker` | window | 11530 |
 | `openEinsatzCenter` | window | 6753 |
-| `openGlobalSearch` | window | 23162 |
+| `openGlobalSearch` | window | 23172 |
 | `openHallOfFame` | window | 8569 |
 | `openLexicon` | window | 8666 |
-| `openLigaGegner` | window | 22919 |
+| `openLigaGegner` | window | 22929 |
 | `openLineupBuilder` | window | 8644 |
 | `openMatchcenter` | window | 8622 |
 | `openMatchcenterStoryPreview` | window | 2256 |
@@ -2623,24 +2623,24 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `openMatchdayTimeline` | window | 22438 |
 | `openOverview` | window | 22387 |
 | `openSeason` | window | 8420 |
-| `openToolMenu` | window | 23279 |
+| `openToolMenu` | window | 23289 |
 | `overviewCompactTableHtml` | function | 22746 |
-| `overviewCrossSeasonTrendHtml` | function | 22795 |
-| `overviewFormHtml` | function | 22754 |
+| `overviewCrossSeasonTrendHtml` | function | 22805 |
+| `overviewFormHtml` | function | 22764 |
 | `overviewLastMatchdayText` | function | 22712 |
-| `overviewLineupLinkHtml` | function | 22812 |
-| `overviewMatchcenterLinkHtml` | function | 22809 |
+| `overviewLineupLinkHtml` | function | 22822 |
+| `overviewMatchcenterLinkHtml` | function | 22819 |
 | `overviewMatchdayEndMs` | function | 22617 |
 | `overviewMatchdayStartMs` | function | 22611 |
 | `overviewNextMatchdayHtml` | function | 22722 |
 | `overviewOpponentLabel` | function | 22700 |
-| `overviewOpponentPreviewHtml` | function | 22804 |
-| `overviewRankChangeTile` | function | 22831 |
-| `overviewRecordHtml` | function | 22788 |
-| `overviewSeasonAwardHtml` | function | 22777 |
-| `overviewSeasonBilanzHtml` | function | 22769 |
+| `overviewOpponentPreviewHtml` | function | 22814 |
+| `overviewRankChangeTile` | function | 22841 |
+| `overviewRecordHtml` | function | 22798 |
+| `overviewSeasonAwardHtml` | function | 22787 |
+| `overviewSeasonBilanzHtml` | function | 22779 |
 | `p1NarrativeKey` | function | 15604 |
-| `paintGlobalSearchResults` | function | 23154 |
+| `paintGlobalSearchResults` | function | 23164 |
 | `parseAppHash` | function | 3249 |
 | `parseAsOfQueryValue` | function | 3288 |
 | `parseComparisonVariant` | function | 13111 |
@@ -2680,7 +2680,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rAntiSynergyMetricRow` | function | 11933 |
 | `rAntiSynergyWinrateRow` | function | 11955 |
 | `rAntiSynergyWinrateText` | function | 11949 |
-| `rAsOfSelector` | function | 22940 |
+| `rAsOfSelector` | function | 22950 |
 | `ratio01` | function | 5176 |
 | `rAvgResponseTimeNote` | function | 12206 |
 | `rCarryPerformanceRows` | function | 10266 |
@@ -2696,7 +2696,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rComparisonModeSelect` | function | 13441 |
 | `rComparisonRoles` | function | 14044 |
 | `rComparisonStyles` | function | 14063 |
-| `rContextBar` | function | 23023 |
+| `rContextBar` | function | 23033 |
 | `rDifficultConnectionList` | function | 11982 |
 | `rDifficultConnectionListCompact` | function | 12049 |
 | `rDifficultConnectionListCompactLegacy` | function | 12007 |
@@ -2778,9 +2778,9 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rGlobalOverview` | function | 14486 |
 | `rGlobalPartnerOpponentPanel` | function | 14434 |
 | `rGlobalProfileTags` | function | 12577 |
-| `rGlobalSearchPanelHtml` | function | 23151 |
-| `rGlobalSearchResultsHtml` | function | 23140 |
-| `rGlobalSearchToggle` | function | 23137 |
+| `rGlobalSearchPanelHtml` | function | 23161 |
+| `rGlobalSearchResultsHtml` | function | 23150 |
+| `rGlobalSearchToggle` | function | 23147 |
 | `rGoalieAnalysis` | function | 10062 |
 | `rGoalieBars` | function | 9719 |
 | `rGoalieDnaBars` | function | 9865 |
@@ -2805,7 +2805,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rHallOfFamePage` | function | 15235 |
 | `rHallPodiumList` | function | 12616 |
 | `rHallSGBadge` | function | 12671 |
-| `rIaShell` | function | 23043 |
+| `rIaShell` | function | 23053 |
 | `rIdentityCards` | function | 8749 |
 | `rIdentityTags` | function | 8729 |
 | `rInsights` | function | 9242 |
@@ -2824,7 +2824,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rKPIVergleich` | function | 14026 |
 | `rLexiconPage` | function | 15350 |
 | `rLexiconRows` | function | 15346 |
-| `rLigaGegnerPlaceholderPage` | function | 22923 |
+| `rLigaGegnerPlaceholderPage` | function | 22933 |
 | `rLineupBuilderAvailablePanel` | function | 20064 |
 | `rLineupBuilderPage` | function | 20240 |
 | `rLineupComplementCards` | function | 20161 |
@@ -2908,7 +2908,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rosterImpactConfidence` | function | 11804 |
 | `rosterImpactConfidenceWeight` | function | 11818 |
 | `rosterPlayerMatches` | function | 2636 |
-| `rOverviewPage` | function | 22907 |
+| `rOverviewPage` | function | 22917 |
 | `rPdashLabel` | function | 14383 |
 | `rPdashStat` | function | 14386 |
 | `rPenalties` | function | 9127 |
@@ -2930,10 +2930,10 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rRosterStatusBadge` | function | 8702 |
 | `rScoreBreakdown` | function | 15666 |
 | `rSeasonDataPreviewCard` | function | 6542 |
-| `rSeasonDataPreviewContextHint` | function | 22975 |
+| `rSeasonDataPreviewContextHint` | function | 22985 |
 | `rSeasonDataPreviewRows` | function | 6532 |
 | `rSeasonDataPreviewStatus` | function | 6529 |
-| `rSeasonDataStateContextHint` | function | 22992 |
+| `rSeasonDataStateContextHint` | function | 23002 |
 | `rSeasonDuoCenterPro` | function | 11622 |
 | `rSeasonDuoSummary` | function | 8901 |
 | `rSeasonInsightsTab` | function | 9227 |
@@ -2950,7 +2950,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `rTeamPage` | function | 21299 |
 | `rTeamResponseMomentumCard` | function | 12284 |
 | `rTimeline` | function | 9016 |
-| `rToolMenu` | function | 23265 |
+| `rToolMenu` | function | 23275 |
 | `runComparison` | window | 13181 |
 | `runDuoComparison` | window | 13269 |
 | `saveLastView` | function | 3440 |
@@ -2986,7 +2986,7 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `setComparisonDuoSeasonKey` | window | 13199 |
 | `setComparisonRoleMode` | window | 13151 |
 | `setComparisonVariant` | window | 13156 |
-| `setContextAsOf` | window | 22953 |
+| `setContextAsOf` | window | 22963 |
 | `setDuoProPickerState` | function | 11501 |
 | `setDuoProSelection` | window | 11551 |
 | `setEinsatzCenterGameNote` | window | 7747 |
@@ -3050,11 +3050,11 @@ Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statisch
 | `toggleMatchcenterSpecialTeamsGames` | window | 2252 |
 | `toggleSgOnlyAlltime` | window | 2412 |
 | `toggleSpecialTeamsGameDetails` | window | 2251 |
-| `toggleToolMenu` | window | 23294 |
-| `toolMenuElements` | function | 23269 |
-| `toolMenuItemElements` | function | 23272 |
-| `toolMenuOnClick` | function | 23330 |
-| `toolMenuOnKeydown` | function | 23306 |
+| `toggleToolMenu` | window | 23304 |
+| `toolMenuElements` | function | 23279 |
+| `toolMenuItemElements` | function | 23282 |
+| `toolMenuOnClick` | function | 23340 |
+| `toolMenuOnKeydown` | function | 23316 |
 | `toPublicPlayerRegistry` | function | 3917 |
 | `uiDatenstandBand` | function | 22156 |
 | `uiDeltaIndicator` | function | 21921 |

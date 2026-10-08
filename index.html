@@ -22747,7 +22747,17 @@ function overviewCompactTableHtml(seasonKey){
   const stats=getSeasonStatsAsOf(seasonKey);
   const standings=stats?.standings||[];
   if(!standings.length)return'';
-  const items=standings.slice(0,5).map(t=>({label:`${t.rank}. ${t.name}`,value:t.pts}));
+  const top5=standings.slice(0,5);
+  // Aufgabe (b), S2e-Kaltstart-Phase: dieselbe Regel wie rOpponentTraitCard/rankingTrustworthy (Aufgabe 4g,
+  // siehe dort) — eine Rangliste nach Punkten ist nach wenigen Spielen keine verlässliche Aussage (nach
+  // einem Spieltag steht ein Team per Zufall ganz oben, siehe die echte Übersichtsseite). Liegt ein
+  // gezeigtes Team unter der 4f-Schwelle (DATENSTAND_SCHWELLEN.spieleGut), wird die GANZE Rangliste
+  // verborgen statt mit einem Hinweis captioniert — "eine falsche Prämisse wird nicht captioniert, sondern
+  // vollständig ausgeblendet" (wie beim 4g-Vorbild), nicht als neutrale, unplatzierte Teamliste dargestellt:
+  // eine Top-5-Liste ohne Rang suggeriert auf der Startseite weiterhin eine Auswahl nach Bedeutung, die die
+  // Datenlage noch nicht stützt.
+  if(!top5.every(t=>Number.isFinite(t.sp)&&t.sp>=DATENSTAND_SCHWELLEN.spieleGut))return'';
+  const items=top5.map(t=>({label:`${t.rank}. ${t.name}`,value:t.pts}));
   return uiRangliste({items,maxVisible:5});
 }
 /** "Formkurve": Punkte (Sieg=3/Unentschieden=1/Niederlage=0) der letzten bis zu 8 Ulm/SG-Spiele, über die bestehende Verlauf-Komponente (P0b.2) — Standard-Punktevergabe, keine neue Kennzahl. */
