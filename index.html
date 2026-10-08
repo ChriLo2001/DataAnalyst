@@ -9731,10 +9731,13 @@ function rGoalieBars(rows,{color='#14b8a6',unit='',empty='Keine Daten verfügbar
   const data=(rows||[]).filter(r=>includeZero?Number.isFinite(Number(r.val)):Number(r.val)>0);
   if(!data.length)return`<div class="noev" style="padding:10px 0;font-size:11px">${empty}</div>`;
   const max=Math.max(...data.map(r=>Number(r.val)||0),1);
+  // r.unit (pro Zeile) überschreibt das gemeinsame unit-Argument — Aufgabe "Goalie-Einheiten" (S2e-
+  // Kaltstart-Phase): rGoalieStability mischt echte Ereignisquoten (%) mit abgeleiteten 0–100-Indizes
+  // (/100) in derselben Liste und braucht deshalb zwei verschiedene Einheiten nebeneinander.
   return`<div class="goalie-bars">${data.map(r=>`<div class="goalie-bar-row">
     <div class="goalie-bar-name">${escHtml(r.name)}</div>
     <div class="goalie-bar-bg"><div class="goalie-bar-fill" style="--gcol:${color};width:${Math.max(4,((Number(r.val)||0)/max)*100)}%"></div></div>
-    <div class="goalie-bar-val">${goalieNum(r.val)}${unit}</div>
+    <div class="goalie-bar-val">${goalieNum(r.val)}${r.unit??unit}</div>
   </div>`).join('')}</div>`;
 }
 const GOALIE_ROLE_LABELS={
@@ -9884,7 +9887,7 @@ function rGoalieDnaBars(stats){
   return`<div class="goalie-dna-list">${rows.map(({meta,val,available})=>`<div class="goalie-dna-row th-tip" data-tip="${escAttr(meta.tip)}" title="${escAttr(meta.tip)}" style="--gcol:${meta.color}">
     <div class="goalie-dna-label">${meta.label}</div>
     <div class="goalie-dna-track"><span class="goalie-dna-fill" style="--dna:${val}%"></span></div>
-    <div class="goalie-dna-value">${available?val:'?'}</div>
+    <div class="goalie-dna-value">${available?`${val}/100`:'?'}</div>
   </div>`).join('')}</div>`;
 }
 function rGoalieKpis(stats){
@@ -10039,16 +10042,20 @@ function rGoalieOpponents(stats){
 }
 function rGoalieStability(stats){
   const model=buildGoalieAnalysisModel(stats);
+  // Aufgabe "Goalie-Einheiten" (S2e-Kaltstart-Phase): nur Clean-Sheet-Quote/Low-Goal-Quote sind echte
+  // Ereignisquoten (Spiele mit Eigenschaft X / Spiele gesamt) und behalten "%". Startstärke/Momentum-
+  // Kontrolle/Schlussphase sind abgeleitete 0–100-Indizes aus buildGoalieAnalysisModel (wie die übrigen
+  // vier in GOALIE_DNA_META/rGoalieDnaBars) — "/100" statt "%" macht das ohne Tooltip klar, siehe dort.
   const rows=[
-    {name:'Clean-Sheet-Quote',val:(stats.games?stats.cleanSheets/stats.games*100:0)},
-    {name:'Low-Goal-Quote',val:(stats.games?stats.lowGoalGames/stats.games*100:0)},
-    {name:'Startstärke',val:model.dnaRows.find(r=>r.label==='Startstärke')?.val||0},
-    {name:'Momentum-Kontrolle',val:model.dnaRows.find(r=>r.label==='Momentum-Kontrolle')?.val||0},
-    {name:'Schlussphase',val:model.dnaRows.find(r=>r.label==='Schlussphase')?.val||0},
+    {name:'Clean-Sheet-Quote',val:(stats.games?stats.cleanSheets/stats.games*100:0),unit:'%'},
+    {name:'Low-Goal-Quote',val:(stats.games?stats.lowGoalGames/stats.games*100:0),unit:'%'},
+    {name:'Startstärke',val:model.dnaRows.find(r=>r.label==='Startstärke')?.val||0,unit:'/100'},
+    {name:'Momentum-Kontrolle',val:model.dnaRows.find(r=>r.label==='Momentum-Kontrolle')?.val||0,unit:'/100'},
+    {name:'Schlussphase',val:model.dnaRows.find(r=>r.label==='Schlussphase')?.val||0,unit:'/100'},
   ];
   return`<div class="goalie-dashboard">
     <div class="goalie-section-grid">
-    <div class="goalie-card"><div class="goalie-card-title">Stabilitätsprofil</div>${rGoalieBars(rows,{color:'#10b981',unit:'%'})}</div>
+    <div class="goalie-card"><div class="goalie-card-title">Stabilitätsprofil</div>${rGoalieBars(rows,{color:'#10b981'})}</div>
     <div class="goalie-card"><div class="goalie-card-title">Zeitwerte</div>
       <div class="partner-pill"><span>Ø Zeit bis erstes Gegentor</span><span>${goalieTime(stats.avgTimeToFirstGA)}</span></div>
       <div class="partner-pill"><span>Max. Zeit bis erstes Gegentor</span><span>${goalieTime(stats.maxTimeToFirstGA)}</span></div>
