@@ -17,7 +17,7 @@
         { "teamKey": "fbc-heidelberg", "weight": 0.5, "scope": { "models": true, "display": true } },
         { "teamKey": "floorball-mannheim", "weight": 0.5, "scope": { "models": true, "display": true } }
       ],
-      "note": "Zusammenschluss zweier Vorgänger, je 14 Spiele Historie in 25/26 (von Chris bestätigt). Gewichte 0,5/0,5 mangels anderer Information — bei besserer Begründung (z. B. Kaderanteil) von Hand anpassen, Summe muss 1 bleiben."
+      "note": "Zusammenschluss zweier Vorgänger, je 14 Spiele Historie in 25/26 (von Chris bestätigt). Gewichte 0,5/0,5 mangels anderer Information — bei besserer Begründung (z. B. Kaderanteil) von Hand anpassen, Summe muss 1 bleiben. Annahme, zu überprüfen, sobald eigene 26/27-Daten vorliegen: Ligamittel-Gewichtung unterstellt, dass der Zusammenschluss genau so stark ist wie der Durchschnitt seiner Vorgänger — ein fusioniertes Team kann tatsächlich stärker (oder schwächer) sein als dieser Durchschnitt (von Chris angemerkt, S2e-Kaltstart-Phase)."
     }
   ],
   "pending": [
