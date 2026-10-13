@@ -2941,10 +2941,17 @@ function variance(arr){
 // ═══════════════════════════════════════════════════════
 function processGame(game,ulmSide){
   const evs=(game.events||[]).filter(e=>e.event_type==='goal');
+  // S2e-Auftrag "Spielzeit normalisieren": Konvention einmal pro Spiel ermittelt (siehe
+  // detectSecondHalfConvention in matchcenter-core.js). Kein Sonderfall-Fallback mehr für "unklar" nötig:
+  // processGame hat genau einen Aufrufer, buildAnnotatedGoalEventsForGame, der VOR diesem Aufruf explizit
+  // auf convention==='unklar' prüft und abbricht (siehe dortiger Wächter-Kommentar) — hier kommt also nie
+  // ein unklares Spiel an, nicht zufällig, sondern durch einen ausdrücklichen Wächter des Aufrufers.
+  // Widersprechende/unklare Einzelereignisse innerhalb eines sonst entschiedenen Spiels sortieren ans Ende
+  // (MAX_SAFE_INTEGER), unverändert gegenüber vorher.
+  const clockConvention=detectSecondHalfConvention(game);
   const sortValue=e=>{
-    const p=Number(e?.period);
-    const s=parseGameClock(e?.time);
-    return (Number.isFinite(p)?p:Number.MAX_SAFE_INTEGER)*1200+(s??0);
+    const sec=gameClockToAbsoluteSeconds(e?.period,e?.time,clockConvention);
+    return sec===null?Number.MAX_SAFE_INTEGER:sec;
   };
   evs.sort((a,b)=>sortValue(a)-sortValue(b));
   let uS=0,oS=0;
@@ -4008,11 +4015,13 @@ function incGoalieBucket(map,key,amount=1){
   const k=key===undefined||key===null||key===''?'Unbekannt':String(key);
   map[k]=(map[k]||0)+amount;
 }
-function goalieEventAbsSeconds(ev){
-  const p=Number(ev?.period);
-  const s=parseGameClock(ev?.time);
-  if(!Number.isFinite(p)||p<1||s===null)return null;
-  return(Math.max(1,Math.floor(p))-1)*1200+s;
+// S2e-Auftrag "Spielzeit normalisieren": vorher (period-1)*1200+s, unterstellte also für Halbzeit 2 immer
+// die 'relativ'-Konvention (siehe gameClockToAbsoluteSeconds/detectSecondHalfConvention in
+// matchcenter-core.js) — bei 'durchlaufend'-Spielen wurde dadurch die absolute Zeit verdoppelt gerechnet.
+// convention muss jetzt vom Aufrufer übergeben werden (einmal pro Spiel per detectSecondHalfConvention()
+// ermittelt, siehe Aufrufstellen) statt stillschweigend 'relativ' anzunehmen.
+function goalieEventAbsSeconds(ev,convention){
+  return gameClockToAbsoluteSeconds(ev?.period,ev?.time,convention);
 }
 function goalieGameDurationSeconds(game){
   const rawMinutes=Number(game?.duration_minutes??game?.game_duration_minutes??game?.duration_min??game?.minutes);
@@ -4202,7 +4211,7 @@ function getPenaltyBasePersonalMinutes(ev){
 function getPenaltyPersonalMinutes(ev,game,gamesData){
   if(!isMatchPenaltyEvent(ev))return getPenaltyBasePersonalMinutes(ev);
   const durationSec=getGameDurationMinutes(game)*60;
-  const eventSec=goalieEventAbsSeconds(ev);
+  const eventSec=goalieEventAbsSeconds(ev,detectSecondHalfConvention(game));
   if(eventSec===null)return getPenaltyBasePersonalMinutes(ev);
   const restCurrent=Math.max(0,Math.ceil((durationSec-eventSec)/60));
   const furtherGames=getFurtherSameDayUlmGames(game,gamesData);
@@ -4259,6 +4268,9 @@ function buildSpecialTeamsForGame(game,seasonKey){
   if(!side)return finalizeSpecialTeamsStats(stats);
   const opponent=game?.[side==='home'?'guest_team_name':'home_team_name']||'?';
   const durationSeconds=goalieGameDurationSeconds(game);
+  // S2e-Auftrag "Spielzeit normalisieren": einmal pro Spiel ermittelt, siehe goalieEventAbsSeconds-Aufruf
+  // unten in der Zeitlinie (Tore UND Strafen) statt der vorher impliziten 'relativ'-Annahme.
+  const clockConvention=detectSecondHalfConvention(game);
   const queues={ulm:[],opp:[]};
   const active={ulm:null,opp:null};
   let currentState='even';
@@ -4371,7 +4383,7 @@ function buildSpecialTeamsForGame(game,seasonKey){
     openPhase(currentState,time);
   }
   const timeline=(game.events||[])
-    .map((ev,index)=>({ev,index,time:goalieEventAbsSeconds(ev)}))
+    .map((ev,index)=>({ev,index,time:goalieEventAbsSeconds(ev,clockConvention)}))
     .filter(row=>{
       if(row.ev?.event_type!=='goal'&&row.ev?.event_type!=='penalty')return false;
       if(!Number.isFinite(row.time)){
@@ -4559,16 +4571,19 @@ function buildGoalieGameRecord(game,seasonKey,side,standings){
   const durationSeconds=goalieGameDurationSeconds(game);
   const opponent=getGoalieOpponentName(game,side,seasonKey);
   const opponentTier=getGoalieOpponentTier(opponent,standings);
+  // S2e-Auftrag "Spielzeit normalisieren": einmal pro Spiel ermittelt statt der vorher impliziten
+  // 'relativ'-Annahme in goalieEventAbsSeconds/getPhaseKey (siehe dort).
+  const clockConvention=detectSecondHalfConvention(game);
   const goalsAgainstEvents=(game?.events||[])
     .filter(ev=>ev?.event_type==='goal'&&ev?.event_team&&ev.event_team!==side)
     .map(ev=>{
-      const absSeconds=goalieEventAbsSeconds(ev);
+      const absSeconds=goalieEventAbsSeconds(ev,clockConvention);
       const safeAbsSeconds=Number.isFinite(absSeconds)?Math.max(0,Math.min(absSeconds,durationSeconds)):null;
       return{
         period:ev?.period??'Unbekannt',
         time:ev?.time||'',
         absSeconds:safeAbsSeconds,
-        phase:getPhaseKey(ev?.period,ev?.time),
+        phase:getPhaseKey(ev?.period,ev?.time,clockConvention),
         opponentTier,
         gameState:goalieGameStateBeforeGoal(ev,side),
       };
@@ -4944,6 +4959,9 @@ function buildPlayerEvents(label,gamesData){
       warnEventProcessingOnce('Spiel-Events konnten nicht verarbeitet werden:',g,'processGame',e.message);
       processed=[];
     }
+    // S2e-Auftrag "Spielzeit normalisieren": einmal pro Spiel ermittelt, für getPhaseKey unten.
+    // ev.absSeconds kommt bereits korrekt normalisiert aus buildAnnotatedGoalEventsForGame (siehe dort).
+    const clockConvention=detectSecondHalfConvention(g);
     for(const ev of processed){
       try{
         if(!ev.isUlm)continue;
@@ -4958,7 +4976,7 @@ function buildPlayerEvents(label,gamesData){
         const assistantName=pFull(assistant);
         if(rosterPlayerMatches(me,scorer)){
           events.push({type:'Tor',gameId:g.id,date:g.date,opponent:opp,result:res,
-            period:ev.period,time:ev.time,phase:getPhaseKey(ev.period,ev.time),
+            period:ev.period,time:ev.time,absSeconds:ev.absSeconds,phase:getPhaseKey(ev.period,ev.time,clockConvention),
             partner:assistantName||'Solo',
             ctx:ev.ctx,clutch:ev.clutch,uA:ev.uA,oA:ev.oA,isFirst:ev.isFirst,
             responseInfo:ev.responseInfo||null,momentumInfo:ev.momentumInfo||null,tags:ev.tags||null,
@@ -4971,7 +4989,7 @@ function buildPlayerEvents(label,gamesData){
             const assistantName=pFull(assistant);
             if(assistantName&&rosterPlayerMatches(me,assistant)){
               events.push({type:'Vorlage',gameId:g.id,date:g.date,opponent:opp,result:res,
-                period:ev.period,time:ev.time,phase:getPhaseKey(ev.period,ev.time),
+                period:ev.period,time:ev.time,absSeconds:ev.absSeconds,phase:getPhaseKey(ev.period,ev.time,clockConvention),
                 partner:scorerName,
                 ctx:ev.ctx,clutch:null,uA:ev.uA,oA:ev.oA,
                 responseInfo:ev.responseInfo||null,momentumInfo:ev.momentumInfo||null,tags:ev.tags||null,
@@ -5267,10 +5285,16 @@ function isImportantClutchGoal(e){
 function isDecisiveGoal(e){
   return e?.type==='Tor'&&/Entscheidend/i.test(clutchText(e));
 }
+// S2e-Auftrag "Spielzeit normalisieren": vorher parseGameClock(e.time)>=900 direkt auf dem rohen
+// Zeitstring, unterstellte also für Halbzeit 2 immer die 'relativ'-Konvention — bei 'durchlaufend'-Spielen
+// galt dadurch JEDES Tor der 2. Halbzeit fälschlich als "spät" (schon der Anstoß zur 2. Halbzeit liegt bei
+// Minute 20, also weit über der alten Schwelle von 900s). Nutzt jetzt e.absSeconds, das buildPlayerEvents
+// bereits konventions-korrekt aus buildAnnotatedGoalEventsForGame übernimmt (siehe dort).
 function isLateGoal(e){
   const p=Number(e?.period);
-  const seconds=parseGameClock(e?.time);
-  return e?.type==='Tor'&&Number.isFinite(p)&&p>=2&&seconds!==null&&seconds>=900;
+  if(e?.type!=='Tor'||!Number.isFinite(p)||p<2||!Number.isFinite(e?.absSeconds))return false;
+  const within=e.absSeconds-(p-1)*1200;
+  return within>=900;
 }
 function isComebackRelevantGoal(e){
   if(e?.type!=='Tor')return false;
@@ -5299,17 +5323,15 @@ function countMomentumClusters(ev){
     byGame[gid].push(e);
   }
   let clusters=0;
+  // S2e-Auftrag "Spielzeit normalisieren": nutzt jetzt e.absSeconds (konventions-korrekt aus
+  // buildPlayerEvents übernommen, siehe dort) statt der vorher impliziten 'relativ'-Annahme in einer
+  // lokalen p*1200+s-Rechnung (gleiche Fehlerklasse wie bei isLateGoal).
   for(const rows of Object.values(byGame)){
-    const eventTime=e=>{
-      const p=Number(e?.period);
-      const s=parseGameClock(e?.time);
-      return Number.isFinite(p)&&s!==null?p*1200+s:null;
-    };
-    const sorted=[...rows].map(e=>({...e,_eventTime:eventTime(e)})).filter(e=>e._eventTime!==null).sort((a,b)=>a._eventTime-b._eventTime);
+    const sorted=[...rows].filter(e=>Number.isFinite(e?.absSeconds)).sort((a,b)=>a.absSeconds-b.absSeconds);
     let inCluster=false;
     for(let i=1;i<sorted.length;i++){
-      const prev=sorted[i-1]._eventTime;
-      const cur=sorted[i]._eventTime;
+      const prev=sorted[i-1].absSeconds;
+      const cur=sorted[i].absSeconds;
       if(cur-prev<=120){if(!inCluster)clusters++;inCluster=true;}
       else inCluster=false;
     }
@@ -10719,11 +10741,11 @@ function getDuoDirectScorerGameCounts(duoPlayerIds,context={}){
   return out;
 }
 
-function responseMomentumAbsSeconds(ev){
-  const p=Number(ev?.period);
-  const s=parseGameClock(ev?.time);
-  if(!Number.isFinite(p)||p<1||p>2||s===null)return null;
-  return(Math.floor(p)-1)*1200+s;
+// S2e-Auftrag "Spielzeit normalisieren": vorher (period-1)*1200+s mit impliziter 'relativ'-Annahme für
+// Halbzeit 2 (siehe goalieEventAbsSeconds, gleicher Fehlerklasse). convention kommt jetzt vom einzigen
+// Aufrufer (buildAnnotatedGoalEventsForGame), der es einmal pro Spiel ermittelt.
+function responseMomentumAbsSeconds(ev,convention){
+  return gameClockToAbsoluteSeconds(ev?.period,ev?.time,convention);
 }
 function responseMomentumTime(seconds){
   const n=Number(seconds);
@@ -10769,10 +10791,23 @@ function responseMomentumGoalActors(game,ev,seasonKey){
 }
 function buildAnnotatedGoalEventsForGame(game,side,seasonKey=game?._mcSeasonKey||getActiveSeasonKey()){
   if(!game||!side)return[];
+  const clockConvention=detectSecondHalfConvention(game);
+  // S2e-Auftrag "Spielzeit normalisieren", Nachtrag 3: expliziter Wächter statt stillem Weiterrechnen.
+  // Heute trifft "unklar" (siehe detectSecondHalfConvention) kein einziges Ulm/SG-Spiel im Archiv — das
+  // ist aber eine Eigenschaft der HEUTIGEN Datenlage, nicht eine Garantie dieser Funktion. Ohne diesen
+  // Wächter würde ein künftiges unklares Ulm-Spiel einfach durchlaufen: processGame sortiert dann jedes
+  // Ereignis auf denselben Platz (gameClockToAbsoluteSeconds liefert durchgängig null), die Score-Kontext-
+  // Herleitung (uA/oA/ctx/clutch) bekäme eine unbestimmte statt einer gemeldeten, bewusst verweigerten
+  // Reihenfolge. Deshalb hier der frühe, ausdrückliche Abbruch mit Meldung statt eines Datenarguments, auf
+  // das sich spätere Aufrufer stillschweigend verlassen müssten.
+  if(clockConvention==='unklar'){
+    warnEventProcessingOnce('Spiel mit unklarer Halbzeit-2-Konvention ausgeschlossen (siehe detectSecondHalfConvention):',game,null);
+    return[];
+  }
   let goals=[];
   try{goals=processGame(game,side)||[];}catch(e){goals=[];}
   const annotated=goals.map((ev,index)=>{
-    const absSeconds=responseMomentumAbsSeconds(ev);
+    const absSeconds=responseMomentumAbsSeconds(ev,clockConvention);
     const actors=responseMomentumGoalActors(game,ev,seasonKey);
     const isFor=!!ev.isUlm;
     const beforeFor=isFor?(Number(ev.uA)||0)-1:(Number(ev.uA)||0);
@@ -15900,14 +15935,6 @@ function matchcenterAnalyzeForm(teamKey,seasonKey){
 
 
 
-function matchcenterGoalMinute(ev){
-  const p=Number(ev?.period);
-  const s=parseGameClock(ev?.time);
-  if(!Number.isFinite(p)||s===null)return null;
-  return (Math.max(1,p)-1)*20+s/60;
-}
-
-
 
 
 
@@ -15994,7 +16021,10 @@ function matchcenterAddUlmScoring(profile,g,gameKey,type,scope,ev,side){
     profile.directGamePoints[gameKey]=(profile.directGamePoints[gameKey]||0)+1;
     if(type==='goal')profile.directGameGoals[gameKey]=(profile.directGameGoals[gameKey]||0)+1;
     if(type==='assist')profile.directGameAssists[gameKey]=(profile.directGameAssists[gameKey]||0)+1;
-    const sec=matchcenterGoalAbsSeconds(ev);
+    // S2e-Auftrag "Spielzeit normalisieren": einmal pro Spiel ermittelt, siehe matchcenterGoalAbsSeconds/
+    // matchcenterIsLateGoalEvent.
+    const clockConvention=detectSecondHalfConvention(g);
+    const sec=matchcenterGoalAbsSeconds(ev,clockConvention);
     if(Number.isFinite(sec)){
       const period=sec<1200?1:2;
       profile.phasePoints[period]=(profile.phasePoints[period]||0)+1;
@@ -16005,7 +16035,7 @@ function matchcenterAddUlmScoring(profile,g,gameKey,type,scope,ev,side){
       const cls=matchcenterClassifyUlmGoalEvent(ev,side);
       if(cls.lead)profile.leadGoals+=1;
       if(cls.equalizer)profile.equalizerGoals+=1;
-      if(matchcenterIsLateGoalEvent(ev))profile.lateGoals+=1;
+      if(matchcenterIsLateGoalEvent(ev,clockConvention))profile.lateGoals+=1;
       if(matchcenterIsClutchGoalEvent(ev,side))profile.clutchGoals+=1;
     }
   }
@@ -16601,12 +16631,11 @@ function matchcenterBuildGoalieMatchup(opponentKey,context,seasonKey){
   }
   return{rows,best,insights:insights.slice(0,5),games};
 }
-function matchcenterGoalAbsSeconds(ev){
-  const p=Number(ev?.period);
-  const s=parseGameClock(ev?.time);
-  if(!Number.isFinite(p)||s===null)return null;
-  const sec=(Math.max(1,p)-1)*1200+s;
-  if(!Number.isFinite(sec)||sec<0||sec>2400)return null;
+// S2e-Auftrag "Spielzeit normalisieren": vorher (period-1)*1200+s, impliziert 'relativ' für Halbzeit 2
+// (gleiche Fehlerklasse wie goalieEventAbsSeconds). convention kommt jetzt vom Aufrufer.
+function matchcenterGoalAbsSeconds(ev,convention){
+  const sec=gameClockToAbsoluteSeconds(ev?.period,ev?.time,convention);
+  if(!Number.isFinite(sec)||sec<0||sec>GAME_LENGTH_SEC)return null;
   return sec;
 }
 function matchcenterTimeValue(sec){
@@ -16642,9 +16671,10 @@ function matchcenterTimingStatsForGames(games,opponentKey,label='',mode='season'
       :matchcenterGameSideForOpponentKey(game,opponentKey,game._mcSeasonKey,mode);
     if(!side)continue;
     const goalTimes=[];
+    const clockConvention=detectSecondHalfConvention(game);
     for(const ev of game.events||[]){
       if(ev?.event_type!=='goal'||ev?.event_team!==side)continue;
-      const sec=matchcenterGoalAbsSeconds(ev);
+      const sec=matchcenterGoalAbsSeconds(ev,clockConvention);
       if(sec===null)continue;
       goalTimes.push(sec);
       stats.goals+=1;

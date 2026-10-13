@@ -179,27 +179,100 @@ function normalizePlayerDisplayName(name){
 function gameStableId(g){
   return g?.id||`${g?.date||g?.game_date||''}-${g?.home_team_name||''}-${g?.guest_team_name||''}`;
 }
-function parseGameClock(time){
-  if(time===undefined||time===null||time==='')return null;
-  const raw=String(time).trim();
-  const match=raw.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
-  if(!match)return null;
-  const minutes=Number(match[1]);
-  const seconds=match[2]===undefined?0:Number(match[2]);
+// Browser-Port von scripts/game-clock.mjs (S2e-Auftrag "Spielzeit normalisieren", nachgeschärfte
+// Fassung mit Mehrheitsregel + periodenbewusster Bereichsprüfung) — die dortigen Doc-Kommentare
+// (Mehrheitsregel, echtes Größer an der 20:00-Schwelle, Punkt-statt-Doppelpunkt-Fälle, Herkunft der
+// Konstanten, warum GAME_LENGTH_SEC nicht in parseGameClock geprüft wird) gelten unverändert auch
+// hier. parseGameClock/getPhaseKey hießen schon vorher so; die restlichen sechs Namen (Konstanten +
+// 5 Funktionen) sind bytegleich zu game-clock.mjs übernommen.
+//
+// Bewusst NICHT angefasst (eigener, vertagter Schritt — siehe Auftrag): scripts/model/normalize.mjs
+// hat eine eigene, unabhängige Version dieser Logik (parseClockSeconds/detectGameTimeFormat/
+// eventTiming), drift-getestet gegen parseGameClock hier in scripts/test-model-normalize.mjs. Die
+// Zusammenlegung beider Pfade ist beschlossen, aber bewusst auf einen eigenen Schritt vertagt.
+const HALF_LENGTH_SEC=20*60;
+const GAME_LENGTH_SEC=40*60;
+function parseGameClock(raw){
+  if(raw===undefined||raw===null||raw==='')return null;
+  const s=String(raw).trim();
+  const m=s.match(/^(\d{1,2})[:.](\d{1,2})$/);
+  if(!m)return null;
+  const minutes=Number(m[1]);
+  const seconds=Number(m[2]);
   if(!Number.isFinite(minutes)||!Number.isFinite(seconds)||seconds<0||seconds>=60)return null;
   return minutes*60+seconds;
 }
-function getPhaseKey(period,time){
+function detectSecondHalfConvention(game){
+  let durchlaufendVotes=0;
+  let relativVotes=0;
+  for(const ev of(game?.events||[])){
+    if(Number(ev?.period)!==2)continue;
+    const s=parseGameClock(ev?.time);
+    if(s===null)continue;
+    if(s>HALF_LENGTH_SEC)durchlaufendVotes++;
+    else relativVotes++;
+  }
+  if(durchlaufendVotes===0&&relativVotes===0)return null;
+  if(durchlaufendVotes===relativVotes)return'unklar';
+  return durchlaufendVotes>relativVotes?'durchlaufend':'relativ';
+}
+// classifyGameClock: siehe game-clock.mjs für die vollständige Begründung jedes status-Werts (u.a.
+// 'unsupportedPeriod' für period>=3 statt einem stillen null — "bauen wir, wenn es das erste Mal
+// vorkommt" — und 'outOfRange' als eigene Kategorie, getrennt von 'unparseable').
+function classifyGameClock(period,time,convention){
   const p=Number(period);
   const s=parseGameClock(time);
-  if(!Number.isFinite(p)||s===null)return'Unbekannt';
-  if(p===1&&s<=600)return'1.D 0-10min';
-  if(p===1)return'1.D 10-20min';
-  if(p===2&&s<=600)return'2.D 0-10min';
-  if(p===2)return'2.D 10-20min';
-  if(p===3&&s<=600)return'3.D 0-10min';
-  if(p===3)return'3.D 10-20min';
-  return'Unbekannt';
+  if(!Number.isFinite(p))return{status:'unknownPeriod',absSec:null};
+  if(s===null)return{status:'unparseable',absSec:null};
+  if(convention==='unklar')return{status:'gameExcluded',absSec:null};
+  if(p>=3)return{status:'unsupportedPeriod',absSec:null};
+  if(p===1){
+    if(s>GAME_LENGTH_SEC)return{status:'outOfRange',absSec:null};
+    return{status:'ok',absSec:s};
+  }
+  if(p===2){
+    if(convention==='durchlaufend'){
+      if(s<=HALF_LENGTH_SEC)return{status:'discardedByMajority',absSec:null};
+      if(s>GAME_LENGTH_SEC)return{status:'outOfRange',absSec:null};
+      return{status:'ok',absSec:s};
+    }
+    if(convention==='relativ'){
+      if(s>HALF_LENGTH_SEC)return{status:'discardedByMajority',absSec:null};
+      return{status:'ok',absSec:HALF_LENGTH_SEC+s};
+    }
+    return{status:'unknownConvention',absSec:null};
+  }
+  return{status:'unknownPeriod',absSec:null};
+}
+function gameClockToAbsoluteSeconds(period,time,convention){
+  return classifyGameClock(period,time,convention).absSec;
+}
+function resolveGameClockSeconds(game,period,time){
+  return gameClockToAbsoluteSeconds(period,time,detectSecondHalfConvention(game));
+}
+function countDiscardedSecondHalfEvents(game){
+  const convention=detectSecondHalfConvention(game);
+  if(convention===null||convention==='unklar')return 0;
+  let count=0;
+  for(const ev of(game?.events||[])){
+    if(Number(ev?.period)!==2)continue;
+    if(classifyGameClock(2,ev?.time,convention).status==='discardedByMajority')count++;
+  }
+  return count;
+}
+// getPhaseKey hieß schon vorher so, leitet jetzt von classifyGameClock() ab statt eigene Bereichslogik zu
+// duplizieren — jeder nicht-'ok'-Status (unlesbar, außer Reichweite, widerspricht der Mehrheit, ganzes
+// Spiel unklar, Periode >= 3) liefert "Unbekannt" statt einer erfundenen Phase. convention ist optional
+// mit demselben Default wie vorher implizit ('relativ'); bestehende Aufrufer ohne 3. Argument verhalten
+// sich für Halbzeit 1 unverändert. Periode 3 lieferte vorher noch eigene "3.D ..."-Phasen (kommt in den
+// Saisondaten nicht vor) — jetzt einheitlich "Unbekannt", wie der Rest dieses Moduls bei period>=3.
+function getPhaseKey(period,time,convention='relativ'){
+  const{status,absSec}=classifyGameClock(period,time,convention);
+  if(status!=='ok')return'Unbekannt';
+  const p=Number(period);
+  const within=p===1?absSec:absSec-HALF_LENGTH_SEC;
+  if(within<=600)return`${p}.D 0-10min`;
+  return`${p}.D 10-20min`;
 }
 function isYouthGame(g){
   const YOUTH=/\bU\s*\d{2}\b|Jugend|Junior|Youth|Nachwuchs/i;
@@ -787,10 +860,15 @@ function matchcenterPenaltyMinutes(ev){
   const m=raw.match(/(\d+)/);
   return m?Number(m[1]):0;
 }
-function matchcenterIsLateGoalEvent(ev){
+// S2e-Auftrag "Spielzeit normalisieren": vorher parseGameClock(ev.time)>=900 direkt auf dem rohen
+// Zeitstring, unterstellte für Halbzeit 2 immer die 'relativ'-Konvention (gleiche Fehlerklasse wie
+// isLateGoal in index.html). convention kommt jetzt vom Aufrufer (einmal pro Spiel ermittelt).
+function matchcenterIsLateGoalEvent(ev,convention){
   const p=Number(ev?.period);
-  const s=parseGameClock(ev?.time);
-  return Number.isFinite(p)&&p>=2&&s!==null&&s>=900;
+  if(!Number.isFinite(p)||p<2)return false;
+  const abs=gameClockToAbsoluteSeconds(p,ev?.time,convention);
+  if(abs===null)return false;
+  return(abs-(p-1)*HALF_LENGTH_SEC)>=900;
 }
 function matchcenterIsClutchGoalEvent(ev,side){
   const hg=Number(ev?.home_goals),gg=Number(ev?.guest_goals);
