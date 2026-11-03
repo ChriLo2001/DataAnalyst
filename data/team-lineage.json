@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "_readme": "Schema und Regeln: docs/spec/module/M1v.md. Von Hand gepflegt, nie automatisch ergänzt (siehe dort). team_id ist für Nachfolge nicht nutzbar (jede Saison neu vergeben) — teamKey ist ein stabiler, von Hand vergebener Slug, keine API-ID. Geprüft an den echten Team-Namen aus season-data/25-26.json und season-data/26-27.json (Aufgabe 5, S2e-Kaltstart-Phase).",
+  "lineage": [
+    {
+      "teamKey": "ptsv-freiburg",
+      "sinceSeason": "26/27",
+      "predecessors": [
+        { "teamKey": "breisgau-bandits", "weight": 1.0, "scope": { "models": true, "display": true } }
+      ],
+      "note": "Umbenennung, gleiches Vereinslogo (von Chris bestätigt). Unmittelbar vorangehende Saison -> scope.display zulässig."
+    },
+    {
+      "teamKey": "sg-heidelberg-mannheim",
+      "sinceSeason": "26/27",
+      "predecessors": [
+        { "teamKey": "fbc-heidelberg", "weight": 0.5, "scope": { "models": true, "display": true } },
+        { "teamKey": "floorball-mannheim", "weight": 0.5, "scope": { "models": true, "display": true } }
+      ],
+      "note": "Zusammenschluss zweier Vorgänger, je 14 Spiele Historie in 25/26 (von Chris bestätigt). Gewichte 0,5/0,5 mangels anderer Information — bei besserer Begründung (z. B. Kaderanteil) von Hand anpassen, Summe muss 1 bleiben. Annahme, zu überprüfen, sobald eigene 26/27-Daten vorliegen: Ligamittel-Gewichtung unterstellt, dass der Zusammenschluss genau so stark ist wie der Durchschnitt seiner Vorgänger — ein fusioniertes Team kann tatsächlich stärker (oder schwächer) sein als dieser Durchschnitt (von Chris angemerkt, S2e-Kaltstart-Phase)."
+    },
+    {
+      "teamKey": "sportvg-feuerbach-roessle",
+      "sinceSeason": "26/27",
+      "predecessors": [
+        { "teamKey": "sportvg-feuerbach", "weight": 1.0, "scope": { "models": true, "display": true } }
+      ],
+      "note": "Rössle ist die offizielle erste Mannschaft von Sportvg Feuerbach (25/26) — offizielle Einstufung, vom Verein bestätigt (nicht aus Kaderüberschneidung abgeleitet). \"Biber\" bleibt bewusst ohne Eintrag: neu in der Liga, keine Vererbung (siehe M1v.md: ein Team ohne lineage-Eintrag verhält sich wie heute)."
+    }
+  ]
+}

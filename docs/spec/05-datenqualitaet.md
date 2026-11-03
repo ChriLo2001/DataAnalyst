@@ -12,7 +12,7 @@ Unabhängig von den Modulen, als eigene kleine Aufgaben:
 
 1. **Eigentore:** `goal_type === 'owngoal'` darf keinem Spieler als Tor gutgeschrieben werden und keinen Assist erzeugen. Betrifft Scorer-, Clutch-, Duo- und Hall-of-Fame-Werte. Vorher/nachher-Diff der betroffenen Spieler im PR dokumentieren.
 2. **Penaltys:** `penalty_shot` als eigene Kennzahl ausweisen (Tore aus Penaltys), in Scorerwerten weiter enthalten.
-3. **Zeitformat:** Kumulierte Zeit in Halbzeit 2 erkennen (siehe M0). Prüfen, ob `parseGameClock`/`goalieEventAbsSeconds` das bereits korrekt behandeln; falls nicht, korrigieren und Phasen- und Timing-Auswertungen neu prüfen.
+3. **Zeitformat:** ✅ Erledigt (S2e-Auftrag "Spielzeit normalisieren"). Kumulierte Zeit in Halbzeit 2 wurde NICHT korrekt behandelt (`goalieEventAbsSeconds`/`getPhaseKey` unterstellten für Halbzeit 2 immer die relative Lesart). Zentral behoben in `scripts/game-clock.mjs` (Browser-Port in `matchcenter-core.js`): Mehrheitsregel je Spiel entscheidet relativ/durchlaufend/unklar, widersprechende Einzelereignisse werden verworfen statt falsch gerechnet, `parseClockString` (vorher `parseGameClock`) liest zusätzlich Punkt statt Doppelpunkt. Alle Phasen- und Timing-Auswertungen umgeleitet (siehe dortiger Bericht für die betroffenen Stellen).
 4. **Timeouts:** Events werden in M0/M7 genutzt. Im Dashboard mindestens in der Spielansicht anzeigen.
 5. **Datenstand:** Sichtbarer Hinweis „Daten bis Spieltag X (Datum)“.
 

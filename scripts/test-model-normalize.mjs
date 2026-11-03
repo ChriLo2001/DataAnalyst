@@ -36,7 +36,7 @@ function assertTrue(cond, label) {
 }
 
 // ── Echte Funktionen aus index.html ────────────────────────────────────
-const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
 function fnSource(name) {
   const m = new RegExp(`(^|\\n)function ${name}\\(`).exec(html);
   if (!m) throw new Error(`Funktion nicht gefunden: ${name}`);
@@ -63,7 +63,8 @@ const real = (() => {
       'normalizeOpponentNameForAllTime', 'isFreiburgTuebingenSgName', 'isMannheimLudwigshafenSgName'].map(fnSource),
     constSource('ULM_TEAM_ALIAS_KEYS'),
     ...['isUlmTeamName', 'detectUlmSide', 'seasonOrderIndex', 'matchcenterSeasonLabel', 'matchcenterSeasonIsUlmTuebingenSgEra',
-      'teamAliasSeasonMatches', 'normalizeTeamKey', 'teamAliasRuleMatches', 'isOwnTeam', 'getCanonicalTeamName', 'isYouthGame', 'parseGameClock'].map(fnSource),
+      'teamAliasSeasonMatches', 'normalizeTeamKey', 'teamAliasRuleMatches', 'isOwnTeam', 'getCanonicalTeamName', 'isYouthGame'].map(fnSource),
+    constSource('HALF_LENGTH_SEC'), constSource('GAME_LENGTH_SEC'), fnSource('parseClockString'),
   ].join('\n');
   const ctx = vm.createContext({ console, SEASON_CONFIG: seasonConfigStub, STATIC_SEASON_DATA: {}, TextDecoder });
   vm.runInContext(code, ctx);
@@ -93,12 +94,43 @@ console.log('== Drift-Test: Node-Regeln gegen die echten Funktionen aus index.ht
     const game = { home_team_name: h, guest_team_name: g };
     if (vm.runInContext('detectUlmSide', real)(game) !== N.detectUlmSide(game)) diffs.detectSide.push(`${h}|${g}`);
   }
+  // clock ist ABSICHTLICH kein reiner Drift-Check mehr (S2e-Auftrag "Spielzeit normalisieren", Teil A):
+  // index.html/matchcenter-core.js wurden auf scripts/game-clock.mjs umgestellt (strengerer, aber
+  // periodenunabhängiger Parser: "m:ss"/"mm:ss" mit Doppelpunkt/Punkt, keine bloßen Zahlen) —
+  // scripts/model/normalize.mjs::parseClockSeconds blieb bewusst UNVERÄNDERT (Auftrag: "Nicht anfassen").
+  // Die Zusammenlegung beider Pfade ist beschlossen, aber auf einen eigenen Schritt vertagt. Bis dahin
+  // muss dieser Test die Abweichung NICHT verschweigen, sondern genau benennen.
+  //
+  // Vollständige Tabelle über alle 15 Eingabewerte, Nachschärfung (geprüft, nicht angenommen): GENAU 4
+  // weichen ab, und ALLE VIER sind inhaltlich (eine Seite liest einen Wert, den die andere verwirft) —
+  // KEINE davon ist nur formal (null gegen NaN); eine solche rein formale Abweichung kam in dieser Liste
+  // nicht vor, es gab also nichts anzugleichen.
+  //   "0:41"→41/41  "20:00"→1200/1200  "12"→null/720 [inhaltlich]  "5:60"→null/null
+  //   "3.25"→205/null [inhaltlich]  ""→null/null  null→null/null  undefined→null/null
+  //   " 9:05 "→545/545  "1:2"→62/62  "100:00"→null/null  "31.41"→1901/null [inhaltlich]
+  //   "abc"→null/null  41→null/2460 [inhaltlich]  "00:00"→0/0
+  // (Format: Eingabe -> parseClockString(index.html)/parseClockSeconds(normalize.mjs))
+  //
+  // Die vier inhaltlichen Abweichungen sind aber NICHT vier gleichartige Geschmacksunterschiede, sondern
+  // zwei verschiedene Dinge:
+  // - "3.25" und "31.41" (Punkt statt Doppelpunkt): dasselbe reale Ereignis, zwei Lesarten. normalize.mjs
+  //   liest hier FALSCH (verwirft ein tatsächlich vorhandenes, gültiges Ereignis als unparseable) —
+  //   index.html liest RICHTIG. Das sind zwei dokumentierte Fehler im Modellpfad, keine Geschmacksfrage;
+  //   sie verschwinden beim Zusammenlegen der beiden Pfade (siehe oben), nicht durch eine Entscheidung.
+  // - "12" und 41 (bloße Zahl ohne Trenner): index.html lehnt das jetzt ABSICHTLICH ab (eine bloße Zahl
+  //   ist nie eindeutig als Minuten:Sekunden von einer reinen Minutenangabe zu unterscheiden), während
+  //   normalize.mjs sie weiterhin als "Minuten, 0 Sekunden" liest. Das ist keine Korrektur eines Fehlers
+  //   im Modellpfad, sondern eine bewusste Verschärfung, die der Modellpfad noch nicht nachvollzogen hat
+  //   — beim Zusammenlegen braucht DAS eine explizite Entscheidung, keine automatische Angleichung.
+  const clockDiffs = [];
   for (const t of ['0:41', '20:00', '12', '5:60', '3.25', '', null, undefined, ' 9:05 ', '1:2', '100:00', '31.41', 'abc', 41, '00:00']) {
-    if (vm.runInContext('parseGameClock', real)(t) !== N.parseClockSeconds(t)) diffs.clock.push(String(t));
+    if (vm.runInContext('parseClockString', real)(t) !== N.parseClockSeconds(t)) clockDiffs.push(String(t));
   }
+  assertEqual(clockDiffs, ['12', '3.25', '31.41', '41'], 'Drift clock: NUR die vier namentlich dokumentierten inhaltlichen Abweichungen (siehe Tabelle oben: 2 Fehler im Modellpfad bei Punkt-Zeiten, 2 bewusste Verschärfungen bei bloßen Zahlen — keine davon nur formal) — jede andere Abweichung wäre unbeabsichtigt und lässt diesen Test rot werden');
   for (const f of [{}, { league_name: 'Verbandsliga' }, { league_name: 'U15 Meisterschaft' }, { competition_name: 'Jugend' }, { season: { name: 'Junior Cup' } }, { spielplan_name: 'Nachwuchs' }, { game_type: 'U 17' }]) {
     if (vm.runInContext('isYouthGame', real)(f) !== N.isYouthGame(f)) diffs.youth.push(JSON.stringify(f));
   }
+  delete diffs.clock;
   for (const [k, v] of Object.entries(diffs)) assertEqual(v, [], `Drift ${k}: keine Abweichung zu index.html`);
   assertEqual(N.SEASON_KEYS_ORDER, Object.keys(seasonConfigStub), 'SEASON_KEYS_ORDER entspricht den Schlüsseln von SEASON_CONFIG in index.html');
   for (const a of ['VfB Ulm', 'SG Sparks Ulm-Tübingen', 'SG Sparks Tübingen-Ulm']) assertTrue(N.isUlmTeamName(a), `isUlmTeamName("${a}")`);

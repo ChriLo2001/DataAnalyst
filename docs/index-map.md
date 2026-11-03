@@ -1,10 +1,10 @@
 # Code-Karte: index.html
 
-<!-- index-map: source-sha256=64f0fa5a8014627d1193eb00654398f2b63036b597311796668dac2d1131f7dc source-lines=24265 -->
+<!-- index-map: source-sha256=56b444e547cab9cc15bec853ac1b218317d87175a1cba283d95fa88c44f058ac source-lines=23646 -->
 
 Automatisch erzeugt von `scripts/build-index-map.mjs`. Nicht von Hand bearbeiten — bei Änderungen an index.html erneut ausführen: `node scripts/build-index-map.mjs --write`. Vor gezieltem Lesen prüfen, ob die Karte noch aktuell ist: `node scripts/build-index-map.mjs --check`.
 
-index.html: 24265 Zeilen gesamt (SHA-256 `64f0fa5a8014627d1193eb00654398f2b63036b597311796668dac2d1131f7dc`). Statischer `<style>`-Block: Zeile 8–1544. Haupt-`<script>`-Block: Zeile 1645–24261.
+index.html: 23646 Zeilen gesamt (SHA-256 `56b444e547cab9cc15bec853ac1b218317d87175a1cba283d95fa88c44f058ac`). Statischer `<style>`-Block: Zeile 11–1550. Haupt-`<script>`-Block: Zeile 1664–23642.
 
 **Leseregel (siehe CLAUDE.md):** index.html nie vollständig laden. Diese Karte nennen, den gesuchten Namen im Register unten finden, dann nur den genannten Zeilenbereich lesen.
 
@@ -14,3254 +14,3089 @@ Top-Level-Blöcke (Funktionen oder Daten-consts) ab 30 Zeilen oder 2000 Zeichen 
 
 | Name | Art | Zeile | Zeilen |
 |---|---|---|---|
-| `SEASON_CONFIG` | const-data | 1690–1781 | 92 |
-| `TYPE_DESC` | const-data | 1884–1907 | 24 |
-| `ROLE_TRAIT_COLORS` | const-data | 1992–2031 | 40 |
-| `ROLE_TRAIT_TOOLTIPS` | const-data | 2053–2092 | 40 |
-| `UI_TEXT_REPLACEMENTS` | const-data | 2496–2513 | 18 |
-| `appendSeasonGameDiagnostics` | function | 2671–2720 | 50 |
-| `resolveRosterPlayerByRef` | function | 2923–2953 | 31 |
-| `processGame` | function | 3056–3113 | 58 |
-| `classifyGameForStats` | function | 3167–3208 | 42 |
-| `buildMatchdays` | function | 3326–3367 | 42 |
-| `parseAppHash` | function | 3536–3567 | 32 |
-| `applyAppHash` | function | 3774–3804 | 31 |
-| `buildStandings` | function | 3885–3924 | 40 |
-| `getOrCreatePlayerProfile` | function | 4056–4088 | 33 |
-| `toPublicPlayerRegistry` | function | 4243–4272 | 30 |
-| `aggregateAllTimePlayers` | function | 4274–4307 | 34 |
-| `emptySpecialTeamsStats` | function | 4368–4408 | 41 |
-| `mergeSpecialTeamsStats` | function | 4422–4451 | 30 |
-| `buildSpecialTeamsForGame` | function | 4567–4760 | 194 |
-| `addGoalieGameToStats` | function | 4820–4870 | 51 |
-| `buildGoalieGameRecord` | function | 4872–4920 | 49 |
-| `buildGoalieStatsForSeason` | function | 4922–5001 | 80 |
-| `aggregateGoalieAlltimeStats` | function | 5003–5037 | 35 |
-| `getAssistDiagnostics` | function | 5064–5116 | 53 |
-| `buildPlayerEvents` | function | 5246–5330 | 85 |
-| `computeMetrics` | function | 5350–5482 | 133 |
-| `buildSoloDuoProfile` | function | 5504–5547 | 44 |
-| `identityInputs` | function | 5634–5691 | 58 |
-| `buildIdentityProfiles` | function | 5735–5966 | 232 |
-| `assignStatus` | function | 6013–6198 | 186 |
-| `fetchTextWithDiagnostics` | function | 6233–6262 | 30 |
-| `fetchSeasonGameRaw` | function | 6298–6337 | 40 |
-| `validateGameStructure` | function | 6547–6586 | 40 |
-| `buildDryRunReport` | function | 6653–6715 | 63 |
-| `stageSeasonDataPreview` | function | 6786–6837 | 52 |
-| `rSeasonDataPreviewCard` | function | 6890–6925 | 36 |
-| `computeEinsatzCenterStats` | function | 7119–7149 | 31 |
-| `rEinsatzCenterStats` | function | 7156–7174 | 19 |
-| `einsatzCenterDeserializeAutosave` | function | 7377–7410 | 34 |
-| `rEinsatzCenterGroupEditor` | function | 7720–7750 | 31 |
-| `rEinsatzCenterRosterSuggestionCard` | function | 7767–7797 | 31 |
-| `rEinsatzCenterGameEditor` | function | 7798–7850 | 53 |
-| `rEinsatzCenterEditPage` | function | 7851–7898 | 48 |
-| `loadSeasonData` | function | 8146–8604 | 459 |
-| `loadSeasonForGlobal` | function | 8644–8674 | 31 |
-| `loadSeason` | function | 8692–8743 | 52 |
-| `ensureHallOfFameIntroOverlay` | function | 8771–8803 | 33 |
-| `rMatrix` | function | 9191–9235 | 45 |
-| `rRadar` | function | 9268–9315 | 48 |
-| `rClutch` | function | 9318–9350 | 33 |
-| `rTimeline` | function | 9353–9461 | 109 |
-| `rOppBreakdown` | function | 9483–9515 | 33 |
-| `generatePlayerInsights` | function | 9518–9561 | 44 |
-| `rInsights` | function | 9579–9630 | 52 |
-| `buildGoalieAnalysisModel` | function | 9897–10055 | 159 |
-| `buildGoalieRoleProfile` | function | 10120–10193 | 74 |
-| `rGoalieInsights` | function | 10312–10333 | 22 |
-| `buildOpponentIntelligence` | function | 10775–10828 | 54 |
-| `buildBestThirdManOptions` | function | 10978–11008 | 31 |
-| `getDuoDirectScorerGameCounts` | function | 11009–11040 | 32 |
-| `buildAnnotatedGoalEventsForGame` | function | 11090–11190 | 101 |
-| `buildResponseGoalStatsRaw` | function | 11233–11281 | 49 |
-| `buildMomentumSwingStatsRaw` | function | 11294–11364 | 71 |
-| `buildDuoFloorCeiling` | function | 11371–11412 | 42 |
-| `buildDuoWithWithoutImpact` | function | 11508–11541 | 34 |
-| `buildDuoCompatibility` | function | 11596–11618 | 23 |
-| `buildDuoProAnalysis` | function | 11653–11696 | 44 |
-| `rDuoCenterPro` | function | 11697–11811 | 115 |
-| `rInteractiveDuoCenterPro` | function | 11886–11941 | 56 |
-| `getDifficultConnectionRowsForPlayer` | function | 11945–11989 | 45 |
-| `getRosterImpactPlayerGames` | function | 12032–12072 | 41 |
-| `buildRosterImpactAnalysis` | function | 12098–12157 | 60 |
-| `rDifficultConnectionList` | function | 12212–12236 | 25 |
-| `rDifficultConnectionListCompactLegacy` | function | 12237–12278 | 42 |
-| `rDifficultConnectionListCompact` | function | 12279–12317 | 39 |
-| `rDifficultConnectionsCard` | function | 12318–12354 | 37 |
-| `RESPONSE_MOMENTUM_TOOLTIPS` | const-data | 12357–12388 | 32 |
-| `rResponseMomentumOverviewCard` | function | 12432–12455 | 24 |
-| `rMatchcenterResponseMomentum` | function | 12502–12539 | 38 |
-| `getTeamAllTimeRecords` | function | 12541–12581 | 41 |
-| `getAllTimeIdentityStandings` | function | 12662–12696 | 35 |
-| `buildRecencyWeightedGlobalIdentityProfile` | function | 12698–12745 | 48 |
-| `rHallOfFameHero` | function | 12801–12826 | 26 |
-| `hallGoalieRowFromStats` | function | 12924–12956 | 33 |
-| `rHallGoalieRankCard` | function | 13009–13040 | 32 |
-| `rHallGoalieLegends` | function | 13058–13090 | 33 |
-| `buildDuoComparison` | function | 13485–13504 | 20 |
-| `rDuoCompareSummaryCards` | function | 13510–13540 | 31 |
-| `rDuoComparisonPage` | function | 13641–13651 | 11 |
-| `buildComparisonExtraMetrics` | function | 13696–13753 | 58 |
-| `buildGoalieComparisonDataset` | function | 13790–13840 | 51 |
-| `buildComparisonDataset` | function | 13841–13876 | 36 |
-| `rKpiMirrorRows` | function | 13902–13961 | 60 |
-| `rKpiRadar` | function | 13973–14007 | 35 |
-| `rKpiTrendCompare` | function | 14054–14120 | 67 |
-| `rKpiOpponentStrength` | function | 14121–14148 | 28 |
-| `rKpiInfoCards` | function | 14159–14190 | 32 |
-| `buildComparisonSummary` | function | 14191–14222 | 32 |
-| `rComparisonStyles` | function | 14260–14297 | 38 |
-| `rComparisonCenterPage` | function | 14298–14348 | 51 |
-| `rGlobalDnaBars` | function | 14389–14418 | 30 |
-| `buildSeasonPlayerDashModel` | function | 14488–14524 | 37 |
-| `buildAlltimePlayerDashModel` | function | 14525–14567 | 43 |
-| `rPlayerDashStyles` | function | 14568–14579 | 12 |
-| `rPlayerDash` | function | 14586–14624 | 39 |
-| `rGlobalOverview` | function | 14683–14734 | 52 |
-| `rGlobalDevelopment` | function | 14754–14792 | 39 |
-| `rGlobalDuoNetwork` | function | 14854–15051 | 198 |
-| `rGlobalOpponentSpecialist` | function | 15053–15098 | 46 |
-| `buildFieldPlayerExplanation` | function | 15164–15238 | 75 |
-| `buildGoaliePlayerExplanation` | function | 15239–15292 | 54 |
-| `buildPlayerIntelligence` | function | 15302–15331 | 30 |
-| `rPlayerExplanation` | function | 15337–15388 | 52 |
-| `rAllTimePlayersPage` | function | 15390–15430 | 41 |
-| `rHallOfFamePage` | function | 15432–15520 | 89 |
-| `rLexiconPage` | function | 15547–15719 | 173 |
-| `buildConfidence` | function | 15743–15788 | 46 |
-| `getMatchcenterOpponents` | function | 16110–16142 | 33 |
-| `getMatchcenterDirectOpponents` | function | 16143–16173 | 31 |
-| `matchcenterAnalyzeDirect` | function | 16194–16230 | 37 |
-| `matchcenterFinalizeOpponentPlayerProfiles` | function | 16377–16423 | 47 |
-| `matchcenterBuildOpponentScouting` | function | 16424–16495 | 72 |
-| `matchcenterEnsureUlmPlayer` | function | 16518–16555 | 38 |
-| `matchcenterAddUlmScoring` | function | 16580–16617 | 38 |
-| `matchcenterFinalizeUlmPlayers` | function | 16618–16686 | 69 |
-| `matchcenterBuildUlmPlayerScouting` | function | 16687–16741 | 55 |
-| `matchcenterEnsureOpponentDuo` | function | 16759–16791 | 33 |
-| `matchcenterFinalizeOpponentDuos` | function | 16818–16852 | 35 |
-| `matchcenterBuildOpponentDuos` | function | 16853–16897 | 45 |
-| `matchcenterEnsureUlmDuo` | function | 16912–16949 | 38 |
-| `matchcenterFinalizeUlmDuos` | function | 16969–17004 | 36 |
-| `matchcenterBuildUlmDuos` | function | 17005–17047 | 43 |
-| `matchcenterBuildSpecialTeamsMatchup` | function | 17081–17128 | 48 |
-| `matchcenterBuildGoalieMatchup` | function | 17151–17193 | 43 |
-| `matchcenterTimingStatsForGames` | function | 17226–17262 | 37 |
-| `rMatchcenterUlmScouting` | function | 17608–17644 | 37 |
-| `rMatchcenterOpponentScouting` | function | 17645–17680 | 36 |
-| `rMatchcenterUlmDuos` | function | 17789–17831 | 43 |
-| `rMatchcenterOpponentDuos` | function | 17832–17874 | 43 |
-| `rMatchcenterSpecialTeams` | function | 17887–17936 | 50 |
-| `matchcenterBuildPlanConfidence` | function | 18027–18061 | 35 |
-| `matchcenterBuildIntelligenceDataQuality` | function | 18110–18160 | 51 |
-| `matchcenterBuildOpponentDNA` | function | 18161–18273 | 113 |
-| `matchcenterBuildOpponentAlarm` | function | 18340–18449 | 110 |
-| `matchcenterBuildIntelligenceSignals` | function | 18496–18542 | 47 |
-| `buildMatchIntelligenceFromContext` | function | 18543–18597 | 55 |
-| `buildMatchStories` | function | 18646–18675 | 30 |
-| `buildDigitalCoachReport` | function | 18746–18778 | 33 |
-| `buildMatchdayCaptionBlocks` | function | 18850–18879 | 30 |
-| `buildSocialMediaContent` | function | 18880–18928 | 49 |
-| `lineupRosterGamesForPlayer` | function | 18996–19043 | 48 |
-| `buildLineupExperienceProfile` | function | 19044–19086 | 43 |
-| `buildLineupOpponentDNAFit` | function | 19099–19142 | 44 |
-| `classifyLineIdentity` | function | 19143–19190 | 48 |
-| `lineupPlayerProfile` | function | 19191–19266 | 76 |
-| `buildLineupAnalysis` | function | 19267–19400 | 134 |
-| `buildLineupScoreBreakdowns` | function | 19401–19430 | 30 |
-| `lineupEvaluateComplementCandidate` | function | 19514–19591 | 78 |
-| `buildTeamLineBalance` | function | 19610–19653 | 44 |
-| `buildLineupRecommendations` | function | 19688–19766 | 79 |
-| `matchcenterBuildMatchPlan` | function | 19795–19940 | 146 |
-| `rMatchcenterOpponentDNA` | function | 19975–20007 | 33 |
-| `rMatchcenterIntelOverview` | function | 20030–20075 | 46 |
-| `rMatchcenterDigitalCoach` | function | 20117–20181 | 65 |
-| `rMatchcenterLockerRoomSheet` | function | 20199–20254 | 56 |
-| `downloadMatchdayStory` | window | 20273–20320 | 48 |
-| `rSocialVideoBlock` | function | 20324–20349 | 26 |
-| `rMatchcenterSocialMediaCenter` | function | 20374–20427 | 54 |
-| `rMatchcenterLineupBuilder` | function | 20459–20531 | 73 |
-| `rLineupBuilderAvailablePanel` | function | 20546–20593 | 48 |
-| `rLineupRecommendationMode` | function | 20609–20642 | 34 |
-| `rLineupTestLine` | function | 20656–20704 | 49 |
-| `rLineupBuilderPage` | function | 20722–20755 | 34 |
-| `rMatchcenterScoutingSummary` | function | 20756–20799 | 44 |
-| `getTeamLogoUrlForStory` | function | 20853–20882 | 30 |
-| `matchcenterStoryPlayer` | function | 20962–20994 | 33 |
-| `matchcenterStoryPickFactItems` | function | 21062–21114 | 53 |
-| `buildMatchcenterStoryPreviewData` | function | 21338–21449 | 112 |
-| `matchcenterStoryVisibleFacts` | function | 21456–21486 | 31 |
-| `rMatchcenterStoryPreview` | function | 21505–21574 | 70 |
-| `fitMatchcenterStoryLayout` | function | 21581–21623 | 43 |
-| `socialVideoDistributeSceneDurations` | function | 21673–21704 | 32 |
-| `socialVideoTopScorerAsOf` | function | 21810–21839 | 30 |
-| `socialVideoOpponentSceneData` | function | 21842–21889 | 48 |
-| `socialVideoBuildStorySpec` | function | 21906–21957 | 52 |
-| `socialVideoBuildFeedSpec` | function | 21960–22009 | 50 |
-| `socialVideoStoryFrameData` | function | 22048–22081 | 34 |
-| `rSocialVideoFeedFrame` | function | 22085–22121 | 37 |
-| `downloadSocialVideoStandbild` | window | 22144–22194 | 51 |
-| `rMatchcenterPage` | function | 22196–22343 | 148 |
-| `rTeamPage` | function | 22344–22654 | 311 |
-| `_render` | function | 22704–22868 | 165 |
-| `uiObjektseite` | function | 23186–23219 | 34 |
-| `rMatchdayDetailPage` | function | 23439–23474 | 36 |
-| `buildOverviewCards` | function | 23716–23756 | 41 |
+| `SEASON_CONFIG` | const-data | 1718–1812 | 95 |
+| `TYPE_DESC` | const-data | 1915–1938 | 24 |
+| `ROLE_TRAIT_COLORS` | const-data | 2023–2062 | 40 |
+| `ROLE_TRAIT_TOOLTIPS` | const-data | 2084–2123 | 40 |
+| `appendSeasonGameDiagnostics` | function | 2561–2626 | 66 |
+| `resolveRosterPlayerByRef` | function | 2844–2874 | 31 |
+| `processGame` | function | 2957–3021 | 65 |
+| `parseAppHash` | function | 3271–3302 | 32 |
+| `applyAppHash` | function | 3509–3539 | 31 |
+| `getOrCreatePlayerProfile` | function | 3769–3801 | 33 |
+| `applySeasonScoringToRegistry` | function | 3878–3910 | 33 |
+| `toPublicPlayerRegistry` | function | 3983–4012 | 30 |
+| `aggregateAllTimePlayers` | function | 4014–4053 | 40 |
+| `emptySpecialTeamsStats` | function | 4116–4156 | 41 |
+| `mergeSpecialTeamsStats` | function | 4170–4199 | 30 |
+| `buildSpecialTeamsForGame` | function | 4321–4517 | 197 |
+| `addGoalieGameToStats` | function | 4577–4627 | 51 |
+| `buildGoalieGameRecord` | function | 4629–4680 | 52 |
+| `buildGoalieStatsForSeason` | function | 4682–4761 | 80 |
+| `aggregateGoalieAlltimeStats` | function | 4763–4801 | 39 |
+| `getAssistDiagnostics` | function | 4828–4880 | 53 |
+| `buildPlayerEvents` | function | 5011–5106 | 96 |
+| `computeMetrics` | function | 5126–5259 | 134 |
+| `buildSoloDuoProfile` | function | 5281–5324 | 44 |
+| `identityInputs` | function | 5415–5472 | 58 |
+| `buildIdentityProfiles` | function | 5516–5747 | 232 |
+| `assignStatus` | function | 5794–5979 | 186 |
+| `fetchTextWithDiagnostics` | function | 6014–6043 | 30 |
+| `fetchSeasonGameRaw` | function | 6079–6118 | 40 |
+| `validateGameStructure` | function | 6306–6345 | 40 |
+| `buildDryRunReport` | function | 6412–6474 | 63 |
+| `stageSeasonDataPreview` | function | 6545–6596 | 52 |
+| `rSeasonDataPreviewCard` | function | 6649–6684 | 36 |
+| `computeEinsatzCenterStats` | function | 6878–6908 | 31 |
+| `rEinsatzCenterStats` | function | 6915–6933 | 19 |
+| `einsatzCenterDeserializeAutosave` | function | 7136–7169 | 34 |
+| `rEinsatzCenterGroupEditor` | function | 7479–7509 | 31 |
+| `rEinsatzCenterRosterSuggestionCard` | function | 7526–7556 | 31 |
+| `rEinsatzCenterGameEditor` | function | 7557–7609 | 53 |
+| `rEinsatzCenterEditPage` | function | 7610–7657 | 48 |
+| `loadSeasonData` | function | 7905–8374 | 470 |
+| `loadSeasonForGlobal` | function | 8414–8444 | 31 |
+| `loadSeason` | function | 8462–8513 | 52 |
+| `ensureHallOfFameIntroOverlay` | function | 8541–8573 | 33 |
+| `rSeasonProfileKpis` | function | 8942–8970 | 29 |
+| `rMatrix` | function | 8986–9030 | 45 |
+| `rRadar` | function | 9063–9110 | 48 |
+| `rClutch` | function | 9113–9145 | 33 |
+| `rTimeline` | function | 9148–9256 | 109 |
+| `rOppBreakdown` | function | 9278–9310 | 33 |
+| `generatePlayerInsights` | function | 9313–9356 | 44 |
+| `rInsights` | function | 9374–9425 | 52 |
+| `buildGoalieAnalysisModel` | function | 9699–9857 | 159 |
+| `buildGoalieRoleProfile` | function | 9925–9998 | 74 |
+| `rGoalieInsights` | function | 10138–10159 | 22 |
+| `buildOpponentIntelligence` | function | 10602–10655 | 54 |
+| `buildBestThirdManOptions` | function | 10805–10838 | 34 |
+| `getDuoDirectScorerGameCounts` | function | 10839–10870 | 32 |
+| `buildAnnotatedGoalEventsForGame` | function | 10920–11033 | 114 |
+| `buildResponseGoalStatsRaw` | function | 11076–11124 | 49 |
+| `buildMomentumSwingStatsRaw` | function | 11137–11207 | 71 |
+| `buildDuoFloorCeiling` | function | 11214–11255 | 42 |
+| `buildDuoWithWithoutImpact` | function | 11351–11384 | 34 |
+| `buildDuoCompatibility` | function | 11450–11472 | 23 |
+| `buildDuoProAnalysis` | function | 11509–11552 | 44 |
+| `rDuoCenterPro` | function | 11553–11672 | 120 |
+| `rInteractiveDuoCenterPro` | function | 11747–11802 | 56 |
+| `getDifficultConnectionRowsForPlayer` | function | 11806–11850 | 45 |
+| `getRosterImpactPlayerGames` | function | 11943–11984 | 42 |
+| `buildRosterImpactAnalysis` | function | 12018–12086 | 69 |
+| `rDifficultConnectionList` | function | 12163–12187 | 25 |
+| `rDifficultConnectionListCompactLegacy` | function | 12188–12229 | 42 |
+| `rDifficultConnectionListCompact` | function | 12230–12268 | 39 |
+| `rDifficultConnectionsCard` | function | 12269–12305 | 37 |
+| `RESPONSE_MOMENTUM_TOOLTIPS` | const-data | 12308–12339 | 32 |
+| `rResponseMomentumOverviewCard` | function | 12402–12425 | 24 |
+| `rMatchcenterResponseMomentum` | function | 12472–12509 | 38 |
+| `getTeamAllTimeRecords` | function | 12511–12551 | 41 |
+| `getAllTimeIdentityStandings` | function | 12632–12666 | 35 |
+| `buildRecencyWeightedGlobalIdentityProfile` | function | 12668–12715 | 48 |
+| `rHallOfFameHero` | function | 12771–12796 | 26 |
+| `hallGoalieRowFromStats` | function | 12894–12926 | 33 |
+| `rHallGoalieRankCard` | function | 12979–13010 | 32 |
+| `rHallGoalieAwardCards` | function | 13060–13080 | 21 |
+| `rHallGoalieLegends` | function | 13081–13113 | 33 |
+| `buildDuoComparison` | function | 13508–13527 | 20 |
+| `rDuoCompareSummaryCards` | function | 13533–13563 | 31 |
+| `rDuoComparisonPage` | function | 13664–13674 | 11 |
+| `buildComparisonExtraMetrics` | function | 13719–13776 | 58 |
+| `buildGoalieComparisonDataset` | function | 13813–13863 | 51 |
+| `buildComparisonDataset` | function | 13864–13899 | 36 |
+| `rKpiMirrorRows` | function | 13939–13998 | 60 |
+| `rKpiRadar` | function | 14010–14044 | 35 |
+| `rKpiTrendCompare` | function | 14091–14157 | 67 |
+| `rKpiOpponentStrength` | function | 14158–14185 | 28 |
+| `rKpiInfoCards` | function | 14196–14227 | 32 |
+| `buildComparisonSummary` | function | 14228–14259 | 32 |
+| `rComparisonStyles` | function | 14297–14334 | 38 |
+| `rComparisonCenterPage` | function | 14335–14385 | 51 |
+| `rGlobalDnaBars` | function | 14426–14455 | 30 |
+| `buildSeasonPlayerDashModel` | function | 14525–14561 | 37 |
+| `buildAlltimePlayerDashModel` | function | 14562–14604 | 43 |
+| `rPlayerDashStyles` | function | 14605–14616 | 12 |
+| `rPlayerDash` | function | 14623–14661 | 39 |
+| `rGlobalOverview` | function | 14720–14771 | 52 |
+| `rGlobalDevelopment` | function | 14791–14829 | 39 |
+| `rGlobalDuoNetwork` | function | 14891–15088 | 198 |
+| `rGlobalOpponentSpecialist` | function | 15090–15135 | 46 |
+| `buildFieldPlayerExplanation` | function | 15201–15275 | 75 |
+| `buildGoaliePlayerExplanation` | function | 15276–15329 | 54 |
+| `buildPlayerIntelligence` | function | 15339–15368 | 30 |
+| `rPlayerExplanation` | function | 15374–15425 | 52 |
+| `rAllTimePlayersPage` | function | 15427–15467 | 41 |
+| `rHallOfFamePage` | function | 15469–15557 | 89 |
+| `rLexiconPage` | function | 15584–15756 | 173 |
+| `buildConfidence` | function | 15773–15818 | 46 |
+| `getMatchcenterOpponents` | function | 15982–16014 | 33 |
+| `getMatchcenterDirectOpponents` | function | 16015–16045 | 31 |
+| `matchcenterAnalyzeDirect` | function | 16048–16084 | 37 |
+| `matchcenterEnsureUlmPlayer` | function | 16133–16170 | 38 |
+| `matchcenterAddUlmScoring` | function | 16195–16235 | 41 |
+| `matchcenterFinalizeUlmPlayers` | function | 16236–16304 | 69 |
+| `matchcenterBuildUlmPlayerScouting` | function | 16305–16359 | 55 |
+| `matchcenterEnsureOpponentDuo` | function | 16377–16409 | 33 |
+| `matchcenterFinalizeOpponentDuos` | function | 16436–16470 | 35 |
+| `matchcenterBuildOpponentDuos` | function | 16471–16515 | 45 |
+| `matchcenterEnsureUlmDuo` | function | 16530–16567 | 38 |
+| `matchcenterFinalizeUlmDuos` | function | 16587–16622 | 36 |
+| `matchcenterBuildUlmDuos` | function | 16623–16665 | 43 |
+| `matchcenterBuildSpecialTeamsMatchup` | function | 16699–16746 | 48 |
+| `matchcenterBuildGoalieMatchup` | function | 16769–16814 | 46 |
+| `matchcenterTimingStatsForGames` | function | 16846–16883 | 38 |
+| `rMatchcenterUlmScouting` | function | 17227–17263 | 37 |
+| `rMatchcenterOpponentScouting` | function | 17264–17299 | 36 |
+| `rMatchcenterUlmDuos` | function | 17408–17450 | 43 |
+| `rMatchcenterOpponentDuos` | function | 17451–17493 | 43 |
+| `rMatchcenterSpecialTeams` | function | 17506–17555 | 50 |
+| `matchcenterBuildPlanConfidence` | function | 17646–17693 | 48 |
+| `matchcenterBuildIntelligenceDataQuality` | function | 17742–17811 | 70 |
+| `matchcenterBuildOpponentDNA` | function | 17812–17924 | 113 |
+| `matchcenterBuildOpponentAlarm` | function | 17991–18100 | 110 |
+| `matchcenterBuildIntelligenceSignals` | function | 18147–18193 | 47 |
+| `buildMatchIntelligenceFromContext` | function | 18194–18248 | 55 |
+| `buildMatchStories` | function | 18297–18326 | 30 |
+| `buildDigitalCoachReport` | function | 18397–18429 | 33 |
+| `buildMatchdayCaptionBlocks` | function | 18501–18530 | 30 |
+| `buildSocialMediaContent` | function | 18531–18579 | 49 |
+| `lineupRosterGamesForPlayer` | function | 18647–18694 | 48 |
+| `buildLineupExperienceProfile` | function | 18695–18737 | 43 |
+| `buildLineupOpponentDNAFit` | function | 18750–18793 | 44 |
+| `classifyLineIdentity` | function | 18794–18841 | 48 |
+| `lineupPlayerProfile` | function | 18842–18917 | 76 |
+| `buildLineupAnalysis` | function | 18918–19051 | 134 |
+| `buildLineupScoreBreakdowns` | function | 19052–19081 | 30 |
+| `lineupEvaluateComplementCandidate` | function | 19165–19243 | 79 |
+| `buildTeamLineBalance` | function | 19269–19312 | 44 |
+| `buildLineupRecommendations` | function | 19349–19430 | 82 |
+| `matchcenterBuildMatchPlan` | function | 19459–19604 | 146 |
+| `rMatchcenterOpponentDNA` | function | 19639–19671 | 33 |
+| `rMatchcenterIntelOverview` | function | 19694–19739 | 46 |
+| `rMatchcenterDigitalCoach` | function | 19781–19845 | 65 |
+| `rMatchcenterLockerRoomSheet` | function | 19863–19918 | 56 |
+| `downloadMatchdayStory` | window | 19937–19984 | 48 |
+| `rSocialVideoBlock` | function | 19988–20019 | 32 |
+| `generateSocialVideoVideos` | window | 20029–20070 | 42 |
+| `rMatchcenterSocialMediaCenter` | function | 20121–20174 | 54 |
+| `rMatchcenterLineupBuilder` | function | 20206–20278 | 73 |
+| `rLineupBuilderAvailablePanel` | function | 20293–20340 | 48 |
+| `rLineupRecommendationMode` | function | 20356–20389 | 34 |
+| `rLineupTestLine` | function | 20403–20451 | 49 |
+| `rLineupBuilderPage` | function | 20469–20503 | 35 |
+| `rMatchcenterScoutingSummary` | function | 20504–20547 | 44 |
+| `getTeamLogoUrlForStory` | function | 20592–20621 | 30 |
+| `matchcenterStoryPickFactItems` | function | 20744–20796 | 53 |
+| `buildMatchcenterStoryPreviewData` | function | 21015–21126 | 112 |
+| `matchcenterStoryVisibleFacts` | function | 21133–21163 | 31 |
+| `rMatchcenterStoryPreview` | function | 21182–21251 | 70 |
+| `fitMatchcenterStoryLayout` | function | 21258–21300 | 43 |
+| `rMatchcenterPage` | function | 21379–21527 | 149 |
+| `rTeamPage` | function | 21528–21866 | 339 |
+| `exportExcel` | function | 21871–21896 | 26 |
+| `_render` | function | 21920–22089 | 170 |
+| `uiObjektseite` | function | 22475–22508 | 34 |
+| `rMatchdayDetailPage` | function | 22776–22815 | 40 |
+| `buildOverviewCards` | function | 23097–23137 | 41 |
 
 ## CSS-Regelgruppen
 
-Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statischen `<style>`-Blocks (Zeile 8–1544):
+Aufeinanderfolgende Regeln mit gleichem Selektor-Präfix, innerhalb des statischen `<style>`-Blocks (Zeile 11–1550):
 
 | Präfix | Zeile | Regeln |
 |---|---|---|
-| `:root` | 10–37 | 1 |
-| `*` | 38–38 | 1 |
-| `body` | 39–39 | 1 |
-| `#cover` | 42–42 | 1 |
-| `#cover::before` | 43–43 | 1 |
-| `#cover::after` | 44–44 | 1 |
-| `#cover` | 45–45 | 1 |
-| `cv-skyline` | 46–54 | 9 |
-| `@media(max-width:700px)` | 57–57 | 1 |
-| `@media(prefers-reduced-motion:reduce)` | 58–58 | 1 |
-| `cv-brand` | 59–59 | 1 |
-| `cv-logo` | 60–61 | 2 |
-| `cv-title` | 63–64 | 2 |
-| `cv-sub` | 65–65 | 1 |
-| `cv-div` | 66–66 | 1 |
-| `cv-main` | 67–67 | 1 |
-| `cv-action` | 68–79 | 12 |
-| `#cover` | 80–80 | 1 |
-| `cv-lexicon` | 81–81 | 1 |
+| `:root` | 12–39 | 1 |
+| `*` | 40–40 | 1 |
+| `body` | 41–41 | 1 |
+| `#cover` | 44–44 | 1 |
+| `#cover::before` | 45–45 | 1 |
+| `#cover::after` | 46–46 | 1 |
+| `#cover` | 47–47 | 1 |
+| `cv-skyline` | 48–56 | 9 |
+| `@media(max-width:700px)` | 59–59 | 1 |
+| `@media(prefers-reduced-motion:reduce)` | 60–60 | 1 |
+| `cv-brand` | 61–61 | 1 |
+| `cv-logo` | 62–63 | 2 |
+| `cv-title` | 65–66 | 2 |
+| `cv-sub` | 67–67 | 1 |
+| `cv-div` | 68–68 | 1 |
+| `cv-main` | 69–69 | 1 |
+| `cv-action` | 70–81 | 12 |
 | `#cover` | 82–82 | 1 |
-| `cv-nav` | 83–84 | 2 |
-| `cv-season` | 85–103 | 19 |
-| `cv-stats` | 104–104 | 1 |
-| `cvs` | 105–105 | 1 |
-| `cvs-val` | 106–106 | 1 |
-| `cvs-lbl` | 107–107 | 1 |
-| `hidden` | 108–108 | 1 |
-| `@media(max-width:760px)` | 109–109 | 1 |
-| `matchcenter-page` | 112–112 | 1 |
-| `mc-hero` | 113–115 | 3 |
-| `mc-eyebrow` | 116–116 | 1 |
-| `mc-title` | 117–117 | 1 |
-| `mc-sub` | 118–118 | 1 |
-| `mc-control` | 119–119 | 1 |
-| `mc-field` | 120–120 | 1 |
-| `mc-label` | 121–121 | 1 |
-| `mc-select` | 122–123 | 2 |
-| `mc-status` | 124–124 | 1 |
-| `mc-tabs` | 125–125 | 1 |
-| `mc-tab` | 126–127 | 2 |
-| `mc-section` | 128–131 | 4 |
-| `mc-kpi` | 132–132 | 1 |
-| `mc-card` | 133–136 | 4 |
-| `mc-big` | 137–137 | 1 |
-| `mc-value` | 138–138 | 1 |
-| `mc-muted` | 139–139 | 1 |
-| `mc-split` | 140–140 | 1 |
-| `mc-form` | 141–141 | 1 |
-| `mc-team` | 142–143 | 2 |
-| `mc-score` | 144–144 | 1 |
-| `mc-form` | 145–150 | 6 |
-| `mc-mini` | 151–154 | 4 |
-| `mc-vs` | 155–155 | 1 |
-| `mc-score` | 156–160 | 5 |
-| `mc-vs` | 161–161 | 1 |
-| `mc-insight` | 162–163 | 2 |
-| `mc-games` | 164–165 | 2 |
-| `mc-game` | 166–167 | 2 |
-| `mc-result` | 168–169 | 2 |
-| `mc-empty` | 170–170 | 1 |
-| `mc-watch` | 171–173 | 3 |
-| `mc-player` | 174–175 | 2 |
-| `mc-danger` | 176–179 | 4 |
-| `mc-watch` | 180–180 | 1 |
-| `mc-stat` | 181–182 | 2 |
-| `mc-rank` | 183–185 | 3 |
-| `mc-player` | 186–186 | 1 |
-| `mc-rank` | 187–187 | 1 |
+| `cv-lexicon` | 83–83 | 1 |
+| `#cover` | 84–84 | 1 |
+| `cv-nav` | 85–86 | 2 |
+| `cv-season` | 87–105 | 19 |
+| `cv-stats` | 106–106 | 1 |
+| `cvs` | 107–107 | 1 |
+| `cvs-val` | 108–108 | 1 |
+| `cvs-lbl` | 109–109 | 1 |
+| `hidden` | 110–110 | 1 |
+| `@media(max-width:760px)` | 111–111 | 1 |
+| `matchcenter-page` | 114–114 | 1 |
+| `mc-hero` | 115–117 | 3 |
+| `mc-eyebrow` | 118–118 | 1 |
+| `mc-title` | 119–119 | 1 |
+| `mc-sub` | 120–120 | 1 |
+| `mc-control` | 121–121 | 1 |
+| `mc-field` | 122–122 | 1 |
+| `mc-label` | 123–123 | 1 |
+| `mc-select` | 124–125 | 2 |
+| `mc-status` | 126–126 | 1 |
+| `mc-tabs` | 127–127 | 1 |
+| `mc-tab` | 128–129 | 2 |
+| `mc-section` | 130–133 | 4 |
+| `mc-kpi` | 134–134 | 1 |
+| `mc-card` | 135–138 | 4 |
+| `mc-big` | 139–139 | 1 |
+| `mc-value` | 140–140 | 1 |
+| `mc-muted` | 141–141 | 1 |
+| `mc-split` | 142–142 | 1 |
+| `mc-form` | 143–143 | 1 |
+| `mc-team` | 144–145 | 2 |
+| `mc-score` | 146–146 | 1 |
+| `mc-form` | 147–152 | 6 |
+| `mc-mini` | 153–156 | 4 |
+| `mc-vs` | 157–157 | 1 |
+| `mc-score` | 158–162 | 5 |
+| `mc-vs` | 163–163 | 1 |
+| `mc-insight` | 164–165 | 2 |
+| `mc-games` | 166–167 | 2 |
+| `mc-game` | 168–169 | 2 |
+| `mc-result` | 170–171 | 2 |
+| `mc-empty` | 172–172 | 1 |
+| `mc-watch` | 173–175 | 3 |
+| `mc-player` | 176–177 | 2 |
+| `mc-danger` | 178–181 | 4 |
+| `mc-watch` | 182–182 | 1 |
+| `mc-stat` | 183–184 | 2 |
+| `mc-rank` | 185–187 | 3 |
 | `mc-player` | 188–188 | 1 |
-| `mc-form` | 189–192 | 4 |
-| `mc-scout` | 193–193 | 1 |
-| `mc-duo` | 194–197 | 4 |
-| `mc-special` | 198–204 | 7 |
-| `mc-st` | 205–207 | 3 |
-| `mc-goalie` | 208–213 | 6 |
-| `mc-summary` | 214–218 | 5 |
-| `mc-intel` | 219–250 | 32 |
-| `mc-coach` | 251–272 | 22 |
-| `mc-locker` | 273–284 | 12 |
-| `mc-output` | 285–286 | 2 |
-| `mc-social` | 287–299 | 13 |
-| `player-explain` | 300–313 | 14 |
-| `lineup-builder` | 314–363 | 50 |
-| `mc-timing` | 364–364 | 1 |
-| `mc-time` | 365–370 | 6 |
-| `mc-priority` | 371–374 | 4 |
-| `mc-confidence` | 375–377 | 3 |
-| `p1-score` | 378–384 | 7 |
-| `p1-empty` | 385–389 | 5 |
-| `mc-plan` | 390–417 | 28 |
-| `mc-hero` | 418–418 | 1 |
-| `mc-story` | 419–495 | 77 |
-| `mc-feed` | 502–518 | 17 |
-| `@media(max-width:980px)` | 519–520 | 2 |
-| `@media(max-width:620px)` | 521–521 | 1 |
-| `html` | 524–524 | 1 |
-| `body` | 525–525 | 1 |
-| `button` | 526–526 | 1 |
-| `button:focus-visible` | 527–527 | 1 |
-| `section-grid` | 528–528 | 1 |
-| `card-grid` | 529–529 | 1 |
-| `kpi-grid` | 530–530 | 1 |
-| `two-column` | 531–531 | 1 |
-| `:where(.team-card` | 532–533 | 2 |
-| `:where(.team-card-title` | 534–534 | 1 |
-| `:where(.mc-big` | 535–535 | 1 |
-| `:where(.nav-btn` | 536–537 | 2 |
-| `view-back` | 538–538 | 1 |
-| `:where(.nav-btn.active` | 539–539 | 1 |
-| `:where(.btn-exp)` | 540–540 | 1 |
-| `:where(.nav-btn:hover` | 541–541 | 1 |
-| `:where(.mc-confidence-badge` | 543–543 | 1 |
-| `badge-muted` | 544–544 | 1 |
-| `badge-primary` | 545–545 | 1 |
-| `badge-success` | 546–546 | 1 |
-| `badge-warning` | 547–547 | 1 |
-| `badge-danger` | 548–548 | 1 |
-| `badge-gold` | 549–549 | 1 |
-| `:where(.tabs` | 550–550 | 1 |
-| `:where(.tb` | 551–551 | 1 |
-| `:where(.tb:hover` | 552–552 | 1 |
-| `:where(.tb.active` | 553–553 | 1 |
-| `:where(.mc-empty` | 554–554 | 1 |
-| `:where(.wrn-box)` | 555–555 | 1 |
-| `:where(.ok-box)` | 556–556 | 1 |
-| `#global-tip` | 557–557 | 1 |
-| `th-tip` | 558–558 | 1 |
-| `details` | 559–559 | 1 |
-| `details>summary` | 560–560 | 1 |
-| `details>summary::-webkit-details-marker` | 561–561 | 1 |
-| `details>summary::after` | 562–562 | 1 |
-| `details[open]>summary::after` | 563–563 | 1 |
-| `p1-score` | 564–564 | 1 |
-| `tw` | 565–565 | 1 |
-| `mc-story` | 566–567 | 2 |
-| `lineup-builder` | 568–569 | 2 |
-| `@media(max-width:980px)` | 570–574 | 1 |
-| `@media(max-width:700px)` | 575–593 | 1 |
-| `@media(prefers-reduced-motion:reduce)` | 594–596 | 1 |
-| `vfb-hof` | 599–630 | 32 |
-| `@media(max-width:640px)` | 639–639 | 1 |
-| `@media(prefers-reduced-motion:reduce)` | 640–640 | 1 |
-| `#main` | 643–643 | 1 |
-| `ld` | 646–646 | 1 |
-| `ld-title` | 647–647 | 1 |
-| `prog-o` | 648–648 | 1 |
-| `prog-i` | 649–649 | 1 |
-| `prog-sub` | 650–650 | 1 |
-| `hdr` | 653–653 | 1 |
-| `hdr-l` | 654–654 | 1 |
-| `hdr-logo` | 655–655 | 1 |
-| `hdr-title` | 656–657 | 2 |
-| `hdr-sub` | 658–658 | 1 |
-| `hdr-nav` | 659–659 | 1 |
-| `nav-btn` | 660–662 | 3 |
-| `btn-exp` | 663–663 | 1 |
-| `btn-back` | 664–664 | 1 |
-| `ptabs` | 667–667 | 1 |
-| `ptab` | 668–670 | 3 |
-| `star-dot` | 671–671 | 1 |
-| `player-badge` | 672–674 | 3 |
-| `scorer-star` | 675–678 | 4 |
-| `enforcer-marker` | 679–679 | 1 |
-| `stats` | 682–682 | 1 |
-| `sc` | 683–684 | 2 |
-| `c1` | 685–685 | 1 |
-| `c4` | 686–686 | 1 |
-| `sv` | 687–687 | 1 |
-| `sl` | 688–688 | 1 |
-| `tags-row` | 691–691 | 1 |
-| `tag` | 692–692 | 1 |
-| `tabs` | 695–696 | 2 |
-| `tb` | 697–699 | 3 |
-| `tw` | 702–702 | 1 |
-| `table` | 703–703 | 1 |
-| `thead` | 704–704 | 1 |
-| `tbody` | 705–707 | 3 |
-| `bdg` | 708–708 | 1 |
-| `bt` | 709–709 | 1 |
-| `bv` | 710–710 | 1 |
-| `bs` | 711–711 | 1 |
-| `bwin` | 712–712 | 1 |
-| `bdraw` | 713–713 | 1 |
-| `bloss` | 714–714 | 1 |
-| `bclutch` | 715–715 | 1 |
-| `mono` | 716–716 | 1 |
-| `chip` | 717–717 | 1 |
-| `pg` | 720–720 | 1 |
-| `pc` | 721–721 | 1 |
-| `pcb` | 722–722 | 1 |
-| `pch` | 723–723 | 1 |
-| `pcn` | 724–724 | 1 |
-| `pbg` | 725–725 | 1 |
-| `pbf` | 726–726 | 1 |
-| `pev` | 727–727 | 1 |
-| `radar-wrap` | 730–730 | 1 |
-| `radar-stats` | 731–731 | 1 |
-| `rstat` | 732–732 | 1 |
-| `rstat-name` | 733–733 | 1 |
-| `rstat-bar` | 734–735 | 2 |
-| `rstat-val` | 736–736 | 1 |
-| `cl-grid` | 739–739 | 1 |
-| `clcard` | 740–740 | 1 |
-| `clcard-bar` | 741–741 | 1 |
-| `clval` | 742–742 | 1 |
-| `cllbl` | 743–743 | 1 |
-| `ctx-bars` | 744–744 | 1 |
-| `ctx-row` | 745–745 | 1 |
-| `ctx-lbl` | 746–746 | 1 |
-| `ctx-bg` | 747–747 | 1 |
-| `ctx-fill` | 748–748 | 1 |
-| `ctx-cnt` | 749–749 | 1 |
-| `cl-ev` | 750–750 | 1 |
-| `opp-str` | 751–751 | 1 |
-| `tl-wrap` | 754–754 | 1 |
-| `in-grid` | 757–757 | 1 |
-| `ic` | 758–758 | 1 |
-| `ic-bar` | 759–759 | 1 |
-| `ititle` | 760–760 | 1 |
-| `imain` | 761–761 | 1 |
-| `isub` | 762–762 | 1 |
-| `team-grid` | 765–765 | 1 |
-| `team-card` | 766–767 | 2 |
-| `game-row` | 768–769 | 2 |
-| `game-date` | 770–770 | 1 |
-| `game-opp` | 771–771 | 1 |
-| `game-score` | 772–772 | 1 |
-| `game-ind` | 773–773 | 1 |
-| `stnd-tbl` | 774–778 | 5 |
-| `stnd-ulm` | 779–780 | 2 |
-| `rank-badge` | 781–781 | 1 |
-| `rank-1` | 782–782 | 1 |
-| `rank-2` | 783–783 | 1 |
-| `rank-3` | 784–784 | 1 |
-| `rank-def` | 785–785 | 1 |
-| `rank-bar` | 786–787 | 2 |
-| `rank-num` | 788–788 | 1 |
-| `rank-name` | 789–789 | 1 |
-| `rank-bg` | 790–790 | 1 |
-| `rank-fill` | 791–791 | 1 |
-| `rank-val` | 792–792 | 1 |
-| `st-shell` | 793–793 | 1 |
-| `st-grid` | 794–794 | 1 |
-| `st-card` | 795–798 | 4 |
-| `st-label` | 799–799 | 1 |
-| `st-value` | 800–800 | 1 |
-| `st-sub` | 801–801 | 1 |
-| `st-bar` | 802–802 | 1 |
-| `st-fill` | 803–803 | 1 |
-| `st-detail` | 804–808 | 5 |
-| `st-mini` | 809–810 | 2 |
-| `st-games` | 811–811 | 1 |
-| `st-game` | 812–814 | 3 |
-| `st-toggle` | 815–816 | 2 |
-| `st-card` | 817–817 | 1 |
-| `@media(max-width:760px)` | 818–818 | 1 |
-| `noev` | 821–821 | 1 |
-| `wrn-box` | 822–822 | 1 |
-| `ok-box` | 823–823 | 1 |
-| `stitle` | 824–824 | 1 |
-| `sep` | 825–825 | 1 |
-| `tag` | 828–828 | 1 |
-| `tags-row` | 829–829 | 1 |
-| `tag-tip` | 830–831 | 2 |
-| `tag` | 832–832 | 1 |
-| `opp-breakdown` | 835–835 | 1 |
-| `obd` | 836–836 | 1 |
-| `obd-val` | 837–837 | 1 |
-| `obd-lbl` | 838–838 | 1 |
-| `obd-sub` | 839–839 | 1 |
-| `th-tip` | 843–843 | 1 |
-| `#global-tip` | 844–844 | 1 |
-| `duo-row` | 845–846 | 2 |
-| `duo-num` | 847–847 | 1 |
-| `duo-names` | 848–848 | 1 |
-| `duo-bar` | 849–850 | 2 |
-| `hof-duo` | 853–859 | 4 |
-| `duo-col` | 861–866 | 1 |
-| `duo-col` | 868–873 | 1 |
-| `duo-col` | 875–891 | 1 |
-| `duo-col` | 893–898 | 1 |
-| `duo-col` | 900–905 | 1 |
-| `hof-duo` | 906–906 | 1 |
-| `duo-val` | 907–907 | 1 |
-| `hof-shell` | 910–910 | 1 |
-| `hof-hero` | 911–914 | 2 |
-| `hof-crest` | 915–915 | 1 |
-| `hof-hero` | 916–916 | 1 |
-| `hof-kicker` | 917–917 | 1 |
-| `hof-subline` | 918–918 | 1 |
-| `hof-arc` | 919–919 | 1 |
-| `hof-bird` | 920–921 | 2 |
-| `hof-section` | 922–922 | 1 |
-| `hof-grid` | 923–924 | 2 |
-| `hof-card` | 925–927 | 3 |
-| `hof-goalie` | 928–943 | 16 |
-| `hof-sg` | 944–944 | 1 |
-| `hof-filter` | 945–948 | 4 |
-| `hof-goalie` | 949–956 | 8 |
-| `@media(max-width:640px)` | 957–964 | 1 |
-| `hof-card` | 966–966 | 1 |
-| `hof-podium` | 967–967 | 1 |
-| `podium-place` | 968–971 | 4 |
-| `podium-medal` | 972–972 | 1 |
-| `podium-place` | 973–973 | 1 |
-| `podium-name` | 974–974 | 1 |
-| `podium-value` | 975–975 | 1 |
-| `podium-place` | 976–976 | 1 |
-| `podium-label` | 977–977 | 1 |
-| `hof-rest` | 978–978 | 1 |
-| `at-hero` | 979–981 | 3 |
-| `at-name` | 982–982 | 1 |
-| `at-meta` | 983–983 | 1 |
-| `at-rank` | 984–986 | 3 |
-| `at-kpis` | 987–987 | 1 |
-| `at-kpi` | 988–991 | 4 |
-| `at-grid` | 992–992 | 1 |
-| `at-card` | 993–994 | 2 |
-| `trend-row` | 995–996 | 2 |
-| `trend-season` | 997–997 | 1 |
-| `trend-bars` | 998–998 | 1 |
-| `trend-bg` | 999–999 | 1 |
-| `trend-fill` | 1000–1000 | 1 |
-| `trend-val` | 1001–1001 | 1 |
-| `sparkline` | 1002–1002 | 1 |
-| `dna-row` | 1003–1003 | 1 |
-| `dna-label` | 1004–1004 | 1 |
-| `dna-bg` | 1005–1005 | 1 |
-| `dna-fill` | 1006–1006 | 1 |
-| `dna-val` | 1007–1007 | 1 |
-| `partner-pill` | 1008–1011 | 4 |
-| `team-card` | 1012–1015 | 4 |
-| `hof-shell` | 1016–1016 | 1 |
-| `role-switch` | 1017–1017 | 1 |
-| `role-btn` | 1018–1021 | 4 |
-| `goalie-shell` | 1022–1022 | 1 |
-| `goalie-head` | 1023–1023 | 1 |
-| `goalie-title` | 1024–1024 | 1 |
-| `goalie-sub` | 1025–1025 | 1 |
-| `goalie-pill` | 1026–1026 | 1 |
-| `goalie-tabs` | 1027–1027 | 1 |
-| `goalie-tab` | 1028–1029 | 2 |
-| `goalie-role` | 1030–1030 | 1 |
-| `goalie-grid` | 1031–1031 | 1 |
-| `goalie-kpi` | 1032–1034 | 3 |
-| `goalie-val` | 1035–1035 | 1 |
-| `goalie-lbl` | 1036–1036 | 1 |
-| `goalie-card` | 1037–1037 | 1 |
-| `goalie-dashboard` | 1038–1038 | 1 |
-| `goalie-section` | 1039–1039 | 1 |
-| `goalie-mini` | 1040–1040 | 1 |
-| `goalie-metric` | 1041–1043 | 3 |
-| `goalie-profile` | 1044–1045 | 2 |
-| `goalie-stack` | 1046–1047 | 2 |
-| `goalie-tier` | 1048–1053 | 6 |
-| `goalie-note` | 1054–1054 | 1 |
-| `goalie-bars` | 1055–1055 | 1 |
-| `goalie-bar` | 1056–1060 | 5 |
-| `goalie-dna` | 1061–1066 | 6 |
-| `goalie-insights` | 1067–1067 | 1 |
-| `goalie-insight` | 1068–1070 | 3 |
-| `goalie-table` | 1071–1073 | 3 |
-| `@media(max-width:900px)` | 1074–1074 | 1 |
-| `@media(max-width:560px)` | 1075–1075 | 1 |
-| `@media(max-width:720px)` | 1076–1080 | 1 |
-| `body` | 1083–1083 | 1 |
-| `button` | 1084–1084 | 1 |
-| `cv-action` | 1085–1086 | 2 |
-| `mc-eyebrow` | 1087–1087 | 1 |
-| `mc-sub` | 1088–1088 | 1 |
-| `sl` | 1089–1089 | 1 |
-| `cvs-lbl` | 1090–1090 | 1 |
-| `mc-value` | 1091–1091 | 1 |
-| `#global-tip` | 1092–1092 | 1 |
-| `rm-term` | 1093–1093 | 1 |
-| `duo-compare` | 1094–1103 | 10 |
-| `duo-profile` | 1104–1104 | 1 |
-| `duo-flow` | 1105–1105 | 1 |
-| `duo-impact` | 1106–1106 | 1 |
-| `duo-details` | 1107–1107 | 1 |
-| `@media(max-width:640px)` | 1108–1108 | 1 |
-| `tag` | 1109–1109 | 1 |
-| `timeline-role` | 1110–1112 | 3 |
-| `difficult-connections` | 1113–1113 | 1 |
-| `difficult-note` | 1114–1114 | 1 |
-| `difficult-scope` | 1115–1115 | 1 |
-| `difficult-list` | 1116–1116 | 1 |
-| `difficult-row` | 1117–1117 | 1 |
-| `difficult-main` | 1118–1120 | 3 |
-| `difficult-metric` | 1121–1121 | 1 |
-| `difficult-confidence` | 1122–1122 | 1 |
-| `difficult-empty` | 1123–1123 | 1 |
-| `difficult-impact` | 1124–1128 | 5 |
-| `difficult-score` | 1129–1129 | 1 |
-| `difficult-impact` | 1130–1135 | 6 |
-| `difficult-delta` | 1136–1138 | 3 |
-| `difficult-impact` | 1139–1139 | 1 |
-| `difficult-direct` | 1140–1140 | 1 |
-| `difficult-toolbar` | 1141–1141 | 1 |
-| `difficult-compact` | 1142–1143 | 2 |
-| `difficult-details` | 1144–1146 | 3 |
-| `difficult-more` | 1147–1147 | 1 |
-| `lineup-builder` | 1148–1150 | 3 |
-| `duo-pro` | 1151–1158 | 8 |
-| `duo-third` | 1159–1161 | 3 |
-| `duo-warning` | 1162–1167 | 6 |
-| `@media(max-width:760px)` | 1168–1175 | 1 |
-| `:root` | 1178–1178 | 1 |
-| `#main` | 1179–1179 | 1 |
-| `hdr` | 1180–1180 | 1 |
-| `hdr-l` | 1181–1181 | 1 |
-| `hdr-nav` | 1182–1182 | 1 |
-| `:where(.matchcenter-page` | 1183–1183 | 1 |
-| `:where(.team-grid` | 1184–1184 | 1 |
-| `:where(.team-card` | 1185–1186 | 2 |
-| `:where(.mc-card.accent-gold` | 1187–1187 | 1 |
-| `:where(.mc-card.accent-red` | 1188–1188 | 1 |
-| `:where(.mc-goalie-card` | 1189–1189 | 1 |
-| `:where(.team-card-title` | 1190–1190 | 1 |
-| `:where(.mc-section-title` | 1191–1191 | 1 |
-| `:where(.mc-muted` | 1192–1192 | 1 |
-| `:where(.mc-big` | 1193–1193 | 1 |
-| `:where(.mc-summary-value` | 1194–1194 | 1 |
-| `:where(.mc-danger-score` | 1195–1195 | 1 |
-| `:where(.mc-mini` | 1196–1196 | 1 |
-| `:where(.mc-player-name` | 1197–1197 | 1 |
-| `:where(.mc-stat-pill` | 1198–1198 | 1 |
-| `:where(.mc-tab` | 1199–1199 | 1 |
-| `:where(.mc-tabs` | 1200–1200 | 1 |
-| `:where(.mc-score-bar` | 1201–1201 | 1 |
-| `mc-score` | 1202–1202 | 1 |
-| `lineup-builder` | 1203–1205 | 3 |
-| `duo-pro` | 1206–1206 | 1 |
-| `duo-third` | 1207–1207 | 1 |
-| `difficult-impact` | 1208–1208 | 1 |
-| `mc-story` | 1209–1209 | 1 |
-| `mc-empty` | 1210–1210 | 1 |
-| `table` | 1211–1211 | 1 |
-| `team-card` | 1212–1213 | 2 |
-| `mc-section` | 1214–1214 | 1 |
-| `mc-summary` | 1215–1215 | 1 |
-| `mc-tab` | 1216–1216 | 1 |
-| `mc-player` | 1217–1217 | 1 |
-| `noev` | 1218–1218 | 1 |
-| `mono` | 1219–1219 | 1 |
-| `:where(.bdg` | 1220–1220 | 1 |
-| `:where(.sl` | 1221–1221 | 1 |
-| `:where(.partner-pill` | 1222–1222 | 1 |
-| `@media(max-width:980px)` | 1223–1226 | 1 |
-| `@media(max-width:640px)` | 1227–1233 | 1 |
-| `season-profile` | 1236–1280 | 45 |
-| `difficult-connections` | 1283–1284 | 2 |
-| `difficult-impact` | 1285–1287 | 3 |
-| `difficult-compact` | 1288–1288 | 1 |
-| `difficult-compare` | 1289–1295 | 7 |
-| `difficult-impact` | 1296–1296 | 1 |
-| `difficult-metric` | 1297–1303 | 7 |
-| `difficult-details` | 1304–1304 | 1 |
-| `difficult-direct` | 1305–1305 | 1 |
-| `response-momentum` | 1306–1312 | 7 |
-| `rm-term` | 1313–1313 | 1 |
-| `player-explain` | 1314–1316 | 3 |
-| `@media(max-width:720px)` | 1317–1323 | 1 |
-| `@media(max-width:900px)` | 1324–1326 | 1 |
-| `@media(max-width:560px)` | 1327–1334 | 1 |
-| `ui-kpi` | 1347–1354 | 8 |
-| `ui-info` | 1355–1357 | 3 |
-| `ui-delta` | 1358–1361 | 4 |
-| `ui-reliability` | 1362–1365 | 4 |
-| `ui-kernaussage` | 1367–1368 | 2 |
-| `ui-hinweis` | 1370–1373 | 4 |
-| `ui-rangliste` | 1375–1382 | 8 |
-| `ui-verlauf` | 1384–1385 | 2 |
-| `ui-intervall` | 1387–1391 | 5 |
-| `ui-methodenbox` | 1393–1398 | 6 |
-| `ui-notiz` | 1400–1400 | 1 |
-| `ui-platzhalter` | 1402–1403 | 2 |
-| `@media(prefers-reduced-motion:reduce)` | 1405–1405 | 1 |
-| `@media(max-width:600px)` | 1407–1410 | 1 |
-| `ui-objektseite` | 1419–1427 | 9 |
-| `@media(max-width:600px)` | 1429–1432 | 1 |
-| `@media(max-width:360px)` | 1433–1435 | 1 |
-| `ia-context` | 1444–1448 | 5 |
-| `ia-mainnav` | 1449–1452 | 4 |
-| `ia-placeholder` | 1453–1454 | 2 |
-| `ia-overview` | 1461–1465 | 5 |
-| `ia-matchday` | 1471–1479 | 9 |
-| `ia-back` | 1480–1480 | 1 |
-| `ia-search` | 1486–1500 | 15 |
-| `@media(max-width:600px)` | 1501–1503 | 1 |
-| `ia-tool` | 1509–1516 | 8 |
-| `ia-mainnav` | 1525–1525 | 1 |
-| `@media(max-width:600px)` | 1526–1536 | 1 |
-| `@media(max-width:600px)` | 1538–1543 | 1 |
+| `mc-rank` | 189–189 | 1 |
+| `mc-player` | 190–190 | 1 |
+| `mc-form` | 191–194 | 4 |
+| `mc-scout` | 195–195 | 1 |
+| `mc-duo` | 196–199 | 4 |
+| `mc-special` | 200–206 | 7 |
+| `mc-st` | 207–209 | 3 |
+| `mc-goalie` | 210–215 | 6 |
+| `mc-summary` | 216–220 | 5 |
+| `mc-intel` | 221–252 | 32 |
+| `mc-coach` | 253–274 | 22 |
+| `mc-locker` | 275–286 | 12 |
+| `mc-output` | 287–288 | 2 |
+| `mc-social` | 289–301 | 13 |
+| `player-explain` | 302–315 | 14 |
+| `lineup-builder` | 316–365 | 50 |
+| `mc-timing` | 366–366 | 1 |
+| `mc-time` | 367–372 | 6 |
+| `mc-priority` | 373–376 | 4 |
+| `mc-confidence` | 377–379 | 3 |
+| `p1-score` | 380–386 | 7 |
+| `p1-empty` | 387–391 | 5 |
+| `mc-plan` | 392–419 | 28 |
+| `mc-hero` | 420–420 | 1 |
+| `mc-story` | 421–497 | 77 |
+| `mc-feed` | 504–520 | 17 |
+| `@media(max-width:980px)` | 521–522 | 2 |
+| `@media(max-width:620px)` | 523–523 | 1 |
+| `html` | 526–526 | 1 |
+| `body` | 527–527 | 1 |
+| `button` | 528–528 | 1 |
+| `button:focus-visible` | 529–529 | 1 |
+| `section-grid` | 530–530 | 1 |
+| `card-grid` | 531–531 | 1 |
+| `kpi-grid` | 532–532 | 1 |
+| `two-column` | 533–533 | 1 |
+| `:where(.team-card` | 534–535 | 2 |
+| `:where(.team-card-title` | 536–536 | 1 |
+| `:where(.mc-big` | 537–537 | 1 |
+| `:where(.nav-btn` | 538–539 | 2 |
+| `view-back` | 540–540 | 1 |
+| `:where(.nav-btn.active` | 541–541 | 1 |
+| `:where(.btn-exp)` | 542–542 | 1 |
+| `:where(.nav-btn:hover` | 543–543 | 1 |
+| `:where(.mc-confidence-badge` | 545–545 | 1 |
+| `badge-muted` | 546–546 | 1 |
+| `badge-primary` | 547–547 | 1 |
+| `badge-success` | 548–548 | 1 |
+| `badge-warning` | 549–549 | 1 |
+| `badge-danger` | 550–550 | 1 |
+| `badge-gold` | 551–551 | 1 |
+| `:where(.tabs` | 552–552 | 1 |
+| `:where(.tb` | 553–553 | 1 |
+| `:where(.tb:hover` | 554–554 | 1 |
+| `:where(.tb.active` | 555–555 | 1 |
+| `:where(.mc-empty` | 556–556 | 1 |
+| `:where(.wrn-box)` | 557–557 | 1 |
+| `:where(.ok-box)` | 558–558 | 1 |
+| `#global-tip` | 559–559 | 1 |
+| `th-tip` | 560–560 | 1 |
+| `details` | 561–561 | 1 |
+| `details>summary` | 562–562 | 1 |
+| `details>summary::-webkit-details-marker` | 563–563 | 1 |
+| `details>summary::after` | 564–564 | 1 |
+| `details[open]>summary::after` | 565–565 | 1 |
+| `p1-score` | 566–566 | 1 |
+| `tw` | 567–567 | 1 |
+| `mc-story` | 568–569 | 2 |
+| `lineup-builder` | 570–571 | 2 |
+| `@media(max-width:980px)` | 572–576 | 1 |
+| `@media(max-width:700px)` | 577–595 | 1 |
+| `@media(prefers-reduced-motion:reduce)` | 596–598 | 1 |
+| `vfb-hof` | 601–632 | 32 |
+| `@media(max-width:640px)` | 641–641 | 1 |
+| `@media(prefers-reduced-motion:reduce)` | 642–642 | 1 |
+| `#main` | 645–645 | 1 |
+| `ld` | 648–648 | 1 |
+| `ld-title` | 649–649 | 1 |
+| `prog-o` | 650–650 | 1 |
+| `prog-i` | 651–651 | 1 |
+| `prog-sub` | 652–652 | 1 |
+| `hdr` | 655–655 | 1 |
+| `hdr-l` | 656–656 | 1 |
+| `hdr-logo` | 657–657 | 1 |
+| `hdr-title` | 658–659 | 2 |
+| `hdr-sub` | 660–660 | 1 |
+| `hdr-nav` | 661–661 | 1 |
+| `nav-btn` | 662–664 | 3 |
+| `btn-exp` | 665–665 | 1 |
+| `btn-back` | 666–666 | 1 |
+| `ptabs` | 669–669 | 1 |
+| `ptab` | 670–672 | 3 |
+| `star-dot` | 673–673 | 1 |
+| `player-badge` | 674–676 | 3 |
+| `scorer-star` | 677–680 | 4 |
+| `enforcer-marker` | 681–681 | 1 |
+| `stats` | 684–684 | 1 |
+| `sc` | 685–686 | 2 |
+| `c1` | 687–687 | 1 |
+| `c4` | 688–688 | 1 |
+| `sv` | 689–689 | 1 |
+| `sl` | 690–690 | 1 |
+| `tags-row` | 693–693 | 1 |
+| `tag` | 694–694 | 1 |
+| `tabs` | 697–698 | 2 |
+| `tb` | 699–701 | 3 |
+| `tw` | 704–704 | 1 |
+| `table` | 705–705 | 1 |
+| `thead` | 706–706 | 1 |
+| `tbody` | 707–709 | 3 |
+| `bdg` | 710–710 | 1 |
+| `bt` | 711–711 | 1 |
+| `bv` | 712–712 | 1 |
+| `bs` | 713–713 | 1 |
+| `bwin` | 714–714 | 1 |
+| `bdraw` | 715–715 | 1 |
+| `bloss` | 716–716 | 1 |
+| `bclutch` | 717–717 | 1 |
+| `mono` | 718–718 | 1 |
+| `chip` | 719–719 | 1 |
+| `pg` | 722–722 | 1 |
+| `pc` | 723–723 | 1 |
+| `pcb` | 724–724 | 1 |
+| `pch` | 725–725 | 1 |
+| `pcn` | 726–726 | 1 |
+| `pbg` | 727–727 | 1 |
+| `pbf` | 728–728 | 1 |
+| `pev` | 729–729 | 1 |
+| `radar-wrap` | 732–732 | 1 |
+| `radar-stats` | 733–733 | 1 |
+| `rstat` | 734–734 | 1 |
+| `rstat-name` | 735–735 | 1 |
+| `rstat-bar` | 736–737 | 2 |
+| `rstat-val` | 738–738 | 1 |
+| `cl-grid` | 741–741 | 1 |
+| `clcard` | 742–742 | 1 |
+| `clcard-bar` | 743–743 | 1 |
+| `clval` | 744–744 | 1 |
+| `cllbl` | 745–745 | 1 |
+| `ctx-bars` | 746–746 | 1 |
+| `ctx-row` | 747–747 | 1 |
+| `ctx-lbl` | 748–748 | 1 |
+| `ctx-bg` | 749–749 | 1 |
+| `ctx-fill` | 750–750 | 1 |
+| `ctx-cnt` | 751–751 | 1 |
+| `cl-ev` | 752–752 | 1 |
+| `opp-str` | 753–753 | 1 |
+| `tl-wrap` | 756–756 | 1 |
+| `in-grid` | 759–759 | 1 |
+| `ic` | 760–760 | 1 |
+| `ic-bar` | 761–761 | 1 |
+| `ititle` | 762–762 | 1 |
+| `imain` | 763–763 | 1 |
+| `isub` | 764–764 | 1 |
+| `team-grid` | 767–767 | 1 |
+| `team-card` | 768–769 | 2 |
+| `game-row` | 770–771 | 2 |
+| `game-date` | 772–772 | 1 |
+| `game-opp` | 773–773 | 1 |
+| `game-score` | 774–774 | 1 |
+| `game-ind` | 775–775 | 1 |
+| `stnd-tbl` | 776–780 | 5 |
+| `stnd-ulm` | 781–782 | 2 |
+| `rank-badge` | 783–783 | 1 |
+| `rank-1` | 784–784 | 1 |
+| `rank-2` | 785–785 | 1 |
+| `rank-3` | 786–786 | 1 |
+| `rank-def` | 787–787 | 1 |
+| `rank-bar` | 788–789 | 2 |
+| `rank-num` | 790–790 | 1 |
+| `rank-name` | 791–791 | 1 |
+| `rank-bg` | 792–792 | 1 |
+| `rank-fill` | 793–793 | 1 |
+| `rank-val` | 794–794 | 1 |
+| `st-shell` | 795–795 | 1 |
+| `st-grid` | 796–796 | 1 |
+| `st-card` | 797–800 | 4 |
+| `st-label` | 801–801 | 1 |
+| `st-value` | 802–802 | 1 |
+| `st-sub` | 803–803 | 1 |
+| `st-bar` | 804–804 | 1 |
+| `st-fill` | 805–805 | 1 |
+| `st-detail` | 806–810 | 5 |
+| `st-mini` | 811–812 | 2 |
+| `st-games` | 813–813 | 1 |
+| `st-game` | 814–816 | 3 |
+| `st-toggle` | 817–818 | 2 |
+| `st-card` | 819–819 | 1 |
+| `@media(max-width:760px)` | 820–820 | 1 |
+| `noev` | 823–823 | 1 |
+| `wrn-box` | 824–824 | 1 |
+| `ok-box` | 825–825 | 1 |
+| `stitle` | 826–826 | 1 |
+| `sep` | 827–827 | 1 |
+| `tag` | 830–830 | 1 |
+| `tags-row` | 831–831 | 1 |
+| `tag-tip` | 832–833 | 2 |
+| `tag` | 834–834 | 1 |
+| `opp-breakdown` | 837–837 | 1 |
+| `obd` | 838–838 | 1 |
+| `obd-val` | 839–839 | 1 |
+| `obd-lbl` | 840–840 | 1 |
+| `obd-sub` | 841–841 | 1 |
+| `th-tip` | 845–845 | 1 |
+| `#global-tip` | 846–846 | 1 |
+| `duo-row` | 847–848 | 2 |
+| `duo-num` | 849–849 | 1 |
+| `duo-names` | 850–850 | 1 |
+| `duo-bar` | 851–852 | 2 |
+| `hof-duo` | 855–861 | 4 |
+| `duo-col` | 863–868 | 1 |
+| `duo-col` | 870–875 | 1 |
+| `duo-col` | 877–893 | 1 |
+| `duo-col` | 895–900 | 1 |
+| `duo-col` | 902–907 | 1 |
+| `hof-duo` | 908–908 | 1 |
+| `duo-val` | 909–909 | 1 |
+| `hof-shell` | 912–912 | 1 |
+| `hof-hero` | 913–916 | 2 |
+| `hof-crest` | 917–917 | 1 |
+| `hof-hero` | 918–918 | 1 |
+| `hof-kicker` | 919–919 | 1 |
+| `hof-subline` | 920–920 | 1 |
+| `hof-arc` | 921–921 | 1 |
+| `hof-bird` | 922–923 | 2 |
+| `hof-section` | 924–924 | 1 |
+| `hof-grid` | 925–926 | 2 |
+| `hof-card` | 927–929 | 3 |
+| `hof-goalie` | 930–945 | 16 |
+| `hof-sg` | 946–946 | 1 |
+| `hof-filter` | 947–950 | 4 |
+| `hof-goalie` | 951–958 | 8 |
+| `@media(max-width:640px)` | 959–966 | 1 |
+| `hof-card` | 968–968 | 1 |
+| `hof-podium` | 969–969 | 1 |
+| `podium-place` | 970–973 | 4 |
+| `podium-medal` | 974–974 | 1 |
+| `podium-place` | 975–975 | 1 |
+| `podium-name` | 976–976 | 1 |
+| `podium-value` | 977–977 | 1 |
+| `podium-place` | 978–978 | 1 |
+| `podium-label` | 979–979 | 1 |
+| `hof-rest` | 980–980 | 1 |
+| `at-hero` | 981–983 | 3 |
+| `at-name` | 984–984 | 1 |
+| `at-meta` | 985–985 | 1 |
+| `at-rank` | 986–988 | 3 |
+| `at-kpis` | 989–989 | 1 |
+| `at-kpi` | 990–993 | 4 |
+| `at-grid` | 994–994 | 1 |
+| `at-card` | 995–996 | 2 |
+| `trend-row` | 997–998 | 2 |
+| `trend-season` | 999–999 | 1 |
+| `trend-bars` | 1000–1000 | 1 |
+| `trend-bg` | 1001–1001 | 1 |
+| `trend-fill` | 1002–1002 | 1 |
+| `trend-val` | 1003–1003 | 1 |
+| `sparkline` | 1004–1004 | 1 |
+| `dna-row` | 1005–1005 | 1 |
+| `dna-label` | 1006–1006 | 1 |
+| `dna-bg` | 1007–1007 | 1 |
+| `dna-fill` | 1008–1008 | 1 |
+| `dna-val` | 1009–1009 | 1 |
+| `partner-pill` | 1010–1013 | 4 |
+| `team-card` | 1014–1017 | 4 |
+| `hof-shell` | 1018–1018 | 1 |
+| `role-switch` | 1019–1019 | 1 |
+| `role-btn` | 1020–1023 | 4 |
+| `goalie-shell` | 1024–1024 | 1 |
+| `goalie-head` | 1025–1025 | 1 |
+| `goalie-title` | 1026–1026 | 1 |
+| `goalie-sub` | 1027–1027 | 1 |
+| `goalie-pill` | 1028–1028 | 1 |
+| `goalie-tabs` | 1029–1029 | 1 |
+| `goalie-tab` | 1030–1031 | 2 |
+| `goalie-role` | 1032–1032 | 1 |
+| `goalie-grid` | 1033–1033 | 1 |
+| `goalie-kpi` | 1034–1036 | 3 |
+| `goalie-val` | 1037–1037 | 1 |
+| `goalie-lbl` | 1038–1038 | 1 |
+| `goalie-card` | 1039–1039 | 1 |
+| `goalie-dashboard` | 1040–1040 | 1 |
+| `goalie-section` | 1041–1041 | 1 |
+| `goalie-mini` | 1042–1042 | 1 |
+| `goalie-metric` | 1043–1045 | 3 |
+| `goalie-profile` | 1046–1047 | 2 |
+| `goalie-stack` | 1048–1049 | 2 |
+| `goalie-tier` | 1050–1055 | 6 |
+| `goalie-note` | 1056–1056 | 1 |
+| `goalie-bars` | 1057–1057 | 1 |
+| `goalie-bar` | 1058–1062 | 5 |
+| `goalie-dna` | 1063–1068 | 6 |
+| `goalie-insights` | 1069–1069 | 1 |
+| `goalie-insight` | 1070–1072 | 3 |
+| `goalie-table` | 1073–1075 | 3 |
+| `@media(max-width:900px)` | 1076–1076 | 1 |
+| `@media(max-width:560px)` | 1077–1077 | 1 |
+| `@media(max-width:720px)` | 1078–1082 | 1 |
+| `body` | 1085–1085 | 1 |
+| `button` | 1086–1086 | 1 |
+| `cv-action` | 1087–1088 | 2 |
+| `mc-eyebrow` | 1089–1089 | 1 |
+| `mc-sub` | 1090–1090 | 1 |
+| `sl` | 1091–1091 | 1 |
+| `cvs-lbl` | 1092–1092 | 1 |
+| `mc-value` | 1093–1093 | 1 |
+| `#global-tip` | 1094–1094 | 1 |
+| `rm-term` | 1095–1095 | 1 |
+| `duo-compare` | 1096–1105 | 10 |
+| `duo-profile` | 1106–1106 | 1 |
+| `duo-flow` | 1107–1107 | 1 |
+| `duo-impact` | 1108–1108 | 1 |
+| `duo-details` | 1109–1109 | 1 |
+| `@media(max-width:640px)` | 1110–1110 | 1 |
+| `tag` | 1111–1111 | 1 |
+| `timeline-role` | 1112–1114 | 3 |
+| `difficult-connections` | 1115–1115 | 1 |
+| `difficult-note` | 1116–1116 | 1 |
+| `difficult-scope` | 1117–1117 | 1 |
+| `difficult-list` | 1118–1118 | 1 |
+| `difficult-row` | 1119–1119 | 1 |
+| `difficult-main` | 1120–1122 | 3 |
+| `difficult-metric` | 1123–1123 | 1 |
+| `difficult-confidence` | 1124–1124 | 1 |
+| `difficult-empty` | 1125–1125 | 1 |
+| `difficult-impact` | 1126–1130 | 5 |
+| `difficult-score` | 1131–1131 | 1 |
+| `difficult-impact` | 1132–1137 | 6 |
+| `difficult-delta` | 1138–1140 | 3 |
+| `difficult-impact` | 1141–1141 | 1 |
+| `difficult-direct` | 1142–1142 | 1 |
+| `difficult-toolbar` | 1143–1143 | 1 |
+| `difficult-compact` | 1144–1145 | 2 |
+| `difficult-details` | 1146–1148 | 3 |
+| `difficult-more` | 1149–1149 | 1 |
+| `lineup-builder` | 1150–1152 | 3 |
+| `duo-pro` | 1153–1160 | 8 |
+| `duo-third` | 1161–1163 | 3 |
+| `duo-warning` | 1164–1169 | 6 |
+| `@media(max-width:760px)` | 1170–1177 | 1 |
+| `:root` | 1180–1180 | 1 |
+| `#main` | 1181–1181 | 1 |
+| `hdr` | 1182–1182 | 1 |
+| `hdr-l` | 1183–1183 | 1 |
+| `hdr-nav` | 1184–1184 | 1 |
+| `:where(.matchcenter-page` | 1185–1185 | 1 |
+| `:where(.team-grid` | 1186–1186 | 1 |
+| `:where(.team-card` | 1187–1188 | 2 |
+| `:where(.mc-card.accent-gold` | 1189–1189 | 1 |
+| `:where(.mc-card.accent-red` | 1190–1190 | 1 |
+| `:where(.mc-goalie-card` | 1191–1191 | 1 |
+| `:where(.team-card-title` | 1192–1192 | 1 |
+| `:where(.mc-section-title` | 1193–1193 | 1 |
+| `:where(.mc-muted` | 1194–1194 | 1 |
+| `:where(.mc-big` | 1195–1195 | 1 |
+| `:where(.mc-summary-value` | 1196–1196 | 1 |
+| `:where(.mc-danger-score` | 1197–1197 | 1 |
+| `:where(.mc-mini` | 1198–1198 | 1 |
+| `:where(.mc-player-name` | 1199–1199 | 1 |
+| `:where(.mc-stat-pill` | 1200–1200 | 1 |
+| `:where(.mc-tab` | 1201–1201 | 1 |
+| `:where(.mc-tabs` | 1202–1202 | 1 |
+| `:where(.mc-score-bar` | 1203–1203 | 1 |
+| `mc-score` | 1204–1204 | 1 |
+| `lineup-builder` | 1205–1207 | 3 |
+| `duo-pro` | 1208–1208 | 1 |
+| `duo-third` | 1209–1209 | 1 |
+| `difficult-impact` | 1210–1210 | 1 |
+| `mc-story` | 1211–1211 | 1 |
+| `mc-empty` | 1212–1212 | 1 |
+| `table` | 1213–1213 | 1 |
+| `team-card` | 1214–1215 | 2 |
+| `mc-section` | 1216–1216 | 1 |
+| `mc-summary` | 1217–1217 | 1 |
+| `mc-tab` | 1218–1218 | 1 |
+| `mc-player` | 1219–1219 | 1 |
+| `noev` | 1220–1220 | 1 |
+| `mono` | 1221–1221 | 1 |
+| `:where(.bdg` | 1222–1222 | 1 |
+| `:where(.sl` | 1223–1223 | 1 |
+| `:where(.partner-pill` | 1224–1224 | 1 |
+| `@media(max-width:980px)` | 1225–1228 | 1 |
+| `@media(max-width:640px)` | 1229–1235 | 1 |
+| `season-profile` | 1238–1282 | 45 |
+| `difficult-connections` | 1285–1286 | 2 |
+| `difficult-impact` | 1287–1289 | 3 |
+| `difficult-compact` | 1290–1290 | 1 |
+| `difficult-compare` | 1291–1297 | 7 |
+| `difficult-impact` | 1298–1298 | 1 |
+| `difficult-metric` | 1299–1305 | 7 |
+| `difficult-details` | 1306–1306 | 1 |
+| `difficult-direct` | 1307–1307 | 1 |
+| `response-momentum` | 1308–1314 | 7 |
+| `rm-term` | 1315–1315 | 1 |
+| `player-explain` | 1316–1318 | 3 |
+| `@media(max-width:720px)` | 1319–1325 | 1 |
+| `@media(max-width:900px)` | 1326–1328 | 1 |
+| `@media(max-width:560px)` | 1329–1336 | 1 |
+| `ui-kpi` | 1349–1356 | 8 |
+| `ui-info` | 1357–1359 | 3 |
+| `ui-delta` | 1360–1363 | 4 |
+| `ui-reliability` | 1364–1367 | 4 |
+| `ui-kernaussage` | 1369–1370 | 2 |
+| `ui-hinweis` | 1372–1375 | 4 |
+| `ui-rangliste` | 1377–1384 | 8 |
+| `ui-verlauf` | 1386–1387 | 2 |
+| `ui-intervall` | 1389–1393 | 5 |
+| `ui-methodenbox` | 1395–1400 | 6 |
+| `ui-notiz` | 1402–1402 | 1 |
+| `ui-datenstand` | 1406–1406 | 1 |
+| `ui-platzhalter` | 1408–1409 | 2 |
+| `@media(prefers-reduced-motion:reduce)` | 1411–1411 | 1 |
+| `@media(max-width:600px)` | 1413–1416 | 1 |
+| `ui-objektseite` | 1425–1433 | 9 |
+| `@media(max-width:600px)` | 1435–1438 | 1 |
+| `@media(max-width:360px)` | 1439–1441 | 1 |
+| `ia-context` | 1450–1454 | 5 |
+| `ia-mainnav` | 1455–1458 | 4 |
+| `ia-placeholder` | 1459–1460 | 2 |
+| `ia-overview` | 1467–1471 | 5 |
+| `ia-matchday` | 1477–1485 | 9 |
+| `ia-back` | 1486–1486 | 1 |
+| `ia-search` | 1492–1506 | 15 |
+| `@media(max-width:600px)` | 1507–1509 | 1 |
+| `ia-tool` | 1515–1522 | 8 |
+| `ia-mainnav` | 1531–1531 | 1 |
+| `@media(max-width:600px)` | 1532–1542 | 1 |
+| `@media(max-width:600px)` | 1544–1549 | 1 |
 
 ## @keyframes
 
 | Name | Zeile |
 |---|---|
-| `cv-skyline-sweep` | 55–55 |
-| `cv-skyline-pulse-opacity` | 56–56 |
-| `pulse` | 62–62 |
-| `vfb-hof-intro-flash` | 631–631 |
-| `vfb-hof-intro-bar` | 632–632 |
-| `vfb-hof-intro-crown` | 633–633 |
-| `vfb-hof-intro-float` | 634–634 |
-| `vfb-hof-intro-letter` | 635–635 |
-| `vfb-hof-intro-sub` | 636–636 |
-| `vfb-hof-intro-spark` | 637–637 |
-| `vfb-hof-intro-shimmer` | 638–638 |
-| `ui-platzhalter-shimmer` | 1404–1404 |
+| `cv-skyline-sweep` | 57–57 |
+| `cv-skyline-pulse-opacity` | 58–58 |
+| `pulse` | 64–64 |
+| `vfb-hof-intro-flash` | 633–633 |
+| `vfb-hof-intro-bar` | 634–634 |
+| `vfb-hof-intro-crown` | 635–635 |
+| `vfb-hof-intro-float` | 636–636 |
+| `vfb-hof-intro-letter` | 637–637 |
+| `vfb-hof-intro-sub` | 638–638 |
+| `vfb-hof-intro-spark` | 639–639 |
+| `vfb-hof-intro-shimmer` | 640–640 |
+| `ui-platzhalter-shimmer` | 1410–1410 |
 
 ## Funktionen, window.-Zuweisungen und const-Pfeilfunktionen (nach Zeile)
 
-1129 `function`-Deklarationen, 130 `window.`-Funktionszuweisungen, 4 `const`-Pfeilfunktionen — alle Top-Level, sortiert nach Zeile.
+1047 `function`-Deklarationen, 134 `window.`-Funktionszuweisungen, 4 `const`-Pfeilfunktionen — alle Top-Level, sortiert nach Zeile.
 
 | Name | Art | Zeile | Zeilen |
 |---|---|---|---|
-| `createSeasonBucket` | function | 1782–1796 | 15 |
-| `getSeasonApiBaseUrl` | function | 1807–1823 | 17 |
-| `seasonApiUrl` | function | 1824–1826 | 3 |
-| `getSeasonOriginBaseUrl` | function | 1827–1835 | 9 |
-| `seasonPathPrefix` | function | 1836–1838 | 3 |
-| `uniqueList` | function | 1839–1841 | 3 |
-| `seasonGameApiUrls` | function | 1842–1851 | 10 |
-| `seasonGameHtmlUrls` | function | 1852–1859 | 8 |
-| `clearAnalysisCache` | function | 2157–2159 | 3 |
-| `analysisCacheContext` | function | 2160–2174 | 15 |
-| `asOfCacheKeyPart` | function | 2188–2193 | 6 |
-| `analysisCacheKey` | function | 2194–2197 | 4 |
-| `cachedAnalysis` | function | 2198–2203 | 6 |
-| `setState` | const-arrow | 2204–2211 | 8 |
-| `invalidateGlobalIdentityCache` | function | 2212–2214 | 3 |
-| `setP` | window | 2216–2216 | 1 |
-| `setTab` | window | 2217–2217 | 1 |
-| `setPlayerRoleView` | window | 2218–2218 | 1 |
-| `setGoalieTab` | window | 2219–2219 | 1 |
-| `toggleSpecialTeamsGameDetails` | window | 2220–2220 | 1 |
-| `toggleMatchcenterSpecialTeamsGames` | window | 2221–2221 | 1 |
-| `toggleMatchcenterPlayerDetails` | window | 2222–2222 | 1 |
-| `toggleMatchcenterDuoDetails` | window | 2223–2223 | 1 |
-| `setMatchcenterTab` | window | 2224–2224 | 1 |
-| `openMatchcenterStoryPreview` | window | 2225–2225 | 1 |
-| `closeMatchcenterStoryPreview` | window | 2226–2226 | 1 |
-| `toggleHallOfFamePureSGPlayers` | window | 2227–2227 | 1 |
-| `copyMatchcenterText` | window | 2228–2253 | 26 |
-| `addLineupPlayer` | window | 2254–2259 | 6 |
-| `removeLineupPlayer` | window | 2260–2260 | 1 |
-| `clearLineupPlayers` | window | 2261–2261 | 1 |
-| `filterLineupPlayers` | window | 2262–2268 | 7 |
-| `lineupBuilderPoolIds` | function | 2269–2271 | 3 |
-| `normalizeLineupLines` | function | 2272–2276 | 5 |
-| `setLineupBuilderSeason` | window | 2277–2288 | 12 |
-| `setLineupBuilderOpponent` | window | 2289–2289 | 1 |
-| `setLineupBuilderMode` | window | 2290–2290 | 1 |
-| `setLineupActiveLine` | window | 2291–2291 | 1 |
-| `toggleLineupBuilderAvailable` | window | 2292–2305 | 14 |
-| `selectAllLineupAvailable` | window | 2306–2306 | 1 |
-| `clearLineupAvailable` | window | 2307–2307 | 1 |
-| `addLineupBuilderPlayerToLine` | window | 2308–2317 | 10 |
-| `addLineupBuilderPlayerToActiveLine` | window | 2318–2318 | 1 |
-| `removeLineupBuilderPlayerFromLine` | window | 2319–2325 | 7 |
-| `clearLineupBuilderLine` | window | 2326–2331 | 6 |
-| `showLineupComplements` | window | 2332–2332 | 1 |
-| `setLineupNewPlayerProfile` | window | 2333–2333 | 1 |
-| `addSyntheticLineupPlayer` | window | 2334–2351 | 18 |
-| `setAntiSynergyView` | window | 2352–2352 | 1 |
-| `toggleAntiSynergyShowAll` | window | 2353–2353 | 1 |
-| `toggleAntiSynergyHideSgOnly` | window | 2354–2354 | 1 |
-| `filterLineupBuilderAvailable` | window | 2355–2361 | 7 |
-| `setPage` | window | 2362–2370 | 9 |
-| `backToHome` | window | 2371–2377 | 7 |
-| `setGlobalPlayer` | window | 2378–2378 | 1 |
-| `setGlobalPlayerDuo` | window | 2379–2379 | 1 |
-| `setGlobalTab` | window | 2380–2380 | 1 |
-| `toggleSgOnlyAlltime` | window | 2381–2381 | 1 |
-| `getActiveSeasonKey` | function | 2383–2385 | 3 |
-| `getSeasonData` | function | 2386–2414 | 29 |
-| `getGlobalAllTimeSnapshot` | function | 2415–2422 | 8 |
-| `applySeasonContext` | function | 2423–2446 | 24 |
-| `mojibakeScore` | function | 2459–2463 | 5 |
-| `decodeCp1252AsUtf8` | function | 2464–2477 | 14 |
-| `repairMojibake` | function | 2478–2495 | 18 |
-| `fixKnownUiTransliterations` | function | 2514–2518 | 5 |
-| `cleanText` | function | 2519–2521 | 3 |
-| `fixMojibakeText` | function | 2522–2524 | 3 |
-| `repairRenderedMojibake` | function | 2525–2546 | 22 |
-| `normalizeTeamName` | function | 2547–2556 | 10 |
-| `normalizeOpponentNameForAllTime` | function | 2557–2567 | 11 |
-| `isFreiburgTuebingenSgName` | function | 2568–2570 | 3 |
-| `isMannheimLudwigshafenSgName` | function | 2571–2573 | 3 |
-| `getAllTimeOpponentNames` | function | 2574–2581 | 8 |
-| `getUniqueAllTimeOpponentNames` | function | 2582–2584 | 3 |
-| `isUlmTeamName` | function | 2586–2591 | 6 |
-| `getUlmTeamStatus` | function | 2592–2596 | 5 |
-| `detectUlmSide` | function | 2597–2603 | 7 |
-| `detectSide` | const-arrow | 2604–2604 | 1 |
-| `pFull` | function | 2605–2611 | 7 |
-| `normalizePlayerDisplayName` | function | 2612–2627 | 16 |
-| `normalizePlayerName` | function | 2628–2637 | 10 |
-| `getPreClubHistoryPlayerNames` | function | 2638–2640 | 3 |
-| `isPreClubHistoryPlayerName` | function | 2641–2645 | 5 |
-| `gameStableId` | function | 2646–2648 | 3 |
-| `diagnoseGameDuplicates` | function | 2649–2662 | 14 |
-| `gameClassificationStatusLabel` | function | 2663–2670 | 8 |
-| `appendSeasonGameDiagnostics` | function | 2671–2720 | 50 |
-| `warnEventProcessingOnce` | function | 2722–2729 | 8 |
-| `rosterPlayerMatches` | function | 2730–2744 | 15 |
-| `getRosterGameIdsForPlayer` | function | 2745–2753 | 9 |
-| `isGoalieRosterEntry` | function | 2754–2758 | 5 |
-| `goalieEntryRecognitionReason` | function | 2768–2777 | 10 |
-| `isExcludedGoalieAppearance` | function | 2778–2791 | 14 |
-| `isGoalieAppearance` | function | 2792–2797 | 6 |
-| `isFieldAppearance` | function | 2798–2803 | 6 |
-| `getFieldGameIdsForPlayer` | function | 2804–2810 | 7 |
-| `getGoalieGameIdsForPlayer` | function | 2811–2817 | 7 |
-| `getPlayerFieldGames` | function | 2818–2821 | 4 |
-| `getPlayerGoalieGames` | function | 2822–2825 | 4 |
-| `roleGameStableKey` | function | 2826–2828 | 3 |
-| `getPlayerAlltimeRoleGames` | function | 2829–2847 | 19 |
-| `getPlayerAlltimeFieldGames` | function | 2848–2850 | 3 |
-| `getPlayerAlltimeGoalieGames` | function | 2851–2853 | 3 |
-| `getPlayerAlltimeTotalGames` | function | 2854–2862 | 9 |
-| `getPlayerSeasonRoleGameSummary` | function | 2863–2885 | 23 |
-| `getPlayedUlmGames` | function | 2886–2894 | 9 |
-| `countPlayedUlmGames` | function | 2895–2897 | 3 |
-| `getSeasonTeamGames` | function | 2898–2901 | 4 |
-| `getSeasonTeamGameIds` | function | 2902–2904 | 3 |
-| `getPlayerSourceId` | function | 2905–2907 | 3 |
-| `getJerseyNumber` | function | 2908–2910 | 3 |
-| `normalizeEventPlayerRef` | function | 2911–2922 | 12 |
-| `resolveRosterPlayerByRef` | function | 2923–2953 | 31 |
-| `resolveGoalScorerPlayer` | function | 2954–2968 | 15 |
-| `getGoalScorerFromEvent` | function | 2969–2971 | 3 |
-| `normalizeAssistPlayerName` | function | 2972–2974 | 3 |
-| `collectAssistEventRefs` | function | 2975–3002 | 28 |
-| `getAssistPlayersFromEvent` | function | 3003–3016 | 14 |
-| `resolveAssistPlayer` | function | 3017–3023 | 7 |
-| `parseGameClock` | function | 3024–3033 | 10 |
-| `t2s` | const-arrow | 3034–3034 | 1 |
-| `getPhaseKey` | function | 3035–3046 | 12 |
-| `variance` | function | 3047–3051 | 5 |
-| `processGame` | function | 3056–3113 | 58 |
-| `isGamePlayed` | function | 3115–3117 | 3 |
-| `isYouthGame` | function | 3120–3128 | 9 |
-| `gameStatusText` | function | 3130–3136 | 7 |
-| `gameScore` | function | 3137–3146 | 10 |
-| `isGameAtOrBeforeAsOf` | function | 3156–3166 | 11 |
-| `classifyGameForStats` | function | 3167–3208 | 42 |
-| `getRelevantSeasonGames` | function | 3209–3228 | 20 |
-| `deriveAsOfForSeason` | function | 3241–3244 | 4 |
-| `getSeasonStatsAsOf` | function | 3279–3290 | 12 |
-| `compareGamesChronologically` | function | 3305–3318 | 14 |
-| `buildMatchdays` | function | 3326–3367 | 42 |
-| `getSeasonMatchdays` | function | 3376–3380 | 5 |
-| `matchdayAsOfCutoff` | function | 3389–3397 | 9 |
-| `formatDateDE` | function | 3399–3402 | 4 |
-| `seasonKeyToHashSegment` | function | 3426–3428 | 3 |
-| `hashSegmentToSeasonKey` | function | 3429–3432 | 4 |
-| `isValidAsOfDate` | function | 3433–3435 | 3 |
-| `isValidAsOfStartTime` | function | 3436–3438 | 3 |
-| `asOfEquals` | function | 3445–3452 | 8 |
-| `decodeHashSegmentSafe` | function | 3516–3518 | 3 |
-| `parseAppHash` | function | 3536–3567 | 32 |
-| `parseAsOfQueryValue` | function | 3575–3585 | 11 |
-| `buildAppHash` | function | 3591–3603 | 13 |
-| `buildGlobalPageHash` | function | 3608–3617 | 10 |
-| `buildHashStringFromParsed` | function | 3623–3627 | 5 |
-| `computeCurrentAppHash` | function | 3643–3655 | 13 |
-| `syncHashFromState` | function | 3669–3679 | 11 |
-| `withoutHashSync` | function | 3686–3694 | 9 |
-| `parseLastViewState` | function | 3710–3721 | 12 |
-| `getStoredLastView` | function | 3722–3725 | 4 |
-| `saveLastView` | function | 3727–3729 | 3 |
-| `applyGlobalPageFromHash` | function | 3741–3761 | 21 |
-| `applyAppHash` | function | 3774–3804 | 31 |
-| `initHashRouting` | function | 3853–3871 | 19 |
-| `gameResult` | function | 3874–3880 | 7 |
-| `buildStandings` | function | 3885–3924 | 40 |
-| `getOppStrength` | function | 3926–3932 | 7 |
-| `createPlayerAnalysisProfile` | function | 3944–3946 | 3 |
-| `emptyPlayerSeasonStats` | function | 3948–3953 | 6 |
-| `emptyGoalieSeasonStats` | function | 3954–3975 | 22 |
-| `emptyGoalieAlltimeStats` | function | 3976–3990 | 15 |
-| `emptyGoalieSpecialTeamsStats` | function | 3991–4002 | 12 |
-| `emptyFieldRoleSeasonStats` | function | 4003–4005 | 3 |
-| `addUnique` | function | 4007–4009 | 3 |
-| `incrementUniqueCounter` | function | 4011–4016 | 6 |
-| `buildPlayerIdentity` | function | 4018–4033 | 16 |
-| `resetPlayerRegistrySeason` | function | 4035–4045 | 11 |
-| `derivePlayerStatus` | function | 4047–4054 | 8 |
-| `getOrCreatePlayerProfile` | function | 4056–4088 | 33 |
-| `registerPlayerIdentity` | function | 4090–4106 | 17 |
-| `ensureGoalieSeasonStats` | function | 4108–4112 | 5 |
-| `ensureFieldRoleSeasonStats` | function | 4113–4117 | 5 |
-| `markFieldRoleAppearance` | function | 4118–4121 | 4 |
-| `registerSeasonRosters` | function | 4123–4141 | 19 |
-| `linkUiPlayersToRegistry` | function | 4143–4163 | 21 |
-| `applySeasonScoringToRegistry` | function | 4165–4186 | 22 |
-| `finalizePlayerRegistrySeason` | function | 4188–4202 | 15 |
-| `serializeSeasonStats` | function | 4204–4216 | 13 |
-| `serializeGoalieSeasonStats` | function | 4217–4238 | 22 |
-| `serializeFieldRoleSeasonStats` | function | 4239–4241 | 3 |
-| `toPublicPlayerRegistry` | function | 4243–4272 | 30 |
-| `aggregateAllTimePlayers` | function | 4274–4307 | 34 |
-| `finiteNumbers` | function | 4309–4311 | 3 |
-| `avgOrNull` | function | 4312–4315 | 4 |
-| `medianOrNull` | function | 4316–4321 | 6 |
-| `incGoalieBucket` | function | 4322–4325 | 4 |
-| `goalieEventAbsSeconds` | function | 4326–4331 | 6 |
-| `goalieGameDurationSeconds` | function | 4332–4336 | 5 |
-| `goalieGameStateBeforeGoal` | function | 4337–4348 | 12 |
-| `getGoalieOpponentName` | function | 4349–4352 | 4 |
-| `getGoalieOpponentTier` | function | 4353–4357 | 5 |
-| `resultGoalsAgainstForSide` | function | 4358–4367 | 10 |
-| `emptySpecialTeamsStats` | function | 4368–4408 | 41 |
-| `clonePlain` | function | 4409–4411 | 3 |
-| `finalizeSpecialTeamsStats` | function | 4412–4418 | 7 |
-| `serializeSpecialTeamsStats` | function | 4419–4421 | 3 |
-| `mergeSpecialTeamsStats` | function | 4422–4451 | 30 |
-| `penaltyRawText` | function | 4454–4456 | 3 |
-| `isMatchPenaltyEvent` | function | 4457–4460 | 4 |
-| `isTwoPlusTwoPenaltyEvent` | function | 4461–4464 | 4 |
-| `getPenaltyDisciplineType` | function | 4465–4472 | 8 |
-| `getGameDurationMinutes` | function | 4473–4477 | 5 |
-| `gameDaySortValue` | function | 4478–4485 | 8 |
-| `isSameUlmTeamContext` | function | 4486–4493 | 8 |
-| `getFurtherSameDayUlmGames` | function | 4494–4505 | 12 |
-| `getPenaltySpecialTeamsMinutes` | function | 4506–4508 | 3 |
-| `getPenaltyBasePersonalMinutes` | function | 4509–4516 | 8 |
-| `getPenaltyPersonalMinutes` | function | 4517–4526 | 10 |
-| `getPenaltyDisciplineMinutes` | function | 4527–4529 | 3 |
-| `getSpecialTeamsPenaltyChunks` | function | 4530–4539 | 10 |
-| `isPenaltyGoalEvent` | function | 4540–4544 | 5 |
-| `specialTeamsStateFromActive` | function | 4545–4551 | 7 |
-| `annotateSpecialTeamsGoalEvent` | function | 4552–4566 | 15 |
-| `buildSpecialTeamsForGame` | function | 4567–4760 | 194 |
-| `buildSpecialTeamsForSeason` | function | 4761–4769 | 9 |
-| `aggregateAlltimeSpecialTeams` | function | 4770–4777 | 8 |
-| `mergeGoalieSpecialTeamsStats` | function | 4778–4789 | 12 |
-| `addGoalieSpecialTeamsGameToStats` | function | 4790–4804 | 15 |
-| `finalizeGoalieSeasonStats` | function | 4805–4819 | 15 |
-| `addGoalieGameToStats` | function | 4820–4870 | 51 |
-| `buildGoalieGameRecord` | function | 4872–4920 | 49 |
-| `buildGoalieStatsForSeason` | function | 4922–5001 | 80 |
-| `aggregateGoalieAlltimeStats` | function | 5003–5037 | 35 |
-| `updatePlayerRoleAvailability` | function | 5039–5048 | 10 |
-| `getGoalieDiagnostics` | function | 5050–5055 | 6 |
-| `getSpecialTeamsDiagnostics` | function | 5057–5062 | 6 |
-| `getAssistDiagnostics` | function | 5064–5116 | 53 |
-| `buildSeasonDuos` | function | 5119–5145 | 27 |
-| `mergeDuoSet` | function | 5146–5162 | 17 |
-| `aggregateAllTimeDuos` | function | 5163–5173 | 11 |
-| `aggregateSeasonStats` | function | 5175–5190 | 16 |
-| `buildPlayerDataFoundation` | function | 5192–5213 | 22 |
-| `buildRegistry` | function | 5215–5241 | 27 |
-| `buildPlayerEvents` | function | 5246–5330 | 85 |
-| `getPhaseIndex` | function | 5335–5345 | 11 |
-| `computeMetrics` | function | 5350–5482 | 133 |
-| `detectTypes` | function | 5484–5499 | 16 |
-| `pct` | function | 5501–5501 | 1 |
-| `ratio01` | function | 5502–5502 | 1 |
-| `relative01` | function | 5503–5503 | 1 |
-| `buildSoloDuoProfile` | function | 5504–5547 | 44 |
-| `identityPartnerStats` | function | 5548–5561 | 14 |
-| `identityOpponentGroups` | function | 5562–5569 | 8 |
-| `eventMatchesTeams` | function | 5570–5575 | 6 |
-| `clutchText` | function | 5576–5576 | 1 |
-| `isImportantClutchGoal` | function | 5577–5581 | 5 |
-| `isDecisiveGoal` | function | 5582–5584 | 3 |
-| `isLateGoal` | function | 5585–5589 | 5 |
-| `isComebackRelevantGoal` | function | 5590–5593 | 4 |
-| `identityPointsVsTeams` | function | 5594–5596 | 3 |
-| `identityGoalsVsTeams` | function | 5597–5599 | 3 |
-| `identityClutchGoalsVsTeams` | function | 5600–5602 | 3 |
-| `identityDecisiveGoalsVsTeams` | function | 5603–5605 | 3 |
-| `identityLateGoalsVsTeams` | function | 5606–5608 | 3 |
-| `countMomentumClusters` | function | 5609–5633 | 25 |
-| `identityInputs` | function | 5634–5691 | 58 |
-| `clearlyAboveAverage` | function | 5692–5692 | 1 |
-| `normalizeSecondaryTraits` | function | 5693–5704 | 12 |
-| `seasonRoleTraitsFromClassic` | function | 5705–5709 | 5 |
-| `seasonRoleKeysForPlayer` | function | 5710–5718 | 9 |
-| `hasSeasonRole` | function | 5719–5721 | 3 |
-| `selectEnforcerKeys` | function | 5722–5734 | 13 |
-| `buildIdentityProfiles` | function | 5735–5966 | 232 |
-| `composeIdentityText` | function | 5967–5973 | 7 |
-| `countCaptainAppearances` | function | 5975–5987 | 13 |
-| `countGoalieAppearances` | function | 5989–5991 | 3 |
-| `computeRosterStatus` | function | 5993–6011 | 19 |
-| `assignStatus` | function | 6013–6198 | 186 |
-| `fetchJsonLegacy` | function | 6204–6223 | 20 |
-| `responseExcerpt` | function | 6225–6227 | 3 |
-| `diagnosticError` | function | 6228–6232 | 5 |
-| `fetchTextWithDiagnostics` | function | 6233–6262 | 30 |
-| `fetchJsonWithDiagnostics` | function | 6263–6271 | 9 |
-| `fetchJson` | function | 6272–6275 | 4 |
-| `formatStatus` | function | 6276–6278 | 3 |
-| `formatDiagnosticAttempt` | function | 6279–6291 | 13 |
-| `formatGameLoadError` | function | 6292–6297 | 6 |
-| `fetchSeasonGameRaw` | function | 6298–6337 | 40 |
-| `normalizeGame` | function | 6340–6361 | 22 |
-| `getStaticSeasonGames` | function | 6362–6365 | 4 |
-| `loadSeasonManifest` | function | 6377–6393 | 17 |
-| `resolveCurrentSeasonKey` | function | 6409–6428 | 20 |
-| `applyCurrentSeasonCoverHighlight` | function | 6429–6433 | 5 |
-| `isUsableExternalSeasonData` | function | 6446–6454 | 9 |
-| `ensureExternalSeasonData` | function | 6455–6476 | 22 |
-| `buildStaticSeasonDataBlock` | function | 6477–6486 | 10 |
-| `getGameId` | function | 6513–6517 | 5 |
-| `findDuplicateGameIds` | function | 6519–6529 | 11 |
-| `validateGameStructure` | function | 6547–6586 | 40 |
-| `validateSeasonGames` | function | 6588–6598 | 11 |
-| `diffGameIds` | function | 6600–6609 | 10 |
-| `validateSeasonKey` | function | 6611–6621 | 11 |
-| `validateWrapperFormat` | function | 6623–6632 | 10 |
-| `validateMergedSeason` | function | 6634–6651 | 18 |
-| `buildDryRunReport` | function | 6653–6715 | 63 |
-| `seasonDataPreviewRerender` | function | 6736–6738 | 3 |
-| `seasonDataPreviewRow` | function | 6740–6751 | 12 |
-| `buildSeasonDataPreviewChanges` | function | 6758–6775 | 18 |
-| `stageSeasonDataPreview` | function | 6786–6837 | 52 |
-| `stageSeasonDataPreviewFromFile` | function | 6838–6851 | 14 |
-| `stageSeasonDataPreviewFromPaste` | function | 6852–6856 | 5 |
-| `discardSeasonDataPreview` | function | 6857–6861 | 5 |
-| `getSeasonDataPreview` | function | 6863–6865 | 3 |
-| `isSeasonDataPreviewStale` | function | 6871–6875 | 5 |
-| `rSeasonDataPreviewStatus` | function | 6877–6879 | 3 |
-| `rSeasonDataPreviewRows` | function | 6880–6888 | 9 |
-| `rSeasonDataPreviewCard` | function | 6890–6925 | 36 |
-| `setSeasonDataPreviewOpen` | window | 6926–6926 | 1 |
-| `setSeasonDataPreviewPasteText` | window | 6927–6927 | 1 |
-| `fileNameForLineupSeasonKey` | function | 6947–6949 | 3 |
-| `ensureLineupDataLoaded` | function | 6965–6981 | 17 |
-| `ensureLineupGroupsRegistryLoaded` | function | 6990–7006 | 17 |
-| `resolveLineupPlayerName` | function | 7018–7021 | 4 |
-| `findLineupGameContext` | function | 7024–7031 | 8 |
-| `rEinsatzCenterGroup` | function | 7033–7044 | 12 |
-| `rEinsatzCenterCombo` | function | 7046–7053 | 8 |
-| `rEinsatzCenterGameCard` | function | 7055–7072 | 18 |
-| `rEinsatzCenterPage` | function | 7074–7093 | 20 |
-| `setEinsatzCenterSeason` | window | 7095–7100 | 6 |
-| `openEinsatzCenter` | window | 7101–7108 | 8 |
-| `computeEinsatzCenterStats` | function | 7119–7149 | 31 |
-| `lineupGroupDisplayName` | function | 7150–7155 | 6 |
-| `rEinsatzCenterStats` | function | 7156–7174 | 19 |
-| `getEffectiveLineupData` | function | 7232–7239 | 8 |
-| `isEinsatzCenterGameFromDraft` | function | 7241–7244 | 4 |
-| `einsatzCenterDraftInView` | function | 7246–7249 | 4 |
-| `rEinsatzCenterDraftMark` | function | 7250–7253 | 4 |
-| `rEinsatzCenterDraftStatsHint` | function | 7254–7258 | 5 |
-| `einsatzCenterDraftStaleHint` | function | 7260–7262 | 3 |
-| `rEinsatzCenterDraftBanner` | function | 7264–7271 | 8 |
-| `ensureEinsatzCenterDraft` | function | 7282–7295 | 14 |
-| `getEinsatzCenterGameDraft` | function | 7304–7315 | 12 |
-| `einsatzCenterAutosaveKey` | function | 7342–7342 | 1 |
-| `einsatzCenterStorageRead` | function | 7343–7345 | 3 |
-| `einsatzCenterStorageWrite` | function | 7346–7348 | 3 |
-| `einsatzCenterStorageRemove` | function | 7349–7351 | 3 |
-| `einsatzCenterDraftIsEmpty` | function | 7354–7356 | 3 |
-| `einsatzCenterSerializeDraft` | function | 7358–7370 | 13 |
-| `einsatzCenterIsPlainObject` | function | 7371–7371 | 1 |
-| `einsatzCenterDeserializeAutosave` | function | 7377–7410 | 34 |
-| `einsatzCenterCurrentRawBaseHash` | function | 7417–7422 | 6 |
-| `einsatzCenterAutosaveDraft` | function | 7431–7458 | 28 |
-| `einsatzCenterInspectAutosave` | function | 7466–7494 | 29 |
-| `restoreEinsatzCenterAutosave` | function | 7497–7513 | 17 |
-| `discardEinsatzCenterAutosave` | function | 7515–7520 | 6 |
-| `rEinsatzCenterAutosaveBanner` | function | 7523–7535 | 13 |
-| `einsatzCenterAutosaveInfoText` | function | 7537–7547 | 11 |
-| `loadEinsatzCenterMismatchedAutosave` | function | 7561–7579 | 19 |
-| `deriveLineupValidPlayerIds` | function | 7592–7608 | 17 |
-| `deriveLineupUlmPlayerIds` | function | 7616–7632 | 17 |
-| `getSeasonmanagerRosterSuggestion` | function | 7646–7666 | 21 |
-| `einsatzCenterCanonicalJson` | function | 7675–7684 | 10 |
-| `einsatzCenterSha256Hex` | function | 7685–7689 | 5 |
-| `einsatzCenterComputeBaseHash` | function | 7690–7692 | 3 |
-| `einsatzCenterSoftIssues` | function | 7699–7717 | 19 |
-| `rEinsatzCenterGroupEditor` | function | 7720–7750 | 31 |
-| `rEinsatzCenterComboEditor` | function | 7751–7757 | 7 |
-| `rEinsatzCenterRosterSuggestionCard` | function | 7767–7797 | 31 |
-| `rEinsatzCenterGameEditor` | function | 7798–7850 | 53 |
-| `rEinsatzCenterEditPage` | function | 7851–7898 | 48 |
-| `startEinsatzCenterDraftMode` | window | 7901–7905 | 5 |
-| `cancelEinsatzCenterEdit` | window | 7906–7916 | 11 |
-| `viewEinsatzCenterMergedView` | window | 7918–7918 | 1 |
-| `returnToEinsatzCenterEdit` | window | 7919–7919 | 1 |
-| `setEinsatzCenterIncludeDraft` | window | 7920–7920 | 1 |
-| `selectEinsatzCenterEditGame` | window | 7921–7924 | 4 |
-| `addEinsatzCenterRosterPlayer` | window | 7925–7932 | 8 |
-| `removeEinsatzCenterRosterPlayer` | window | 7933–7940 | 8 |
-| `toggleEinsatzCenterRosterSuggestionPlayer` | window | 7941–7947 | 7 |
-| `dismissEinsatzCenterRosterSuggestion` | window | 7948–7951 | 4 |
-| `acceptEinsatzCenterRosterSuggestion` | window | 7959–7975 | 17 |
-| `addEinsatzCenterExistingGroup` | window | 7976–7984 | 9 |
-| `addEinsatzCenterNewGroup` | window | 7985–8001 | 17 |
-| `removeEinsatzCenterGroup` | window | 8002–8009 | 8 |
-| `toggleEinsatzCenterGroupRename` | window | 8010–8012 | 3 |
-| `renameEinsatzCenterGroup` | window | 8024–8043 | 20 |
-| `addEinsatzCenterGroupPlayer` | window | 8044–8051 | 8 |
-| `removeEinsatzCenterGroupPlayer` | window | 8052–8059 | 8 |
-| `setEinsatzCenterGroupPlayerPosition` | window | 8060–8068 | 9 |
-| `toggleEinsatzCenterComboPlayer` | window | 8069–8076 | 8 |
-| `confirmEinsatzCenterCombo` | window | 8077–8087 | 11 |
-| `removeEinsatzCenterCombo` | window | 8088–8094 | 7 |
-| `setEinsatzCenterGameNote` | window | 8095–8101 | 7 |
-| `buildEinsatzCenterDraftExport` | function | 8105–8118 | 14 |
-| `exportEinsatzCenterDraft` | window | 8119–8131 | 13 |
-| `loadSeasonData` | function | 8146–8604 | 459 |
-| `showMainShell` | function | 8607–8611 | 5 |
-| `hasSeasonSource` | function | 8612–8615 | 4 |
-| `hasEmbeddedSeasonData` | function | 8616–8618 | 3 |
-| `getGlobalLoadableSeasonKeys` | function | 8619–8625 | 7 |
-| `getAllTimeCoverStats` | function | 8626–8633 | 8 |
-| `updateCoverAllTimeStats` | function | 8634–8642 | 9 |
-| `loadSeasonForGlobal` | function | 8644–8674 | 31 |
-| `ensureGlobalDataLoaded` | function | 8675–8690 | 16 |
-| `loadSeason` | function | 8692–8743 | 52 |
-| `startApp` | window | 8745–8756 | 12 |
-| `ensureAppLoaded` | function | 8747–8756 | 10 |
-| `openSeason` | window | 8757–8759 | 3 |
-| `openAllTimePlayers` | window | 8760–8765 | 6 |
-| `hofIntroDelay` | function | 8768–8770 | 3 |
-| `ensureHallOfFameIntroOverlay` | function | 8771–8803 | 33 |
-| `buildHallOfFameIntroTitle` | function | 8804–8814 | 11 |
-| `seedHallOfFameIntroParticles` | function | 8815–8832 | 18 |
-| `cleanupHallOfFameIntro` | function | 8833–8847 | 15 |
-| `restoreHallOfFameIntroPrevious` | function | 8848–8859 | 12 |
-| `finishHallOfFameIntro` | function | 8860–8867 | 8 |
-| `startHallOfFameIntro` | function | 8868–8892 | 25 |
-| `cancelHallOfFameIntro` | function | 8893–8904 | 12 |
-| `openHallOfFame` | window | 8906–8929 | 24 |
-| `openComparisonCenter` | window | 8930–8958 | 29 |
-| `openMatchcenter` | window | 8959–8980 | 22 |
-| `openLineupBuilder` | window | 8981–8998 | 18 |
-| `setMatchcenterOpponent` | window | 8999–8999 | 1 |
-| `setMatchcenterContext` | window | 9000–9000 | 1 |
-| `setMatchcenterSeason` | window | 9001–9001 | 1 |
-| `toggleMatchcenterGames` | window | 9002–9002 | 1 |
-| `openLexicon` | window | 9003–9006 | 4 |
-| `rRes` | const-arrow | 9011–9011 | 1 |
-| `rClutchBadge` | function | 9012–9019 | 8 |
-| `escAttr` | function | 9020–9022 | 3 |
-| `roleTraitLabel` | function | 9023–9025 | 3 |
-| `isVisibleSecondaryTrait` | function | 9026–9029 | 4 |
-| `rRoleTraitTip` | function | 9030–9034 | 5 |
-| `rStyleMetricTip` | function | 9035–9038 | 4 |
-| `rRosterStatusBadge` | function | 9039–9046 | 8 |
-| `classicTagLabel` | function | 9047–9049 | 3 |
-| `rClassicTagTip` | function | 9050–9054 | 5 |
-| `fallbackIdentityProfile` | function | 9055–9065 | 11 |
-| `rIdentityTags` | function | 9066–9074 | 9 |
-| `rStyleProfileBars` | function | 9075–9085 | 11 |
-| `rIdentityCards` | function | 9086–9111 | 26 |
-| `rClassicRoleTags` | function | 9112–9119 | 8 |
-| `renderTags` | function | 9120–9122 | 3 |
-| `getSeasonPlayerFieldBasis` | function | 9124–9150 | 27 |
-| `getSeasonScopedIdentityProfile` | function | 9151–9162 | 12 |
-| `rSeasonProfileKpis` | function | 9163–9182 | 20 |
-| `rSeasonProfileTagStrip` | function | 9184–9188 | 5 |
-| `rMatrix` | function | 9191–9235 | 45 |
-| `rSeasonDuoSummary` | function | 9238–9246 | 9 |
-| `rPhases` | function | 9248–9265 | 18 |
-| `rRadar` | function | 9268–9315 | 48 |
-| `rClutch` | function | 9318–9350 | 33 |
-| `rTimeline` | function | 9353–9461 | 109 |
-| `rPenalties` | function | 9464–9480 | 17 |
-| `rOppBreakdown` | function | 9483–9515 | 33 |
-| `generatePlayerInsights` | function | 9518–9561 | 44 |
-| `rSeasonInsightsTab` | function | 9564–9577 | 14 |
-| `rInsights` | function | 9579–9630 | 52 |
-| `rTable` | function | 9633–9653 | 21 |
-| `findLoadedSeasonPlayer` | function | 9656–9664 | 9 |
-| `getAllTimePlayerRows` | function | 9665–9680 | 16 |
-| `isSgOnlyAlltimePlayer` | function | 9681–9688 | 8 |
-| `isPureSGPlayer` | function | 9689–9692 | 4 |
-| `filterPureSGPlayers` | function | 9693–9696 | 4 |
-| `getAllTimeMainPlayerRows` | function | 9697–9699 | 3 |
-| `getAllTimeSgOnlyRows` | function | 9700–9702 | 3 |
-| `getPlayerSeasonStats` | function | 9703–9707 | 5 |
-| `getPlayerAlltimeStats` | function | 9708–9715 | 8 |
-| `getPlayerRegistryProfile` | function | 9716–9723 | 8 |
-| `getPlayerGoalieSeasonStats` | function | 9724–9728 | 5 |
-| `getPlayerGoalieAlltimeStats` | function | 9729–9752 | 24 |
-| `sumRoleGames` | function | 9753–9758 | 6 |
-| `getPlayerRoleAvailability` | function | 9759–9772 | 14 |
-| `resolvePlayerRoleView` | function | 9773–9780 | 8 |
-| `rPlayerRoleSwitch` | function | 9781–9787 | 7 |
-| `goalieNum` | function | 9788–9793 | 6 |
-| `goalieTime` | function | 9794–9801 | 8 |
-| `goalieBucketRows` | function | 9802–9807 | 6 |
-| `goalieTopRow` | function | 9808–9810 | 3 |
-| `goalieTierMeta` | function | 9811–9819 | 9 |
-| `goalieStdDev` | function | 9820–9825 | 6 |
-| `goalieDetailFirstTime` | function | 9826–9832 | 7 |
-| `goalieEventSecondInPeriod` | function | 9833–9838 | 6 |
-| `goaliePctText` | function | 9839–9842 | 4 |
-| `goalieSafeNum` | function | 9843–9846 | 4 |
-| `goalieClampScore` | function | 9847–9850 | 4 |
-| `goalieInverseScore` | function | 9851–9858 | 8 |
-| `goaliePositiveScore` | function | 9859–9866 | 8 |
-| `goaliePositiveCurveScore` | function | 9867–9875 | 9 |
-| `goalieWeightedScore` | function | 9876–9881 | 6 |
-| `goalieApplySampleConfidence` | function | 9882–9889 | 8 |
-| `goalieBucketLooseSum` | function | 9890–9896 | 7 |
-| `buildGoalieAnalysisModel` | function | 9897–10055 | 159 |
-| `rGoalieBars` | function | 10056–10065 | 10 |
-| `goalieDnaKey` | function | 10107–10111 | 5 |
-| `goalieDnaValue` | function | 10112–10118 | 7 |
-| `goalieStateGoals` | function | 10119–10119 | 1 |
-| `buildGoalieRoleProfile` | function | 10120–10193 | 74 |
-| `rGoalieRoleTraits` | function | 10194–10197 | 4 |
-| `getGoalieDnaRows` | function | 10198–10201 | 4 |
-| `rGoalieDnaBars` | function | 10202–10215 | 14 |
-| `rGoalieKpis` | function | 10216–10232 | 17 |
-| `rGoalieMiniMetrics` | function | 10233–10238 | 6 |
-| `rGoalieFirstGoalResistance` | function | 10239–10252 | 14 |
-| `rGoalieMomentum` | function | 10253–10266 | 14 |
-| `rGoalieTierCards` | function | 10267–10294 | 28 |
-| `rGoaliePhaseProfile` | function | 10295–10311 | 17 |
-| `rGoalieInsights` | function | 10312–10333 | 22 |
-| `rGoalieOverview` | function | 10334–10350 | 17 |
-| `rGoaliePhases` | function | 10351–10353 | 3 |
-| `rGoalieOpponents` | function | 10354–10365 | 12 |
-| `rGoalieStability` | function | 10366–10390 | 25 |
-| `rGoalieTable` | function | 10391–10398 | 8 |
-| `rGoalieAnalysis` | function | 10399–10424 | 26 |
-| `seasonOrderIndex` | function | 10425–10429 | 5 |
-| `getPreviousSeasonKey` | function | 10430–10434 | 5 |
-| `playerAppearedInSeasonByName` | function | 10435–10445 | 11 |
-| `playerAppearedForUlmStatusInSeasonByName` | function | 10446–10464 | 19 |
-| `isRookieCandidateForSeason` | function | 10465–10474 | 10 |
-| `getLoadedSeasonPointsByName` | function | 10475–10479 | 5 |
-| `seasonHasPureUlmTeam` | function | 10480–10486 | 7 |
-| `isSgOnlyHallOfFameExcluded` | function | 10487–10495 | 9 |
-| `isHallOfFameEligiblePlayer` | function | 10496–10501 | 6 |
-| `getHallOfFamePlayerRows` | function | 10502–10504 | 3 |
-| `getHallOfFamePlayerIdSet` | function | 10505–10507 | 3 |
-| `getGlobalProfileEvents` | function | 10509–10520 | 12 |
-| `countBy` | function | 10522–10530 | 9 |
-| `getLoadedSeasonPlayerUi` | function | 10531–10535 | 5 |
-| `getGlobalPlayerTeamRecord` | function | 10536–10561 | 26 |
-| `getGlobalPlayerPeakGame` | function | 10562–10572 | 11 |
-| `getGlobalPlayerBestSeason` | function | 10573–10579 | 7 |
-| `getAllTimeDuoRowsForPlayer` | function | 10580–10590 | 11 |
-| `getCarryPerformanceRows` | function | 10591–10606 | 16 |
-| `rCarryPerformanceRows` | function | 10607–10619 | 13 |
-| `getAllTimeGamesPlayedRows` | function | 10620–10644 | 25 |
-| `getAllTimePenaltyRows` | function | 10645–10660 | 16 |
-| `getSeasonUiPlayerForProfile` | function | 10661–10664 | 4 |
-| `getSeasonIdentityProfile` | function | 10665–10669 | 5 |
-| `seasonStatNumber` | function | 10670–10673 | 4 |
-| `seasonStatSetSize` | function | 10674–10679 | 6 |
-| `isActiveAlltimeSeasonStats` | function | 10680–10693 | 14 |
-| `getActiveAlltimeSeasonKeys` | function | 10694–10704 | 11 |
-| `getAlltimeRecencyWeight` | function | 10705–10710 | 6 |
-| `getRosterStatus` | function | 10711–10717 | 7 |
-| `getGlobalTopScorerMilestones` | function | 10718–10730 | 13 |
-| `getGlobalRookieSeasonKey` | function | 10731–10744 | 14 |
-| `getGlobalRookieMilestone` | function | 10745–10755 | 11 |
-| `getGlobalPlayerMilestones` | function | 10756–10773 | 18 |
-| `buildOpponentIntelligence` | function | 10775–10828 | 54 |
-| `rOpponentIntelBars` | function | 10830–10840 | 11 |
-| `getAllTimeDuoRows` | function | 10842–10864 | 23 |
-| `rDuoRows` | function | 10866–10885 | 20 |
-| `getAllLoadedSeasonGames` | function | 10887–10906 | 20 |
-| `getRosterEntryRegistryProfile` | function | 10908–10911 | 4 |
-| `difficultConnectionConfidence` | function | 10912–10916 | 5 |
-| `getDuoRowsForPlayerScope` | function | 10917–10935 | 19 |
-| `buildDirectDuoLookupForPlayer` | function | 10936–10953 | 18 |
-| `duoScopeSeasonKeys` | function | 10954–10957 | 4 |
-| `getDuoScorerCountsWithCandidate` | function | 10958–10977 | 20 |
-| `buildBestThirdManOptions` | function | 10978–11008 | 31 |
-| `getDuoDirectScorerGameCounts` | function | 11009–11040 | 32 |
-| `responseMomentumAbsSeconds` | function | 11042–11047 | 6 |
-| `responseMomentumTime` | function | 11048–11054 | 7 |
-| `responseMomentumGameRows` | function | 11055–11061 | 7 |
-| `responseMomentumSide` | function | 11062–11070 | 9 |
-| `responseMomentumActor` | function | 11071–11081 | 11 |
-| `responseMomentumGoalActors` | function | 11082–11089 | 8 |
-| `buildAnnotatedGoalEventsForGame` | function | 11090–11190 | 101 |
-| `responseMomentumConfidence` | function | 11191–11195 | 5 |
-| `responseMomentumEmptyState` | function | 11196–11203 | 8 |
-| `responseMomentumPairKey` | function | 11204–11206 | 3 |
-| `ensureRmPlayer` | function | 11207–11212 | 6 |
-| `ensureRmDuo` | function | 11213–11218 | 6 |
-| `finalizeResponseStats` | function | 11219–11232 | 14 |
-| `buildResponseGoalStatsRaw` | function | 11233–11281 | 49 |
-| `buildResponseGoalStats` | function | 11282–11287 | 6 |
-| `finalizeMomentumStats` | function | 11288–11293 | 6 |
-| `buildMomentumSwingStatsRaw` | function | 11294–11364 | 71 |
-| `buildMomentumSwingStats` | function | 11365–11370 | 6 |
-| `buildDuoFloorCeiling` | function | 11371–11412 | 42 |
-| `buildDuoWarnings` | function | 11413–11431 | 19 |
-| `duoProPairKey` | function | 11432–11434 | 3 |
-| `duoProContextSeasonKey` | function | 11435–11437 | 3 |
-| `getDuoFieldPlayerRows` | function | 11438–11448 | 11 |
-| `duoProPlayer` | function | 11449–11453 | 5 |
-| `getDuoSharedFieldRows` | function | 11454–11459 | 6 |
-| `buildDuoDirectProduction` | function | 11460–11480 | 21 |
-| `emptyDuoTeamImpactStats` | function | 11481–11483 | 3 |
-| `addDuoTeamGame` | function | 11484–11499 | 16 |
-| `finalizeDuoTeamImpactStats` | function | 11500–11507 | 8 |
-| `buildDuoWithWithoutImpact` | function | 11508–11541 | 34 |
-| `buildDuoOpponentAdjusted` | function | 11542–11554 | 13 |
-| `buildDuoNetworkContext` | function | 11555–11578 | 24 |
-| `buildDuoGapAnalysis` | function | 11579–11595 | 17 |
-| `buildDuoCompatibility` | function | 11596–11618 | 23 |
-| `buildDuoUntestedPotential` | function | 11619–11630 | 12 |
-| `buildDuoUsageRate` | function | 11631–11642 | 12 |
-| `buildDuoReplacementOptions` | function | 11643–11652 | 10 |
-| `buildDuoProAnalysis` | function | 11653–11696 | 44 |
-| `rDuoCenterPro` | function | 11697–11811 | 115 |
-| `duoProDomId` | function | 11812–11814 | 3 |
-| `duoProPickerOpen` | function | 11815–11817 | 3 |
-| `duoProPickerMessage` | function | 11818–11820 | 3 |
-| `setDuoProPickerState` | function | 11821–11830 | 10 |
-| `duoProResolveCandidate` | function | 11831–11839 | 9 |
-| `duoProSelectionPayload` | function | 11840–11849 | 10 |
-| `openDuoProPicker` | window | 11850–11850 | 1 |
-| `cancelDuoProPicker` | window | 11851–11851 | 1 |
-| `selectDuoProQuick` | window | 11852–11855 | 4 |
-| `confirmDuoProSelection` | window | 11856–11870 | 15 |
-| `setDuoProSelection` | window | 11871–11878 | 8 |
-| `rDuoProPlayerSelect` | function | 11879–11885 | 7 |
-| `rInteractiveDuoCenterPro` | function | 11886–11941 | 56 |
-| `rSeasonDuoCenterPro` | function | 11942–11944 | 3 |
-| `getDifficultConnectionRowsForPlayer` | function | 11945–11989 | 45 |
-| `emptyRosterImpactStats` | function | 11990–11992 | 3 |
-| `finalizeRosterImpactStats` | function | 11993–12000 | 8 |
-| `addRosterImpactGameToStats` | function | 12001–12010 | 10 |
-| `getRosterImpactPlayerEventLookup` | function | 12011–12031 | 21 |
-| `getRosterImpactPlayerGames` | function | 12032–12072 | 41 |
-| `rosterImpactConfidence` | function | 12073–12078 | 6 |
-| `rosterImpactConfidenceWeight` | function | 12079–12082 | 4 |
-| `antiSynergyImpactScore` | function | 12083–12097 | 15 |
-| `buildRosterImpactAnalysis` | function | 12098–12157 | 60 |
-| `buildDuoAntiSynergy` | function | 12158–12160 | 3 |
-| `rAntiSynergyDelta` | function | 12161–12167 | 7 |
-| `antiSynergyDeltaClass` | function | 12168–12171 | 4 |
-| `antiSynergySigned` | function | 12172–12176 | 5 |
-| `rAntiSynergyCompareChip` | function | 12177–12184 | 8 |
-| `rAntiSynergyMetricRow` | function | 12185–12193 | 9 |
-| `rRosterImpactStatLine` | function | 12194–12197 | 4 |
-| `antiSynergyPartnerIsSgOnly` | function | 12198–12201 | 4 |
-| `rAntiSynergyMainDelta` | function | 12202–12211 | 10 |
-| `rDifficultConnectionList` | function | 12212–12236 | 25 |
-| `rDifficultConnectionListCompactLegacy` | function | 12237–12278 | 42 |
-| `rDifficultConnectionListCompact` | function | 12279–12317 | 39 |
-| `rDifficultConnectionsCard` | function | 12318–12354 | 37 |
-| `responseMomentumTooltipFor` | function | 12399–12405 | 7 |
-| `rmTerm` | function | 12406–12409 | 4 |
-| `rRmKpi` | function | 12410–12420 | 11 |
-| `rRmTopList` | function | 12421–12431 | 11 |
-| `rResponseMomentumOverviewCard` | function | 12432–12455 | 24 |
-| `rPlayerResponseMomentumCard` | function | 12456–12474 | 19 |
-| `rDuoResponseMomentumCard` | function | 12475–12494 | 20 |
-| `rTeamResponseMomentumCard` | function | 12495–12501 | 7 |
-| `rMatchcenterResponseMomentum` | function | 12502–12539 | 38 |
-| `getTeamAllTimeRecords` | function | 12541–12581 | 41 |
-| `getAllTimeOpponentIntelligence` | function | 12583–12589 | 7 |
-| `getAllTimeOpponentTopScorers` | function | 12591–12615 | 25 |
-| `getHallOfFameStats` | function | 12617–12639 | 23 |
-| `rOpponentTopScorerTable` | function | 12641–12660 | 20 |
-| `getAllTimeIdentityStandings` | function | 12662–12696 | 35 |
-| `buildRecencyWeightedGlobalIdentityProfile` | function | 12698–12745 | 48 |
-| `getGlobalIdentityProfile` | function | 12747–12773 | 27 |
-| `dedupeIdentityProfileTags` | function | 12775–12786 | 12 |
-| `rGlobalProfileTags` | function | 12788–12792 | 5 |
-| `escHtml` | function | 12794–12796 | 3 |
-| `pctValue` | function | 12797–12800 | 4 |
-| `rHallOfFameHero` | function | 12801–12826 | 26 |
-| `rHallPodiumList` | function | 12827–12849 | 23 |
-| `rHallDuoTemple` | function | 12850–12857 | 8 |
-| `hallGoalieNum` | function | 12859–12864 | 6 |
-| `hallGoalieTime` | function | 12865–12872 | 8 |
-| `hallGoalieSeasonLabel` | function | 12873–12873 | 1 |
-| `isHallRowPureSG` | function | 12874–12881 | 8 |
-| `rHallSGBadge` | function | 12882–12884 | 3 |
-| `hallGoaliePkStats` | function | 12885–12896 | 12 |
-| `hallGoalieTopteamStats` | function | 12897–12903 | 7 |
-| `hallGoalieSeasonScore` | function | 12904–12923 | 20 |
-| `hallGoalieRowFromStats` | function | 12924–12956 | 33 |
-| `getHallGoalieData` | function | 12957–12972 | 16 |
-| `hallGoalieNameHtml` | function | 12973–12975 | 3 |
-| `hallGoalieTooltip` | function | 12990–12993 | 4 |
-| `hallGoalieExplainForLabel` | function | 12994–13008 | 15 |
-| `rHallGoalieRankCard` | function | 13009–13040 | 32 |
-| `rHallGoalieAwardCards` | function | 13041–13057 | 17 |
-| `rHallGoalieLegends` | function | 13058–13090 | 33 |
-| `getGlobalSeasonStatRows` | function | 13091–13106 | 16 |
-| `getAlltimeRank` | function | 13107–13112 | 6 |
-| `rAlltimeKpis` | function | 13113–13126 | 14 |
-| `rSparkline` | function | 13127–13139 | 13 |
-| `comparisonItemKey` | function | 13151–13156 | 6 |
-| `normalizeComparisonItem` | function | 13157–13161 | 5 |
-| `comparisonJsArg` | function | 13162–13164 | 3 |
-| `comparisonNum` | function | 13165–13168 | 4 |
-| `comparisonPct` | function | 13169–13172 | 4 |
-| `comparisonFmt` | function | 13173–13176 | 4 |
-| `comparisonPctFmt` | function | 13177–13179 | 3 |
-| `getComparisonPlayerRow` | function | 13180–13182 | 3 |
-| `getComparisonSeasonLabel` | function | 13183–13185 | 3 |
-| `getComparisonTeamGoalsForSeason` | function | 13186–13197 | 12 |
-| `getComparisonAlltimeTeamGoals` | function | 13198–13200 | 3 |
-| `getComparisonSeasonEvents` | function | 13201–13205 | 5 |
-| `getComparisonChemistryFromEvents` | function | 13206–13210 | 5 |
-| `getComparisonClutchFromEvents` | function | 13211–13215 | 5 |
-| `getComparisonStyleProfile` | function | 13216–13240 | 25 |
-| `getComparisonProfile` | function | 13241–13245 | 5 |
-| `getComparisonSeasonTrend` | function | 13246–13271 | 26 |
-| `getComparisonAlltimeTrend` | function | 13272–13277 | 6 |
-| `getComparisonPlayerOptions` | function | 13279–13293 | 15 |
-| `comparisonVariantValue` | function | 13294–13296 | 3 |
-| `getComparisonVariantsForPlayer` | function | 13297–13321 | 25 |
-| `parseComparisonVariant` | function | 13322–13336 | 15 |
-| `getComparisonCurrentSelection` | function | 13337–13347 | 11 |
-| `filterComparisonPlayers` | window | 13348–13355 | 8 |
-| `selectComparisonPlayer` | window | 13356–13361 | 6 |
-| `setComparisonRoleMode` | window | 13362–13366 | 5 |
-| `setComparisonVariant` | window | 13367–13370 | 4 |
-| `toggleComparisonSgOnly` | window | 13371–13371 | 1 |
-| `addComparisonItem` | window | 13372–13379 | 8 |
-| `addSelectedComparisonItem` | window | 13380–13385 | 6 |
-| `toggleComparisonPicker` | window | 13386–13386 | 1 |
-| `removeComparisonItem` | window | 13387–13390 | 4 |
-| `clearComparison` | window | 13391–13391 | 1 |
-| `runComparison` | window | 13392–13398 | 7 |
-| `selectComparisonMode` | window | 13399–13399 | 1 |
-| `backToComparisonModeSelect` | window | 13400–13400 | 1 |
-| `normalizeDuoComparisonItem` | function | 13401–13404 | 4 |
-| `comparisonDuoContext` | function | 13405–13408 | 4 |
-| `setComparisonDuoMode` | window | 13409–13409 | 1 |
-| `setComparisonDuoSeasonKey` | window | 13410–13410 | 1 |
-| `setComparisonDuoSearch` | window | 13411–13411 | 1 |
-| `filterPlayerSuggestions` | function | 13412–13423 | 12 |
-| `rComparisonDuoSuggestionButtons` | function | 13424–13427 | 4 |
-| `renderComparisonDuoSuggestions` | function | 13428–13436 | 9 |
-| `filterComparisonDuoSuggestions` | window | 13437–13444 | 8 |
-| `selectComparisonDuoSuggestion` | window | 13438–13444 | 7 |
-| `handleComparisonDuoSearchKey` | window | 13445–13457 | 13 |
-| `setComparisonDuoPlayer` | window | 13458–13463 | 6 |
-| `addComparisonDuoFromSelection` | window | 13464–13471 | 8 |
-| `addComparisonDuo` | window | 13472–13474 | 3 |
-| `removeComparisonDuo` | window | 13475–13478 | 4 |
-| `clearComparisonDuos` | window | 13479–13479 | 1 |
-| `runDuoComparison` | window | 13480–13484 | 5 |
-| `buildDuoComparison` | function | 13485–13504 | 20 |
-| `rDuoComparisonBars` | function | 13505–13509 | 5 |
-| `rDuoCompareSummaryCards` | function | 13510–13540 | 31 |
-| `rDuoComparisonProfile` | function | 13541–13562 | 22 |
-| `rDuoComparisonChemistry` | function | 13563–13578 | 16 |
-| `rDuoComparisonImpact` | function | 13579–13594 | 16 |
-| `rDuoComparisonContext` | function | 13595–13612 | 18 |
-| `rDuoComparisonDetails` | function | 13613–13616 | 4 |
-| `rDuoComparisonDashboard` | function | 13617–13630 | 14 |
-| `rComparisonDuoSearchBox` | function | 13631–13640 | 10 |
-| `rDuoComparisonPage` | function | 13641–13651 | 11 |
-| `rComparisonModeSelect` | function | 13652–13654 | 3 |
-| `getComparisonEventsForItem` | function | 13655–13657 | 3 |
-| `getComparisonRosterGamesForSeason` | function | 13658–13674 | 17 |
-| `getComparisonRosterGames` | function | 13675–13682 | 8 |
-| `comparisonEventGameKey` | function | 13683–13685 | 3 |
-| `comparisonEventPhaseLabel` | function | 13686–13689 | 4 |
-| `comparisonOpponentStrengthTier` | function | 13690–13695 | 6 |
-| `buildComparisonExtraMetrics` | function | 13696–13753 | 58 |
-| `getGoalieComparisonAlltimeTrend` | function | 13754–13770 | 17 |
-| `getGoalieComparisonSeasonTrend` | function | 13771–13789 | 19 |
-| `buildGoalieComparisonDataset` | function | 13790–13840 | 51 |
-| `buildComparisonDataset` | function | 13841–13876 | 36 |
-| `kpiValueText` | function | 13878–13881 | 4 |
-| `kpiDelta` | function | 13882–13887 | 6 |
-| `kpiItemColor` | function | 13888–13890 | 3 |
-| `rKpiCards` | function | 13891–13901 | 11 |
-| `rKpiMirrorRows` | function | 13902–13961 | 60 |
-| `kpiRadarValue` | function | 13962–13972 | 11 |
-| `rKpiRadar` | function | 13973–14007 | 35 |
-| `rKpiShareBars` | function | 14008–14015 | 8 |
-| `rKpiMetricCard` | function | 14016–14020 | 5 |
-| `rKpiTextMetricCard` | function | 14021–14023 | 3 |
-| `rKpiExtendedMetrics` | function | 14024–14038 | 15 |
-| `kpiNiceMax` | function | 14039–14044 | 6 |
-| `kpiTrendRows` | function | 14045–14053 | 9 |
-| `rKpiTrendCompare` | function | 14054–14120 | 67 |
-| `rKpiOpponentStrength` | function | 14121–14148 | 28 |
-| `kpiBadge` | function | 14149–14151 | 3 |
-| `rKpiObjectMini` | function | 14152–14158 | 7 |
-| `rKpiInfoCards` | function | 14159–14190 | 32 |
-| `buildComparisonSummary` | function | 14191–14222 | 32 |
-| `rKPIVergleich` | function | 14223–14236 | 14 |
-| `rComparisonMiniOverview` | function | 14237–14240 | 4 |
-| `rComparisonRoles` | function | 14241–14248 | 8 |
-| `rComparisonDashboard` | function | 14249–14259 | 11 |
-| `rComparisonStyles` | function | 14260–14297 | 38 |
-| `rComparisonCenterPage` | function | 14298–14348 | 51 |
-| `rSeasonTrendRows` | function | 14349–14367 | 19 |
-| `getAlltimeAggregatedStyleProfile` | function | 14368–14387 | 20 |
-| `rGlobalDnaBars` | function | 14389–14418 | 30 |
-| `pdashNum` | function | 14419–14422 | 4 |
-| `pdashPct` | function | 14423–14426 | 4 |
-| `pdashPhaseLabel` | function | 14427–14430 | 4 |
-| `pdashTopCount` | function | 14431–14434 | 4 |
-| `pdashBestPhase` | function | 14435–14438 | 4 |
-| `pdashTopPartner` | function | 14439–14442 | 4 |
-| `pdashTopOpponent` | function | 14443–14446 | 4 |
-| `pdashOpponentTier` | function | 14447–14452 | 6 |
-| `pdashOpponentStrength` | function | 14453–14472 | 20 |
-| `pdashInsight` | function | 14473–14475 | 3 |
-| `pdashInsights` | function | 14476–14487 | 12 |
-| `buildSeasonPlayerDashModel` | function | 14488–14524 | 37 |
-| `buildAlltimePlayerDashModel` | function | 14525–14567 | 43 |
-| `rPlayerDashStyles` | function | 14568–14579 | 12 |
-| `rPdashLabel` | function | 14580–14582 | 3 |
-| `rPdashStat` | function | 14583–14585 | 3 |
-| `rPlayerDash` | function | 14586–14624 | 39 |
-| `rSeasonPlayerDashboard` | function | 14625–14627 | 3 |
-| `rAlltimePlayerDashboard` | function | 14628–14630 | 3 |
-| `rGlobalPartnerOpponentPanel` | function | 14631–14644 | 14 |
-| `rGlobalCareerHeader` | function | 14645–14665 | 21 |
-| `rSeasonLandingPage` | function | 14667–14681 | 15 |
-| `rGlobalOverview` | function | 14683–14734 | 52 |
-| `rGlobalAllTimeStats` | function | 14736–14752 | 17 |
-| `rGlobalDevelopment` | function | 14754–14792 | 39 |
-| `getGlobalPlayerOpponentGameRows` | function | 14795–14822 | 28 |
-| `getGlobalOpponentSpecialistProfile` | function | 14824–14852 | 29 |
-| `rGlobalDuoNetwork` | function | 14854–15051 | 198 |
-| `rGlobalOpponentSpecialist` | function | 15053–15098 | 46 |
-| `playerExplainConfidence` | function | 15100–15105 | 6 |
-| `playerExplainConfidenceLabel` | function | 15106–15108 | 3 |
-| `playerExplainAdd` | function | 15109–15113 | 5 |
-| `playerExplainStyleSignature` | function | 15114–15125 | 12 |
-| `playerExplainRolePhrase` | function | 15126–15134 | 9 |
-| `playerExplainHeadline` | function | 15135–15144 | 10 |
-| `playerExplainContextSentence` | function | 15145–15163 | 19 |
-| `buildFieldPlayerExplanation` | function | 15164–15238 | 75 |
-| `buildGoaliePlayerExplanation` | function | 15239–15292 | 54 |
-| `buildPlayerExplanation` | function | 15293–15301 | 9 |
-| `buildPlayerIntelligence` | function | 15302–15331 | 30 |
-| `rPlayerExplainItems` | function | 15332–15336 | 5 |
-| `rPlayerExplanation` | function | 15337–15388 | 52 |
-| `rAllTimePlayersPage` | function | 15390–15430 | 41 |
-| `rHallOfFamePage` | function | 15432–15520 | 89 |
-| `lexiconUniqueKeys` | function | 15525–15532 | 8 |
-| `lexiconEntry` | function | 15533–15542 | 10 |
-| `rLexiconRows` | function | 15543–15546 | 4 |
-| `rLexiconPage` | function | 15547–15719 | 173 |
-| `matchcenterClamp` | function | 15721–15725 | 5 |
-| `matchcenterNum` | function | 15726–15729 | 4 |
-| `clampScore` | function | 15730–15733 | 4 |
-| `getScoreLabel` | function | 15734–15742 | 9 |
-| `buildConfidence` | function | 15743–15788 | 46 |
-| `confidenceCautiousText` | function | 15789–15792 | 4 |
-| `explainScore` | function | 15793–15807 | 15 |
-| `p1NarrativeKey` | function | 15808–15810 | 3 |
-| `scoreNarrative` | function | 15811–15829 | 19 |
-| `rankNarratives` | function | 15830–15843 | 14 |
-| `getEmptyState` | function | 15844–15855 | 12 |
-| `rEmptyState` | function | 15856–15859 | 4 |
-| `rScoreBreakdown` | function | 15860–15875 | 16 |
-| `matchcenterFmt` | function | 15876–15880 | 5 |
-| `matchcenterSigned` | function | 15881–15885 | 5 |
-| `matchcenterDateValue` | function | 15886–15890 | 5 |
-| `matchcenterDateLabel` | function | 15891–15895 | 5 |
-| `matchcenterSortGamesAsc` | function | 15896–15900 | 5 |
-| `matchcenterSeasonKeys` | function | 15901–15904 | 4 |
-| `matchcenterSeasonLabel` | function | 15905–15907 | 3 |
-| `matchcenterSeasonIsUlmTuebingenSgEra` | function | 15908–15911 | 4 |
-| `teamAliasSeasonMatches` | function | 15920–15925 | 6 |
-| `normalizeTeamKey` | function | 15926–15928 | 3 |
-| `teamAliasRuleMatches` | function | 15929–15933 | 5 |
-| `isOwnTeam` | function | 15934–15944 | 11 |
-| `getCanonicalTeamName` | function | 15945–15950 | 6 |
-| `getOpponentAliasKeys` | function | 15951–15971 | 21 |
-| `dedupeGamesById` | function | 15972–15980 | 9 |
-| `matchcenterIsFreiburgTuebingenTeamName` | function | 15981–15987 | 7 |
-| `matchcenterIsUlmTeamName` | function | 15988–15990 | 3 |
-| `normalizeTeamNameForMatchcenter` | function | 15991–15995 | 5 |
-| `matchcenterDetectUlmSide` | function | 15996–16002 | 7 |
-| `matchcenterSeasonHasGames` | function | 16003–16005 | 3 |
-| `matchcenterDefaultSeasonKey` | function | 16006–16011 | 6 |
-| `matchcenterTeamDisplay` | function | 16012–16014 | 3 |
-| `matchcenterTeamKey` | function | 16015–16019 | 5 |
-| `matchcenterAliasModeForContext` | function | 16020–16022 | 3 |
-| `getOpponentAliasKeysForMatchcenter` | function | 16023–16048 | 26 |
-| `matchcenterGameTeamName` | function | 16049–16051 | 3 |
-| `matchcenterGameSideForTeam` | function | 16052–16059 | 8 |
-| `matchcenterGameSideForOpponentKey` | function | 16060–16070 | 11 |
-| `matchcenterGameScore` | function | 16071–16074 | 4 |
-| `matchcenterOutcomeForTeam` | function | 16075–16083 | 9 |
-| `matchcenterAllGamesForSeason` | function | 16084–16103 | 20 |
-| `matchcenterAllGames` | function | 16104–16106 | 3 |
-| `matchcenterOpponentMode` | function | 16107–16109 | 3 |
-| `getMatchcenterOpponents` | function | 16110–16142 | 33 |
-| `getMatchcenterDirectOpponents` | function | 16143–16173 | 31 |
-| `matchcenterDirectGames` | function | 16174–16187 | 14 |
-| `matchcenterContextGames` | function | 16188–16193 | 6 |
-| `matchcenterAnalyzeDirect` | function | 16194–16230 | 37 |
-| `matchcenterAnalyzeForm` | function | 16231–16256 | 26 |
-| `matchcenterGameKey` | function | 16257–16259 | 3 |
-| `matchcenterScoutingGames` | function | 16260–16274 | 15 |
-| `matchcenterRosterPlayers` | function | 16275–16278 | 4 |
-| `matchcenterPlayerDisplayName` | function | 16279–16284 | 6 |
-| `matchcenterFindRosterPlayer` | function | 16285–16289 | 5 |
-| `matchcenterPlayerKey` | function | 16290–16295 | 6 |
-| `matchcenterEventNumber` | function | 16296–16300 | 5 |
-| `matchcenterPenaltyMinutes` | function | 16301–16310 | 10 |
-| `matchcenterGoalMinute` | function | 16311–16316 | 6 |
-| `matchcenterIsLateGoalEvent` | function | 16317–16321 | 5 |
-| `matchcenterIsClutchGoalEvent` | function | 16322–16332 | 11 |
-| `matchcenterEnsureOpponentPlayer` | function | 16333–16356 | 24 |
-| `matchcenterRegisterPlayerGame` | function | 16357–16359 | 3 |
-| `matchcenterAddScoring` | function | 16360–16376 | 17 |
-| `matchcenterFinalizeOpponentPlayerProfiles` | function | 16377–16423 | 47 |
-| `matchcenterBuildOpponentScouting` | function | 16424–16495 | 72 |
-| `matchcenterBuildOpponentPlayerInsights` | function | 16496–16509 | 14 |
-| `matchcenterEmptyBuckets` | function | 16510–16512 | 3 |
-| `matchcenterUlmScoutingConfidence` | function | 16513–16517 | 5 |
-| `matchcenterEnsureUlmPlayer` | function | 16518–16555 | 38 |
-| `matchcenterRegisterUlmProfileGame` | function | 16556–16561 | 6 |
-| `matchcenterUpdateUlmSeasonRow` | function | 16562–16568 | 7 |
-| `matchcenterClassifyUlmGoalEvent` | function | 16569–16579 | 11 |
-| `matchcenterAddUlmScoring` | function | 16580–16617 | 38 |
-| `matchcenterFinalizeUlmPlayers` | function | 16618–16686 | 69 |
-| `matchcenterBuildUlmPlayerScouting` | function | 16687–16741 | 55 |
-| `matchcenterBuildUlmPlayerInsights` | function | 16742–16754 | 13 |
-| `matchcenterDuoPairKey` | function | 16755–16758 | 4 |
-| `matchcenterEnsureOpponentDuo` | function | 16759–16791 | 33 |
-| `matchcenterDuoDirectionLabel` | function | 16792–16798 | 7 |
-| `matchcenterAddDuoConnection` | function | 16799–16817 | 19 |
-| `matchcenterFinalizeOpponentDuos` | function | 16818–16852 | 35 |
-| `matchcenterBuildOpponentDuos` | function | 16853–16897 | 45 |
-| `matchcenterBuildOpponentDuoInsights` | function | 16898–16911 | 14 |
-| `matchcenterEnsureUlmDuo` | function | 16912–16949 | 38 |
-| `matchcenterAddUlmDuoConnection` | function | 16950–16968 | 19 |
-| `matchcenterFinalizeUlmDuos` | function | 16969–17004 | 36 |
-| `matchcenterBuildUlmDuos` | function | 17005–17047 | 43 |
-| `matchcenterBuildUlmDuoInsights` | function | 17048–17060 | 13 |
-| `matchcenterDirectContextGames` | function | 17061–17063 | 3 |
-| `matchcenterSpecialTeamsForGame` | function | 17064–17067 | 4 |
-| `matchcenterPersonalPenaltyMinutesForSide` | function | 17068–17076 | 9 |
-| `matchcenterPct` | function | 17077–17080 | 4 |
-| `matchcenterBuildSpecialTeamsMatchup` | function | 17081–17128 | 48 |
-| `matchcenterGoalieKey` | function | 17129–17133 | 5 |
-| `matchcenterGoalieFitScore` | function | 17134–17150 | 17 |
-| `matchcenterBuildGoalieMatchup` | function | 17151–17193 | 43 |
-| `matchcenterGoalAbsSeconds` | function | 17194–17201 | 8 |
-| `matchcenterTimeValue` | function | 17202–17209 | 8 |
-| `matchcenterEmptyTimingStats` | function | 17210–17218 | 9 |
-| `matchcenterWindowForSecond` | function | 17219–17225 | 7 |
-| `matchcenterTimingStatsForGames` | function | 17226–17262 | 37 |
-| `matchcenterBuildTimingInsights` | function | 17263–17273 | 11 |
-| `matchcenterBuildTimingAnalysis` | function | 17274–17284 | 11 |
-| `rMatchcenterTimeBars` | function | 17285–17298 | 14 |
-| `rMatchcenterTimingStatsCard` | function | 17299–17318 | 20 |
-| `rMatchcenterTiming` | function | 17319–17342 | 24 |
-| `rMatchcenterTabs` | function | 17358–17360 | 3 |
-| `rMatchcenterProfileSection` | function | 17361–17380 | 20 |
-| `rMatchcenterFormSection` | function | 17381–17406 | 26 |
-| `rMatchcenterDetailsSection` | function | 17407–17414 | 8 |
-| `matchcenterResultClass` | function | 17415–17417 | 3 |
-| `matchcenterResultLetter` | function | 17418–17420 | 3 |
-| `matchcenterUlmTeamLabelForGame` | function | 17421–17425 | 5 |
-| `matchcenterGameLine` | function | 17426–17431 | 6 |
-| `matchcenterFormLine` | function | 17432–17436 | 5 |
-| `matchcenterBuildInsights` | function | 17437–17457 | 21 |
-| `rMatchcenterKpi` | function | 17458–17464 | 7 |
-| `rMatchcenterFormCard` | function | 17465–17485 | 21 |
-| `rMatchcenterGamesList` | function | 17486–17497 | 12 |
-| `rMatchcenterWatchCard` | function | 17498–17518 | 21 |
-| `rMatchcenterPlayerRow` | function | 17519–17542 | 24 |
-| `rMatchcenterRankCard` | function | 17543–17548 | 6 |
-| `rMatchcenterUlmImpactCard` | function | 17549–17577 | 29 |
-| `rMatchcenterUlmPlayerRow` | function | 17578–17601 | 24 |
-| `rMatchcenterUlmRankCard` | function | 17602–17607 | 6 |
-| `rMatchcenterUlmScouting` | function | 17608–17644 | 37 |
-| `rMatchcenterOpponentScouting` | function | 17645–17680 | 36 |
-| `rMatchcenterPlayersTab` | function | 17681–17683 | 3 |
-| `rMatchcenterDuoWatchCard` | function | 17684–17703 | 20 |
-| `rMatchcenterDuoRow` | function | 17704–17727 | 24 |
-| `rMatchcenterDuoRankCard` | function | 17728–17733 | 6 |
-| `rMatchcenterUlmDuoWatchCard` | function | 17734–17759 | 26 |
-| `rMatchcenterUlmDuoRow` | function | 17760–17782 | 23 |
-| `rMatchcenterUlmDuoRankCard` | function | 17783–17788 | 6 |
-| `rMatchcenterUlmDuos` | function | 17789–17831 | 43 |
-| `rMatchcenterOpponentDuos` | function | 17832–17874 | 43 |
-| `rMatchcenterDuosTab` | function | 17875–17877 | 3 |
-| `rMatchcenterSpecialCard` | function | 17878–17886 | 9 |
-| `rMatchcenterSpecialTeams` | function | 17887–17936 | 50 |
-| `rMatchcenterGoalieCard` | function | 17937–17960 | 24 |
-| `rMatchcenterGoalieMatchup` | function | 17961–17989 | 29 |
-| `matchcenterPlanScoreText` | function | 17990–17993 | 4 |
-| `matchcenterPlanRateText` | function | 17994–17998 | 5 |
-| `matchcenterPriorityLabel` | function | 17999–18001 | 3 |
-| `matchcenterConfidenceClass` | function | 18002–18007 | 6 |
-| `matchcenterInferPriority` | function | 18008–18014 | 7 |
-| `matchcenterAddPlanItem` | function | 18015–18020 | 6 |
-| `matchcenterAddPlanWatch` | function | 18021–18026 | 6 |
-| `matchcenterBuildPlanConfidence` | function | 18027–18061 | 35 |
-| `matchcenterIntelCurve` | function | 18062–18067 | 6 |
-| `matchcenterIntelInverseCurve` | function | 18068–18071 | 4 |
-| `matchcenterIntelWeighted` | function | 18072–18082 | 11 |
-| `matchcenterIntelRate` | function | 18083–18086 | 4 |
-| `matchcenterIntelPct` | function | 18087–18090 | 4 |
-| `matchcenterIntelPriorityFromScore` | function | 18091–18096 | 6 |
-| `matchcenterIntelPriorityClass` | function | 18097–18102 | 6 |
-| `matchcenterIntelPriorityLabel` | function | 18103–18106 | 4 |
-| `matchcenterIntelDataLabel` | function | 18107–18109 | 3 |
-| `matchcenterBuildIntelligenceDataQuality` | function | 18110–18160 | 51 |
-| `matchcenterBuildOpponentDNA` | function | 18161–18273 | 113 |
-| `matchcenterDeriveOpponentType` | function | 18274–18291 | 18 |
-| `matchcenterIntelPlayerRef` | function | 18292–18304 | 13 |
-| `matchcenterIntelDuoRef` | function | 18305–18318 | 14 |
-| `matchcenterIntelAddAlarm` | function | 18319–18339 | 21 |
-| `matchcenterBuildOpponentAlarm` | function | 18340–18449 | 110 |
-| `matchcenterBuildIntelListFromPlan` | function | 18450–18458 | 9 |
-| `matchcenterBuildCoachHints` | function | 18459–18474 | 16 |
-| `matchcenterBuildIntelHeadline` | function | 18475–18482 | 8 |
-| `matchcenterBuildOneThingToWatch` | function | 18483–18495 | 13 |
-| `matchcenterBuildIntelligenceSignals` | function | 18496–18542 | 47 |
-| `buildMatchIntelligenceFromContext` | function | 18543–18597 | 55 |
-| `buildMatchIntelligence` | function | 18598–18619 | 22 |
-| `matchcenterCoachCautious` | function | 18620–18622 | 3 |
-| `matchcenterCoachAdd` | function | 18623–18631 | 9 |
-| `matchcenterCoachGameModel` | function | 18632–18645 | 14 |
-| `buildMatchStories` | function | 18646–18675 | 30 |
-| `matchcenterCoachPriorityFromAlarm` | function | 18676–18685 | 10 |
-| `matchcenterBuildCoachPriorities` | function | 18686–18692 | 7 |
-| `matchcenterBuildCoachLevers` | function | 18693–18702 | 10 |
-| `matchcenterBuildCoachDangerPatterns` | function | 18703–18710 | 8 |
-| `matchcenterBuildCoachIfThen` | function | 18711–18720 | 10 |
-| `matchcenterBuildCoachAvoidList` | function | 18721–18730 | 10 |
-| `matchcenterBuildCoachActivationHints` | function | 18731–18737 | 7 |
-| `matchcenterBuildCoachKeyActors` | function | 18738–18745 | 8 |
-| `buildDigitalCoachReport` | function | 18746–18778 | 33 |
-| `buildLockerRoomSheet` | function | 18779–18799 | 21 |
-| `matchcenterSocialAdd` | function | 18800–18806 | 7 |
-| `matchcenterSocialCaption` | function | 18807–18812 | 6 |
-| `socialSentence` | function | 18813–18815 | 3 |
-| `socialEnsurePeriod` | function | 18816–18819 | 4 |
-| `socialFirstUseful` | function | 18820–18822 | 3 |
-| `socialPlayerFocusLine` | function | 18823–18829 | 7 |
-| `socialDuoFocusLine` | function | 18830–18835 | 6 |
-| `socialOpponentLine` | function | 18836–18839 | 4 |
-| `socialKeyFactLine` | function | 18840–18849 | 10 |
-| `buildMatchdayCaptionBlocks` | function | 18850–18879 | 30 |
-| `buildSocialMediaContent` | function | 18880–18928 | 49 |
-| `isSyntheticLineupPlayerId` | function | 18934–18936 | 3 |
-| `getSyntheticLineupPlayers` | function | 18937–18939 | 3 |
-| `getSyntheticLineupRow` | function | 18940–18956 | 17 |
-| `getSyntheticLineupRows` | function | 18957–18959 | 3 |
-| `getLineupAllRows` | function | 18960–18962 | 3 |
-| `lineupRowMeta` | function | 18963–18970 | 8 |
-| `getLineupPlayerPool` | function | 18971–18979 | 9 |
-| `lineupScore` | function | 18980–18985 | 6 |
-| `lineupAverage` | function | 18986–18989 | 4 |
-| `lineupLevelLabel` | function | 18990–18993 | 4 |
-| `lineupRosterGamesForPlayer` | function | 18996–19043 | 48 |
-| `buildLineupExperienceProfile` | function | 19044–19086 | 43 |
-| `lineupOpponentDNAForContext` | function | 19087–19098 | 12 |
-| `buildLineupOpponentDNAFit` | function | 19099–19142 | 44 |
-| `classifyLineIdentity` | function | 19143–19190 | 48 |
-| `lineupPlayerProfile` | function | 19191–19266 | 76 |
-| `buildLineupAnalysis` | function | 19267–19400 | 134 |
-| `buildLineupScoreBreakdowns` | function | 19401–19430 | 30 |
-| `buildLineupIntelligence` | function | 19431–19441 | 11 |
-| `buildLineAnalysis` | function | 19442–19444 | 3 |
-| `lineupRowMap` | function | 19445–19447 | 3 |
-| `lineupRankCandidateIds` | function | 19448–19462 | 15 |
-| `lineupCombinationIds` | function | 19463–19476 | 14 |
-| `lineupStdDev` | function | 19477–19482 | 6 |
-| `lineupRoleDnaComplementScore` | function | 19483–19506 | 24 |
-| `lineupDirectChemistryScore` | function | 19507–19513 | 7 |
-| `lineupEvaluateComplementCandidate` | function | 19514–19591 | 78 |
-| `lineupPlayerAnchorScore` | function | 19592–19609 | 18 |
-| `buildTeamLineBalance` | function | 19610–19653 | 44 |
-| `buildBalancedLineupSet` | function | 19654–19678 | 25 |
-| `lineupRecommendationReason` | function | 19679–19687 | 9 |
-| `buildLineupRecommendations` | function | 19688–19766 | 79 |
-| `recommendLineComplements` | function | 19767–19794 | 28 |
-| `matchcenterBuildMatchPlan` | function | 19795–19940 | 146 |
-| `rMatchcenterPlanItems` | function | 19941–19958 | 18 |
-| `rMatchcenterPlanWatch` | function | 19959–19974 | 16 |
-| `rMatchcenterOpponentDNA` | function | 19975–20007 | 33 |
-| `rMatchcenterOpponentAlarm` | function | 20008–20029 | 22 |
-| `rMatchcenterIntelOverview` | function | 20030–20075 | 46 |
-| `rMatchcenterIntelCoachHints` | function | 20076–20089 | 14 |
-| `rMatchcenterCoachCardList` | function | 20090–20103 | 14 |
-| `rMatchcenterCoachIfThen` | function | 20104–20111 | 8 |
-| `rMatchcenterCoachSimpleList` | function | 20112–20116 | 5 |
-| `rMatchcenterDigitalCoach` | function | 20117–20181 | 65 |
-| `rMatchcenterCopyButton` | function | 20182–20186 | 5 |
-| `rMatchcenterLockerList` | function | 20187–20198 | 12 |
-| `rMatchcenterLockerRoomSheet` | function | 20199–20254 | 56 |
-| `rMatchcenterSocialBlock` | function | 20255–20262 | 8 |
-| `matchcenterStoryDownloadFileName` | function | 20263–20272 | 10 |
-| `downloadMatchdayStory` | window | 20273–20320 | 48 |
-| `rSocialVideoBlock` | function | 20324–20349 | 26 |
-| `generateSocialVideoStandbilder` | window | 20350–20373 | 24 |
-| `rMatchcenterSocialMediaCenter` | function | 20374–20427 | 54 |
-| `rLineupScoreRows` | function | 20428–20449 | 22 |
-| `rLineupSimpleCards` | function | 20450–20458 | 9 |
-| `rMatchcenterLineupBuilder` | function | 20459–20531 | 73 |
-| `rLineupMetricPills` | function | 20532–20545 | 14 |
-| `rLineupBuilderAvailablePanel` | function | 20546–20593 | 48 |
-| `rLineupRecommendationCards` | function | 20594–20608 | 15 |
-| `rLineupRecommendationMode` | function | 20609–20642 | 34 |
-| `rLineupComplementCards` | function | 20643–20655 | 13 |
-| `rLineupTestLine` | function | 20656–20704 | 49 |
-| `rLineupTestMode` | function | 20705–20721 | 17 |
-| `rLineupBuilderPage` | function | 20722–20755 | 34 |
-| `rMatchcenterScoutingSummary` | function | 20756–20799 | 44 |
-| `rMatchcenterMatchPlan` | function | 20800–20820 | 21 |
-| `matchcenterStoryInitials` | function | 20822–20827 | 6 |
-| `matchcenterStoryLogoBase` | function | 20828–20833 | 6 |
-| `matchcenterStorySafeLogoUrl` | function | 20834–20840 | 7 |
-| `matchcenterStoryTeamAssetKey` | function | 20848–20852 | 5 |
-| `getTeamLogoUrlForStory` | function | 20853–20882 | 30 |
-| `matchcenterStoryLogoForOpponent` | function | 20883–20897 | 15 |
-| `matchcenterStoryTableRank` | function | 20898–20908 | 11 |
-| `matchcenterStoryUlmTableRank` | function | 20909–20915 | 7 |
-| `matchcenterStoryRankText` | function | 20916–20919 | 4 |
-| `matchcenterStoryInlineStat` | function | 20920–20922 | 3 |
-| `matchcenterStoryShortTeamLabel` | function | 20923–20946 | 24 |
-| `matchcenterStoryRankRows` | function | 20947–20958 | 12 |
-| `matchcenterStoryFormLetters` | function | 20959–20961 | 3 |
-| `matchcenterStoryPlayer` | function | 20962–20994 | 33 |
-| `matchcenterStoryAddFact` | function | 20995–21001 | 7 |
-| `matchcenterStoryFactKey` | function | 21002–21004 | 3 |
-| `matchcenterStoryLooksArtificial` | function | 21005–21007 | 3 |
-| `matchcenterStoryEstimateFactWeight` | function | 21008–21013 | 6 |
-| `matchcenterStoryAddCandidate` | function | 21014–21036 | 23 |
-| `matchcenterStoryCategoryLimit` | function | 21037–21040 | 4 |
-| `matchcenterStoryNormalizePickOptions` | function | 21041–21051 | 11 |
-| `matchcenterStoryCandidateForBudget` | function | 21052–21061 | 10 |
-| `matchcenterStoryPickFactItems` | function | 21062–21114 | 53 |
-| `matchcenterStoryPickFacts` | function | 21115–21117 | 3 |
-| `matchcenterStoryFormRecord` | function | 21118–21123 | 6 |
-| `matchcenterStoryCurrentStreak` | function | 21124–21132 | 9 |
-| `matchcenterStoryWinlessStreak` | function | 21133–21141 | 9 |
-| `matchcenterStoryFormFact` | function | 21142–21152 | 11 |
-| `matchcenterStoryFormFactCandidates` | function | 21153–21172 | 20 |
-| `matchcenterStoryLateGoalsForOutcome` | function | 21173–21176 | 4 |
-| `matchcenterStoryClutchFact` | function | 21177–21191 | 15 |
-| `matchcenterStoryPlayerClutchTotal` | function | 21192–21199 | 8 |
-| `matchcenterStoryBestClutchPlayer` | function | 21200–21209 | 10 |
-| `matchcenterStoryPlayerClutchFact` | function | 21210–21235 | 26 |
-| `matchcenterStoryDuoClutchTotal` | function | 21236–21243 | 8 |
-| `matchcenterStoryBestClutchDuo` | function | 21244–21253 | 10 |
-| `matchcenterStoryDuoClutchFact` | function | 21254–21256 | 3 |
-| `matchcenterStoryDuoFact` | function | 21257–21277 | 21 |
-| `matchcenterStoryClutchPriority` | function | 21278–21280 | 3 |
-| `matchcenterStoryCompetitionLabel` | function | 21281–21284 | 4 |
-| `matchcenterStoryShortDuel` | function | 21285–21289 | 5 |
-| `matchcenterStoryLastDuelLabel` | function | 21290–21293 | 4 |
-| `matchcenterStoryDirectFactCandidates` | function | 21294–21315 | 22 |
-| `matchcenterStoryPlanFactCandidates` | function | 21316–21328 | 13 |
-| `matchcenterStoryCategoryForPlanFact` | function | 21329–21337 | 9 |
-| `buildMatchcenterStoryPreviewData` | function | 21338–21449 | 112 |
-| `matchcenterStoryNameClass` | function | 21450–21455 | 6 |
-| `matchcenterStoryVisibleFacts` | function | 21456–21486 | 31 |
-| `rMatchcenterStoryLogo` | function | 21487–21491 | 5 |
-| `rMatchcenterStoryForm` | function | 21492–21496 | 5 |
-| `rMatchcenterStoryPlayerCard` | function | 21497–21504 | 8 |
-| `rMatchcenterStoryPreview` | function | 21505–21574 | 70 |
-| `rMatchcenterStoryFrame` | function | 21575–21580 | 6 |
-| `fitMatchcenterStoryLayout` | function | 21581–21623 | 43 |
-| `socialVideoDistributeSceneDurations` | function | 21673–21704 | 32 |
-| `socialVideoFitText` | function | 21710–21719 | 10 |
-| `socialVideoCheckFonts` | function | 21725–21735 | 11 |
-| `probeSocialVideoExportCapability` | function | 21744–21759 | 16 |
-| `ensureSocialVideoExportCapabilityChecked` | function | 21765–21769 | 5 |
-| `socialVideoUlmGamesForMatchday` | function | 21774–21779 | 6 |
-| `socialVideoTableRank` | function | 21781–21785 | 5 |
-| `socialVideoFormAsOf` | function | 21789–21794 | 6 |
-| `socialVideoLastDuelAsOf` | function | 21798–21804 | 7 |
-| `socialVideoTopScorerAsOf` | function | 21810–21839 | 30 |
-| `socialVideoOpponentSceneData` | function | 21842–21889 | 48 |
-| `socialVideoFileName` | function | 21893–21899 | 7 |
-| `socialVideoMatchdayLabel` | function | 21901–21903 | 3 |
-| `socialVideoBuildStorySpec` | function | 21906–21957 | 52 |
-| `socialVideoBuildFeedSpec` | function | 21960–22009 | 50 |
-| `buildSocialVideoSpec` | function | 22019–22034 | 16 |
-| `socialVideoStoryFrameData` | function | 22048–22081 | 34 |
-| `rSocialVideoFeedFrame` | function | 22085–22121 | 37 |
-| `socialVideoStandbildFrame` | function | 22124–22127 | 4 |
-| `socialVideoXmlSafeHtml` | function | 22136–22138 | 3 |
-| `downloadSocialVideoStandbild` | window | 22144–22194 | 51 |
-| `rMatchcenterPage` | function | 22196–22343 | 148 |
-| `rTeamPage` | function | 22344–22654 | 311 |
-| `exportExcel` | function | 22659–22680 | 22 |
-| `render` | function | 22686–22703 | 18 |
-| `_render` | function | 22704–22868 | 165 |
-| `uiFormatNumber` | function | 22902–22906 | 5 |
-| `uiReliabilityDots` | function | 22915–22922 | 8 |
-| `uiDeltaIndicator` | function | 22930–22936 | 7 |
-| `uiInfoIcon` | function | 22948–22952 | 5 |
-| `uiKennzahlKachel` | function | 22960–22971 | 12 |
-| `uiKernaussage` | function | 22980–22986 | 7 |
-| `uiHinweisKarte` | function | 22994–23006 | 13 |
-| `uiRangliste` | function | 23016–23033 | 18 |
-| `uiVerlauf` | function | 23044–23063 | 20 |
-| `uiIntervallBalken` | function | 23070–23082 | 13 |
-| `uiMethodenbox` | function | 23089–23098 | 10 |
-| `uiNotiz` | function | 23106–23110 | 5 |
-| `uiPlatzhalter` | function | 23118–23123 | 6 |
-| `uiObjektseiteSortTabs` | function | 23168–23176 | 9 |
-| `uiObjektseite` | function | 23186–23219 | 34 |
-| `mainNavActiveKeyForPage` | function | 23276–23281 | 6 |
-| `goToMainNavPoint` | window | 23282–23288 | 7 |
-| `rMainNav` | function | 23289–23293 | 5 |
-| `rMainNavBottom` | function | 23311–23318 | 8 |
-| `openOverview` | window | 23328–23336 | 9 |
-| `switchOverviewSeason` | window | 23345–23351 | 7 |
-| `openMatchdayTimeline` | window | 23379–23386 | 8 |
-| `openMatchday` | window | 23387–23396 | 10 |
-| `switchMatchdaySeason` | window | 23398–23403 | 6 |
-| `matchdayUlmGames` | function | 23405–23407 | 3 |
-| `matchdayGameCardHtml` | function | 23408–23418 | 11 |
-| `rMatchdayTimelineRow` | function | 23420–23427 | 8 |
-| `rMatchdayTimelinePage` | function | 23428–23438 | 11 |
-| `rMatchdayDetailPage` | function | 23439–23474 | 36 |
-| `rMatchdayPage` | function | 23475–23481 | 7 |
-| `overviewMatchdayStartMs` | function | 23500–23505 | 6 |
-| `overviewMatchdayEndMs` | function | 23506–23511 | 6 |
-| `detectOverviewPhase` | function | 23512–23537 | 26 |
-| `getSeasonDataState` | function | 23544–23554 | 11 |
-| `parseSeasonDataState` | function | 23555–23563 | 9 |
-| `isNewSeasonDataState` | function | 23565–23567 | 3 |
-| `recordOverviewVisit` | function | 23574–23583 | 10 |
-| `overviewOpponentLabel` | function | 23584–23588 | 5 |
-| `overviewLastMatchdayText` | function | 23589–23592 | 4 |
-| `overviewNextMatchdayHtml` | function | 23593–23597 | 5 |
-| `overviewCompactTableHtml` | function | 23605–23611 | 7 |
-| `overviewFormHtml` | function | 23613–23627 | 15 |
-| `overviewSeasonBilanzHtml` | function | 23628–23634 | 7 |
-| `overviewSeasonAwardHtml` | function | 23636–23645 | 10 |
-| `overviewRecordHtml` | function | 23647–23652 | 6 |
-| `overviewCrossSeasonTrendHtml` | function | 23654–23662 | 9 |
-| `overviewOpponentPreviewHtml` | function | 23663–23667 | 5 |
-| `overviewMatchcenterLinkHtml` | function | 23668–23670 | 3 |
-| `overviewLineupLinkHtml` | function | 23671–23673 | 3 |
-| `overviewRankChangeTile` | function | 23690–23707 | 18 |
-| `buildOverviewCards` | function | 23716–23756 | 41 |
-| `rOverviewPage` | function | 23766–23777 | 12 |
-| `openLigaGegner` | window | 23778–23781 | 4 |
-| `rLigaGegnerPlaceholderPage` | function | 23782–23787 | 6 |
-| `rAsOfSelector` | function | 23799–23811 | 13 |
-| `setContextAsOf` | window | 23812–23823 | 12 |
-| `rSeasonDataPreviewContextHint` | function | 23834–23842 | 9 |
-| `rSeasonDataStateContextHint` | function | 23851–23857 | 7 |
-| `rContextBar` | function | 23882–23900 | 19 |
-| `rIaShell` | function | 23902–23904 | 3 |
-| `globalSearchTokens` | function | 23921–23924 | 4 |
-| `globalSearchEntries` | function | 23926–23939 | 14 |
-| `globalSearchPlayerScore` | function | 23940–23947 | 8 |
-| `globalSearchMatchdayScore` | function | 23949–23961 | 13 |
-| `globalSearchMatch` | function | 23963–23974 | 12 |
-| `globalSearchIsEditableTarget` | function | 23975–23979 | 5 |
-| `globalSearchKeyAction` | function | 23981–23995 | 15 |
-| `rGlobalSearchToggle` | function | 23996–23998 | 3 |
-| `rGlobalSearchResultsHtml` | function | 23999–24009 | 11 |
-| `rGlobalSearchPanelHtml` | function | 24010–24012 | 3 |
-| `paintGlobalSearchResults` | function | 24013–24020 | 8 |
-| `openGlobalSearch` | window | 24021–24045 | 25 |
-| `closeGlobalSearch` | window | 24046–24053 | 8 |
-| `onGlobalSearchInput` | window | 24054–24059 | 6 |
-| `moveGlobalSearch` | function | 24060–24065 | 6 |
-| `activateGlobalSearchResult` | window | 24066–24075 | 10 |
-| `globalSearchOnKeydown` | function | 24076–24097 | 22 |
-| `initGlobalSearch` | function | 24098–24102 | 5 |
-| `rToolMenu` | function | 24124–24127 | 4 |
-| `toolMenuElements` | function | 24128–24130 | 3 |
-| `toolMenuItemElements` | function | 24131–24133 | 3 |
-| `isToolMenuOpen` | function | 24134–24137 | 4 |
-| `openToolMenu` | window | 24138–24145 | 8 |
-| `closeToolMenu` | window | 24146–24152 | 7 |
-| `toggleToolMenu` | window | 24153–24156 | 4 |
-| `activateToolMenuItem` | window | 24157–24164 | 8 |
-| `toolMenuOnKeydown` | function | 24165–24188 | 24 |
-| `toolMenuOnClick` | function | 24189–24195 | 7 |
-| `initToolMenu` | function | 24196–24199 | 4 |
+| `createSeasonBucket` | function | 1813–1827 | 15 |
+| `getSeasonApiBaseUrl` | function | 1838–1854 | 17 |
+| `seasonApiUrl` | function | 1855–1857 | 3 |
+| `getSeasonOriginBaseUrl` | function | 1858–1866 | 9 |
+| `seasonPathPrefix` | function | 1867–1869 | 3 |
+| `uniqueList` | function | 1870–1872 | 3 |
+| `seasonGameApiUrls` | function | 1873–1882 | 10 |
+| `seasonGameHtmlUrls` | function | 1883–1890 | 8 |
+| `clearAnalysisCache` | function | 2188–2190 | 3 |
+| `analysisCacheContext` | function | 2191–2205 | 15 |
+| `asOfCacheKeyPart` | function | 2219–2224 | 6 |
+| `analysisCacheKey` | function | 2225–2228 | 4 |
+| `cachedAnalysis` | function | 2229–2234 | 6 |
+| `setState` | const-arrow | 2235–2242 | 8 |
+| `invalidateGlobalIdentityCache` | function | 2243–2245 | 3 |
+| `setP` | window | 2247–2247 | 1 |
+| `setTab` | window | 2248–2248 | 1 |
+| `setPlayerRoleView` | window | 2249–2249 | 1 |
+| `setGoalieTab` | window | 2250–2250 | 1 |
+| `toggleSpecialTeamsGameDetails` | window | 2251–2251 | 1 |
+| `toggleMatchcenterSpecialTeamsGames` | window | 2252–2252 | 1 |
+| `toggleMatchcenterPlayerDetails` | window | 2253–2253 | 1 |
+| `toggleMatchcenterDuoDetails` | window | 2254–2254 | 1 |
+| `setMatchcenterTab` | window | 2255–2255 | 1 |
+| `openMatchcenterStoryPreview` | window | 2256–2256 | 1 |
+| `closeMatchcenterStoryPreview` | window | 2257–2257 | 1 |
+| `toggleHallOfFamePureSGPlayers` | window | 2258–2258 | 1 |
+| `copyMatchcenterText` | window | 2259–2284 | 26 |
+| `addLineupPlayer` | window | 2285–2290 | 6 |
+| `removeLineupPlayer` | window | 2291–2291 | 1 |
+| `clearLineupPlayers` | window | 2292–2292 | 1 |
+| `filterLineupPlayers` | window | 2293–2299 | 7 |
+| `lineupBuilderPoolIds` | function | 2300–2302 | 3 |
+| `normalizeLineupLines` | function | 2303–2307 | 5 |
+| `setLineupBuilderSeason` | window | 2308–2319 | 12 |
+| `setLineupBuilderOpponent` | window | 2320–2320 | 1 |
+| `setLineupBuilderMode` | window | 2321–2321 | 1 |
+| `setLineupActiveLine` | window | 2322–2322 | 1 |
+| `toggleLineupBuilderAvailable` | window | 2323–2336 | 14 |
+| `selectAllLineupAvailable` | window | 2337–2337 | 1 |
+| `clearLineupAvailable` | window | 2338–2338 | 1 |
+| `addLineupBuilderPlayerToLine` | window | 2339–2348 | 10 |
+| `addLineupBuilderPlayerToActiveLine` | window | 2349–2349 | 1 |
+| `removeLineupBuilderPlayerFromLine` | window | 2350–2356 | 7 |
+| `clearLineupBuilderLine` | window | 2357–2362 | 6 |
+| `showLineupComplements` | window | 2363–2363 | 1 |
+| `setLineupNewPlayerProfile` | window | 2364–2364 | 1 |
+| `addSyntheticLineupPlayer` | window | 2365–2382 | 18 |
+| `setAntiSynergyView` | window | 2383–2383 | 1 |
+| `toggleAntiSynergyShowAll` | window | 2384–2384 | 1 |
+| `toggleAntiSynergyHideSgOnly` | window | 2385–2385 | 1 |
+| `filterLineupBuilderAvailable` | window | 2386–2392 | 7 |
+| `setPage` | window | 2393–2401 | 9 |
+| `backToHome` | window | 2402–2408 | 7 |
+| `setGlobalPlayer` | window | 2409–2409 | 1 |
+| `setGlobalPlayerDuo` | window | 2410–2410 | 1 |
+| `setGlobalTab` | window | 2411–2411 | 1 |
+| `toggleSgOnlyAlltime` | window | 2412–2412 | 1 |
+| `getActiveSeasonKey` | function | 2414–2416 | 3 |
+| `getGlobalAllTimeSnapshot` | function | 2418–2425 | 8 |
+| `applySeasonContext` | function | 2426–2449 | 24 |
+| `fixMojibakeText` | function | 2463–2465 | 3 |
+| `repairRenderedMojibake` | function | 2466–2487 | 22 |
+| `getAllTimeOpponentNames` | function | 2492–2499 | 8 |
+| `getUniqueAllTimeOpponentNames` | function | 2500–2502 | 3 |
+| `getUlmTeamStatus` | function | 2505–2509 | 5 |
+| `detectUlmSide` | function | 2510–2516 | 7 |
+| `detectSide` | const-arrow | 2517–2517 | 1 |
+| `normalizePlayerName` | function | 2520–2529 | 10 |
+| `getPreClubHistoryPlayerNames` | function | 2530–2532 | 3 |
+| `isPreClubHistoryPlayerName` | function | 2533–2537 | 5 |
+| `diagnoseGameDuplicates` | function | 2539–2552 | 14 |
+| `gameClassificationStatusLabel` | function | 2553–2560 | 8 |
+| `appendSeasonGameDiagnostics` | function | 2561–2626 | 66 |
+| `warnEventProcessingOnce` | function | 2628–2635 | 8 |
+| `rosterPlayerMatches` | function | 2636–2650 | 15 |
+| `getRosterGameIdsForPlayer` | function | 2651–2659 | 9 |
+| `isGoalieRosterEntry` | function | 2660–2664 | 5 |
+| `goalieEntryRecognitionReason` | function | 2674–2683 | 10 |
+| `isExcludedGoalieAppearance` | function | 2684–2697 | 14 |
+| `playerRoleInGame` | function | 2705–2709 | 5 |
+| `getPlayerGameRole` | function | 2710–2716 | 7 |
+| `isGoalieAppearance` | function | 2717–2720 | 4 |
+| `isFieldAppearance` | function | 2721–2724 | 4 |
+| `getFieldGameIdsForPlayer` | function | 2725–2731 | 7 |
+| `getGoalieGameIdsForPlayer` | function | 2732–2738 | 7 |
+| `getPlayerFieldGames` | function | 2739–2742 | 4 |
+| `getPlayerGoalieGames` | function | 2743–2746 | 4 |
+| `roleGameStableKey` | function | 2747–2749 | 3 |
+| `getPlayerAlltimeRoleGames` | function | 2750–2768 | 19 |
+| `getPlayerAlltimeFieldGames` | function | 2769–2771 | 3 |
+| `getPlayerAlltimeGoalieGames` | function | 2772–2774 | 3 |
+| `getPlayerAlltimeTotalGames` | function | 2775–2783 | 9 |
+| `getPlayerSeasonRoleGameSummary` | function | 2784–2806 | 23 |
+| `getPlayedUlmGames` | function | 2807–2815 | 9 |
+| `countPlayedUlmGames` | function | 2816–2818 | 3 |
+| `getSeasonTeamGames` | function | 2819–2822 | 4 |
+| `getSeasonTeamGameIds` | function | 2823–2825 | 3 |
+| `getPlayerSourceId` | function | 2826–2828 | 3 |
+| `getJerseyNumber` | function | 2829–2831 | 3 |
+| `normalizeEventPlayerRef` | function | 2832–2843 | 12 |
+| `resolveRosterPlayerByRef` | function | 2844–2874 | 31 |
+| `resolveGoalScorerPlayer` | function | 2875–2889 | 15 |
+| `getGoalScorerFromEvent` | function | 2890–2892 | 3 |
+| `normalizeAssistPlayerName` | function | 2893–2895 | 3 |
+| `collectAssistEventRefs` | function | 2896–2923 | 28 |
+| `getAssistPlayersFromEvent` | function | 2924–2937 | 14 |
+| `resolveAssistPlayer` | function | 2938–2944 | 7 |
+| `t2s` | const-arrow | 2946–2946 | 1 |
+| `variance` | function | 2948–2952 | 5 |
+| `processGame` | function | 2957–3021 | 65 |
+| `isGamePlayed` | function | 3023–3025 | 3 |
+| `deriveAsOfForSeason` | function | 3056–3059 | 4 |
+| `seasonKeyToHashSegment` | function | 3161–3163 | 3 |
+| `hashSegmentToSeasonKey` | function | 3164–3167 | 4 |
+| `isValidAsOfDate` | function | 3168–3170 | 3 |
+| `isValidAsOfStartTime` | function | 3171–3173 | 3 |
+| `asOfEquals` | function | 3180–3187 | 8 |
+| `decodeHashSegmentSafe` | function | 3251–3253 | 3 |
+| `parseAppHash` | function | 3271–3302 | 32 |
+| `parseAsOfQueryValue` | function | 3310–3320 | 11 |
+| `buildAppHash` | function | 3326–3338 | 13 |
+| `buildGlobalPageHash` | function | 3343–3352 | 10 |
+| `buildHashStringFromParsed` | function | 3358–3362 | 5 |
+| `computeCurrentAppHash` | function | 3378–3390 | 13 |
+| `syncHashFromState` | function | 3404–3414 | 11 |
+| `withoutHashSync` | function | 3421–3429 | 9 |
+| `parseLastViewState` | function | 3445–3456 | 12 |
+| `getStoredLastView` | function | 3457–3460 | 4 |
+| `saveLastView` | function | 3462–3464 | 3 |
+| `applyGlobalPageFromHash` | function | 3476–3496 | 21 |
+| `applyAppHash` | function | 3509–3539 | 31 |
+| `initHashRouting` | function | 3588–3606 | 19 |
+| `gameResult` | function | 3609–3615 | 7 |
+| `getOppStrength` | function | 3622–3639 | 18 |
+| `createPlayerAnalysisProfile` | function | 3651–3653 | 3 |
+| `emptyPlayerSeasonStats` | function | 3655–3663 | 9 |
+| `emptyGoalieSeasonStats` | function | 3664–3687 | 24 |
+| `emptyGoalieAlltimeStats` | function | 3688–3703 | 16 |
+| `emptyGoalieSpecialTeamsStats` | function | 3704–3715 | 12 |
+| `emptyFieldRoleSeasonStats` | function | 3716–3718 | 3 |
+| `addUnique` | function | 3720–3722 | 3 |
+| `incrementUniqueCounter` | function | 3724–3729 | 6 |
+| `buildPlayerIdentity` | function | 3731–3746 | 16 |
+| `resetPlayerRegistrySeason` | function | 3748–3758 | 11 |
+| `derivePlayerStatus` | function | 3760–3767 | 8 |
+| `getOrCreatePlayerProfile` | function | 3769–3801 | 33 |
+| `registerPlayerIdentity` | function | 3803–3819 | 17 |
+| `ensureGoalieSeasonStats` | function | 3821–3825 | 5 |
+| `ensureFieldRoleSeasonStats` | function | 3826–3830 | 5 |
+| `markFieldRoleAppearance` | function | 3831–3834 | 4 |
+| `registerSeasonRosters` | function | 3836–3854 | 19 |
+| `linkUiPlayersToRegistry` | function | 3856–3876 | 21 |
+| `applySeasonScoringToRegistry` | function | 3878–3910 | 33 |
+| `finalizeSeasonAppearanceTotals` | function | 3914–3923 | 10 |
+| `finalizePlayerRegistrySeason` | function | 3925–3939 | 15 |
+| `serializeSeasonStats` | function | 3941–3955 | 15 |
+| `serializeGoalieSeasonStats` | function | 3956–3978 | 23 |
+| `serializeFieldRoleSeasonStats` | function | 3979–3981 | 3 |
+| `toPublicPlayerRegistry` | function | 3983–4012 | 30 |
+| `aggregateAllTimePlayers` | function | 4014–4053 | 40 |
+| `finiteNumbers` | function | 4055–4057 | 3 |
+| `avgOrNull` | function | 4058–4061 | 4 |
+| `medianOrNull` | function | 4062–4067 | 6 |
+| `incGoalieBucket` | function | 4068–4071 | 4 |
+| `goalieEventAbsSeconds` | function | 4077–4079 | 3 |
+| `goalieGameDurationSeconds` | function | 4080–4084 | 5 |
+| `goalieGameStateBeforeGoal` | function | 4085–4096 | 12 |
+| `getGoalieOpponentName` | function | 4097–4100 | 4 |
+| `getGoalieOpponentTier` | function | 4101–4105 | 5 |
+| `resultGoalsAgainstForSide` | function | 4106–4115 | 10 |
+| `emptySpecialTeamsStats` | function | 4116–4156 | 41 |
+| `clonePlain` | function | 4157–4159 | 3 |
+| `finalizeSpecialTeamsStats` | function | 4160–4166 | 7 |
+| `serializeSpecialTeamsStats` | function | 4167–4169 | 3 |
+| `mergeSpecialTeamsStats` | function | 4170–4199 | 30 |
+| `penaltyRawText` | function | 4202–4204 | 3 |
+| `isMatchPenaltyEvent` | function | 4205–4208 | 4 |
+| `isTwoPlusTwoPenaltyEvent` | function | 4209–4212 | 4 |
+| `getPenaltyDisciplineType` | function | 4213–4220 | 8 |
+| `getGameDurationMinutes` | function | 4221–4225 | 5 |
+| `gameDaySortValue` | function | 4226–4233 | 8 |
+| `isSameUlmTeamContext` | function | 4234–4241 | 8 |
+| `getFurtherSameDayUlmGames` | function | 4242–4253 | 12 |
+| `getPenaltySpecialTeamsMinutes` | function | 4254–4256 | 3 |
+| `getPenaltyBasePersonalMinutes` | function | 4257–4264 | 8 |
+| `getPenaltyPersonalMinutes` | function | 4265–4274 | 10 |
+| `getPenaltyDisciplineMinutes` | function | 4275–4277 | 3 |
+| `getSpecialTeamsPenaltyChunks` | function | 4278–4287 | 10 |
+| `isPenaltyGoalEvent` | function | 4288–4292 | 5 |
+| `isOwnGoalEvent` | function | 4295–4298 | 4 |
+| `specialTeamsStateFromActive` | function | 4299–4305 | 7 |
+| `annotateSpecialTeamsGoalEvent` | function | 4306–4320 | 15 |
+| `buildSpecialTeamsForGame` | function | 4321–4517 | 197 |
+| `buildSpecialTeamsForSeason` | function | 4518–4526 | 9 |
+| `aggregateAlltimeSpecialTeams` | function | 4527–4534 | 8 |
+| `mergeGoalieSpecialTeamsStats` | function | 4535–4546 | 12 |
+| `addGoalieSpecialTeamsGameToStats` | function | 4547–4561 | 15 |
+| `finalizeGoalieSeasonStats` | function | 4562–4576 | 15 |
+| `addGoalieGameToStats` | function | 4577–4627 | 51 |
+| `buildGoalieGameRecord` | function | 4629–4680 | 52 |
+| `buildGoalieStatsForSeason` | function | 4682–4761 | 80 |
+| `aggregateGoalieAlltimeStats` | function | 4763–4801 | 39 |
+| `updatePlayerRoleAvailability` | function | 4803–4812 | 10 |
+| `getGoalieDiagnostics` | function | 4814–4819 | 6 |
+| `getSpecialTeamsDiagnostics` | function | 4821–4826 | 6 |
+| `getAssistDiagnostics` | function | 4828–4880 | 53 |
+| `buildSeasonDuos` | function | 4883–4909 | 27 |
+| `mergeDuoSet` | function | 4910–4926 | 17 |
+| `aggregateAllTimeDuos` | function | 4927–4937 | 11 |
+| `aggregateSeasonStats` | function | 4939–4954 | 16 |
+| `buildPlayerDataFoundation` | function | 4956–4978 | 23 |
+| `buildRegistry` | function | 4980–5006 | 27 |
+| `buildPlayerEvents` | function | 5011–5106 | 96 |
+| `getPhaseIndex` | function | 5111–5121 | 11 |
+| `computeMetrics` | function | 5126–5259 | 134 |
+| `detectTypes` | function | 5261–5276 | 16 |
+| `pct` | function | 5278–5278 | 1 |
+| `ratio01` | function | 5279–5279 | 1 |
+| `relative01` | function | 5280–5280 | 1 |
+| `buildSoloDuoProfile` | function | 5281–5324 | 44 |
+| `identityPartnerStats` | function | 5325–5338 | 14 |
+| `identityOpponentGroups` | function | 5339–5346 | 8 |
+| `eventMatchesTeams` | function | 5347–5352 | 6 |
+| `clutchText` | function | 5353–5353 | 1 |
+| `isImportantClutchGoal` | function | 5354–5358 | 5 |
+| `isDecisiveGoal` | function | 5359–5361 | 3 |
+| `isLateGoal` | function | 5367–5372 | 6 |
+| `isComebackRelevantGoal` | function | 5373–5376 | 4 |
+| `identityPointsVsTeams` | function | 5377–5379 | 3 |
+| `identityGoalsVsTeams` | function | 5380–5382 | 3 |
+| `identityClutchGoalsVsTeams` | function | 5383–5385 | 3 |
+| `identityDecisiveGoalsVsTeams` | function | 5386–5388 | 3 |
+| `identityLateGoalsVsTeams` | function | 5389–5391 | 3 |
+| `countMomentumClusters` | function | 5392–5414 | 23 |
+| `identityInputs` | function | 5415–5472 | 58 |
+| `clearlyAboveAverage` | function | 5473–5473 | 1 |
+| `normalizeSecondaryTraits` | function | 5474–5485 | 12 |
+| `seasonRoleTraitsFromClassic` | function | 5486–5490 | 5 |
+| `seasonRoleKeysForPlayer` | function | 5491–5499 | 9 |
+| `hasSeasonRole` | function | 5500–5502 | 3 |
+| `selectEnforcerKeys` | function | 5503–5515 | 13 |
+| `buildIdentityProfiles` | function | 5516–5747 | 232 |
+| `composeIdentityText` | function | 5748–5754 | 7 |
+| `countCaptainAppearances` | function | 5756–5768 | 13 |
+| `countGoalieAppearances` | function | 5770–5772 | 3 |
+| `computeRosterStatus` | function | 5774–5792 | 19 |
+| `assignStatus` | function | 5794–5979 | 186 |
+| `fetchJsonLegacy` | function | 5985–6004 | 20 |
+| `responseExcerpt` | function | 6006–6008 | 3 |
+| `diagnosticError` | function | 6009–6013 | 5 |
+| `fetchTextWithDiagnostics` | function | 6014–6043 | 30 |
+| `fetchJsonWithDiagnostics` | function | 6044–6052 | 9 |
+| `fetchJson` | function | 6053–6056 | 4 |
+| `formatStatus` | function | 6057–6059 | 3 |
+| `formatDiagnosticAttempt` | function | 6060–6072 | 13 |
+| `formatGameLoadError` | function | 6073–6078 | 6 |
+| `fetchSeasonGameRaw` | function | 6079–6118 | 40 |
+| `getStaticSeasonGames` | function | 6122–6125 | 4 |
+| `loadSeasonManifest` | function | 6137–6153 | 17 |
+| `resolveCurrentSeasonKey` | function | 6168–6187 | 20 |
+| `applyCurrentSeasonCoverHighlight` | function | 6188–6192 | 5 |
+| `isUsableExternalSeasonData` | function | 6205–6213 | 9 |
+| `ensureExternalSeasonData` | function | 6214–6235 | 22 |
+| `buildStaticSeasonDataBlock` | function | 6236–6245 | 10 |
+| `getGameId` | function | 6272–6276 | 5 |
+| `findDuplicateGameIds` | function | 6278–6288 | 11 |
+| `validateGameStructure` | function | 6306–6345 | 40 |
+| `validateSeasonGames` | function | 6347–6357 | 11 |
+| `diffGameIds` | function | 6359–6368 | 10 |
+| `validateSeasonKey` | function | 6370–6380 | 11 |
+| `validateWrapperFormat` | function | 6382–6391 | 10 |
+| `validateMergedSeason` | function | 6393–6410 | 18 |
+| `buildDryRunReport` | function | 6412–6474 | 63 |
+| `seasonDataPreviewRerender` | function | 6495–6497 | 3 |
+| `seasonDataPreviewRow` | function | 6499–6510 | 12 |
+| `buildSeasonDataPreviewChanges` | function | 6517–6534 | 18 |
+| `stageSeasonDataPreview` | function | 6545–6596 | 52 |
+| `stageSeasonDataPreviewFromFile` | function | 6597–6610 | 14 |
+| `stageSeasonDataPreviewFromPaste` | function | 6611–6615 | 5 |
+| `discardSeasonDataPreview` | function | 6616–6620 | 5 |
+| `getSeasonDataPreview` | function | 6622–6624 | 3 |
+| `isSeasonDataPreviewStale` | function | 6630–6634 | 5 |
+| `rSeasonDataPreviewStatus` | function | 6636–6638 | 3 |
+| `rSeasonDataPreviewRows` | function | 6639–6647 | 9 |
+| `rSeasonDataPreviewCard` | function | 6649–6684 | 36 |
+| `setSeasonDataPreviewOpen` | window | 6685–6685 | 1 |
+| `setSeasonDataPreviewPasteText` | window | 6686–6686 | 1 |
+| `fileNameForLineupSeasonKey` | function | 6706–6708 | 3 |
+| `ensureLineupDataLoaded` | function | 6724–6740 | 17 |
+| `ensureLineupGroupsRegistryLoaded` | function | 6749–6765 | 17 |
+| `resolveLineupPlayerName` | function | 6777–6780 | 4 |
+| `findLineupGameContext` | function | 6783–6790 | 8 |
+| `rEinsatzCenterGroup` | function | 6792–6803 | 12 |
+| `rEinsatzCenterCombo` | function | 6805–6812 | 8 |
+| `rEinsatzCenterGameCard` | function | 6814–6831 | 18 |
+| `rEinsatzCenterPage` | function | 6833–6852 | 20 |
+| `setEinsatzCenterSeason` | window | 6854–6859 | 6 |
+| `openEinsatzCenter` | window | 6860–6867 | 8 |
+| `computeEinsatzCenterStats` | function | 6878–6908 | 31 |
+| `lineupGroupDisplayName` | function | 6909–6914 | 6 |
+| `rEinsatzCenterStats` | function | 6915–6933 | 19 |
+| `getEffectiveLineupData` | function | 6991–6998 | 8 |
+| `isEinsatzCenterGameFromDraft` | function | 7000–7003 | 4 |
+| `einsatzCenterDraftInView` | function | 7005–7008 | 4 |
+| `rEinsatzCenterDraftMark` | function | 7009–7012 | 4 |
+| `rEinsatzCenterDraftStatsHint` | function | 7013–7017 | 5 |
+| `einsatzCenterDraftStaleHint` | function | 7019–7021 | 3 |
+| `rEinsatzCenterDraftBanner` | function | 7023–7030 | 8 |
+| `ensureEinsatzCenterDraft` | function | 7041–7054 | 14 |
+| `getEinsatzCenterGameDraft` | function | 7063–7074 | 12 |
+| `einsatzCenterAutosaveKey` | function | 7101–7101 | 1 |
+| `einsatzCenterStorageRead` | function | 7102–7104 | 3 |
+| `einsatzCenterStorageWrite` | function | 7105–7107 | 3 |
+| `einsatzCenterStorageRemove` | function | 7108–7110 | 3 |
+| `einsatzCenterDraftIsEmpty` | function | 7113–7115 | 3 |
+| `einsatzCenterSerializeDraft` | function | 7117–7129 | 13 |
+| `einsatzCenterIsPlainObject` | function | 7130–7130 | 1 |
+| `einsatzCenterDeserializeAutosave` | function | 7136–7169 | 34 |
+| `einsatzCenterCurrentRawBaseHash` | function | 7176–7181 | 6 |
+| `einsatzCenterAutosaveDraft` | function | 7190–7217 | 28 |
+| `einsatzCenterInspectAutosave` | function | 7225–7253 | 29 |
+| `restoreEinsatzCenterAutosave` | function | 7256–7272 | 17 |
+| `discardEinsatzCenterAutosave` | function | 7274–7279 | 6 |
+| `rEinsatzCenterAutosaveBanner` | function | 7282–7294 | 13 |
+| `einsatzCenterAutosaveInfoText` | function | 7296–7306 | 11 |
+| `loadEinsatzCenterMismatchedAutosave` | function | 7320–7338 | 19 |
+| `deriveLineupValidPlayerIds` | function | 7351–7367 | 17 |
+| `deriveLineupUlmPlayerIds` | function | 7375–7391 | 17 |
+| `getSeasonmanagerRosterSuggestion` | function | 7405–7425 | 21 |
+| `einsatzCenterCanonicalJson` | function | 7434–7443 | 10 |
+| `einsatzCenterSha256Hex` | function | 7444–7448 | 5 |
+| `einsatzCenterComputeBaseHash` | function | 7449–7451 | 3 |
+| `einsatzCenterSoftIssues` | function | 7458–7476 | 19 |
+| `rEinsatzCenterGroupEditor` | function | 7479–7509 | 31 |
+| `rEinsatzCenterComboEditor` | function | 7510–7516 | 7 |
+| `rEinsatzCenterRosterSuggestionCard` | function | 7526–7556 | 31 |
+| `rEinsatzCenterGameEditor` | function | 7557–7609 | 53 |
+| `rEinsatzCenterEditPage` | function | 7610–7657 | 48 |
+| `startEinsatzCenterDraftMode` | window | 7660–7664 | 5 |
+| `cancelEinsatzCenterEdit` | window | 7665–7675 | 11 |
+| `viewEinsatzCenterMergedView` | window | 7677–7677 | 1 |
+| `returnToEinsatzCenterEdit` | window | 7678–7678 | 1 |
+| `setEinsatzCenterIncludeDraft` | window | 7679–7679 | 1 |
+| `selectEinsatzCenterEditGame` | window | 7680–7683 | 4 |
+| `addEinsatzCenterRosterPlayer` | window | 7684–7691 | 8 |
+| `removeEinsatzCenterRosterPlayer` | window | 7692–7699 | 8 |
+| `toggleEinsatzCenterRosterSuggestionPlayer` | window | 7700–7706 | 7 |
+| `dismissEinsatzCenterRosterSuggestion` | window | 7707–7710 | 4 |
+| `acceptEinsatzCenterRosterSuggestion` | window | 7718–7734 | 17 |
+| `addEinsatzCenterExistingGroup` | window | 7735–7743 | 9 |
+| `addEinsatzCenterNewGroup` | window | 7744–7760 | 17 |
+| `removeEinsatzCenterGroup` | window | 7761–7768 | 8 |
+| `toggleEinsatzCenterGroupRename` | window | 7769–7771 | 3 |
+| `renameEinsatzCenterGroup` | window | 7783–7802 | 20 |
+| `addEinsatzCenterGroupPlayer` | window | 7803–7810 | 8 |
+| `removeEinsatzCenterGroupPlayer` | window | 7811–7818 | 8 |
+| `setEinsatzCenterGroupPlayerPosition` | window | 7819–7827 | 9 |
+| `toggleEinsatzCenterComboPlayer` | window | 7828–7835 | 8 |
+| `confirmEinsatzCenterCombo` | window | 7836–7846 | 11 |
+| `removeEinsatzCenterCombo` | window | 7847–7853 | 7 |
+| `setEinsatzCenterGameNote` | window | 7854–7860 | 7 |
+| `buildEinsatzCenterDraftExport` | function | 7864–7877 | 14 |
+| `exportEinsatzCenterDraft` | window | 7878–7890 | 13 |
+| `loadSeasonData` | function | 7905–8374 | 470 |
+| `showMainShell` | function | 8377–8381 | 5 |
+| `hasSeasonSource` | function | 8382–8385 | 4 |
+| `hasEmbeddedSeasonData` | function | 8386–8388 | 3 |
+| `getGlobalLoadableSeasonKeys` | function | 8389–8395 | 7 |
+| `getAllTimeCoverStats` | function | 8396–8403 | 8 |
+| `updateCoverAllTimeStats` | function | 8404–8412 | 9 |
+| `loadSeasonForGlobal` | function | 8414–8444 | 31 |
+| `ensureGlobalDataLoaded` | function | 8445–8460 | 16 |
+| `loadSeason` | function | 8462–8513 | 52 |
+| `startApp` | window | 8515–8526 | 12 |
+| `ensureAppLoaded` | function | 8517–8526 | 10 |
+| `openSeason` | window | 8527–8529 | 3 |
+| `openAllTimePlayers` | window | 8530–8535 | 6 |
+| `hofIntroDelay` | function | 8538–8540 | 3 |
+| `ensureHallOfFameIntroOverlay` | function | 8541–8573 | 33 |
+| `buildHallOfFameIntroTitle` | function | 8574–8584 | 11 |
+| `seedHallOfFameIntroParticles` | function | 8585–8602 | 18 |
+| `cleanupHallOfFameIntro` | function | 8603–8617 | 15 |
+| `restoreHallOfFameIntroPrevious` | function | 8618–8629 | 12 |
+| `finishHallOfFameIntro` | function | 8630–8637 | 8 |
+| `startHallOfFameIntro` | function | 8638–8662 | 25 |
+| `cancelHallOfFameIntro` | function | 8663–8674 | 12 |
+| `openHallOfFame` | window | 8676–8699 | 24 |
+| `openComparisonCenter` | window | 8700–8728 | 29 |
+| `openMatchcenter` | window | 8729–8750 | 22 |
+| `openLineupBuilder` | window | 8751–8768 | 18 |
+| `setMatchcenterOpponent` | window | 8769–8769 | 1 |
+| `setMatchcenterContext` | window | 8770–8770 | 1 |
+| `setMatchcenterSeason` | window | 8771–8771 | 1 |
+| `toggleMatchcenterGames` | window | 8772–8772 | 1 |
+| `openLexicon` | window | 8773–8776 | 4 |
+| `rRes` | const-arrow | 8781–8781 | 1 |
+| `rClutchBadge` | function | 8782–8789 | 8 |
+| `escAttr` | function | 8790–8792 | 3 |
+| `roleTraitLabel` | function | 8793–8795 | 3 |
+| `isVisibleSecondaryTrait` | function | 8796–8799 | 4 |
+| `rRoleTraitTip` | function | 8800–8804 | 5 |
+| `rStyleMetricTip` | function | 8805–8808 | 4 |
+| `rRosterStatusBadge` | function | 8809–8816 | 8 |
+| `classicTagLabel` | function | 8817–8819 | 3 |
+| `rClassicTagTip` | function | 8820–8824 | 5 |
+| `fallbackIdentityProfile` | function | 8825–8835 | 11 |
+| `rIdentityTags` | function | 8836–8844 | 9 |
+| `rStyleProfileBars` | function | 8845–8855 | 11 |
+| `rIdentityCards` | function | 8856–8881 | 26 |
+| `rClassicRoleTags` | function | 8882–8889 | 8 |
+| `renderTags` | function | 8890–8892 | 3 |
+| `getSeasonPlayerFieldBasis` | function | 8894–8921 | 28 |
+| `getSeasonScopedIdentityProfile` | function | 8925–8941 | 17 |
+| `rSeasonProfileKpis` | function | 8942–8970 | 29 |
+| `rSeasonProfileTagStrip` | function | 8972–8983 | 12 |
+| `rMatrix` | function | 8986–9030 | 45 |
+| `rSeasonDuoSummary` | function | 9033–9041 | 9 |
+| `rPhases` | function | 9043–9060 | 18 |
+| `rRadar` | function | 9063–9110 | 48 |
+| `rClutch` | function | 9113–9145 | 33 |
+| `rTimeline` | function | 9148–9256 | 109 |
+| `rPenalties` | function | 9259–9275 | 17 |
+| `rOppBreakdown` | function | 9278–9310 | 33 |
+| `generatePlayerInsights` | function | 9313–9356 | 44 |
+| `rSeasonInsightsTab` | function | 9359–9372 | 14 |
+| `rInsights` | function | 9374–9425 | 52 |
+| `rTable` | function | 9428–9451 | 24 |
+| `findLoadedSeasonPlayer` | function | 9454–9462 | 9 |
+| `getAllTimePlayerRows` | function | 9463–9478 | 16 |
+| `isSgOnlyAlltimePlayer` | function | 9479–9486 | 8 |
+| `isPureSGPlayer` | function | 9487–9490 | 4 |
+| `filterPureSGPlayers` | function | 9491–9494 | 4 |
+| `getAllTimeMainPlayerRows` | function | 9495–9497 | 3 |
+| `getAllTimeSgOnlyRows` | function | 9498–9500 | 3 |
+| `getPlayerSeasonStats` | function | 9501–9505 | 5 |
+| `getPlayerAlltimeStats` | function | 9506–9513 | 8 |
+| `getPlayerRegistryProfile` | function | 9514–9521 | 8 |
+| `getPlayerGoalieSeasonStats` | function | 9522–9526 | 5 |
+| `getPlayerGoalieAlltimeStats` | function | 9527–9550 | 24 |
+| `sumRoleGames` | function | 9551–9556 | 6 |
+| `getPlayerRoleAvailability` | function | 9557–9574 | 18 |
+| `resolvePlayerRoleView` | function | 9575–9582 | 8 |
+| `rPlayerRoleSwitch` | function | 9583–9589 | 7 |
+| `goalieNum` | function | 9590–9595 | 6 |
+| `goalieTime` | function | 9596–9603 | 8 |
+| `goalieBucketRows` | function | 9604–9609 | 6 |
+| `goalieTopRow` | function | 9610–9612 | 3 |
+| `goalieTierMeta` | function | 9613–9621 | 9 |
+| `goalieStdDev` | function | 9622–9627 | 6 |
+| `goalieDetailFirstTime` | function | 9628–9634 | 7 |
+| `goalieEventSecondInPeriod` | function | 9635–9640 | 6 |
+| `goaliePctText` | function | 9641–9644 | 4 |
+| `goalieSafeNum` | function | 9645–9648 | 4 |
+| `goalieClampScore` | function | 9649–9652 | 4 |
+| `goalieInverseScore` | function | 9653–9660 | 8 |
+| `goaliePositiveScore` | function | 9661–9668 | 8 |
+| `goaliePositiveCurveScore` | function | 9669–9677 | 9 |
+| `goalieWeightedScore` | function | 9678–9683 | 6 |
+| `goalieApplySampleConfidence` | function | 9684–9691 | 8 |
+| `goalieBucketLooseSum` | function | 9692–9698 | 7 |
+| `buildGoalieAnalysisModel` | function | 9699–9857 | 159 |
+| `rGoalieBars` | function | 9858–9870 | 13 |
+| `goalieDnaKey` | function | 9912–9916 | 5 |
+| `goalieDnaValue` | function | 9917–9923 | 7 |
+| `goalieStateGoals` | function | 9924–9924 | 1 |
+| `buildGoalieRoleProfile` | function | 9925–9998 | 74 |
+| `rGoalieRoleTraits` | function | 9999–10002 | 4 |
+| `getGoalieDnaRows` | function | 10003–10006 | 4 |
+| `rGoalieDnaBars` | function | 10007–10020 | 14 |
+| `rGoalieScoringRow` | function | 10021–10041 | 21 |
+| `rGoalieKpis` | function | 10042–10058 | 17 |
+| `rGoalieMiniMetrics` | function | 10059–10064 | 6 |
+| `rGoalieFirstGoalResistance` | function | 10065–10078 | 14 |
+| `rGoalieMomentum` | function | 10079–10092 | 14 |
+| `rGoalieTierCards` | function | 10093–10120 | 28 |
+| `rGoaliePhaseProfile` | function | 10121–10137 | 17 |
+| `rGoalieInsights` | function | 10138–10159 | 22 |
+| `rGoalieOverview` | function | 10160–10177 | 18 |
+| `rGoaliePhases` | function | 10178–10180 | 3 |
+| `rGoalieOpponents` | function | 10181–10192 | 12 |
+| `rGoalieStability` | function | 10193–10221 | 29 |
+| `rGoalieTable` | function | 10222–10229 | 8 |
+| `rGoalieAnalysis` | function | 10230–10255 | 26 |
+| `getPreviousSeasonKey` | function | 10257–10261 | 5 |
+| `playerAppearedInSeasonByName` | function | 10262–10272 | 11 |
+| `playerAppearedForUlmStatusInSeasonByName` | function | 10273–10291 | 19 |
+| `isRookieCandidateForSeason` | function | 10292–10301 | 10 |
+| `getLoadedSeasonPointsByName` | function | 10302–10306 | 5 |
+| `seasonHasPureUlmTeam` | function | 10307–10313 | 7 |
+| `isSgOnlyHallOfFameExcluded` | function | 10314–10322 | 9 |
+| `isHallOfFameEligiblePlayer` | function | 10323–10328 | 6 |
+| `getHallOfFamePlayerRows` | function | 10329–10331 | 3 |
+| `getHallOfFamePlayerIdSet` | function | 10332–10334 | 3 |
+| `getGlobalProfileEvents` | function | 10336–10347 | 12 |
+| `countBy` | function | 10349–10357 | 9 |
+| `getLoadedSeasonPlayerUi` | function | 10358–10362 | 5 |
+| `getGlobalPlayerTeamRecord` | function | 10363–10388 | 26 |
+| `getGlobalPlayerPeakGame` | function | 10389–10399 | 11 |
+| `getGlobalPlayerBestSeason` | function | 10400–10406 | 7 |
+| `getAllTimeDuoRowsForPlayer` | function | 10407–10417 | 11 |
+| `getCarryPerformanceRows` | function | 10418–10433 | 16 |
+| `rCarryPerformanceRows` | function | 10434–10446 | 13 |
+| `getAllTimeGamesPlayedRows` | function | 10447–10471 | 25 |
+| `getAllTimePenaltyRows` | function | 10472–10487 | 16 |
+| `getSeasonUiPlayerForProfile` | function | 10488–10491 | 4 |
+| `getSeasonIdentityProfile` | function | 10492–10496 | 5 |
+| `seasonStatNumber` | function | 10497–10500 | 4 |
+| `seasonStatSetSize` | function | 10501–10506 | 6 |
+| `isActiveAlltimeSeasonStats` | function | 10507–10520 | 14 |
+| `getActiveAlltimeSeasonKeys` | function | 10521–10531 | 11 |
+| `getAlltimeRecencyWeight` | function | 10532–10537 | 6 |
+| `getRosterStatus` | function | 10538–10544 | 7 |
+| `getGlobalTopScorerMilestones` | function | 10545–10557 | 13 |
+| `getGlobalRookieSeasonKey` | function | 10558–10571 | 14 |
+| `getGlobalRookieMilestone` | function | 10572–10582 | 11 |
+| `getGlobalPlayerMilestones` | function | 10583–10600 | 18 |
+| `buildOpponentIntelligence` | function | 10602–10655 | 54 |
+| `rOpponentIntelBars` | function | 10657–10667 | 11 |
+| `getAllTimeDuoRows` | function | 10669–10691 | 23 |
+| `rDuoRows` | function | 10693–10712 | 20 |
+| `getAllLoadedSeasonGames` | function | 10714–10733 | 20 |
+| `getRosterEntryRegistryProfile` | function | 10735–10738 | 4 |
+| `difficultConnectionConfidence` | function | 10739–10743 | 5 |
+| `getDuoRowsForPlayerScope` | function | 10744–10762 | 19 |
+| `buildDirectDuoLookupForPlayer` | function | 10763–10780 | 18 |
+| `duoScopeSeasonKeys` | function | 10781–10784 | 4 |
+| `getDuoScorerCountsWithCandidate` | function | 10785–10804 | 20 |
+| `buildBestThirdManOptions` | function | 10805–10838 | 34 |
+| `getDuoDirectScorerGameCounts` | function | 10839–10870 | 32 |
+| `responseMomentumAbsSeconds` | function | 10875–10877 | 3 |
+| `responseMomentumTime` | function | 10878–10884 | 7 |
+| `responseMomentumGameRows` | function | 10885–10891 | 7 |
+| `responseMomentumSide` | function | 10892–10900 | 9 |
+| `responseMomentumActor` | function | 10901–10911 | 11 |
+| `responseMomentumGoalActors` | function | 10912–10919 | 8 |
+| `buildAnnotatedGoalEventsForGame` | function | 10920–11033 | 114 |
+| `responseMomentumConfidence` | function | 11034–11038 | 5 |
+| `responseMomentumEmptyState` | function | 11039–11046 | 8 |
+| `responseMomentumPairKey` | function | 11047–11049 | 3 |
+| `ensureRmPlayer` | function | 11050–11055 | 6 |
+| `ensureRmDuo` | function | 11056–11061 | 6 |
+| `finalizeResponseStats` | function | 11062–11075 | 14 |
+| `buildResponseGoalStatsRaw` | function | 11076–11124 | 49 |
+| `buildResponseGoalStats` | function | 11125–11130 | 6 |
+| `finalizeMomentumStats` | function | 11131–11136 | 6 |
+| `buildMomentumSwingStatsRaw` | function | 11137–11207 | 71 |
+| `buildMomentumSwingStats` | function | 11208–11213 | 6 |
+| `buildDuoFloorCeiling` | function | 11214–11255 | 42 |
+| `buildDuoWarnings` | function | 11256–11274 | 19 |
+| `duoProPairKey` | function | 11275–11277 | 3 |
+| `duoProContextSeasonKey` | function | 11278–11280 | 3 |
+| `getDuoFieldPlayerRows` | function | 11281–11291 | 11 |
+| `duoProPlayer` | function | 11292–11296 | 5 |
+| `getDuoSharedFieldRows` | function | 11297–11302 | 6 |
+| `buildDuoDirectProduction` | function | 11303–11323 | 21 |
+| `emptyDuoTeamImpactStats` | function | 11324–11326 | 3 |
+| `addDuoTeamGame` | function | 11327–11342 | 16 |
+| `finalizeDuoTeamImpactStats` | function | 11343–11350 | 8 |
+| `buildDuoWithWithoutImpact` | function | 11351–11384 | 34 |
+| `buildDuoOpponentAdjusted` | function | 11385–11397 | 13 |
+| `buildDuoNetworkContext` | function | 11398–11421 | 24 |
+| `buildDuoGapAnalysis` | function | 11422–11438 | 17 |
+| `buildDuoCompatibility` | function | 11450–11472 | 23 |
+| `buildDuoUntestedPotential` | function | 11473–11484 | 12 |
+| `buildDuoUsageRate` | function | 11485–11496 | 12 |
+| `buildDuoReplacementOptions` | function | 11497–11508 | 12 |
+| `buildDuoProAnalysis` | function | 11509–11552 | 44 |
+| `rDuoCenterPro` | function | 11553–11672 | 120 |
+| `duoProDomId` | function | 11673–11675 | 3 |
+| `duoProPickerOpen` | function | 11676–11678 | 3 |
+| `duoProPickerMessage` | function | 11679–11681 | 3 |
+| `setDuoProPickerState` | function | 11682–11691 | 10 |
+| `duoProResolveCandidate` | function | 11692–11700 | 9 |
+| `duoProSelectionPayload` | function | 11701–11710 | 10 |
+| `openDuoProPicker` | window | 11711–11711 | 1 |
+| `cancelDuoProPicker` | window | 11712–11712 | 1 |
+| `selectDuoProQuick` | window | 11713–11716 | 4 |
+| `confirmDuoProSelection` | window | 11717–11731 | 15 |
+| `setDuoProSelection` | window | 11732–11739 | 8 |
+| `rDuoProPlayerSelect` | function | 11740–11746 | 7 |
+| `rInteractiveDuoCenterPro` | function | 11747–11802 | 56 |
+| `rSeasonDuoCenterPro` | function | 11803–11805 | 3 |
+| `getDifficultConnectionRowsForPlayer` | function | 11806–11850 | 45 |
+| `emptyRosterImpactStats` | function | 11851–11853 | 3 |
+| `finalizeRosterImpactStats` | function | 11854–11861 | 8 |
+| `addRosterImpactGameToStats` | function | 11862–11871 | 10 |
+| `getRosterImpactPlayerEventLookup` | function | 11872–11892 | 21 |
+| `buildRosterImpactGameIndex` | function | 11905–11930 | 26 |
+| `getRosterImpactPlayerGames` | function | 11943–11984 | 42 |
+| `rosterImpactConfidence` | function | 11985–11990 | 6 |
+| `confidenceFromSampleSize` | function | 11995–11998 | 4 |
+| `rosterImpactConfidenceWeight` | function | 11999–12002 | 4 |
+| `antiSynergyImpactScore` | function | 12003–12017 | 15 |
+| `buildRosterImpactAnalysis` | function | 12018–12086 | 69 |
+| `buildDuoAntiSynergy` | function | 12087–12089 | 3 |
+| `rAntiSynergyDelta` | function | 12090–12096 | 7 |
+| `antiSynergyDeltaClass` | function | 12097–12100 | 4 |
+| `antiSynergySigned` | function | 12101–12105 | 5 |
+| `rAntiSynergyCompareChip` | function | 12106–12113 | 8 |
+| `rAntiSynergyMetricRow` | function | 12114–12122 | 9 |
+| `rAntiSynergyWinrateText` | function | 12130–12135 | 6 |
+| `rAntiSynergyWinrateRow` | function | 12136–12144 | 9 |
+| `rRosterImpactStatLine` | function | 12145–12148 | 4 |
+| `antiSynergyPartnerIsSgOnly` | function | 12149–12152 | 4 |
+| `rAntiSynergyMainDelta` | function | 12153–12162 | 10 |
+| `rDifficultConnectionList` | function | 12163–12187 | 25 |
+| `rDifficultConnectionListCompactLegacy` | function | 12188–12229 | 42 |
+| `rDifficultConnectionListCompact` | function | 12230–12268 | 39 |
+| `rDifficultConnectionsCard` | function | 12269–12305 | 37 |
+| `responseMomentumTooltipFor` | function | 12350–12356 | 7 |
+| `rmTerm` | function | 12357–12360 | 4 |
+| `rResponseRateDisplay` | function | 12366–12372 | 7 |
+| `rRmKpi` | function | 12373–12384 | 12 |
+| `rAvgResponseTimeNote` | function | 12387–12390 | 4 |
+| `rRmTopList` | function | 12391–12401 | 11 |
+| `rResponseMomentumOverviewCard` | function | 12402–12425 | 24 |
+| `rPlayerResponseMomentumCard` | function | 12426–12444 | 19 |
+| `rDuoResponseMomentumCard` | function | 12445–12464 | 20 |
+| `rTeamResponseMomentumCard` | function | 12465–12471 | 7 |
+| `rMatchcenterResponseMomentum` | function | 12472–12509 | 38 |
+| `getTeamAllTimeRecords` | function | 12511–12551 | 41 |
+| `getAllTimeOpponentIntelligence` | function | 12553–12559 | 7 |
+| `getAllTimeOpponentTopScorers` | function | 12561–12585 | 25 |
+| `getHallOfFameStats` | function | 12587–12609 | 23 |
+| `rOpponentTopScorerTable` | function | 12611–12630 | 20 |
+| `getAllTimeIdentityStandings` | function | 12632–12666 | 35 |
+| `buildRecencyWeightedGlobalIdentityProfile` | function | 12668–12715 | 48 |
+| `getGlobalIdentityProfile` | function | 12717–12743 | 27 |
+| `dedupeIdentityProfileTags` | function | 12745–12756 | 12 |
+| `rGlobalProfileTags` | function | 12758–12762 | 5 |
+| `escHtml` | function | 12764–12766 | 3 |
+| `pctValue` | function | 12767–12770 | 4 |
+| `rHallOfFameHero` | function | 12771–12796 | 26 |
+| `rHallPodiumList` | function | 12797–12819 | 23 |
+| `rHallDuoTemple` | function | 12820–12827 | 8 |
+| `hallGoalieNum` | function | 12829–12834 | 6 |
+| `hallGoalieTime` | function | 12835–12842 | 8 |
+| `hallGoalieSeasonLabel` | function | 12843–12843 | 1 |
+| `isHallRowPureSG` | function | 12844–12851 | 8 |
+| `rHallSGBadge` | function | 12852–12854 | 3 |
+| `hallGoaliePkStats` | function | 12855–12866 | 12 |
+| `hallGoalieTopteamStats` | function | 12867–12873 | 7 |
+| `hallGoalieSeasonScore` | function | 12874–12893 | 20 |
+| `hallGoalieRowFromStats` | function | 12894–12926 | 33 |
+| `getHallGoalieData` | function | 12927–12942 | 16 |
+| `hallGoalieNameHtml` | function | 12943–12945 | 3 |
+| `hallGoalieTooltip` | function | 12960–12963 | 4 |
+| `hallGoalieExplainForLabel` | function | 12964–12978 | 15 |
+| `rHallGoalieRankCard` | function | 12979–13010 | 32 |
+| `noGoalStreakGoaliesForGame` | function | 13026–13033 | 8 |
+| `buildHallOfFameLongestNoGoalStreak` | function | 13034–13059 | 26 |
+| `rHallGoalieAwardCards` | function | 13060–13080 | 21 |
+| `rHallGoalieLegends` | function | 13081–13113 | 33 |
+| `getGlobalSeasonStatRows` | function | 13114–13129 | 16 |
+| `getAlltimeRank` | function | 13130–13135 | 6 |
+| `rAlltimeKpis` | function | 13136–13149 | 14 |
+| `rSparkline` | function | 13150–13162 | 13 |
+| `comparisonItemKey` | function | 13174–13179 | 6 |
+| `normalizeComparisonItem` | function | 13180–13184 | 5 |
+| `comparisonJsArg` | function | 13185–13187 | 3 |
+| `comparisonNum` | function | 13188–13191 | 4 |
+| `comparisonPct` | function | 13192–13195 | 4 |
+| `comparisonFmt` | function | 13196–13199 | 4 |
+| `comparisonPctFmt` | function | 13200–13202 | 3 |
+| `getComparisonPlayerRow` | function | 13203–13205 | 3 |
+| `getComparisonSeasonLabel` | function | 13206–13208 | 3 |
+| `getComparisonTeamGoalsForSeason` | function | 13209–13220 | 12 |
+| `getComparisonAlltimeTeamGoals` | function | 13221–13223 | 3 |
+| `getComparisonSeasonEvents` | function | 13224–13228 | 5 |
+| `getComparisonChemistryFromEvents` | function | 13229–13233 | 5 |
+| `getComparisonClutchFromEvents` | function | 13234–13238 | 5 |
+| `getComparisonStyleProfile` | function | 13239–13263 | 25 |
+| `getComparisonProfile` | function | 13264–13268 | 5 |
+| `getComparisonSeasonTrend` | function | 13269–13294 | 26 |
+| `getComparisonAlltimeTrend` | function | 13295–13300 | 6 |
+| `getComparisonPlayerOptions` | function | 13302–13316 | 15 |
+| `comparisonVariantValue` | function | 13317–13319 | 3 |
+| `getComparisonVariantsForPlayer` | function | 13320–13344 | 25 |
+| `parseComparisonVariant` | function | 13345–13359 | 15 |
+| `getComparisonCurrentSelection` | function | 13360–13370 | 11 |
+| `filterComparisonPlayers` | window | 13371–13378 | 8 |
+| `selectComparisonPlayer` | window | 13379–13384 | 6 |
+| `setComparisonRoleMode` | window | 13385–13389 | 5 |
+| `setComparisonVariant` | window | 13390–13393 | 4 |
+| `toggleComparisonSgOnly` | window | 13394–13394 | 1 |
+| `addComparisonItem` | window | 13395–13402 | 8 |
+| `addSelectedComparisonItem` | window | 13403–13408 | 6 |
+| `toggleComparisonPicker` | window | 13409–13409 | 1 |
+| `removeComparisonItem` | window | 13410–13413 | 4 |
+| `clearComparison` | window | 13414–13414 | 1 |
+| `runComparison` | window | 13415–13421 | 7 |
+| `selectComparisonMode` | window | 13422–13422 | 1 |
+| `backToComparisonModeSelect` | window | 13423–13423 | 1 |
+| `normalizeDuoComparisonItem` | function | 13424–13427 | 4 |
+| `comparisonDuoContext` | function | 13428–13431 | 4 |
+| `setComparisonDuoMode` | window | 13432–13432 | 1 |
+| `setComparisonDuoSeasonKey` | window | 13433–13433 | 1 |
+| `setComparisonDuoSearch` | window | 13434–13434 | 1 |
+| `filterPlayerSuggestions` | function | 13435–13446 | 12 |
+| `rComparisonDuoSuggestionButtons` | function | 13447–13450 | 4 |
+| `renderComparisonDuoSuggestions` | function | 13451–13459 | 9 |
+| `filterComparisonDuoSuggestions` | window | 13460–13467 | 8 |
+| `selectComparisonDuoSuggestion` | window | 13461–13467 | 7 |
+| `handleComparisonDuoSearchKey` | window | 13468–13480 | 13 |
+| `setComparisonDuoPlayer` | window | 13481–13486 | 6 |
+| `addComparisonDuoFromSelection` | window | 13487–13494 | 8 |
+| `addComparisonDuo` | window | 13495–13497 | 3 |
+| `removeComparisonDuo` | window | 13498–13501 | 4 |
+| `clearComparisonDuos` | window | 13502–13502 | 1 |
+| `runDuoComparison` | window | 13503–13507 | 5 |
+| `buildDuoComparison` | function | 13508–13527 | 20 |
+| `rDuoComparisonBars` | function | 13528–13532 | 5 |
+| `rDuoCompareSummaryCards` | function | 13533–13563 | 31 |
+| `rDuoComparisonProfile` | function | 13564–13585 | 22 |
+| `rDuoComparisonChemistry` | function | 13586–13601 | 16 |
+| `rDuoComparisonImpact` | function | 13602–13617 | 16 |
+| `rDuoComparisonContext` | function | 13618–13635 | 18 |
+| `rDuoComparisonDetails` | function | 13636–13639 | 4 |
+| `rDuoComparisonDashboard` | function | 13640–13653 | 14 |
+| `rComparisonDuoSearchBox` | function | 13654–13663 | 10 |
+| `rDuoComparisonPage` | function | 13664–13674 | 11 |
+| `rComparisonModeSelect` | function | 13675–13677 | 3 |
+| `getComparisonEventsForItem` | function | 13678–13680 | 3 |
+| `getComparisonRosterGamesForSeason` | function | 13681–13697 | 17 |
+| `getComparisonRosterGames` | function | 13698–13705 | 8 |
+| `comparisonEventGameKey` | function | 13706–13708 | 3 |
+| `comparisonEventPhaseLabel` | function | 13709–13712 | 4 |
+| `comparisonOpponentStrengthTier` | function | 13713–13718 | 6 |
+| `buildComparisonExtraMetrics` | function | 13719–13776 | 58 |
+| `getGoalieComparisonAlltimeTrend` | function | 13777–13793 | 17 |
+| `getGoalieComparisonSeasonTrend` | function | 13794–13812 | 19 |
+| `buildGoalieComparisonDataset` | function | 13813–13863 | 51 |
+| `buildComparisonDataset` | function | 13864–13899 | 36 |
+| `kpiValueText` | function | 13901–13904 | 4 |
+| `kpiDelta` | function | 13905–13910 | 6 |
+| `kpiItemColor` | function | 13911–13913 | 3 |
+| `rKpiCards` | function | 13914–13924 | 11 |
+| `rKpiMirrorRows` | function | 13939–13998 | 60 |
+| `kpiRadarValue` | function | 13999–14009 | 11 |
+| `rKpiRadar` | function | 14010–14044 | 35 |
+| `rKpiShareBars` | function | 14045–14052 | 8 |
+| `rKpiMetricCard` | function | 14053–14057 | 5 |
+| `rKpiTextMetricCard` | function | 14058–14060 | 3 |
+| `rKpiExtendedMetrics` | function | 14061–14075 | 15 |
+| `kpiNiceMax` | function | 14076–14081 | 6 |
+| `kpiTrendRows` | function | 14082–14090 | 9 |
+| `rKpiTrendCompare` | function | 14091–14157 | 67 |
+| `rKpiOpponentStrength` | function | 14158–14185 | 28 |
+| `kpiBadge` | function | 14186–14188 | 3 |
+| `rKpiObjectMini` | function | 14189–14195 | 7 |
+| `rKpiInfoCards` | function | 14196–14227 | 32 |
+| `buildComparisonSummary` | function | 14228–14259 | 32 |
+| `rKPIVergleich` | function | 14260–14273 | 14 |
+| `rComparisonMiniOverview` | function | 14274–14277 | 4 |
+| `rComparisonRoles` | function | 14278–14285 | 8 |
+| `rComparisonDashboard` | function | 14286–14296 | 11 |
+| `rComparisonStyles` | function | 14297–14334 | 38 |
+| `rComparisonCenterPage` | function | 14335–14385 | 51 |
+| `rSeasonTrendRows` | function | 14386–14404 | 19 |
+| `getAlltimeAggregatedStyleProfile` | function | 14405–14424 | 20 |
+| `rGlobalDnaBars` | function | 14426–14455 | 30 |
+| `pdashNum` | function | 14456–14459 | 4 |
+| `pdashPct` | function | 14460–14463 | 4 |
+| `pdashPhaseLabel` | function | 14464–14467 | 4 |
+| `pdashTopCount` | function | 14468–14471 | 4 |
+| `pdashBestPhase` | function | 14472–14475 | 4 |
+| `pdashTopPartner` | function | 14476–14479 | 4 |
+| `pdashTopOpponent` | function | 14480–14483 | 4 |
+| `pdashOpponentTier` | function | 14484–14489 | 6 |
+| `pdashOpponentStrength` | function | 14490–14509 | 20 |
+| `pdashInsight` | function | 14510–14512 | 3 |
+| `pdashInsights` | function | 14513–14524 | 12 |
+| `buildSeasonPlayerDashModel` | function | 14525–14561 | 37 |
+| `buildAlltimePlayerDashModel` | function | 14562–14604 | 43 |
+| `rPlayerDashStyles` | function | 14605–14616 | 12 |
+| `rPdashLabel` | function | 14617–14619 | 3 |
+| `rPdashStat` | function | 14620–14622 | 3 |
+| `rPlayerDash` | function | 14623–14661 | 39 |
+| `rSeasonPlayerDashboard` | function | 14662–14664 | 3 |
+| `rAlltimePlayerDashboard` | function | 14665–14667 | 3 |
+| `rGlobalPartnerOpponentPanel` | function | 14668–14681 | 14 |
+| `rGlobalCareerHeader` | function | 14682–14702 | 21 |
+| `rSeasonLandingPage` | function | 14704–14718 | 15 |
+| `rGlobalOverview` | function | 14720–14771 | 52 |
+| `rGlobalAllTimeStats` | function | 14773–14789 | 17 |
+| `rGlobalDevelopment` | function | 14791–14829 | 39 |
+| `getGlobalPlayerOpponentGameRows` | function | 14832–14859 | 28 |
+| `getGlobalOpponentSpecialistProfile` | function | 14861–14889 | 29 |
+| `rGlobalDuoNetwork` | function | 14891–15088 | 198 |
+| `rGlobalOpponentSpecialist` | function | 15090–15135 | 46 |
+| `playerExplainConfidence` | function | 15137–15142 | 6 |
+| `playerExplainConfidenceLabel` | function | 15143–15145 | 3 |
+| `playerExplainAdd` | function | 15146–15150 | 5 |
+| `playerExplainStyleSignature` | function | 15151–15162 | 12 |
+| `playerExplainRolePhrase` | function | 15163–15171 | 9 |
+| `playerExplainHeadline` | function | 15172–15181 | 10 |
+| `playerExplainContextSentence` | function | 15182–15200 | 19 |
+| `buildFieldPlayerExplanation` | function | 15201–15275 | 75 |
+| `buildGoaliePlayerExplanation` | function | 15276–15329 | 54 |
+| `buildPlayerExplanation` | function | 15330–15338 | 9 |
+| `buildPlayerIntelligence` | function | 15339–15368 | 30 |
+| `rPlayerExplainItems` | function | 15369–15373 | 5 |
+| `rPlayerExplanation` | function | 15374–15425 | 52 |
+| `rAllTimePlayersPage` | function | 15427–15467 | 41 |
+| `rHallOfFamePage` | function | 15469–15557 | 89 |
+| `lexiconUniqueKeys` | function | 15562–15569 | 8 |
+| `lexiconEntry` | function | 15570–15579 | 10 |
+| `rLexiconRows` | function | 15580–15583 | 4 |
+| `rLexiconPage` | function | 15584–15756 | 173 |
+| `clampScore` | function | 15760–15763 | 4 |
+| `getScoreLabel` | function | 15764–15772 | 9 |
+| `buildConfidence` | function | 15773–15818 | 46 |
+| `confidenceCautiousText` | function | 15819–15822 | 4 |
+| `explainScore` | function | 15823–15837 | 15 |
+| `p1NarrativeKey` | function | 15838–15840 | 3 |
+| `scoreNarrative` | function | 15841–15859 | 19 |
+| `rankNarratives` | function | 15860–15873 | 14 |
+| `getEmptyState` | function | 15874–15885 | 12 |
+| `rEmptyState` | function | 15886–15889 | 4 |
+| `capSuperlativeLabel` | function | 15897–15899 | 3 |
+| `rScoreBreakdown` | function | 15900–15916 | 17 |
+| `matchcenterSigned` | function | 15918–15922 | 5 |
+| `matchcenterDateLabel` | function | 15924–15928 | 5 |
+| `dedupeGamesById` | function | 15940–15948 | 9 |
+| `matchcenterIsFreiburgTuebingenTeamName` | function | 15949–15955 | 7 |
+| `matchcenterSeasonHasGames` | function | 15959–15961 | 3 |
+| `matchcenterDefaultSeasonKey` | function | 15962–15967 | 6 |
+| `matchcenterOpponentMode` | function | 15979–15981 | 3 |
+| `getMatchcenterOpponents` | function | 15982–16014 | 33 |
+| `getMatchcenterDirectOpponents` | function | 16015–16045 | 31 |
+| `matchcenterAnalyzeDirect` | function | 16048–16084 | 37 |
+| `matchcenterAnalyzeForm` | function | 16085–16110 | 26 |
+| `matchcenterEmptyBuckets` | function | 16125–16127 | 3 |
+| `matchcenterUlmScoutingConfidence` | function | 16128–16132 | 5 |
+| `matchcenterEnsureUlmPlayer` | function | 16133–16170 | 38 |
+| `matchcenterRegisterUlmProfileGame` | function | 16171–16176 | 6 |
+| `matchcenterUpdateUlmSeasonRow` | function | 16177–16183 | 7 |
+| `matchcenterClassifyUlmGoalEvent` | function | 16184–16194 | 11 |
+| `matchcenterAddUlmScoring` | function | 16195–16235 | 41 |
+| `matchcenterFinalizeUlmPlayers` | function | 16236–16304 | 69 |
+| `matchcenterBuildUlmPlayerScouting` | function | 16305–16359 | 55 |
+| `matchcenterBuildUlmPlayerInsights` | function | 16360–16372 | 13 |
+| `matchcenterDuoPairKey` | function | 16373–16376 | 4 |
+| `matchcenterEnsureOpponentDuo` | function | 16377–16409 | 33 |
+| `matchcenterDuoDirectionLabel` | function | 16410–16416 | 7 |
+| `matchcenterAddDuoConnection` | function | 16417–16435 | 19 |
+| `matchcenterFinalizeOpponentDuos` | function | 16436–16470 | 35 |
+| `matchcenterBuildOpponentDuos` | function | 16471–16515 | 45 |
+| `matchcenterBuildOpponentDuoInsights` | function | 16516–16529 | 14 |
+| `matchcenterEnsureUlmDuo` | function | 16530–16567 | 38 |
+| `matchcenterAddUlmDuoConnection` | function | 16568–16586 | 19 |
+| `matchcenterFinalizeUlmDuos` | function | 16587–16622 | 36 |
+| `matchcenterBuildUlmDuos` | function | 16623–16665 | 43 |
+| `matchcenterBuildUlmDuoInsights` | function | 16666–16678 | 13 |
+| `matchcenterDirectContextGames` | function | 16679–16681 | 3 |
+| `matchcenterSpecialTeamsForGame` | function | 16682–16685 | 4 |
+| `matchcenterPersonalPenaltyMinutesForSide` | function | 16686–16694 | 9 |
+| `matchcenterPct` | function | 16695–16698 | 4 |
+| `matchcenterBuildSpecialTeamsMatchup` | function | 16699–16746 | 48 |
+| `matchcenterGoalieKey` | function | 16747–16751 | 5 |
+| `matchcenterGoalieFitScore` | function | 16752–16768 | 17 |
+| `matchcenterBuildGoalieMatchup` | function | 16769–16814 | 46 |
+| `matchcenterGoalAbsSeconds` | function | 16817–16821 | 5 |
+| `matchcenterTimeValue` | function | 16822–16829 | 8 |
+| `matchcenterEmptyTimingStats` | function | 16830–16838 | 9 |
+| `matchcenterWindowForSecond` | function | 16839–16845 | 7 |
+| `matchcenterTimingStatsForGames` | function | 16846–16883 | 38 |
+| `matchcenterBuildTimingInsights` | function | 16884–16894 | 11 |
+| `matchcenterBuildTimingAnalysis` | function | 16895–16905 | 11 |
+| `rMatchcenterTimeBars` | function | 16906–16919 | 14 |
+| `rMatchcenterTimingStatsCard` | function | 16920–16939 | 20 |
+| `rMatchcenterTiming` | function | 16940–16963 | 24 |
+| `rMatchcenterTabs` | function | 16979–16981 | 3 |
+| `rMatchcenterProfileSection` | function | 16982–17001 | 20 |
+| `rMatchcenterFormSection` | function | 17002–17027 | 26 |
+| `rMatchcenterDetailsSection` | function | 17028–17035 | 8 |
+| `matchcenterResultClass` | function | 17036–17038 | 3 |
+| `matchcenterUlmTeamLabelForGame` | function | 17040–17044 | 5 |
+| `matchcenterGameLine` | function | 17045–17050 | 6 |
+| `matchcenterFormLine` | function | 17051–17055 | 5 |
+| `matchcenterBuildInsights` | function | 17056–17076 | 21 |
+| `rMatchcenterKpi` | function | 17077–17083 | 7 |
+| `rMatchcenterFormCard` | function | 17084–17104 | 21 |
+| `rMatchcenterGamesList` | function | 17105–17116 | 12 |
+| `rMatchcenterWatchCard` | function | 17117–17137 | 21 |
+| `rMatchcenterPlayerRow` | function | 17138–17161 | 24 |
+| `rMatchcenterRankCard` | function | 17162–17167 | 6 |
+| `rMatchcenterUlmImpactCard` | function | 17168–17196 | 29 |
+| `rMatchcenterUlmPlayerRow` | function | 17197–17220 | 24 |
+| `rMatchcenterUlmRankCard` | function | 17221–17226 | 6 |
+| `rMatchcenterUlmScouting` | function | 17227–17263 | 37 |
+| `rMatchcenterOpponentScouting` | function | 17264–17299 | 36 |
+| `rMatchcenterPlayersTab` | function | 17300–17302 | 3 |
+| `rMatchcenterDuoWatchCard` | function | 17303–17322 | 20 |
+| `rMatchcenterDuoRow` | function | 17323–17346 | 24 |
+| `rMatchcenterDuoRankCard` | function | 17347–17352 | 6 |
+| `rMatchcenterUlmDuoWatchCard` | function | 17353–17378 | 26 |
+| `rMatchcenterUlmDuoRow` | function | 17379–17401 | 23 |
+| `rMatchcenterUlmDuoRankCard` | function | 17402–17407 | 6 |
+| `rMatchcenterUlmDuos` | function | 17408–17450 | 43 |
+| `rMatchcenterOpponentDuos` | function | 17451–17493 | 43 |
+| `rMatchcenterDuosTab` | function | 17494–17496 | 3 |
+| `rMatchcenterSpecialCard` | function | 17497–17505 | 9 |
+| `rMatchcenterSpecialTeams` | function | 17506–17555 | 50 |
+| `rMatchcenterGoalieCard` | function | 17556–17579 | 24 |
+| `rMatchcenterGoalieMatchup` | function | 17580–17608 | 29 |
+| `matchcenterPlanScoreText` | function | 17609–17612 | 4 |
+| `matchcenterPlanRateText` | function | 17613–17617 | 5 |
+| `matchcenterPriorityLabel` | function | 17618–17620 | 3 |
+| `matchcenterConfidenceClass` | function | 17621–17626 | 6 |
+| `matchcenterInferPriority` | function | 17627–17633 | 7 |
+| `matchcenterAddPlanItem` | function | 17634–17639 | 6 |
+| `matchcenterAddPlanWatch` | function | 17640–17645 | 6 |
+| `matchcenterBuildPlanConfidence` | function | 17646–17693 | 48 |
+| `matchcenterIntelCurve` | function | 17694–17699 | 6 |
+| `matchcenterIntelInverseCurve` | function | 17700–17703 | 4 |
+| `matchcenterIntelWeighted` | function | 17704–17714 | 11 |
+| `matchcenterIntelRate` | function | 17715–17718 | 4 |
+| `matchcenterIntelPct` | function | 17719–17722 | 4 |
+| `matchcenterIntelPriorityFromScore` | function | 17723–17728 | 6 |
+| `matchcenterIntelPriorityClass` | function | 17729–17734 | 6 |
+| `matchcenterIntelPriorityLabel` | function | 17735–17738 | 4 |
+| `matchcenterIntelDataLabel` | function | 17739–17741 | 3 |
+| `matchcenterBuildIntelligenceDataQuality` | function | 17742–17811 | 70 |
+| `matchcenterBuildOpponentDNA` | function | 17812–17924 | 113 |
+| `matchcenterDeriveOpponentType` | function | 17925–17942 | 18 |
+| `matchcenterIntelPlayerRef` | function | 17943–17955 | 13 |
+| `matchcenterIntelDuoRef` | function | 17956–17969 | 14 |
+| `matchcenterIntelAddAlarm` | function | 17970–17990 | 21 |
+| `matchcenterBuildOpponentAlarm` | function | 17991–18100 | 110 |
+| `matchcenterBuildIntelListFromPlan` | function | 18101–18109 | 9 |
+| `matchcenterBuildCoachHints` | function | 18110–18125 | 16 |
+| `matchcenterBuildIntelHeadline` | function | 18126–18133 | 8 |
+| `matchcenterBuildOneThingToWatch` | function | 18134–18146 | 13 |
+| `matchcenterBuildIntelligenceSignals` | function | 18147–18193 | 47 |
+| `buildMatchIntelligenceFromContext` | function | 18194–18248 | 55 |
+| `buildMatchIntelligence` | function | 18249–18270 | 22 |
+| `matchcenterCoachCautious` | function | 18271–18273 | 3 |
+| `matchcenterCoachAdd` | function | 18274–18282 | 9 |
+| `matchcenterCoachGameModel` | function | 18283–18296 | 14 |
+| `buildMatchStories` | function | 18297–18326 | 30 |
+| `matchcenterCoachPriorityFromAlarm` | function | 18327–18336 | 10 |
+| `matchcenterBuildCoachPriorities` | function | 18337–18343 | 7 |
+| `matchcenterBuildCoachLevers` | function | 18344–18353 | 10 |
+| `matchcenterBuildCoachDangerPatterns` | function | 18354–18361 | 8 |
+| `matchcenterBuildCoachIfThen` | function | 18362–18371 | 10 |
+| `matchcenterBuildCoachAvoidList` | function | 18372–18381 | 10 |
+| `matchcenterBuildCoachActivationHints` | function | 18382–18388 | 7 |
+| `matchcenterBuildCoachKeyActors` | function | 18389–18396 | 8 |
+| `buildDigitalCoachReport` | function | 18397–18429 | 33 |
+| `buildLockerRoomSheet` | function | 18430–18450 | 21 |
+| `matchcenterSocialAdd` | function | 18451–18457 | 7 |
+| `matchcenterSocialCaption` | function | 18458–18463 | 6 |
+| `socialSentence` | function | 18464–18466 | 3 |
+| `socialEnsurePeriod` | function | 18467–18470 | 4 |
+| `socialFirstUseful` | function | 18471–18473 | 3 |
+| `socialPlayerFocusLine` | function | 18474–18480 | 7 |
+| `socialDuoFocusLine` | function | 18481–18486 | 6 |
+| `socialOpponentLine` | function | 18487–18490 | 4 |
+| `socialKeyFactLine` | function | 18491–18500 | 10 |
+| `buildMatchdayCaptionBlocks` | function | 18501–18530 | 30 |
+| `buildSocialMediaContent` | function | 18531–18579 | 49 |
+| `isSyntheticLineupPlayerId` | function | 18585–18587 | 3 |
+| `getSyntheticLineupPlayers` | function | 18588–18590 | 3 |
+| `getSyntheticLineupRow` | function | 18591–18607 | 17 |
+| `getSyntheticLineupRows` | function | 18608–18610 | 3 |
+| `getLineupAllRows` | function | 18611–18613 | 3 |
+| `lineupRowMeta` | function | 18614–18621 | 8 |
+| `getLineupPlayerPool` | function | 18622–18630 | 9 |
+| `lineupScore` | function | 18631–18636 | 6 |
+| `lineupAverage` | function | 18637–18640 | 4 |
+| `lineupLevelLabel` | function | 18641–18644 | 4 |
+| `lineupRosterGamesForPlayer` | function | 18647–18694 | 48 |
+| `buildLineupExperienceProfile` | function | 18695–18737 | 43 |
+| `lineupOpponentDNAForContext` | function | 18738–18749 | 12 |
+| `buildLineupOpponentDNAFit` | function | 18750–18793 | 44 |
+| `classifyLineIdentity` | function | 18794–18841 | 48 |
+| `lineupPlayerProfile` | function | 18842–18917 | 76 |
+| `buildLineupAnalysis` | function | 18918–19051 | 134 |
+| `buildLineupScoreBreakdowns` | function | 19052–19081 | 30 |
+| `buildLineupIntelligence` | function | 19082–19092 | 11 |
+| `buildLineAnalysis` | function | 19093–19095 | 3 |
+| `lineupRowMap` | function | 19096–19098 | 3 |
+| `lineupRankCandidateIds` | function | 19099–19113 | 15 |
+| `lineupCombinationIds` | function | 19114–19127 | 14 |
+| `lineupStdDev` | function | 19128–19133 | 6 |
+| `lineupRoleDnaComplementScore` | function | 19134–19157 | 24 |
+| `lineupDirectChemistryScore` | function | 19158–19164 | 7 |
+| `lineupEvaluateComplementCandidate` | function | 19165–19243 | 79 |
+| `lineupPlayerAnchorScore` | function | 19244–19261 | 18 |
+| `lineupPlayerAnchorConfidence` | function | 19264–19268 | 5 |
+| `buildTeamLineBalance` | function | 19269–19312 | 44 |
+| `buildBalancedLineupSet` | function | 19313–19339 | 27 |
+| `lineupRecommendationReason` | function | 19340–19348 | 9 |
+| `buildLineupRecommendations` | function | 19349–19430 | 82 |
+| `recommendLineComplements` | function | 19431–19458 | 28 |
+| `matchcenterBuildMatchPlan` | function | 19459–19604 | 146 |
+| `rMatchcenterPlanItems` | function | 19605–19622 | 18 |
+| `rMatchcenterPlanWatch` | function | 19623–19638 | 16 |
+| `rMatchcenterOpponentDNA` | function | 19639–19671 | 33 |
+| `rMatchcenterOpponentAlarm` | function | 19672–19693 | 22 |
+| `rMatchcenterIntelOverview` | function | 19694–19739 | 46 |
+| `rMatchcenterIntelCoachHints` | function | 19740–19753 | 14 |
+| `rMatchcenterCoachCardList` | function | 19754–19767 | 14 |
+| `rMatchcenterCoachIfThen` | function | 19768–19775 | 8 |
+| `rMatchcenterCoachSimpleList` | function | 19776–19780 | 5 |
+| `rMatchcenterDigitalCoach` | function | 19781–19845 | 65 |
+| `rMatchcenterCopyButton` | function | 19846–19850 | 5 |
+| `rMatchcenterLockerList` | function | 19851–19862 | 12 |
+| `rMatchcenterLockerRoomSheet` | function | 19863–19918 | 56 |
+| `rMatchcenterSocialBlock` | function | 19919–19926 | 8 |
+| `matchcenterStoryDownloadFileName` | function | 19927–19936 | 10 |
+| `downloadMatchdayStory` | window | 19937–19984 | 48 |
+| `rSocialVideoBlock` | function | 19988–20019 | 32 |
+| `socialVideoJobsForMatchday` | function | 20022–20028 | 7 |
+| `generateSocialVideoVideos` | window | 20029–20070 | 42 |
+| `cancelSocialVideoRecording` | window | 20071–20073 | 3 |
+| `generateSocialVideoStandbilder` | window | 20074–20097 | 24 |
+| `generateSocialVideoContactSheets` | window | 20098–20120 | 23 |
+| `rMatchcenterSocialMediaCenter` | function | 20121–20174 | 54 |
+| `rLineupScoreRows` | function | 20175–20196 | 22 |
+| `rLineupSimpleCards` | function | 20197–20205 | 9 |
+| `rMatchcenterLineupBuilder` | function | 20206–20278 | 73 |
+| `rLineupMetricPills` | function | 20279–20292 | 14 |
+| `rLineupBuilderAvailablePanel` | function | 20293–20340 | 48 |
+| `rLineupRecommendationCards` | function | 20341–20355 | 15 |
+| `rLineupRecommendationMode` | function | 20356–20389 | 34 |
+| `rLineupComplementCards` | function | 20390–20402 | 13 |
+| `rLineupTestLine` | function | 20403–20451 | 49 |
+| `rLineupTestMode` | function | 20452–20468 | 17 |
+| `rLineupBuilderPage` | function | 20469–20503 | 35 |
+| `rMatchcenterScoutingSummary` | function | 20504–20547 | 44 |
+| `rMatchcenterMatchPlan` | function | 20548–20568 | 21 |
+| `matchcenterStoryLogoBase` | function | 20571–20576 | 6 |
+| `matchcenterStorySafeLogoUrl` | function | 20577–20583 | 7 |
+| `getTeamLogoUrlForStory` | function | 20592–20621 | 30 |
+| `matchcenterStoryLogoForOpponent` | function | 20622–20636 | 15 |
+| `matchcenterStoryTableRank` | function | 20637–20647 | 11 |
+| `matchcenterStoryUlmTableRank` | function | 20648–20654 | 7 |
+| `matchcenterStoryRankText` | function | 20655–20658 | 4 |
+| `matchcenterStoryInlineStat` | function | 20659–20661 | 3 |
+| `matchcenterStoryRankRows` | function | 20663–20674 | 12 |
+| `matchcenterStoryAddFact` | function | 20677–20683 | 7 |
+| `matchcenterStoryFactKey` | function | 20684–20686 | 3 |
+| `matchcenterStoryLooksArtificial` | function | 20687–20689 | 3 |
+| `matchcenterStoryEstimateFactWeight` | function | 20690–20695 | 6 |
+| `matchcenterStoryAddCandidate` | function | 20696–20718 | 23 |
+| `matchcenterStoryCategoryLimit` | function | 20719–20722 | 4 |
+| `matchcenterStoryNormalizePickOptions` | function | 20723–20733 | 11 |
+| `matchcenterStoryCandidateForBudget` | function | 20734–20743 | 10 |
+| `matchcenterStoryPickFactItems` | function | 20744–20796 | 53 |
+| `matchcenterStoryPickFacts` | function | 20797–20799 | 3 |
+| `matchcenterStoryCurrentStreak` | function | 20801–20809 | 9 |
+| `matchcenterStoryWinlessStreak` | function | 20810–20818 | 9 |
+| `matchcenterStoryFormFact` | function | 20819–20829 | 11 |
+| `matchcenterStoryFormFactCandidates` | function | 20830–20849 | 20 |
+| `matchcenterStoryLateGoalsForOutcome` | function | 20850–20853 | 4 |
+| `matchcenterStoryClutchFact` | function | 20854–20868 | 15 |
+| `matchcenterStoryPlayerClutchTotal` | function | 20869–20876 | 8 |
+| `matchcenterStoryBestClutchPlayer` | function | 20877–20886 | 10 |
+| `matchcenterStoryPlayerClutchFact` | function | 20887–20912 | 26 |
+| `matchcenterStoryDuoClutchTotal` | function | 20913–20920 | 8 |
+| `matchcenterStoryBestClutchDuo` | function | 20921–20930 | 10 |
+| `matchcenterStoryDuoClutchFact` | function | 20931–20933 | 3 |
+| `matchcenterStoryDuoFact` | function | 20934–20954 | 21 |
+| `matchcenterStoryClutchPriority` | function | 20955–20957 | 3 |
+| `matchcenterStoryCompetitionLabel` | function | 20958–20961 | 4 |
+| `matchcenterStoryShortDuel` | function | 20962–20966 | 5 |
+| `matchcenterStoryLastDuelLabel` | function | 20967–20970 | 4 |
+| `matchcenterStoryDirectFactCandidates` | function | 20971–20992 | 22 |
+| `matchcenterStoryPlanFactCandidates` | function | 20993–21005 | 13 |
+| `matchcenterStoryCategoryForPlanFact` | function | 21006–21014 | 9 |
+| `buildMatchcenterStoryPreviewData` | function | 21015–21126 | 112 |
+| `matchcenterStoryNameClass` | function | 21127–21132 | 6 |
+| `matchcenterStoryVisibleFacts` | function | 21133–21163 | 31 |
+| `rMatchcenterStoryLogo` | function | 21164–21168 | 5 |
+| `rMatchcenterStoryForm` | function | 21169–21173 | 5 |
+| `rMatchcenterStoryPlayerCard` | function | 21174–21181 | 8 |
+| `rMatchcenterStoryPreview` | function | 21182–21251 | 70 |
+| `rMatchcenterStoryFrame` | function | 21252–21257 | 6 |
+| `fitMatchcenterStoryLayout` | function | 21258–21300 | 43 |
+| `ensureSocialVideoExportCapabilityChecked` | function | 21309–21313 | 5 |
+| `downloadSocialVideoStandbild` | window | 21328–21347 | 20 |
+| `downloadSocialVideoContactSheet` | window | 21352–21377 | 26 |
+| `rMatchcenterPage` | function | 21379–21527 | 149 |
+| `rTeamPage` | function | 21528–21866 | 339 |
+| `exportExcel` | function | 21871–21896 | 26 |
+| `render` | function | 21902–21919 | 18 |
+| `_render` | function | 21920–22089 | 170 |
+| `uiFormatNumber` | function | 22123–22127 | 5 |
+| `uiReliabilityDots` | function | 22136–22143 | 8 |
+| `uiDeltaIndicator` | function | 22151–22157 | 7 |
+| `uiInfoIcon` | function | 22169–22173 | 5 |
+| `uiKennzahlKachel` | function | 22181–22192 | 12 |
+| `uiKernaussage` | function | 22201–22207 | 7 |
+| `uiHinweisKarte` | function | 22215–22227 | 13 |
+| `uiRangliste` | function | 22237–22254 | 18 |
+| `uiVerlauf` | function | 22265–22284 | 20 |
+| `uiIntervallBalken` | function | 22291–22303 | 13 |
+| `uiMethodenbox` | function | 22310–22319 | 10 |
+| `uiNotiz` | function | 22327–22331 | 5 |
+| `datenstandQuoteState` | function | 22353–22360 | 8 |
+| `uiQuoteText` | function | 22363–22369 | 7 |
+| `uiDatenstandBand` | function | 22386–22399 | 14 |
+| `uiPlatzhalter` | function | 22407–22412 | 6 |
+| `uiObjektseiteSortTabs` | function | 22457–22465 | 9 |
+| `uiObjektseite` | function | 22475–22508 | 34 |
+| `mainNavActiveKeyForPage` | function | 22565–22570 | 6 |
+| `goToMainNavPoint` | window | 22571–22577 | 7 |
+| `rMainNav` | function | 22578–22582 | 5 |
+| `rMainNavBottom` | function | 22600–22607 | 8 |
+| `openOverview` | window | 22617–22625 | 9 |
+| `switchOverviewSeason` | window | 22634–22640 | 7 |
+| `openMatchdayTimeline` | window | 22668–22675 | 8 |
+| `openMatchday` | window | 22676–22685 | 10 |
+| `switchMatchdaySeason` | window | 22687–22692 | 6 |
+| `matchdayUlmGames` | function | 22694–22696 | 3 |
+| `matchdayLineupInfo` | function | 22703–22713 | 11 |
+| `matchdayLineupCardHtml` | function | 22715–22721 | 7 |
+| `matchdayGameCardHtml` | function | 22722–22741 | 20 |
+| `matchdayFixtureCardHtml` | function | 22747–22755 | 9 |
+| `rMatchdayTimelineRow` | function | 22757–22764 | 8 |
+| `rMatchdayTimelinePage` | function | 22765–22775 | 11 |
+| `rMatchdayDetailPage` | function | 22776–22815 | 40 |
+| `rMatchdayPage` | function | 22816–22822 | 7 |
+| `overviewMatchdayStartMs` | function | 22841–22846 | 6 |
+| `overviewMatchdayEndMs` | function | 22847–22852 | 6 |
+| `detectOverviewPhase` | function | 22853–22878 | 26 |
+| `getSeasonDataState` | function | 22885–22895 | 11 |
+| `parseSeasonDataState` | function | 22896–22904 | 9 |
+| `isNewSeasonDataState` | function | 22906–22908 | 3 |
+| `recordOverviewVisit` | function | 22915–22924 | 10 |
+| `overviewOpponentLabel` | function | 22930–22941 | 12 |
+| `overviewLastMatchdayText` | function | 22942–22945 | 4 |
+| `overviewNextMatchdayHtml` | function | 22952–22968 | 17 |
+| `overviewCompactTableHtml` | function | 22976–22992 | 17 |
+| `overviewFormHtml` | function | 22994–23008 | 15 |
+| `overviewSeasonBilanzHtml` | function | 23009–23015 | 7 |
+| `overviewSeasonAwardHtml` | function | 23017–23026 | 10 |
+| `overviewRecordHtml` | function | 23028–23033 | 6 |
+| `overviewCrossSeasonTrendHtml` | function | 23035–23043 | 9 |
+| `overviewOpponentPreviewHtml` | function | 23044–23048 | 5 |
+| `overviewMatchcenterLinkHtml` | function | 23049–23051 | 3 |
+| `overviewLineupLinkHtml` | function | 23052–23054 | 3 |
+| `overviewRankChangeTile` | function | 23071–23088 | 18 |
+| `buildOverviewCards` | function | 23097–23137 | 41 |
+| `rOverviewPage` | function | 23147–23158 | 12 |
+| `openLigaGegner` | window | 23159–23162 | 4 |
+| `rLigaGegnerPlaceholderPage` | function | 23163–23168 | 6 |
+| `rAsOfSelector` | function | 23180–23192 | 13 |
+| `setContextAsOf` | window | 23193–23204 | 12 |
+| `rSeasonDataPreviewContextHint` | function | 23215–23223 | 9 |
+| `rSeasonDataStateContextHint` | function | 23232–23238 | 7 |
+| `rContextBar` | function | 23263–23281 | 19 |
+| `rIaShell` | function | 23283–23285 | 3 |
+| `globalSearchTokens` | function | 23302–23305 | 4 |
+| `globalSearchEntries` | function | 23307–23320 | 14 |
+| `globalSearchPlayerScore` | function | 23321–23328 | 8 |
+| `globalSearchMatchdayScore` | function | 23330–23342 | 13 |
+| `globalSearchMatch` | function | 23344–23355 | 12 |
+| `globalSearchIsEditableTarget` | function | 23356–23360 | 5 |
+| `globalSearchKeyAction` | function | 23362–23376 | 15 |
+| `rGlobalSearchToggle` | function | 23377–23379 | 3 |
+| `rGlobalSearchResultsHtml` | function | 23380–23390 | 11 |
+| `rGlobalSearchPanelHtml` | function | 23391–23393 | 3 |
+| `paintGlobalSearchResults` | function | 23394–23401 | 8 |
+| `openGlobalSearch` | window | 23402–23426 | 25 |
+| `closeGlobalSearch` | window | 23427–23434 | 8 |
+| `onGlobalSearchInput` | window | 23435–23440 | 6 |
+| `moveGlobalSearch` | function | 23441–23446 | 6 |
+| `activateGlobalSearchResult` | window | 23447–23456 | 10 |
+| `globalSearchOnKeydown` | function | 23457–23478 | 22 |
+| `initGlobalSearch` | function | 23479–23483 | 5 |
+| `rToolMenu` | function | 23505–23508 | 4 |
+| `toolMenuElements` | function | 23509–23511 | 3 |
+| `toolMenuItemElements` | function | 23512–23514 | 3 |
+| `isToolMenuOpen` | function | 23515–23518 | 4 |
+| `openToolMenu` | window | 23519–23526 | 8 |
+| `closeToolMenu` | window | 23527–23533 | 7 |
+| `toggleToolMenu` | window | 23534–23537 | 4 |
+| `activateToolMenuItem` | window | 23538–23545 | 8 |
+| `toolMenuOnKeydown` | function | 23546–23569 | 24 |
+| `toolMenuOnClick` | function | 23570–23576 | 7 |
+| `initToolMenu` | function | 23577–23580 | 4 |
 
 ## Alphabetisches Register
 
 | Name | Art | Zeile |
 |---|---|---|
-| `_render` | function | 22704 |
-| `acceptEinsatzCenterRosterSuggestion` | window | 7959 |
-| `activateGlobalSearchResult` | window | 24066 |
-| `activateToolMenuItem` | window | 24157 |
-| `addComparisonDuo` | window | 13472 |
-| `addComparisonDuoFromSelection` | window | 13464 |
-| `addComparisonItem` | window | 13372 |
-| `addDuoTeamGame` | function | 11484 |
-| `addEinsatzCenterExistingGroup` | window | 7976 |
-| `addEinsatzCenterGroupPlayer` | window | 8044 |
-| `addEinsatzCenterNewGroup` | window | 7985 |
-| `addEinsatzCenterRosterPlayer` | window | 7925 |
-| `addGoalieGameToStats` | function | 4820 |
-| `addGoalieSpecialTeamsGameToStats` | function | 4790 |
-| `addLineupBuilderPlayerToActiveLine` | window | 2318 |
-| `addLineupBuilderPlayerToLine` | window | 2308 |
-| `addLineupPlayer` | window | 2254 |
-| `addRosterImpactGameToStats` | function | 12001 |
-| `addSelectedComparisonItem` | window | 13380 |
-| `addSyntheticLineupPlayer` | window | 2334 |
-| `addUnique` | function | 4007 |
-| `aggregateAllTimeDuos` | function | 5163 |
-| `aggregateAllTimePlayers` | function | 4274 |
-| `aggregateAlltimeSpecialTeams` | function | 4770 |
-| `aggregateGoalieAlltimeStats` | function | 5003 |
-| `aggregateSeasonStats` | function | 5175 |
-| `analysisCacheContext` | function | 2160 |
-| `analysisCacheKey` | function | 2194 |
-| `annotateSpecialTeamsGoalEvent` | function | 4552 |
-| `antiSynergyDeltaClass` | function | 12168 |
-| `antiSynergyImpactScore` | function | 12083 |
-| `antiSynergyPartnerIsSgOnly` | function | 12198 |
-| `antiSynergySigned` | function | 12172 |
-| `appendSeasonGameDiagnostics` | function | 2671 |
-| `applyAppHash` | function | 3774 |
-| `applyCurrentSeasonCoverHighlight` | function | 6429 |
-| `applyGlobalPageFromHash` | function | 3741 |
-| `applySeasonContext` | function | 2423 |
-| `applySeasonScoringToRegistry` | function | 4165 |
-| `asOfCacheKeyPart` | function | 2188 |
-| `asOfEquals` | function | 3445 |
-| `assignStatus` | function | 6013 |
-| `avgOrNull` | function | 4312 |
-| `backToComparisonModeSelect` | window | 13400 |
-| `backToHome` | window | 2371 |
-| `buildAlltimePlayerDashModel` | function | 14525 |
-| `buildAnnotatedGoalEventsForGame` | function | 11090 |
-| `buildAppHash` | function | 3591 |
-| `buildBalancedLineupSet` | function | 19654 |
-| `buildBestThirdManOptions` | function | 10978 |
-| `buildComparisonDataset` | function | 13841 |
-| `buildComparisonExtraMetrics` | function | 13696 |
-| `buildComparisonSummary` | function | 14191 |
-| `buildConfidence` | function | 15743 |
-| `buildDigitalCoachReport` | function | 18746 |
-| `buildDirectDuoLookupForPlayer` | function | 10936 |
-| `buildDryRunReport` | function | 6653 |
-| `buildDuoAntiSynergy` | function | 12158 |
-| `buildDuoComparison` | function | 13485 |
-| `buildDuoCompatibility` | function | 11596 |
-| `buildDuoDirectProduction` | function | 11460 |
-| `buildDuoFloorCeiling` | function | 11371 |
-| `buildDuoGapAnalysis` | function | 11579 |
-| `buildDuoNetworkContext` | function | 11555 |
-| `buildDuoOpponentAdjusted` | function | 11542 |
-| `buildDuoProAnalysis` | function | 11653 |
-| `buildDuoReplacementOptions` | function | 11643 |
-| `buildDuoUntestedPotential` | function | 11619 |
-| `buildDuoUsageRate` | function | 11631 |
-| `buildDuoWarnings` | function | 11413 |
-| `buildDuoWithWithoutImpact` | function | 11508 |
-| `buildEinsatzCenterDraftExport` | function | 8105 |
-| `buildFieldPlayerExplanation` | function | 15164 |
-| `buildGlobalPageHash` | function | 3608 |
-| `buildGoalieAnalysisModel` | function | 9897 |
-| `buildGoalieComparisonDataset` | function | 13790 |
-| `buildGoalieGameRecord` | function | 4872 |
-| `buildGoaliePlayerExplanation` | function | 15239 |
-| `buildGoalieRoleProfile` | function | 10120 |
-| `buildGoalieStatsForSeason` | function | 4922 |
-| `buildHallOfFameIntroTitle` | function | 8804 |
-| `buildHashStringFromParsed` | function | 3623 |
-| `buildIdentityProfiles` | function | 5735 |
-| `buildLineAnalysis` | function | 19442 |
-| `buildLineupAnalysis` | function | 19267 |
-| `buildLineupExperienceProfile` | function | 19044 |
-| `buildLineupIntelligence` | function | 19431 |
-| `buildLineupOpponentDNAFit` | function | 19099 |
-| `buildLineupRecommendations` | function | 19688 |
-| `buildLineupScoreBreakdowns` | function | 19401 |
-| `buildLockerRoomSheet` | function | 18779 |
-| `buildMatchcenterStoryPreviewData` | function | 21338 |
-| `buildMatchdayCaptionBlocks` | function | 18850 |
-| `buildMatchdays` | function | 3326 |
-| `buildMatchIntelligence` | function | 18598 |
-| `buildMatchIntelligenceFromContext` | function | 18543 |
-| `buildMatchStories` | function | 18646 |
-| `buildMomentumSwingStats` | function | 11365 |
-| `buildMomentumSwingStatsRaw` | function | 11294 |
-| `buildOpponentIntelligence` | function | 10775 |
-| `buildOverviewCards` | function | 23716 |
-| `buildPlayerDataFoundation` | function | 5192 |
-| `buildPlayerEvents` | function | 5246 |
-| `buildPlayerExplanation` | function | 15293 |
-| `buildPlayerIdentity` | function | 4018 |
-| `buildPlayerIntelligence` | function | 15302 |
-| `buildRecencyWeightedGlobalIdentityProfile` | function | 12698 |
-| `buildRegistry` | function | 5215 |
-| `buildResponseGoalStats` | function | 11282 |
-| `buildResponseGoalStatsRaw` | function | 11233 |
-| `buildRosterImpactAnalysis` | function | 12098 |
-| `buildSeasonDataPreviewChanges` | function | 6758 |
-| `buildSeasonDuos` | function | 5119 |
-| `buildSeasonPlayerDashModel` | function | 14488 |
-| `buildSocialMediaContent` | function | 18880 |
-| `buildSocialVideoSpec` | function | 22019 |
-| `buildSoloDuoProfile` | function | 5504 |
-| `buildSpecialTeamsForGame` | function | 4567 |
-| `buildSpecialTeamsForSeason` | function | 4761 |
-| `buildStandings` | function | 3885 |
-| `buildStaticSeasonDataBlock` | function | 6477 |
-| `buildTeamLineBalance` | function | 19610 |
-| `cachedAnalysis` | function | 2198 |
-| `cancelDuoProPicker` | window | 11851 |
-| `cancelEinsatzCenterEdit` | window | 7906 |
-| `cancelHallOfFameIntro` | function | 8893 |
-| `clampScore` | function | 15730 |
-| `classicTagLabel` | function | 9047 |
-| `classifyGameForStats` | function | 3167 |
-| `classifyLineIdentity` | function | 19143 |
-| `cleanText` | function | 2519 |
-| `cleanupHallOfFameIntro` | function | 8833 |
-| `clearAnalysisCache` | function | 2157 |
-| `clearComparison` | window | 13391 |
-| `clearComparisonDuos` | window | 13479 |
-| `clearLineupAvailable` | window | 2307 |
-| `clearLineupBuilderLine` | window | 2326 |
-| `clearLineupPlayers` | window | 2261 |
-| `clearlyAboveAverage` | function | 5692 |
-| `clonePlain` | function | 4409 |
-| `closeGlobalSearch` | window | 24046 |
-| `closeMatchcenterStoryPreview` | window | 2226 |
-| `closeToolMenu` | window | 24146 |
-| `clutchText` | function | 5576 |
-| `collectAssistEventRefs` | function | 2975 |
-| `compareGamesChronologically` | function | 3305 |
-| `comparisonDuoContext` | function | 13405 |
-| `comparisonEventGameKey` | function | 13683 |
-| `comparisonEventPhaseLabel` | function | 13686 |
-| `comparisonFmt` | function | 13173 |
-| `comparisonItemKey` | function | 13151 |
-| `comparisonJsArg` | function | 13162 |
-| `comparisonNum` | function | 13165 |
-| `comparisonOpponentStrengthTier` | function | 13690 |
-| `comparisonPct` | function | 13169 |
-| `comparisonPctFmt` | function | 13177 |
-| `comparisonVariantValue` | function | 13294 |
-| `composeIdentityText` | function | 5967 |
-| `computeCurrentAppHash` | function | 3643 |
-| `computeEinsatzCenterStats` | function | 7119 |
-| `computeMetrics` | function | 5350 |
-| `computeRosterStatus` | function | 5993 |
-| `confidenceCautiousText` | function | 15789 |
-| `confirmDuoProSelection` | window | 11856 |
-| `confirmEinsatzCenterCombo` | window | 8077 |
-| `copyMatchcenterText` | window | 2228 |
-| `countBy` | function | 10522 |
-| `countCaptainAppearances` | function | 5975 |
-| `countGoalieAppearances` | function | 5989 |
-| `countMomentumClusters` | function | 5609 |
-| `countPlayedUlmGames` | function | 2895 |
-| `createPlayerAnalysisProfile` | function | 3944 |
-| `createSeasonBucket` | function | 1782 |
-| `decodeCp1252AsUtf8` | function | 2464 |
-| `decodeHashSegmentSafe` | function | 3516 |
-| `dedupeGamesById` | function | 15972 |
-| `dedupeIdentityProfileTags` | function | 12775 |
-| `deriveAsOfForSeason` | function | 3241 |
-| `deriveLineupUlmPlayerIds` | function | 7616 |
-| `deriveLineupValidPlayerIds` | function | 7592 |
-| `derivePlayerStatus` | function | 4047 |
-| `detectOverviewPhase` | function | 23512 |
-| `detectSide` | const-arrow | 2604 |
-| `detectTypes` | function | 5484 |
-| `detectUlmSide` | function | 2597 |
-| `diagnoseGameDuplicates` | function | 2649 |
-| `diagnosticError` | function | 6228 |
-| `diffGameIds` | function | 6600 |
-| `difficultConnectionConfidence` | function | 10912 |
-| `discardEinsatzCenterAutosave` | function | 7515 |
-| `discardSeasonDataPreview` | function | 6857 |
-| `dismissEinsatzCenterRosterSuggestion` | window | 7948 |
-| `downloadMatchdayStory` | window | 20273 |
-| `downloadSocialVideoStandbild` | window | 22144 |
-| `duoProContextSeasonKey` | function | 11435 |
-| `duoProDomId` | function | 11812 |
-| `duoProPairKey` | function | 11432 |
-| `duoProPickerMessage` | function | 11818 |
-| `duoProPickerOpen` | function | 11815 |
-| `duoProPlayer` | function | 11449 |
-| `duoProResolveCandidate` | function | 11831 |
-| `duoProSelectionPayload` | function | 11840 |
-| `duoScopeSeasonKeys` | function | 10954 |
-| `einsatzCenterAutosaveDraft` | function | 7431 |
-| `einsatzCenterAutosaveInfoText` | function | 7537 |
-| `einsatzCenterAutosaveKey` | function | 7342 |
-| `einsatzCenterCanonicalJson` | function | 7675 |
-| `einsatzCenterComputeBaseHash` | function | 7690 |
-| `einsatzCenterCurrentRawBaseHash` | function | 7417 |
-| `einsatzCenterDeserializeAutosave` | function | 7377 |
-| `einsatzCenterDraftInView` | function | 7246 |
-| `einsatzCenterDraftIsEmpty` | function | 7354 |
-| `einsatzCenterDraftStaleHint` | function | 7260 |
-| `einsatzCenterInspectAutosave` | function | 7466 |
-| `einsatzCenterIsPlainObject` | function | 7371 |
-| `einsatzCenterSerializeDraft` | function | 7358 |
-| `einsatzCenterSha256Hex` | function | 7685 |
-| `einsatzCenterSoftIssues` | function | 7699 |
-| `einsatzCenterStorageRead` | function | 7343 |
-| `einsatzCenterStorageRemove` | function | 7349 |
-| `einsatzCenterStorageWrite` | function | 7346 |
-| `emptyDuoTeamImpactStats` | function | 11481 |
-| `emptyFieldRoleSeasonStats` | function | 4003 |
-| `emptyGoalieAlltimeStats` | function | 3976 |
-| `emptyGoalieSeasonStats` | function | 3954 |
-| `emptyGoalieSpecialTeamsStats` | function | 3991 |
-| `emptyPlayerSeasonStats` | function | 3948 |
-| `emptyRosterImpactStats` | function | 11990 |
-| `emptySpecialTeamsStats` | function | 4368 |
-| `ensureAppLoaded` | function | 8747 |
-| `ensureEinsatzCenterDraft` | function | 7282 |
-| `ensureExternalSeasonData` | function | 6455 |
-| `ensureFieldRoleSeasonStats` | function | 4113 |
-| `ensureGlobalDataLoaded` | function | 8675 |
-| `ensureGoalieSeasonStats` | function | 4108 |
-| `ensureHallOfFameIntroOverlay` | function | 8771 |
-| `ensureLineupDataLoaded` | function | 6965 |
-| `ensureLineupGroupsRegistryLoaded` | function | 6990 |
-| `ensureRmDuo` | function | 11213 |
-| `ensureRmPlayer` | function | 11207 |
-| `ensureSocialVideoExportCapabilityChecked` | function | 21765 |
-| `escAttr` | function | 9020 |
-| `escHtml` | function | 12794 |
-| `eventMatchesTeams` | function | 5570 |
-| `explainScore` | function | 15793 |
-| `exportEinsatzCenterDraft` | window | 8119 |
-| `exportExcel` | function | 22659 |
-| `fallbackIdentityProfile` | function | 9055 |
-| `fetchJson` | function | 6272 |
-| `fetchJsonLegacy` | function | 6204 |
-| `fetchJsonWithDiagnostics` | function | 6263 |
-| `fetchSeasonGameRaw` | function | 6298 |
-| `fetchTextWithDiagnostics` | function | 6233 |
-| `fileNameForLineupSeasonKey` | function | 6947 |
-| `filterComparisonDuoSuggestions` | window | 13437 |
-| `filterComparisonPlayers` | window | 13348 |
-| `filterLineupBuilderAvailable` | window | 2355 |
-| `filterLineupPlayers` | window | 2262 |
-| `filterPlayerSuggestions` | function | 13412 |
-| `filterPureSGPlayers` | function | 9693 |
-| `finalizeDuoTeamImpactStats` | function | 11500 |
-| `finalizeGoalieSeasonStats` | function | 4805 |
-| `finalizeMomentumStats` | function | 11288 |
-| `finalizePlayerRegistrySeason` | function | 4188 |
-| `finalizeResponseStats` | function | 11219 |
-| `finalizeRosterImpactStats` | function | 11993 |
-| `finalizeSpecialTeamsStats` | function | 4412 |
-| `findDuplicateGameIds` | function | 6519 |
-| `findLineupGameContext` | function | 7024 |
-| `findLoadedSeasonPlayer` | function | 9656 |
-| `finishHallOfFameIntro` | function | 8860 |
-| `finiteNumbers` | function | 4309 |
-| `fitMatchcenterStoryLayout` | function | 21581 |
-| `fixKnownUiTransliterations` | function | 2514 |
-| `fixMojibakeText` | function | 2522 |
-| `formatDateDE` | function | 3399 |
-| `formatDiagnosticAttempt` | function | 6279 |
-| `formatGameLoadError` | function | 6292 |
-| `formatStatus` | function | 6276 |
-| `gameClassificationStatusLabel` | function | 2663 |
-| `gameDaySortValue` | function | 4478 |
-| `gameResult` | function | 3874 |
-| `gameScore` | function | 3137 |
-| `gameStableId` | function | 2646 |
-| `gameStatusText` | function | 3130 |
-| `generatePlayerInsights` | function | 9518 |
-| `generateSocialVideoStandbilder` | window | 20350 |
-| `getActiveAlltimeSeasonKeys` | function | 10694 |
-| `getActiveSeasonKey` | function | 2383 |
-| `getAllLoadedSeasonGames` | function | 10887 |
-| `getAlltimeAggregatedStyleProfile` | function | 14368 |
-| `getAllTimeCoverStats` | function | 8626 |
-| `getAllTimeDuoRows` | function | 10842 |
-| `getAllTimeDuoRowsForPlayer` | function | 10580 |
-| `getAllTimeGamesPlayedRows` | function | 10620 |
-| `getAllTimeIdentityStandings` | function | 12662 |
-| `getAllTimeMainPlayerRows` | function | 9697 |
-| `getAllTimeOpponentIntelligence` | function | 12583 |
-| `getAllTimeOpponentNames` | function | 2574 |
-| `getAllTimeOpponentTopScorers` | function | 12591 |
-| `getAllTimePenaltyRows` | function | 10645 |
-| `getAllTimePlayerRows` | function | 9665 |
-| `getAlltimeRank` | function | 13107 |
-| `getAlltimeRecencyWeight` | function | 10705 |
-| `getAllTimeSgOnlyRows` | function | 9700 |
-| `getAssistDiagnostics` | function | 5064 |
-| `getAssistPlayersFromEvent` | function | 3003 |
-| `getCanonicalTeamName` | function | 15945 |
-| `getCarryPerformanceRows` | function | 10591 |
-| `getComparisonAlltimeTeamGoals` | function | 13198 |
-| `getComparisonAlltimeTrend` | function | 13272 |
-| `getComparisonChemistryFromEvents` | function | 13206 |
-| `getComparisonClutchFromEvents` | function | 13211 |
-| `getComparisonCurrentSelection` | function | 13337 |
-| `getComparisonEventsForItem` | function | 13655 |
-| `getComparisonPlayerOptions` | function | 13279 |
-| `getComparisonPlayerRow` | function | 13180 |
-| `getComparisonProfile` | function | 13241 |
-| `getComparisonRosterGames` | function | 13675 |
-| `getComparisonRosterGamesForSeason` | function | 13658 |
-| `getComparisonSeasonEvents` | function | 13201 |
-| `getComparisonSeasonLabel` | function | 13183 |
-| `getComparisonSeasonTrend` | function | 13246 |
-| `getComparisonStyleProfile` | function | 13216 |
-| `getComparisonTeamGoalsForSeason` | function | 13186 |
-| `getComparisonVariantsForPlayer` | function | 13297 |
-| `getDifficultConnectionRowsForPlayer` | function | 11945 |
-| `getDuoDirectScorerGameCounts` | function | 11009 |
-| `getDuoFieldPlayerRows` | function | 11438 |
-| `getDuoRowsForPlayerScope` | function | 10917 |
-| `getDuoScorerCountsWithCandidate` | function | 10958 |
-| `getDuoSharedFieldRows` | function | 11454 |
-| `getEffectiveLineupData` | function | 7232 |
-| `getEinsatzCenterGameDraft` | function | 7304 |
-| `getEmptyState` | function | 15844 |
-| `getFieldGameIdsForPlayer` | function | 2804 |
-| `getFurtherSameDayUlmGames` | function | 4494 |
-| `getGameDurationMinutes` | function | 4473 |
-| `getGameId` | function | 6513 |
-| `getGlobalAllTimeSnapshot` | function | 2415 |
-| `getGlobalIdentityProfile` | function | 12747 |
-| `getGlobalLoadableSeasonKeys` | function | 8619 |
-| `getGlobalOpponentSpecialistProfile` | function | 14824 |
-| `getGlobalPlayerBestSeason` | function | 10573 |
-| `getGlobalPlayerMilestones` | function | 10756 |
-| `getGlobalPlayerOpponentGameRows` | function | 14795 |
-| `getGlobalPlayerPeakGame` | function | 10562 |
-| `getGlobalPlayerTeamRecord` | function | 10536 |
-| `getGlobalProfileEvents` | function | 10509 |
-| `getGlobalRookieMilestone` | function | 10745 |
-| `getGlobalRookieSeasonKey` | function | 10731 |
-| `getGlobalSeasonStatRows` | function | 13091 |
-| `getGlobalTopScorerMilestones` | function | 10718 |
-| `getGoalieComparisonAlltimeTrend` | function | 13754 |
-| `getGoalieComparisonSeasonTrend` | function | 13771 |
-| `getGoalieDiagnostics` | function | 5050 |
-| `getGoalieDnaRows` | function | 10198 |
-| `getGoalieGameIdsForPlayer` | function | 2811 |
-| `getGoalieOpponentName` | function | 4349 |
-| `getGoalieOpponentTier` | function | 4353 |
-| `getGoalScorerFromEvent` | function | 2969 |
-| `getHallGoalieData` | function | 12957 |
-| `getHallOfFamePlayerIdSet` | function | 10505 |
-| `getHallOfFamePlayerRows` | function | 10502 |
-| `getHallOfFameStats` | function | 12617 |
-| `getJerseyNumber` | function | 2908 |
-| `getLineupAllRows` | function | 18960 |
-| `getLineupPlayerPool` | function | 18971 |
-| `getLoadedSeasonPlayerUi` | function | 10531 |
-| `getLoadedSeasonPointsByName` | function | 10475 |
-| `getMatchcenterDirectOpponents` | function | 16143 |
-| `getMatchcenterOpponents` | function | 16110 |
-| `getOpponentAliasKeys` | function | 15951 |
-| `getOpponentAliasKeysForMatchcenter` | function | 16023 |
-| `getOppStrength` | function | 3926 |
-| `getOrCreatePlayerProfile` | function | 4056 |
-| `getPenaltyBasePersonalMinutes` | function | 4509 |
-| `getPenaltyDisciplineMinutes` | function | 4527 |
-| `getPenaltyDisciplineType` | function | 4465 |
-| `getPenaltyPersonalMinutes` | function | 4517 |
-| `getPenaltySpecialTeamsMinutes` | function | 4506 |
-| `getPhaseIndex` | function | 5335 |
-| `getPhaseKey` | function | 3035 |
-| `getPlayedUlmGames` | function | 2886 |
-| `getPlayerAlltimeFieldGames` | function | 2848 |
-| `getPlayerAlltimeGoalieGames` | function | 2851 |
-| `getPlayerAlltimeRoleGames` | function | 2829 |
-| `getPlayerAlltimeStats` | function | 9708 |
-| `getPlayerAlltimeTotalGames` | function | 2854 |
-| `getPlayerFieldGames` | function | 2818 |
-| `getPlayerGoalieAlltimeStats` | function | 9729 |
-| `getPlayerGoalieGames` | function | 2822 |
-| `getPlayerGoalieSeasonStats` | function | 9724 |
-| `getPlayerRegistryProfile` | function | 9716 |
-| `getPlayerRoleAvailability` | function | 9759 |
-| `getPlayerSeasonRoleGameSummary` | function | 2863 |
-| `getPlayerSeasonStats` | function | 9703 |
-| `getPlayerSourceId` | function | 2905 |
-| `getPreClubHistoryPlayerNames` | function | 2638 |
-| `getPreviousSeasonKey` | function | 10430 |
-| `getRelevantSeasonGames` | function | 3209 |
-| `getRosterEntryRegistryProfile` | function | 10908 |
-| `getRosterGameIdsForPlayer` | function | 2745 |
-| `getRosterImpactPlayerEventLookup` | function | 12011 |
-| `getRosterImpactPlayerGames` | function | 12032 |
-| `getRosterStatus` | function | 10711 |
-| `getScoreLabel` | function | 15734 |
-| `getSeasonApiBaseUrl` | function | 1807 |
-| `getSeasonData` | function | 2386 |
-| `getSeasonDataPreview` | function | 6863 |
-| `getSeasonDataState` | function | 23544 |
-| `getSeasonIdentityProfile` | function | 10665 |
-| `getSeasonmanagerRosterSuggestion` | function | 7646 |
-| `getSeasonMatchdays` | function | 3376 |
-| `getSeasonOriginBaseUrl` | function | 1827 |
-| `getSeasonPlayerFieldBasis` | function | 9124 |
-| `getSeasonScopedIdentityProfile` | function | 9151 |
-| `getSeasonStatsAsOf` | function | 3279 |
-| `getSeasonTeamGameIds` | function | 2902 |
-| `getSeasonTeamGames` | function | 2898 |
-| `getSeasonUiPlayerForProfile` | function | 10661 |
-| `getSpecialTeamsDiagnostics` | function | 5057 |
-| `getSpecialTeamsPenaltyChunks` | function | 4530 |
-| `getStaticSeasonGames` | function | 6362 |
-| `getStoredLastView` | function | 3722 |
-| `getSyntheticLineupPlayers` | function | 18937 |
-| `getSyntheticLineupRow` | function | 18940 |
-| `getSyntheticLineupRows` | function | 18957 |
-| `getTeamAllTimeRecords` | function | 12541 |
-| `getTeamLogoUrlForStory` | function | 20853 |
-| `getUlmTeamStatus` | function | 2592 |
-| `getUniqueAllTimeOpponentNames` | function | 2582 |
-| `globalSearchEntries` | function | 23926 |
-| `globalSearchIsEditableTarget` | function | 23975 |
-| `globalSearchKeyAction` | function | 23981 |
-| `globalSearchMatch` | function | 23963 |
-| `globalSearchMatchdayScore` | function | 23949 |
-| `globalSearchOnKeydown` | function | 24076 |
-| `globalSearchPlayerScore` | function | 23940 |
-| `globalSearchTokens` | function | 23921 |
-| `goalieApplySampleConfidence` | function | 9882 |
-| `goalieBucketLooseSum` | function | 9890 |
-| `goalieBucketRows` | function | 9802 |
-| `goalieClampScore` | function | 9847 |
-| `goalieDetailFirstTime` | function | 9826 |
-| `goalieDnaKey` | function | 10107 |
-| `goalieDnaValue` | function | 10112 |
-| `goalieEntryRecognitionReason` | function | 2768 |
-| `goalieEventAbsSeconds` | function | 4326 |
-| `goalieEventSecondInPeriod` | function | 9833 |
-| `goalieGameDurationSeconds` | function | 4332 |
-| `goalieGameStateBeforeGoal` | function | 4337 |
-| `goalieInverseScore` | function | 9851 |
-| `goalieNum` | function | 9788 |
-| `goaliePctText` | function | 9839 |
-| `goaliePositiveCurveScore` | function | 9867 |
-| `goaliePositiveScore` | function | 9859 |
-| `goalieSafeNum` | function | 9843 |
-| `goalieStateGoals` | function | 10119 |
-| `goalieStdDev` | function | 9820 |
-| `goalieTierMeta` | function | 9811 |
-| `goalieTime` | function | 9794 |
-| `goalieTopRow` | function | 9808 |
-| `goalieWeightedScore` | function | 9876 |
-| `goToMainNavPoint` | window | 23282 |
-| `hallGoalieExplainForLabel` | function | 12994 |
-| `hallGoalieNameHtml` | function | 12973 |
-| `hallGoalieNum` | function | 12859 |
-| `hallGoaliePkStats` | function | 12885 |
-| `hallGoalieRowFromStats` | function | 12924 |
-| `hallGoalieSeasonLabel` | function | 12873 |
-| `hallGoalieSeasonScore` | function | 12904 |
-| `hallGoalieTime` | function | 12865 |
-| `hallGoalieTooltip` | function | 12990 |
-| `hallGoalieTopteamStats` | function | 12897 |
-| `handleComparisonDuoSearchKey` | window | 13445 |
-| `hasEmbeddedSeasonData` | function | 8616 |
-| `hashSegmentToSeasonKey` | function | 3429 |
-| `hasSeasonRole` | function | 5719 |
-| `hasSeasonSource` | function | 8612 |
-| `hofIntroDelay` | function | 8768 |
-| `identityClutchGoalsVsTeams` | function | 5600 |
-| `identityDecisiveGoalsVsTeams` | function | 5603 |
-| `identityGoalsVsTeams` | function | 5597 |
-| `identityInputs` | function | 5634 |
-| `identityLateGoalsVsTeams` | function | 5606 |
-| `identityOpponentGroups` | function | 5562 |
-| `identityPartnerStats` | function | 5548 |
-| `identityPointsVsTeams` | function | 5594 |
-| `incGoalieBucket` | function | 4322 |
-| `incrementUniqueCounter` | function | 4011 |
-| `initGlobalSearch` | function | 24098 |
-| `initHashRouting` | function | 3853 |
-| `initToolMenu` | function | 24196 |
-| `invalidateGlobalIdentityCache` | function | 2212 |
-| `isActiveAlltimeSeasonStats` | function | 10680 |
-| `isComebackRelevantGoal` | function | 5590 |
-| `isDecisiveGoal` | function | 5582 |
-| `isEinsatzCenterGameFromDraft` | function | 7241 |
-| `isExcludedGoalieAppearance` | function | 2778 |
-| `isFieldAppearance` | function | 2798 |
-| `isFreiburgTuebingenSgName` | function | 2568 |
-| `isGameAtOrBeforeAsOf` | function | 3156 |
-| `isGamePlayed` | function | 3115 |
-| `isGoalieAppearance` | function | 2792 |
-| `isGoalieRosterEntry` | function | 2754 |
-| `isHallOfFameEligiblePlayer` | function | 10496 |
-| `isHallRowPureSG` | function | 12874 |
-| `isImportantClutchGoal` | function | 5577 |
-| `isLateGoal` | function | 5585 |
-| `isMannheimLudwigshafenSgName` | function | 2571 |
-| `isMatchPenaltyEvent` | function | 4457 |
-| `isNewSeasonDataState` | function | 23565 |
-| `isOwnTeam` | function | 15934 |
-| `isPenaltyGoalEvent` | function | 4540 |
-| `isPreClubHistoryPlayerName` | function | 2641 |
-| `isPureSGPlayer` | function | 9689 |
-| `isRookieCandidateForSeason` | function | 10465 |
-| `isSameUlmTeamContext` | function | 4486 |
-| `isSeasonDataPreviewStale` | function | 6871 |
-| `isSgOnlyAlltimePlayer` | function | 9681 |
-| `isSgOnlyHallOfFameExcluded` | function | 10487 |
-| `isSyntheticLineupPlayerId` | function | 18934 |
-| `isToolMenuOpen` | function | 24134 |
-| `isTwoPlusTwoPenaltyEvent` | function | 4461 |
-| `isUlmTeamName` | function | 2586 |
-| `isUsableExternalSeasonData` | function | 6446 |
-| `isValidAsOfDate` | function | 3433 |
-| `isValidAsOfStartTime` | function | 3436 |
-| `isVisibleSecondaryTrait` | function | 9026 |
-| `isYouthGame` | function | 3120 |
-| `kpiBadge` | function | 14149 |
-| `kpiDelta` | function | 13882 |
-| `kpiItemColor` | function | 13888 |
-| `kpiNiceMax` | function | 14039 |
-| `kpiRadarValue` | function | 13962 |
-| `kpiTrendRows` | function | 14045 |
-| `kpiValueText` | function | 13878 |
-| `lexiconEntry` | function | 15533 |
-| `lexiconUniqueKeys` | function | 15525 |
-| `lineupAverage` | function | 18986 |
-| `lineupBuilderPoolIds` | function | 2269 |
-| `lineupCombinationIds` | function | 19463 |
-| `lineupDirectChemistryScore` | function | 19507 |
-| `lineupEvaluateComplementCandidate` | function | 19514 |
-| `lineupGroupDisplayName` | function | 7150 |
-| `lineupLevelLabel` | function | 18990 |
-| `lineupOpponentDNAForContext` | function | 19087 |
-| `lineupPlayerAnchorScore` | function | 19592 |
-| `lineupPlayerProfile` | function | 19191 |
-| `lineupRankCandidateIds` | function | 19448 |
-| `lineupRecommendationReason` | function | 19679 |
-| `lineupRoleDnaComplementScore` | function | 19483 |
-| `lineupRosterGamesForPlayer` | function | 18996 |
-| `lineupRowMap` | function | 19445 |
-| `lineupRowMeta` | function | 18963 |
-| `lineupScore` | function | 18980 |
-| `lineupStdDev` | function | 19477 |
-| `linkUiPlayersToRegistry` | function | 4143 |
-| `loadEinsatzCenterMismatchedAutosave` | function | 7561 |
-| `loadSeason` | function | 8692 |
-| `loadSeasonData` | function | 8146 |
-| `loadSeasonForGlobal` | function | 8644 |
-| `loadSeasonManifest` | function | 6377 |
-| `mainNavActiveKeyForPage` | function | 23276 |
-| `markFieldRoleAppearance` | function | 4118 |
-| `matchcenterAddDuoConnection` | function | 16799 |
-| `matchcenterAddPlanItem` | function | 18015 |
-| `matchcenterAddPlanWatch` | function | 18021 |
-| `matchcenterAddScoring` | function | 16360 |
-| `matchcenterAddUlmDuoConnection` | function | 16950 |
-| `matchcenterAddUlmScoring` | function | 16580 |
-| `matchcenterAliasModeForContext` | function | 16020 |
-| `matchcenterAllGames` | function | 16104 |
-| `matchcenterAllGamesForSeason` | function | 16084 |
-| `matchcenterAnalyzeDirect` | function | 16194 |
-| `matchcenterAnalyzeForm` | function | 16231 |
-| `matchcenterBuildCoachActivationHints` | function | 18731 |
-| `matchcenterBuildCoachAvoidList` | function | 18721 |
-| `matchcenterBuildCoachDangerPatterns` | function | 18703 |
-| `matchcenterBuildCoachHints` | function | 18459 |
-| `matchcenterBuildCoachIfThen` | function | 18711 |
-| `matchcenterBuildCoachKeyActors` | function | 18738 |
-| `matchcenterBuildCoachLevers` | function | 18693 |
-| `matchcenterBuildCoachPriorities` | function | 18686 |
-| `matchcenterBuildGoalieMatchup` | function | 17151 |
-| `matchcenterBuildInsights` | function | 17437 |
-| `matchcenterBuildIntelHeadline` | function | 18475 |
-| `matchcenterBuildIntelligenceDataQuality` | function | 18110 |
-| `matchcenterBuildIntelligenceSignals` | function | 18496 |
-| `matchcenterBuildIntelListFromPlan` | function | 18450 |
-| `matchcenterBuildMatchPlan` | function | 19795 |
-| `matchcenterBuildOneThingToWatch` | function | 18483 |
-| `matchcenterBuildOpponentAlarm` | function | 18340 |
-| `matchcenterBuildOpponentDNA` | function | 18161 |
-| `matchcenterBuildOpponentDuoInsights` | function | 16898 |
-| `matchcenterBuildOpponentDuos` | function | 16853 |
-| `matchcenterBuildOpponentPlayerInsights` | function | 16496 |
-| `matchcenterBuildOpponentScouting` | function | 16424 |
-| `matchcenterBuildPlanConfidence` | function | 18027 |
-| `matchcenterBuildSpecialTeamsMatchup` | function | 17081 |
-| `matchcenterBuildTimingAnalysis` | function | 17274 |
-| `matchcenterBuildTimingInsights` | function | 17263 |
-| `matchcenterBuildUlmDuoInsights` | function | 17048 |
-| `matchcenterBuildUlmDuos` | function | 17005 |
-| `matchcenterBuildUlmPlayerInsights` | function | 16742 |
-| `matchcenterBuildUlmPlayerScouting` | function | 16687 |
-| `matchcenterClamp` | function | 15721 |
-| `matchcenterClassifyUlmGoalEvent` | function | 16569 |
-| `matchcenterCoachAdd` | function | 18623 |
-| `matchcenterCoachCautious` | function | 18620 |
-| `matchcenterCoachGameModel` | function | 18632 |
-| `matchcenterCoachPriorityFromAlarm` | function | 18676 |
-| `matchcenterConfidenceClass` | function | 18002 |
-| `matchcenterContextGames` | function | 16188 |
-| `matchcenterDateLabel` | function | 15891 |
-| `matchcenterDateValue` | function | 15886 |
-| `matchcenterDefaultSeasonKey` | function | 16006 |
-| `matchcenterDeriveOpponentType` | function | 18274 |
-| `matchcenterDetectUlmSide` | function | 15996 |
-| `matchcenterDirectContextGames` | function | 17061 |
-| `matchcenterDirectGames` | function | 16174 |
-| `matchcenterDuoDirectionLabel` | function | 16792 |
-| `matchcenterDuoPairKey` | function | 16755 |
-| `matchcenterEmptyBuckets` | function | 16510 |
-| `matchcenterEmptyTimingStats` | function | 17210 |
-| `matchcenterEnsureOpponentDuo` | function | 16759 |
-| `matchcenterEnsureOpponentPlayer` | function | 16333 |
-| `matchcenterEnsureUlmDuo` | function | 16912 |
-| `matchcenterEnsureUlmPlayer` | function | 16518 |
-| `matchcenterEventNumber` | function | 16296 |
-| `matchcenterFinalizeOpponentDuos` | function | 16818 |
-| `matchcenterFinalizeOpponentPlayerProfiles` | function | 16377 |
-| `matchcenterFinalizeUlmDuos` | function | 16969 |
-| `matchcenterFinalizeUlmPlayers` | function | 16618 |
-| `matchcenterFindRosterPlayer` | function | 16285 |
-| `matchcenterFmt` | function | 15876 |
-| `matchcenterFormLine` | function | 17432 |
-| `matchcenterGameKey` | function | 16257 |
-| `matchcenterGameLine` | function | 17426 |
-| `matchcenterGameScore` | function | 16071 |
-| `matchcenterGameSideForOpponentKey` | function | 16060 |
-| `matchcenterGameSideForTeam` | function | 16052 |
-| `matchcenterGameTeamName` | function | 16049 |
-| `matchcenterGoalAbsSeconds` | function | 17194 |
-| `matchcenterGoalieFitScore` | function | 17134 |
-| `matchcenterGoalieKey` | function | 17129 |
-| `matchcenterGoalMinute` | function | 16311 |
-| `matchcenterInferPriority` | function | 18008 |
-| `matchcenterIntelAddAlarm` | function | 18319 |
-| `matchcenterIntelCurve` | function | 18062 |
-| `matchcenterIntelDataLabel` | function | 18107 |
-| `matchcenterIntelDuoRef` | function | 18305 |
-| `matchcenterIntelInverseCurve` | function | 18068 |
-| `matchcenterIntelPct` | function | 18087 |
-| `matchcenterIntelPlayerRef` | function | 18292 |
-| `matchcenterIntelPriorityClass` | function | 18097 |
-| `matchcenterIntelPriorityFromScore` | function | 18091 |
-| `matchcenterIntelPriorityLabel` | function | 18103 |
-| `matchcenterIntelRate` | function | 18083 |
-| `matchcenterIntelWeighted` | function | 18072 |
-| `matchcenterIsClutchGoalEvent` | function | 16322 |
-| `matchcenterIsFreiburgTuebingenTeamName` | function | 15981 |
-| `matchcenterIsLateGoalEvent` | function | 16317 |
-| `matchcenterIsUlmTeamName` | function | 15988 |
-| `matchcenterNum` | function | 15726 |
-| `matchcenterOpponentMode` | function | 16107 |
-| `matchcenterOutcomeForTeam` | function | 16075 |
-| `matchcenterPct` | function | 17077 |
-| `matchcenterPenaltyMinutes` | function | 16301 |
-| `matchcenterPersonalPenaltyMinutesForSide` | function | 17068 |
-| `matchcenterPlanRateText` | function | 17994 |
-| `matchcenterPlanScoreText` | function | 17990 |
-| `matchcenterPlayerDisplayName` | function | 16279 |
-| `matchcenterPlayerKey` | function | 16290 |
-| `matchcenterPriorityLabel` | function | 17999 |
-| `matchcenterRegisterPlayerGame` | function | 16357 |
-| `matchcenterRegisterUlmProfileGame` | function | 16556 |
-| `matchcenterResultClass` | function | 17415 |
-| `matchcenterResultLetter` | function | 17418 |
-| `matchcenterRosterPlayers` | function | 16275 |
-| `matchcenterScoutingGames` | function | 16260 |
-| `matchcenterSeasonHasGames` | function | 16003 |
-| `matchcenterSeasonIsUlmTuebingenSgEra` | function | 15908 |
-| `matchcenterSeasonKeys` | function | 15901 |
-| `matchcenterSeasonLabel` | function | 15905 |
-| `matchcenterSigned` | function | 15881 |
-| `matchcenterSocialAdd` | function | 18800 |
-| `matchcenterSocialCaption` | function | 18807 |
-| `matchcenterSortGamesAsc` | function | 15896 |
-| `matchcenterSpecialTeamsForGame` | function | 17064 |
-| `matchcenterStoryAddCandidate` | function | 21014 |
-| `matchcenterStoryAddFact` | function | 20995 |
-| `matchcenterStoryBestClutchDuo` | function | 21244 |
-| `matchcenterStoryBestClutchPlayer` | function | 21200 |
-| `matchcenterStoryCandidateForBudget` | function | 21052 |
-| `matchcenterStoryCategoryForPlanFact` | function | 21329 |
-| `matchcenterStoryCategoryLimit` | function | 21037 |
-| `matchcenterStoryClutchFact` | function | 21177 |
-| `matchcenterStoryClutchPriority` | function | 21278 |
-| `matchcenterStoryCompetitionLabel` | function | 21281 |
-| `matchcenterStoryCurrentStreak` | function | 21124 |
-| `matchcenterStoryDirectFactCandidates` | function | 21294 |
-| `matchcenterStoryDownloadFileName` | function | 20263 |
-| `matchcenterStoryDuoClutchFact` | function | 21254 |
-| `matchcenterStoryDuoClutchTotal` | function | 21236 |
-| `matchcenterStoryDuoFact` | function | 21257 |
-| `matchcenterStoryEstimateFactWeight` | function | 21008 |
-| `matchcenterStoryFactKey` | function | 21002 |
-| `matchcenterStoryFormFact` | function | 21142 |
-| `matchcenterStoryFormFactCandidates` | function | 21153 |
-| `matchcenterStoryFormLetters` | function | 20959 |
-| `matchcenterStoryFormRecord` | function | 21118 |
-| `matchcenterStoryInitials` | function | 20822 |
-| `matchcenterStoryInlineStat` | function | 20920 |
-| `matchcenterStoryLastDuelLabel` | function | 21290 |
-| `matchcenterStoryLateGoalsForOutcome` | function | 21173 |
-| `matchcenterStoryLogoBase` | function | 20828 |
-| `matchcenterStoryLogoForOpponent` | function | 20883 |
-| `matchcenterStoryLooksArtificial` | function | 21005 |
-| `matchcenterStoryNameClass` | function | 21450 |
-| `matchcenterStoryNormalizePickOptions` | function | 21041 |
-| `matchcenterStoryPickFactItems` | function | 21062 |
-| `matchcenterStoryPickFacts` | function | 21115 |
-| `matchcenterStoryPlanFactCandidates` | function | 21316 |
-| `matchcenterStoryPlayer` | function | 20962 |
-| `matchcenterStoryPlayerClutchFact` | function | 21210 |
-| `matchcenterStoryPlayerClutchTotal` | function | 21192 |
-| `matchcenterStoryRankRows` | function | 20947 |
-| `matchcenterStoryRankText` | function | 20916 |
-| `matchcenterStorySafeLogoUrl` | function | 20834 |
-| `matchcenterStoryShortDuel` | function | 21285 |
-| `matchcenterStoryShortTeamLabel` | function | 20923 |
-| `matchcenterStoryTableRank` | function | 20898 |
-| `matchcenterStoryTeamAssetKey` | function | 20848 |
-| `matchcenterStoryUlmTableRank` | function | 20909 |
-| `matchcenterStoryVisibleFacts` | function | 21456 |
-| `matchcenterStoryWinlessStreak` | function | 21133 |
-| `matchcenterTeamDisplay` | function | 16012 |
-| `matchcenterTeamKey` | function | 16015 |
-| `matchcenterTimeValue` | function | 17202 |
-| `matchcenterTimingStatsForGames` | function | 17226 |
-| `matchcenterUlmScoutingConfidence` | function | 16513 |
-| `matchcenterUlmTeamLabelForGame` | function | 17421 |
-| `matchcenterUpdateUlmSeasonRow` | function | 16562 |
-| `matchcenterWindowForSecond` | function | 17219 |
-| `matchdayAsOfCutoff` | function | 3389 |
-| `matchdayGameCardHtml` | function | 23408 |
-| `matchdayUlmGames` | function | 23405 |
-| `medianOrNull` | function | 4316 |
-| `mergeDuoSet` | function | 5146 |
-| `mergeGoalieSpecialTeamsStats` | function | 4778 |
-| `mergeSpecialTeamsStats` | function | 4422 |
-| `mojibakeScore` | function | 2459 |
-| `moveGlobalSearch` | function | 24060 |
-| `normalizeAssistPlayerName` | function | 2972 |
-| `normalizeComparisonItem` | function | 13157 |
-| `normalizeDuoComparisonItem` | function | 13401 |
-| `normalizeEventPlayerRef` | function | 2911 |
-| `normalizeGame` | function | 6340 |
-| `normalizeLineupLines` | function | 2272 |
-| `normalizeOpponentNameForAllTime` | function | 2557 |
-| `normalizePlayerDisplayName` | function | 2612 |
-| `normalizePlayerName` | function | 2628 |
-| `normalizeSecondaryTraits` | function | 5693 |
-| `normalizeTeamKey` | function | 15926 |
-| `normalizeTeamName` | function | 2547 |
-| `normalizeTeamNameForMatchcenter` | function | 15991 |
-| `onGlobalSearchInput` | window | 24054 |
-| `openAllTimePlayers` | window | 8760 |
-| `openComparisonCenter` | window | 8930 |
-| `openDuoProPicker` | window | 11850 |
-| `openEinsatzCenter` | window | 7101 |
-| `openGlobalSearch` | window | 24021 |
-| `openHallOfFame` | window | 8906 |
-| `openLexicon` | window | 9003 |
-| `openLigaGegner` | window | 23778 |
-| `openLineupBuilder` | window | 8981 |
-| `openMatchcenter` | window | 8959 |
-| `openMatchcenterStoryPreview` | window | 2225 |
-| `openMatchday` | window | 23387 |
-| `openMatchdayTimeline` | window | 23379 |
-| `openOverview` | window | 23328 |
-| `openSeason` | window | 8757 |
-| `openToolMenu` | window | 24138 |
-| `overviewCompactTableHtml` | function | 23605 |
-| `overviewCrossSeasonTrendHtml` | function | 23654 |
-| `overviewFormHtml` | function | 23613 |
-| `overviewLastMatchdayText` | function | 23589 |
-| `overviewLineupLinkHtml` | function | 23671 |
-| `overviewMatchcenterLinkHtml` | function | 23668 |
-| `overviewMatchdayEndMs` | function | 23506 |
-| `overviewMatchdayStartMs` | function | 23500 |
-| `overviewNextMatchdayHtml` | function | 23593 |
-| `overviewOpponentLabel` | function | 23584 |
-| `overviewOpponentPreviewHtml` | function | 23663 |
-| `overviewRankChangeTile` | function | 23690 |
-| `overviewRecordHtml` | function | 23647 |
-| `overviewSeasonAwardHtml` | function | 23636 |
-| `overviewSeasonBilanzHtml` | function | 23628 |
-| `p1NarrativeKey` | function | 15808 |
-| `paintGlobalSearchResults` | function | 24013 |
-| `parseAppHash` | function | 3536 |
-| `parseAsOfQueryValue` | function | 3575 |
-| `parseComparisonVariant` | function | 13322 |
-| `parseGameClock` | function | 3024 |
-| `parseLastViewState` | function | 3710 |
-| `parseSeasonDataState` | function | 23555 |
-| `pct` | function | 5501 |
-| `pctValue` | function | 12797 |
-| `pdashBestPhase` | function | 14435 |
-| `pdashInsight` | function | 14473 |
-| `pdashInsights` | function | 14476 |
-| `pdashNum` | function | 14419 |
-| `pdashOpponentStrength` | function | 14453 |
-| `pdashOpponentTier` | function | 14447 |
-| `pdashPct` | function | 14423 |
-| `pdashPhaseLabel` | function | 14427 |
-| `pdashTopCount` | function | 14431 |
-| `pdashTopOpponent` | function | 14443 |
-| `pdashTopPartner` | function | 14439 |
-| `penaltyRawText` | function | 4454 |
-| `pFull` | function | 2605 |
-| `playerAppearedForUlmStatusInSeasonByName` | function | 10446 |
-| `playerAppearedInSeasonByName` | function | 10435 |
-| `playerExplainAdd` | function | 15109 |
-| `playerExplainConfidence` | function | 15100 |
-| `playerExplainConfidenceLabel` | function | 15106 |
-| `playerExplainContextSentence` | function | 15145 |
-| `playerExplainHeadline` | function | 15135 |
-| `playerExplainRolePhrase` | function | 15126 |
-| `playerExplainStyleSignature` | function | 15114 |
-| `probeSocialVideoExportCapability` | function | 21744 |
-| `processGame` | function | 3056 |
-| `rAlltimeKpis` | function | 13113 |
-| `rAlltimePlayerDashboard` | function | 14628 |
-| `rAllTimePlayersPage` | function | 15390 |
-| `rankNarratives` | function | 15830 |
-| `rAntiSynergyCompareChip` | function | 12177 |
-| `rAntiSynergyDelta` | function | 12161 |
-| `rAntiSynergyMainDelta` | function | 12202 |
-| `rAntiSynergyMetricRow` | function | 12185 |
-| `rAsOfSelector` | function | 23799 |
-| `ratio01` | function | 5502 |
-| `rCarryPerformanceRows` | function | 10607 |
-| `rClassicRoleTags` | function | 9112 |
-| `rClassicTagTip` | function | 9050 |
-| `rClutch` | function | 9318 |
-| `rClutchBadge` | function | 9012 |
-| `rComparisonCenterPage` | function | 14298 |
-| `rComparisonDashboard` | function | 14249 |
-| `rComparisonDuoSearchBox` | function | 13631 |
-| `rComparisonDuoSuggestionButtons` | function | 13424 |
-| `rComparisonMiniOverview` | function | 14237 |
-| `rComparisonModeSelect` | function | 13652 |
-| `rComparisonRoles` | function | 14241 |
-| `rComparisonStyles` | function | 14260 |
-| `rContextBar` | function | 23882 |
-| `rDifficultConnectionList` | function | 12212 |
-| `rDifficultConnectionListCompact` | function | 12279 |
-| `rDifficultConnectionListCompactLegacy` | function | 12237 |
-| `rDifficultConnectionsCard` | function | 12318 |
-| `rDuoCenterPro` | function | 11697 |
-| `rDuoCompareSummaryCards` | function | 13510 |
-| `rDuoComparisonBars` | function | 13505 |
-| `rDuoComparisonChemistry` | function | 13563 |
-| `rDuoComparisonContext` | function | 13595 |
-| `rDuoComparisonDashboard` | function | 13617 |
-| `rDuoComparisonDetails` | function | 13613 |
-| `rDuoComparisonImpact` | function | 13579 |
-| `rDuoComparisonPage` | function | 13641 |
-| `rDuoComparisonProfile` | function | 13541 |
-| `rDuoProPlayerSelect` | function | 11879 |
-| `rDuoResponseMomentumCard` | function | 12475 |
-| `rDuoRows` | function | 10866 |
-| `recommendLineComplements` | function | 19767 |
-| `recordOverviewVisit` | function | 23574 |
-| `registerPlayerIdentity` | function | 4090 |
-| `registerSeasonRosters` | function | 4123 |
-| `rEinsatzCenterAutosaveBanner` | function | 7523 |
-| `rEinsatzCenterCombo` | function | 7046 |
-| `rEinsatzCenterComboEditor` | function | 7751 |
-| `rEinsatzCenterDraftBanner` | function | 7264 |
-| `rEinsatzCenterDraftMark` | function | 7250 |
-| `rEinsatzCenterDraftStatsHint` | function | 7254 |
-| `rEinsatzCenterEditPage` | function | 7851 |
-| `rEinsatzCenterGameCard` | function | 7055 |
-| `rEinsatzCenterGameEditor` | function | 7798 |
-| `rEinsatzCenterGroup` | function | 7033 |
-| `rEinsatzCenterGroupEditor` | function | 7720 |
-| `rEinsatzCenterPage` | function | 7074 |
-| `rEinsatzCenterRosterSuggestionCard` | function | 7767 |
-| `rEinsatzCenterStats` | function | 7156 |
-| `relative01` | function | 5503 |
-| `removeComparisonDuo` | window | 13475 |
-| `removeComparisonItem` | window | 13387 |
-| `removeEinsatzCenterCombo` | window | 8088 |
-| `removeEinsatzCenterGroup` | window | 8002 |
-| `removeEinsatzCenterGroupPlayer` | window | 8052 |
-| `removeEinsatzCenterRosterPlayer` | window | 7933 |
-| `removeLineupBuilderPlayerFromLine` | window | 2319 |
-| `removeLineupPlayer` | window | 2260 |
-| `rEmptyState` | function | 15856 |
-| `renameEinsatzCenterGroup` | window | 8024 |
-| `render` | function | 22686 |
-| `renderComparisonDuoSuggestions` | function | 13428 |
-| `renderTags` | function | 9120 |
-| `repairMojibake` | function | 2478 |
-| `repairRenderedMojibake` | function | 2525 |
-| `resetPlayerRegistrySeason` | function | 4035 |
-| `resolveAssistPlayer` | function | 3017 |
-| `resolveCurrentSeasonKey` | function | 6409 |
-| `resolveGoalScorerPlayer` | function | 2954 |
-| `resolveLineupPlayerName` | function | 7018 |
-| `resolvePlayerRoleView` | function | 9773 |
-| `resolveRosterPlayerByRef` | function | 2923 |
-| `responseExcerpt` | function | 6225 |
-| `responseMomentumAbsSeconds` | function | 11042 |
-| `responseMomentumActor` | function | 11071 |
-| `responseMomentumConfidence` | function | 11191 |
-| `responseMomentumEmptyState` | function | 11196 |
-| `responseMomentumGameRows` | function | 11055 |
-| `responseMomentumGoalActors` | function | 11082 |
-| `responseMomentumPairKey` | function | 11204 |
-| `responseMomentumSide` | function | 11062 |
-| `responseMomentumTime` | function | 11048 |
-| `responseMomentumTooltipFor` | function | 12399 |
-| `restoreEinsatzCenterAutosave` | function | 7497 |
-| `restoreHallOfFameIntroPrevious` | function | 8848 |
-| `resultGoalsAgainstForSide` | function | 4358 |
-| `returnToEinsatzCenterEdit` | window | 7919 |
-| `rGlobalAllTimeStats` | function | 14736 |
-| `rGlobalCareerHeader` | function | 14645 |
-| `rGlobalDevelopment` | function | 14754 |
-| `rGlobalDnaBars` | function | 14389 |
-| `rGlobalDuoNetwork` | function | 14854 |
-| `rGlobalOpponentSpecialist` | function | 15053 |
-| `rGlobalOverview` | function | 14683 |
-| `rGlobalPartnerOpponentPanel` | function | 14631 |
-| `rGlobalProfileTags` | function | 12788 |
-| `rGlobalSearchPanelHtml` | function | 24010 |
-| `rGlobalSearchResultsHtml` | function | 23999 |
-| `rGlobalSearchToggle` | function | 23996 |
-| `rGoalieAnalysis` | function | 10399 |
-| `rGoalieBars` | function | 10056 |
-| `rGoalieDnaBars` | function | 10202 |
-| `rGoalieFirstGoalResistance` | function | 10239 |
-| `rGoalieInsights` | function | 10312 |
-| `rGoalieKpis` | function | 10216 |
-| `rGoalieMiniMetrics` | function | 10233 |
-| `rGoalieMomentum` | function | 10253 |
-| `rGoalieOpponents` | function | 10354 |
-| `rGoalieOverview` | function | 10334 |
-| `rGoaliePhaseProfile` | function | 10295 |
-| `rGoaliePhases` | function | 10351 |
-| `rGoalieRoleTraits` | function | 10194 |
-| `rGoalieStability` | function | 10366 |
-| `rGoalieTable` | function | 10391 |
-| `rGoalieTierCards` | function | 10267 |
-| `rHallDuoTemple` | function | 12850 |
-| `rHallGoalieAwardCards` | function | 13041 |
-| `rHallGoalieLegends` | function | 13058 |
-| `rHallGoalieRankCard` | function | 13009 |
-| `rHallOfFameHero` | function | 12801 |
-| `rHallOfFamePage` | function | 15432 |
-| `rHallPodiumList` | function | 12827 |
-| `rHallSGBadge` | function | 12882 |
-| `rIaShell` | function | 23902 |
-| `rIdentityCards` | function | 9086 |
-| `rIdentityTags` | function | 9066 |
-| `rInsights` | function | 9579 |
-| `rInteractiveDuoCenterPro` | function | 11886 |
-| `rKpiCards` | function | 13891 |
-| `rKpiExtendedMetrics` | function | 14024 |
-| `rKpiInfoCards` | function | 14159 |
-| `rKpiMetricCard` | function | 14016 |
-| `rKpiMirrorRows` | function | 13902 |
-| `rKpiObjectMini` | function | 14152 |
-| `rKpiOpponentStrength` | function | 14121 |
-| `rKpiRadar` | function | 13973 |
-| `rKpiShareBars` | function | 14008 |
-| `rKpiTextMetricCard` | function | 14021 |
-| `rKpiTrendCompare` | function | 14054 |
-| `rKPIVergleich` | function | 14223 |
-| `rLexiconPage` | function | 15547 |
-| `rLexiconRows` | function | 15543 |
-| `rLigaGegnerPlaceholderPage` | function | 23782 |
-| `rLineupBuilderAvailablePanel` | function | 20546 |
-| `rLineupBuilderPage` | function | 20722 |
-| `rLineupComplementCards` | function | 20643 |
-| `rLineupMetricPills` | function | 20532 |
-| `rLineupRecommendationCards` | function | 20594 |
-| `rLineupRecommendationMode` | function | 20609 |
-| `rLineupScoreRows` | function | 20428 |
-| `rLineupSimpleCards` | function | 20450 |
-| `rLineupTestLine` | function | 20656 |
-| `rLineupTestMode` | function | 20705 |
-| `rMainNav` | function | 23289 |
-| `rMainNavBottom` | function | 23311 |
-| `rMatchcenterCoachCardList` | function | 20090 |
-| `rMatchcenterCoachIfThen` | function | 20104 |
-| `rMatchcenterCoachSimpleList` | function | 20112 |
-| `rMatchcenterCopyButton` | function | 20182 |
-| `rMatchcenterDetailsSection` | function | 17407 |
-| `rMatchcenterDigitalCoach` | function | 20117 |
-| `rMatchcenterDuoRankCard` | function | 17728 |
-| `rMatchcenterDuoRow` | function | 17704 |
-| `rMatchcenterDuosTab` | function | 17875 |
-| `rMatchcenterDuoWatchCard` | function | 17684 |
-| `rMatchcenterFormCard` | function | 17465 |
-| `rMatchcenterFormSection` | function | 17381 |
-| `rMatchcenterGamesList` | function | 17486 |
-| `rMatchcenterGoalieCard` | function | 17937 |
-| `rMatchcenterGoalieMatchup` | function | 17961 |
-| `rMatchcenterIntelCoachHints` | function | 20076 |
-| `rMatchcenterIntelOverview` | function | 20030 |
-| `rMatchcenterKpi` | function | 17458 |
-| `rMatchcenterLineupBuilder` | function | 20459 |
-| `rMatchcenterLockerList` | function | 20187 |
-| `rMatchcenterLockerRoomSheet` | function | 20199 |
-| `rMatchcenterMatchPlan` | function | 20800 |
-| `rMatchcenterOpponentAlarm` | function | 20008 |
-| `rMatchcenterOpponentDNA` | function | 19975 |
-| `rMatchcenterOpponentDuos` | function | 17832 |
-| `rMatchcenterOpponentScouting` | function | 17645 |
-| `rMatchcenterPage` | function | 22196 |
-| `rMatchcenterPlanItems` | function | 19941 |
-| `rMatchcenterPlanWatch` | function | 19959 |
-| `rMatchcenterPlayerRow` | function | 17519 |
-| `rMatchcenterPlayersTab` | function | 17681 |
-| `rMatchcenterProfileSection` | function | 17361 |
-| `rMatchcenterRankCard` | function | 17543 |
-| `rMatchcenterResponseMomentum` | function | 12502 |
-| `rMatchcenterScoutingSummary` | function | 20756 |
-| `rMatchcenterSocialBlock` | function | 20255 |
-| `rMatchcenterSocialMediaCenter` | function | 20374 |
-| `rMatchcenterSpecialCard` | function | 17878 |
-| `rMatchcenterSpecialTeams` | function | 17887 |
-| `rMatchcenterStoryForm` | function | 21492 |
-| `rMatchcenterStoryFrame` | function | 21575 |
-| `rMatchcenterStoryLogo` | function | 21487 |
-| `rMatchcenterStoryPlayerCard` | function | 21497 |
-| `rMatchcenterStoryPreview` | function | 21505 |
-| `rMatchcenterTabs` | function | 17358 |
-| `rMatchcenterTimeBars` | function | 17285 |
-| `rMatchcenterTiming` | function | 17319 |
-| `rMatchcenterTimingStatsCard` | function | 17299 |
-| `rMatchcenterUlmDuoRankCard` | function | 17783 |
-| `rMatchcenterUlmDuoRow` | function | 17760 |
-| `rMatchcenterUlmDuos` | function | 17789 |
-| `rMatchcenterUlmDuoWatchCard` | function | 17734 |
-| `rMatchcenterUlmImpactCard` | function | 17549 |
-| `rMatchcenterUlmPlayerRow` | function | 17578 |
-| `rMatchcenterUlmRankCard` | function | 17602 |
-| `rMatchcenterUlmScouting` | function | 17608 |
-| `rMatchcenterWatchCard` | function | 17498 |
-| `rMatchdayDetailPage` | function | 23439 |
-| `rMatchdayPage` | function | 23475 |
-| `rMatchdayTimelinePage` | function | 23428 |
-| `rMatchdayTimelineRow` | function | 23420 |
-| `rMatrix` | function | 9191 |
-| `rmTerm` | function | 12406 |
-| `roleGameStableKey` | function | 2826 |
-| `roleTraitLabel` | function | 9023 |
-| `rOppBreakdown` | function | 9483 |
-| `rOpponentIntelBars` | function | 10830 |
-| `rOpponentTopScorerTable` | function | 12641 |
-| `rosterImpactConfidence` | function | 12073 |
-| `rosterImpactConfidenceWeight` | function | 12079 |
-| `rosterPlayerMatches` | function | 2730 |
-| `rOverviewPage` | function | 23766 |
-| `rPdashLabel` | function | 14580 |
-| `rPdashStat` | function | 14583 |
-| `rPenalties` | function | 9464 |
-| `rPhases` | function | 9248 |
-| `rPlayerDash` | function | 14586 |
-| `rPlayerDashStyles` | function | 14568 |
-| `rPlayerExplainItems` | function | 15332 |
-| `rPlayerExplanation` | function | 15337 |
-| `rPlayerResponseMomentumCard` | function | 12456 |
-| `rPlayerRoleSwitch` | function | 9781 |
-| `rRadar` | function | 9268 |
-| `rRes` | const-arrow | 9011 |
-| `rResponseMomentumOverviewCard` | function | 12432 |
-| `rRmKpi` | function | 12410 |
-| `rRmTopList` | function | 12421 |
-| `rRoleTraitTip` | function | 9030 |
-| `rRosterImpactStatLine` | function | 12194 |
-| `rRosterStatusBadge` | function | 9039 |
-| `rScoreBreakdown` | function | 15860 |
-| `rSeasonDataPreviewCard` | function | 6890 |
-| `rSeasonDataPreviewContextHint` | function | 23834 |
-| `rSeasonDataPreviewRows` | function | 6880 |
-| `rSeasonDataPreviewStatus` | function | 6877 |
-| `rSeasonDataStateContextHint` | function | 23851 |
-| `rSeasonDuoCenterPro` | function | 11942 |
-| `rSeasonDuoSummary` | function | 9238 |
-| `rSeasonInsightsTab` | function | 9564 |
-| `rSeasonLandingPage` | function | 14667 |
-| `rSeasonPlayerDashboard` | function | 14625 |
-| `rSeasonProfileKpis` | function | 9163 |
-| `rSeasonProfileTagStrip` | function | 9184 |
-| `rSeasonTrendRows` | function | 14349 |
-| `rSocialVideoBlock` | function | 20324 |
-| `rSocialVideoFeedFrame` | function | 22085 |
-| `rSparkline` | function | 13127 |
-| `rStyleMetricTip` | function | 9035 |
-| `rStyleProfileBars` | function | 9075 |
-| `rTable` | function | 9633 |
-| `rTeamPage` | function | 22344 |
-| `rTeamResponseMomentumCard` | function | 12495 |
-| `rTimeline` | function | 9353 |
-| `rToolMenu` | function | 24124 |
-| `runComparison` | window | 13392 |
-| `runDuoComparison` | window | 13480 |
-| `saveLastView` | function | 3727 |
-| `scoreNarrative` | function | 15811 |
-| `seasonApiUrl` | function | 1824 |
-| `seasonDataPreviewRerender` | function | 6736 |
-| `seasonDataPreviewRow` | function | 6740 |
-| `seasonGameApiUrls` | function | 1842 |
-| `seasonGameHtmlUrls` | function | 1852 |
-| `seasonHasPureUlmTeam` | function | 10480 |
-| `seasonKeyToHashSegment` | function | 3426 |
-| `seasonOrderIndex` | function | 10425 |
-| `seasonPathPrefix` | function | 1836 |
-| `seasonRoleKeysForPlayer` | function | 5710 |
-| `seasonRoleTraitsFromClassic` | function | 5705 |
-| `seasonStatNumber` | function | 10670 |
-| `seasonStatSetSize` | function | 10674 |
-| `seedHallOfFameIntroParticles` | function | 8815 |
-| `selectAllLineupAvailable` | window | 2306 |
-| `selectComparisonDuoSuggestion` | window | 13438 |
-| `selectComparisonMode` | window | 13399 |
-| `selectComparisonPlayer` | window | 13356 |
-| `selectDuoProQuick` | window | 11852 |
-| `selectEinsatzCenterEditGame` | window | 7921 |
-| `selectEnforcerKeys` | function | 5722 |
-| `serializeFieldRoleSeasonStats` | function | 4239 |
-| `serializeGoalieSeasonStats` | function | 4217 |
-| `serializeSeasonStats` | function | 4204 |
-| `serializeSpecialTeamsStats` | function | 4419 |
-| `setAntiSynergyView` | window | 2352 |
-| `setComparisonDuoMode` | window | 13409 |
-| `setComparisonDuoPlayer` | window | 13458 |
-| `setComparisonDuoSearch` | window | 13411 |
-| `setComparisonDuoSeasonKey` | window | 13410 |
-| `setComparisonRoleMode` | window | 13362 |
-| `setComparisonVariant` | window | 13367 |
-| `setContextAsOf` | window | 23812 |
-| `setDuoProPickerState` | function | 11821 |
-| `setDuoProSelection` | window | 11871 |
-| `setEinsatzCenterGameNote` | window | 8095 |
-| `setEinsatzCenterGroupPlayerPosition` | window | 8060 |
-| `setEinsatzCenterIncludeDraft` | window | 7920 |
-| `setEinsatzCenterSeason` | window | 7095 |
-| `setGlobalPlayer` | window | 2378 |
-| `setGlobalPlayerDuo` | window | 2379 |
-| `setGlobalTab` | window | 2380 |
-| `setGoalieTab` | window | 2219 |
-| `setLineupActiveLine` | window | 2291 |
-| `setLineupBuilderMode` | window | 2290 |
-| `setLineupBuilderOpponent` | window | 2289 |
-| `setLineupBuilderSeason` | window | 2277 |
-| `setLineupNewPlayerProfile` | window | 2333 |
-| `setMatchcenterContext` | window | 9000 |
-| `setMatchcenterOpponent` | window | 8999 |
-| `setMatchcenterSeason` | window | 9001 |
-| `setMatchcenterTab` | window | 2224 |
-| `setP` | window | 2216 |
-| `setPage` | window | 2362 |
-| `setPlayerRoleView` | window | 2218 |
-| `setSeasonDataPreviewOpen` | window | 6926 |
-| `setSeasonDataPreviewPasteText` | window | 6927 |
-| `setState` | const-arrow | 2204 |
-| `setTab` | window | 2217 |
-| `showLineupComplements` | window | 2332 |
-| `showMainShell` | function | 8607 |
-| `socialDuoFocusLine` | function | 18830 |
-| `socialEnsurePeriod` | function | 18816 |
-| `socialFirstUseful` | function | 18820 |
-| `socialKeyFactLine` | function | 18840 |
-| `socialOpponentLine` | function | 18836 |
-| `socialPlayerFocusLine` | function | 18823 |
-| `socialSentence` | function | 18813 |
-| `socialVideoBuildFeedSpec` | function | 21960 |
-| `socialVideoBuildStorySpec` | function | 21906 |
-| `socialVideoCheckFonts` | function | 21725 |
-| `socialVideoDistributeSceneDurations` | function | 21673 |
-| `socialVideoFileName` | function | 21893 |
-| `socialVideoFitText` | function | 21710 |
-| `socialVideoFormAsOf` | function | 21789 |
-| `socialVideoLastDuelAsOf` | function | 21798 |
-| `socialVideoMatchdayLabel` | function | 21901 |
-| `socialVideoOpponentSceneData` | function | 21842 |
-| `socialVideoStandbildFrame` | function | 22124 |
-| `socialVideoStoryFrameData` | function | 22048 |
-| `socialVideoTableRank` | function | 21781 |
-| `socialVideoTopScorerAsOf` | function | 21810 |
-| `socialVideoUlmGamesForMatchday` | function | 21774 |
-| `socialVideoXmlSafeHtml` | function | 22136 |
-| `specialTeamsStateFromActive` | function | 4545 |
-| `stageSeasonDataPreview` | function | 6786 |
-| `stageSeasonDataPreviewFromFile` | function | 6838 |
-| `stageSeasonDataPreviewFromPaste` | function | 6852 |
-| `startApp` | window | 8745 |
-| `startEinsatzCenterDraftMode` | window | 7901 |
-| `startHallOfFameIntro` | function | 8868 |
-| `sumRoleGames` | function | 9753 |
-| `switchMatchdaySeason` | window | 23398 |
-| `switchOverviewSeason` | window | 23345 |
-| `syncHashFromState` | function | 3669 |
-| `t2s` | const-arrow | 3034 |
-| `teamAliasRuleMatches` | function | 15929 |
-| `teamAliasSeasonMatches` | function | 15920 |
-| `toggleAntiSynergyHideSgOnly` | window | 2354 |
-| `toggleAntiSynergyShowAll` | window | 2353 |
-| `toggleComparisonPicker` | window | 13386 |
-| `toggleComparisonSgOnly` | window | 13371 |
-| `toggleEinsatzCenterComboPlayer` | window | 8069 |
-| `toggleEinsatzCenterGroupRename` | window | 8010 |
-| `toggleEinsatzCenterRosterSuggestionPlayer` | window | 7941 |
-| `toggleHallOfFamePureSGPlayers` | window | 2227 |
-| `toggleLineupBuilderAvailable` | window | 2292 |
-| `toggleMatchcenterDuoDetails` | window | 2223 |
-| `toggleMatchcenterGames` | window | 9002 |
-| `toggleMatchcenterPlayerDetails` | window | 2222 |
-| `toggleMatchcenterSpecialTeamsGames` | window | 2221 |
-| `toggleSgOnlyAlltime` | window | 2381 |
-| `toggleSpecialTeamsGameDetails` | window | 2220 |
-| `toggleToolMenu` | window | 24153 |
-| `toolMenuElements` | function | 24128 |
-| `toolMenuItemElements` | function | 24131 |
-| `toolMenuOnClick` | function | 24189 |
-| `toolMenuOnKeydown` | function | 24165 |
-| `toPublicPlayerRegistry` | function | 4243 |
-| `uiDeltaIndicator` | function | 22930 |
-| `uiFormatNumber` | function | 22902 |
-| `uiHinweisKarte` | function | 22994 |
-| `uiInfoIcon` | function | 22948 |
-| `uiIntervallBalken` | function | 23070 |
-| `uiKennzahlKachel` | function | 22960 |
-| `uiKernaussage` | function | 22980 |
-| `uiMethodenbox` | function | 23089 |
-| `uiNotiz` | function | 23106 |
-| `uiObjektseite` | function | 23186 |
-| `uiObjektseiteSortTabs` | function | 23168 |
-| `uiPlatzhalter` | function | 23118 |
-| `uiRangliste` | function | 23016 |
-| `uiReliabilityDots` | function | 22915 |
-| `uiVerlauf` | function | 23044 |
-| `uniqueList` | function | 1839 |
-| `updateCoverAllTimeStats` | function | 8634 |
-| `updatePlayerRoleAvailability` | function | 5039 |
-| `validateGameStructure` | function | 6547 |
-| `validateMergedSeason` | function | 6634 |
-| `validateSeasonGames` | function | 6588 |
-| `validateSeasonKey` | function | 6611 |
-| `validateWrapperFormat` | function | 6623 |
-| `variance` | function | 3047 |
-| `viewEinsatzCenterMergedView` | window | 7918 |
-| `warnEventProcessingOnce` | function | 2722 |
-| `withoutHashSync` | function | 3686 |
+| `_render` | function | 21920 |
+| `acceptEinsatzCenterRosterSuggestion` | window | 7718 |
+| `activateGlobalSearchResult` | window | 23447 |
+| `activateToolMenuItem` | window | 23538 |
+| `addComparisonDuo` | window | 13495 |
+| `addComparisonDuoFromSelection` | window | 13487 |
+| `addComparisonItem` | window | 13395 |
+| `addDuoTeamGame` | function | 11327 |
+| `addEinsatzCenterExistingGroup` | window | 7735 |
+| `addEinsatzCenterGroupPlayer` | window | 7803 |
+| `addEinsatzCenterNewGroup` | window | 7744 |
+| `addEinsatzCenterRosterPlayer` | window | 7684 |
+| `addGoalieGameToStats` | function | 4577 |
+| `addGoalieSpecialTeamsGameToStats` | function | 4547 |
+| `addLineupBuilderPlayerToActiveLine` | window | 2349 |
+| `addLineupBuilderPlayerToLine` | window | 2339 |
+| `addLineupPlayer` | window | 2285 |
+| `addRosterImpactGameToStats` | function | 11862 |
+| `addSelectedComparisonItem` | window | 13403 |
+| `addSyntheticLineupPlayer` | window | 2365 |
+| `addUnique` | function | 3720 |
+| `aggregateAllTimeDuos` | function | 4927 |
+| `aggregateAllTimePlayers` | function | 4014 |
+| `aggregateAlltimeSpecialTeams` | function | 4527 |
+| `aggregateGoalieAlltimeStats` | function | 4763 |
+| `aggregateSeasonStats` | function | 4939 |
+| `analysisCacheContext` | function | 2191 |
+| `analysisCacheKey` | function | 2225 |
+| `annotateSpecialTeamsGoalEvent` | function | 4306 |
+| `antiSynergyDeltaClass` | function | 12097 |
+| `antiSynergyImpactScore` | function | 12003 |
+| `antiSynergyPartnerIsSgOnly` | function | 12149 |
+| `antiSynergySigned` | function | 12101 |
+| `appendSeasonGameDiagnostics` | function | 2561 |
+| `applyAppHash` | function | 3509 |
+| `applyCurrentSeasonCoverHighlight` | function | 6188 |
+| `applyGlobalPageFromHash` | function | 3476 |
+| `applySeasonContext` | function | 2426 |
+| `applySeasonScoringToRegistry` | function | 3878 |
+| `asOfCacheKeyPart` | function | 2219 |
+| `asOfEquals` | function | 3180 |
+| `assignStatus` | function | 5794 |
+| `avgOrNull` | function | 4058 |
+| `backToComparisonModeSelect` | window | 13423 |
+| `backToHome` | window | 2402 |
+| `buildAlltimePlayerDashModel` | function | 14562 |
+| `buildAnnotatedGoalEventsForGame` | function | 10920 |
+| `buildAppHash` | function | 3326 |
+| `buildBalancedLineupSet` | function | 19313 |
+| `buildBestThirdManOptions` | function | 10805 |
+| `buildComparisonDataset` | function | 13864 |
+| `buildComparisonExtraMetrics` | function | 13719 |
+| `buildComparisonSummary` | function | 14228 |
+| `buildConfidence` | function | 15773 |
+| `buildDigitalCoachReport` | function | 18397 |
+| `buildDirectDuoLookupForPlayer` | function | 10763 |
+| `buildDryRunReport` | function | 6412 |
+| `buildDuoAntiSynergy` | function | 12087 |
+| `buildDuoComparison` | function | 13508 |
+| `buildDuoCompatibility` | function | 11450 |
+| `buildDuoDirectProduction` | function | 11303 |
+| `buildDuoFloorCeiling` | function | 11214 |
+| `buildDuoGapAnalysis` | function | 11422 |
+| `buildDuoNetworkContext` | function | 11398 |
+| `buildDuoOpponentAdjusted` | function | 11385 |
+| `buildDuoProAnalysis` | function | 11509 |
+| `buildDuoReplacementOptions` | function | 11497 |
+| `buildDuoUntestedPotential` | function | 11473 |
+| `buildDuoUsageRate` | function | 11485 |
+| `buildDuoWarnings` | function | 11256 |
+| `buildDuoWithWithoutImpact` | function | 11351 |
+| `buildEinsatzCenterDraftExport` | function | 7864 |
+| `buildFieldPlayerExplanation` | function | 15201 |
+| `buildGlobalPageHash` | function | 3343 |
+| `buildGoalieAnalysisModel` | function | 9699 |
+| `buildGoalieComparisonDataset` | function | 13813 |
+| `buildGoalieGameRecord` | function | 4629 |
+| `buildGoaliePlayerExplanation` | function | 15276 |
+| `buildGoalieRoleProfile` | function | 9925 |
+| `buildGoalieStatsForSeason` | function | 4682 |
+| `buildHallOfFameIntroTitle` | function | 8574 |
+| `buildHallOfFameLongestNoGoalStreak` | function | 13034 |
+| `buildHashStringFromParsed` | function | 3358 |
+| `buildIdentityProfiles` | function | 5516 |
+| `buildLineAnalysis` | function | 19093 |
+| `buildLineupAnalysis` | function | 18918 |
+| `buildLineupExperienceProfile` | function | 18695 |
+| `buildLineupIntelligence` | function | 19082 |
+| `buildLineupOpponentDNAFit` | function | 18750 |
+| `buildLineupRecommendations` | function | 19349 |
+| `buildLineupScoreBreakdowns` | function | 19052 |
+| `buildLockerRoomSheet` | function | 18430 |
+| `buildMatchcenterStoryPreviewData` | function | 21015 |
+| `buildMatchdayCaptionBlocks` | function | 18501 |
+| `buildMatchIntelligence` | function | 18249 |
+| `buildMatchIntelligenceFromContext` | function | 18194 |
+| `buildMatchStories` | function | 18297 |
+| `buildMomentumSwingStats` | function | 11208 |
+| `buildMomentumSwingStatsRaw` | function | 11137 |
+| `buildOpponentIntelligence` | function | 10602 |
+| `buildOverviewCards` | function | 23097 |
+| `buildPlayerDataFoundation` | function | 4956 |
+| `buildPlayerEvents` | function | 5011 |
+| `buildPlayerExplanation` | function | 15330 |
+| `buildPlayerIdentity` | function | 3731 |
+| `buildPlayerIntelligence` | function | 15339 |
+| `buildRecencyWeightedGlobalIdentityProfile` | function | 12668 |
+| `buildRegistry` | function | 4980 |
+| `buildResponseGoalStats` | function | 11125 |
+| `buildResponseGoalStatsRaw` | function | 11076 |
+| `buildRosterImpactAnalysis` | function | 12018 |
+| `buildRosterImpactGameIndex` | function | 11905 |
+| `buildSeasonDataPreviewChanges` | function | 6517 |
+| `buildSeasonDuos` | function | 4883 |
+| `buildSeasonPlayerDashModel` | function | 14525 |
+| `buildSocialMediaContent` | function | 18531 |
+| `buildSoloDuoProfile` | function | 5281 |
+| `buildSpecialTeamsForGame` | function | 4321 |
+| `buildSpecialTeamsForSeason` | function | 4518 |
+| `buildStaticSeasonDataBlock` | function | 6236 |
+| `buildTeamLineBalance` | function | 19269 |
+| `cachedAnalysis` | function | 2229 |
+| `cancelDuoProPicker` | window | 11712 |
+| `cancelEinsatzCenterEdit` | window | 7665 |
+| `cancelHallOfFameIntro` | function | 8663 |
+| `cancelSocialVideoRecording` | window | 20071 |
+| `capSuperlativeLabel` | function | 15897 |
+| `clampScore` | function | 15760 |
+| `classicTagLabel` | function | 8817 |
+| `classifyLineIdentity` | function | 18794 |
+| `cleanupHallOfFameIntro` | function | 8603 |
+| `clearAnalysisCache` | function | 2188 |
+| `clearComparison` | window | 13414 |
+| `clearComparisonDuos` | window | 13502 |
+| `clearLineupAvailable` | window | 2338 |
+| `clearLineupBuilderLine` | window | 2357 |
+| `clearLineupPlayers` | window | 2292 |
+| `clearlyAboveAverage` | function | 5473 |
+| `clonePlain` | function | 4157 |
+| `closeGlobalSearch` | window | 23427 |
+| `closeMatchcenterStoryPreview` | window | 2257 |
+| `closeToolMenu` | window | 23527 |
+| `clutchText` | function | 5353 |
+| `collectAssistEventRefs` | function | 2896 |
+| `comparisonDuoContext` | function | 13428 |
+| `comparisonEventGameKey` | function | 13706 |
+| `comparisonEventPhaseLabel` | function | 13709 |
+| `comparisonFmt` | function | 13196 |
+| `comparisonItemKey` | function | 13174 |
+| `comparisonJsArg` | function | 13185 |
+| `comparisonNum` | function | 13188 |
+| `comparisonOpponentStrengthTier` | function | 13713 |
+| `comparisonPct` | function | 13192 |
+| `comparisonPctFmt` | function | 13200 |
+| `comparisonVariantValue` | function | 13317 |
+| `composeIdentityText` | function | 5748 |
+| `computeCurrentAppHash` | function | 3378 |
+| `computeEinsatzCenterStats` | function | 6878 |
+| `computeMetrics` | function | 5126 |
+| `computeRosterStatus` | function | 5774 |
+| `confidenceCautiousText` | function | 15819 |
+| `confidenceFromSampleSize` | function | 11995 |
+| `confirmDuoProSelection` | window | 11717 |
+| `confirmEinsatzCenterCombo` | window | 7836 |
+| `copyMatchcenterText` | window | 2259 |
+| `countBy` | function | 10349 |
+| `countCaptainAppearances` | function | 5756 |
+| `countGoalieAppearances` | function | 5770 |
+| `countMomentumClusters` | function | 5392 |
+| `countPlayedUlmGames` | function | 2816 |
+| `createPlayerAnalysisProfile` | function | 3651 |
+| `createSeasonBucket` | function | 1813 |
+| `datenstandQuoteState` | function | 22353 |
+| `decodeHashSegmentSafe` | function | 3251 |
+| `dedupeGamesById` | function | 15940 |
+| `dedupeIdentityProfileTags` | function | 12745 |
+| `deriveAsOfForSeason` | function | 3056 |
+| `deriveLineupUlmPlayerIds` | function | 7375 |
+| `deriveLineupValidPlayerIds` | function | 7351 |
+| `derivePlayerStatus` | function | 3760 |
+| `detectOverviewPhase` | function | 22853 |
+| `detectSide` | const-arrow | 2517 |
+| `detectTypes` | function | 5261 |
+| `detectUlmSide` | function | 2510 |
+| `diagnoseGameDuplicates` | function | 2539 |
+| `diagnosticError` | function | 6009 |
+| `diffGameIds` | function | 6359 |
+| `difficultConnectionConfidence` | function | 10739 |
+| `discardEinsatzCenterAutosave` | function | 7274 |
+| `discardSeasonDataPreview` | function | 6616 |
+| `dismissEinsatzCenterRosterSuggestion` | window | 7707 |
+| `downloadMatchdayStory` | window | 19937 |
+| `downloadSocialVideoContactSheet` | window | 21352 |
+| `downloadSocialVideoStandbild` | window | 21328 |
+| `duoProContextSeasonKey` | function | 11278 |
+| `duoProDomId` | function | 11673 |
+| `duoProPairKey` | function | 11275 |
+| `duoProPickerMessage` | function | 11679 |
+| `duoProPickerOpen` | function | 11676 |
+| `duoProPlayer` | function | 11292 |
+| `duoProResolveCandidate` | function | 11692 |
+| `duoProSelectionPayload` | function | 11701 |
+| `duoScopeSeasonKeys` | function | 10781 |
+| `einsatzCenterAutosaveDraft` | function | 7190 |
+| `einsatzCenterAutosaveInfoText` | function | 7296 |
+| `einsatzCenterAutosaveKey` | function | 7101 |
+| `einsatzCenterCanonicalJson` | function | 7434 |
+| `einsatzCenterComputeBaseHash` | function | 7449 |
+| `einsatzCenterCurrentRawBaseHash` | function | 7176 |
+| `einsatzCenterDeserializeAutosave` | function | 7136 |
+| `einsatzCenterDraftInView` | function | 7005 |
+| `einsatzCenterDraftIsEmpty` | function | 7113 |
+| `einsatzCenterDraftStaleHint` | function | 7019 |
+| `einsatzCenterInspectAutosave` | function | 7225 |
+| `einsatzCenterIsPlainObject` | function | 7130 |
+| `einsatzCenterSerializeDraft` | function | 7117 |
+| `einsatzCenterSha256Hex` | function | 7444 |
+| `einsatzCenterSoftIssues` | function | 7458 |
+| `einsatzCenterStorageRead` | function | 7102 |
+| `einsatzCenterStorageRemove` | function | 7108 |
+| `einsatzCenterStorageWrite` | function | 7105 |
+| `emptyDuoTeamImpactStats` | function | 11324 |
+| `emptyFieldRoleSeasonStats` | function | 3716 |
+| `emptyGoalieAlltimeStats` | function | 3688 |
+| `emptyGoalieSeasonStats` | function | 3664 |
+| `emptyGoalieSpecialTeamsStats` | function | 3704 |
+| `emptyPlayerSeasonStats` | function | 3655 |
+| `emptyRosterImpactStats` | function | 11851 |
+| `emptySpecialTeamsStats` | function | 4116 |
+| `ensureAppLoaded` | function | 8517 |
+| `ensureEinsatzCenterDraft` | function | 7041 |
+| `ensureExternalSeasonData` | function | 6214 |
+| `ensureFieldRoleSeasonStats` | function | 3826 |
+| `ensureGlobalDataLoaded` | function | 8445 |
+| `ensureGoalieSeasonStats` | function | 3821 |
+| `ensureHallOfFameIntroOverlay` | function | 8541 |
+| `ensureLineupDataLoaded` | function | 6724 |
+| `ensureLineupGroupsRegistryLoaded` | function | 6749 |
+| `ensureRmDuo` | function | 11056 |
+| `ensureRmPlayer` | function | 11050 |
+| `ensureSocialVideoExportCapabilityChecked` | function | 21309 |
+| `escAttr` | function | 8790 |
+| `escHtml` | function | 12764 |
+| `eventMatchesTeams` | function | 5347 |
+| `explainScore` | function | 15823 |
+| `exportEinsatzCenterDraft` | window | 7878 |
+| `exportExcel` | function | 21871 |
+| `fallbackIdentityProfile` | function | 8825 |
+| `fetchJson` | function | 6053 |
+| `fetchJsonLegacy` | function | 5985 |
+| `fetchJsonWithDiagnostics` | function | 6044 |
+| `fetchSeasonGameRaw` | function | 6079 |
+| `fetchTextWithDiagnostics` | function | 6014 |
+| `fileNameForLineupSeasonKey` | function | 6706 |
+| `filterComparisonDuoSuggestions` | window | 13460 |
+| `filterComparisonPlayers` | window | 13371 |
+| `filterLineupBuilderAvailable` | window | 2386 |
+| `filterLineupPlayers` | window | 2293 |
+| `filterPlayerSuggestions` | function | 13435 |
+| `filterPureSGPlayers` | function | 9491 |
+| `finalizeDuoTeamImpactStats` | function | 11343 |
+| `finalizeGoalieSeasonStats` | function | 4562 |
+| `finalizeMomentumStats` | function | 11131 |
+| `finalizePlayerRegistrySeason` | function | 3925 |
+| `finalizeResponseStats` | function | 11062 |
+| `finalizeRosterImpactStats` | function | 11854 |
+| `finalizeSeasonAppearanceTotals` | function | 3914 |
+| `finalizeSpecialTeamsStats` | function | 4160 |
+| `findDuplicateGameIds` | function | 6278 |
+| `findLineupGameContext` | function | 6783 |
+| `findLoadedSeasonPlayer` | function | 9454 |
+| `finishHallOfFameIntro` | function | 8630 |
+| `finiteNumbers` | function | 4055 |
+| `fitMatchcenterStoryLayout` | function | 21258 |
+| `fixMojibakeText` | function | 2463 |
+| `formatDiagnosticAttempt` | function | 6060 |
+| `formatGameLoadError` | function | 6073 |
+| `formatStatus` | function | 6057 |
+| `gameClassificationStatusLabel` | function | 2553 |
+| `gameDaySortValue` | function | 4226 |
+| `gameResult` | function | 3609 |
+| `generatePlayerInsights` | function | 9313 |
+| `generateSocialVideoContactSheets` | window | 20098 |
+| `generateSocialVideoStandbilder` | window | 20074 |
+| `generateSocialVideoVideos` | window | 20029 |
+| `getActiveAlltimeSeasonKeys` | function | 10521 |
+| `getActiveSeasonKey` | function | 2414 |
+| `getAllLoadedSeasonGames` | function | 10714 |
+| `getAlltimeAggregatedStyleProfile` | function | 14405 |
+| `getAllTimeCoverStats` | function | 8396 |
+| `getAllTimeDuoRows` | function | 10669 |
+| `getAllTimeDuoRowsForPlayer` | function | 10407 |
+| `getAllTimeGamesPlayedRows` | function | 10447 |
+| `getAllTimeIdentityStandings` | function | 12632 |
+| `getAllTimeMainPlayerRows` | function | 9495 |
+| `getAllTimeOpponentIntelligence` | function | 12553 |
+| `getAllTimeOpponentNames` | function | 2492 |
+| `getAllTimeOpponentTopScorers` | function | 12561 |
+| `getAllTimePenaltyRows` | function | 10472 |
+| `getAllTimePlayerRows` | function | 9463 |
+| `getAlltimeRank` | function | 13130 |
+| `getAlltimeRecencyWeight` | function | 10532 |
+| `getAllTimeSgOnlyRows` | function | 9498 |
+| `getAssistDiagnostics` | function | 4828 |
+| `getAssistPlayersFromEvent` | function | 2924 |
+| `getCarryPerformanceRows` | function | 10418 |
+| `getComparisonAlltimeTeamGoals` | function | 13221 |
+| `getComparisonAlltimeTrend` | function | 13295 |
+| `getComparisonChemistryFromEvents` | function | 13229 |
+| `getComparisonClutchFromEvents` | function | 13234 |
+| `getComparisonCurrentSelection` | function | 13360 |
+| `getComparisonEventsForItem` | function | 13678 |
+| `getComparisonPlayerOptions` | function | 13302 |
+| `getComparisonPlayerRow` | function | 13203 |
+| `getComparisonProfile` | function | 13264 |
+| `getComparisonRosterGames` | function | 13698 |
+| `getComparisonRosterGamesForSeason` | function | 13681 |
+| `getComparisonSeasonEvents` | function | 13224 |
+| `getComparisonSeasonLabel` | function | 13206 |
+| `getComparisonSeasonTrend` | function | 13269 |
+| `getComparisonStyleProfile` | function | 13239 |
+| `getComparisonTeamGoalsForSeason` | function | 13209 |
+| `getComparisonVariantsForPlayer` | function | 13320 |
+| `getDifficultConnectionRowsForPlayer` | function | 11806 |
+| `getDuoDirectScorerGameCounts` | function | 10839 |
+| `getDuoFieldPlayerRows` | function | 11281 |
+| `getDuoRowsForPlayerScope` | function | 10744 |
+| `getDuoScorerCountsWithCandidate` | function | 10785 |
+| `getDuoSharedFieldRows` | function | 11297 |
+| `getEffectiveLineupData` | function | 6991 |
+| `getEinsatzCenterGameDraft` | function | 7063 |
+| `getEmptyState` | function | 15874 |
+| `getFieldGameIdsForPlayer` | function | 2725 |
+| `getFurtherSameDayUlmGames` | function | 4242 |
+| `getGameDurationMinutes` | function | 4221 |
+| `getGameId` | function | 6272 |
+| `getGlobalAllTimeSnapshot` | function | 2418 |
+| `getGlobalIdentityProfile` | function | 12717 |
+| `getGlobalLoadableSeasonKeys` | function | 8389 |
+| `getGlobalOpponentSpecialistProfile` | function | 14861 |
+| `getGlobalPlayerBestSeason` | function | 10400 |
+| `getGlobalPlayerMilestones` | function | 10583 |
+| `getGlobalPlayerOpponentGameRows` | function | 14832 |
+| `getGlobalPlayerPeakGame` | function | 10389 |
+| `getGlobalPlayerTeamRecord` | function | 10363 |
+| `getGlobalProfileEvents` | function | 10336 |
+| `getGlobalRookieMilestone` | function | 10572 |
+| `getGlobalRookieSeasonKey` | function | 10558 |
+| `getGlobalSeasonStatRows` | function | 13114 |
+| `getGlobalTopScorerMilestones` | function | 10545 |
+| `getGoalieComparisonAlltimeTrend` | function | 13777 |
+| `getGoalieComparisonSeasonTrend` | function | 13794 |
+| `getGoalieDiagnostics` | function | 4814 |
+| `getGoalieDnaRows` | function | 10003 |
+| `getGoalieGameIdsForPlayer` | function | 2732 |
+| `getGoalieOpponentName` | function | 4097 |
+| `getGoalieOpponentTier` | function | 4101 |
+| `getGoalScorerFromEvent` | function | 2890 |
+| `getHallGoalieData` | function | 12927 |
+| `getHallOfFamePlayerIdSet` | function | 10332 |
+| `getHallOfFamePlayerRows` | function | 10329 |
+| `getHallOfFameStats` | function | 12587 |
+| `getJerseyNumber` | function | 2829 |
+| `getLineupAllRows` | function | 18611 |
+| `getLineupPlayerPool` | function | 18622 |
+| `getLoadedSeasonPlayerUi` | function | 10358 |
+| `getLoadedSeasonPointsByName` | function | 10302 |
+| `getMatchcenterDirectOpponents` | function | 16015 |
+| `getMatchcenterOpponents` | function | 15982 |
+| `getOppStrength` | function | 3622 |
+| `getOrCreatePlayerProfile` | function | 3769 |
+| `getPenaltyBasePersonalMinutes` | function | 4257 |
+| `getPenaltyDisciplineMinutes` | function | 4275 |
+| `getPenaltyDisciplineType` | function | 4213 |
+| `getPenaltyPersonalMinutes` | function | 4265 |
+| `getPenaltySpecialTeamsMinutes` | function | 4254 |
+| `getPhaseIndex` | function | 5111 |
+| `getPlayedUlmGames` | function | 2807 |
+| `getPlayerAlltimeFieldGames` | function | 2769 |
+| `getPlayerAlltimeGoalieGames` | function | 2772 |
+| `getPlayerAlltimeRoleGames` | function | 2750 |
+| `getPlayerAlltimeStats` | function | 9506 |
+| `getPlayerAlltimeTotalGames` | function | 2775 |
+| `getPlayerFieldGames` | function | 2739 |
+| `getPlayerGameRole` | function | 2710 |
+| `getPlayerGoalieAlltimeStats` | function | 9527 |
+| `getPlayerGoalieGames` | function | 2743 |
+| `getPlayerGoalieSeasonStats` | function | 9522 |
+| `getPlayerRegistryProfile` | function | 9514 |
+| `getPlayerRoleAvailability` | function | 9557 |
+| `getPlayerSeasonRoleGameSummary` | function | 2784 |
+| `getPlayerSeasonStats` | function | 9501 |
+| `getPlayerSourceId` | function | 2826 |
+| `getPreClubHistoryPlayerNames` | function | 2530 |
+| `getPreviousSeasonKey` | function | 10257 |
+| `getRosterEntryRegistryProfile` | function | 10735 |
+| `getRosterGameIdsForPlayer` | function | 2651 |
+| `getRosterImpactPlayerEventLookup` | function | 11872 |
+| `getRosterImpactPlayerGames` | function | 11943 |
+| `getRosterStatus` | function | 10538 |
+| `getScoreLabel` | function | 15764 |
+| `getSeasonApiBaseUrl` | function | 1838 |
+| `getSeasonDataPreview` | function | 6622 |
+| `getSeasonDataState` | function | 22885 |
+| `getSeasonIdentityProfile` | function | 10492 |
+| `getSeasonmanagerRosterSuggestion` | function | 7405 |
+| `getSeasonOriginBaseUrl` | function | 1858 |
+| `getSeasonPlayerFieldBasis` | function | 8894 |
+| `getSeasonScopedIdentityProfile` | function | 8925 |
+| `getSeasonTeamGameIds` | function | 2823 |
+| `getSeasonTeamGames` | function | 2819 |
+| `getSeasonUiPlayerForProfile` | function | 10488 |
+| `getSpecialTeamsDiagnostics` | function | 4821 |
+| `getSpecialTeamsPenaltyChunks` | function | 4278 |
+| `getStaticSeasonGames` | function | 6122 |
+| `getStoredLastView` | function | 3457 |
+| `getSyntheticLineupPlayers` | function | 18588 |
+| `getSyntheticLineupRow` | function | 18591 |
+| `getSyntheticLineupRows` | function | 18608 |
+| `getTeamAllTimeRecords` | function | 12511 |
+| `getTeamLogoUrlForStory` | function | 20592 |
+| `getUlmTeamStatus` | function | 2505 |
+| `getUniqueAllTimeOpponentNames` | function | 2500 |
+| `globalSearchEntries` | function | 23307 |
+| `globalSearchIsEditableTarget` | function | 23356 |
+| `globalSearchKeyAction` | function | 23362 |
+| `globalSearchMatch` | function | 23344 |
+| `globalSearchMatchdayScore` | function | 23330 |
+| `globalSearchOnKeydown` | function | 23457 |
+| `globalSearchPlayerScore` | function | 23321 |
+| `globalSearchTokens` | function | 23302 |
+| `goalieApplySampleConfidence` | function | 9684 |
+| `goalieBucketLooseSum` | function | 9692 |
+| `goalieBucketRows` | function | 9604 |
+| `goalieClampScore` | function | 9649 |
+| `goalieDetailFirstTime` | function | 9628 |
+| `goalieDnaKey` | function | 9912 |
+| `goalieDnaValue` | function | 9917 |
+| `goalieEntryRecognitionReason` | function | 2674 |
+| `goalieEventAbsSeconds` | function | 4077 |
+| `goalieEventSecondInPeriod` | function | 9635 |
+| `goalieGameDurationSeconds` | function | 4080 |
+| `goalieGameStateBeforeGoal` | function | 4085 |
+| `goalieInverseScore` | function | 9653 |
+| `goalieNum` | function | 9590 |
+| `goaliePctText` | function | 9641 |
+| `goaliePositiveCurveScore` | function | 9669 |
+| `goaliePositiveScore` | function | 9661 |
+| `goalieSafeNum` | function | 9645 |
+| `goalieStateGoals` | function | 9924 |
+| `goalieStdDev` | function | 9622 |
+| `goalieTierMeta` | function | 9613 |
+| `goalieTime` | function | 9596 |
+| `goalieTopRow` | function | 9610 |
+| `goalieWeightedScore` | function | 9678 |
+| `goToMainNavPoint` | window | 22571 |
+| `hallGoalieExplainForLabel` | function | 12964 |
+| `hallGoalieNameHtml` | function | 12943 |
+| `hallGoalieNum` | function | 12829 |
+| `hallGoaliePkStats` | function | 12855 |
+| `hallGoalieRowFromStats` | function | 12894 |
+| `hallGoalieSeasonLabel` | function | 12843 |
+| `hallGoalieSeasonScore` | function | 12874 |
+| `hallGoalieTime` | function | 12835 |
+| `hallGoalieTooltip` | function | 12960 |
+| `hallGoalieTopteamStats` | function | 12867 |
+| `handleComparisonDuoSearchKey` | window | 13468 |
+| `hasEmbeddedSeasonData` | function | 8386 |
+| `hashSegmentToSeasonKey` | function | 3164 |
+| `hasSeasonRole` | function | 5500 |
+| `hasSeasonSource` | function | 8382 |
+| `hofIntroDelay` | function | 8538 |
+| `identityClutchGoalsVsTeams` | function | 5383 |
+| `identityDecisiveGoalsVsTeams` | function | 5386 |
+| `identityGoalsVsTeams` | function | 5380 |
+| `identityInputs` | function | 5415 |
+| `identityLateGoalsVsTeams` | function | 5389 |
+| `identityOpponentGroups` | function | 5339 |
+| `identityPartnerStats` | function | 5325 |
+| `identityPointsVsTeams` | function | 5377 |
+| `incGoalieBucket` | function | 4068 |
+| `incrementUniqueCounter` | function | 3724 |
+| `initGlobalSearch` | function | 23479 |
+| `initHashRouting` | function | 3588 |
+| `initToolMenu` | function | 23577 |
+| `invalidateGlobalIdentityCache` | function | 2243 |
+| `isActiveAlltimeSeasonStats` | function | 10507 |
+| `isComebackRelevantGoal` | function | 5373 |
+| `isDecisiveGoal` | function | 5359 |
+| `isEinsatzCenterGameFromDraft` | function | 7000 |
+| `isExcludedGoalieAppearance` | function | 2684 |
+| `isFieldAppearance` | function | 2721 |
+| `isGamePlayed` | function | 3023 |
+| `isGoalieAppearance` | function | 2717 |
+| `isGoalieRosterEntry` | function | 2660 |
+| `isHallOfFameEligiblePlayer` | function | 10323 |
+| `isHallRowPureSG` | function | 12844 |
+| `isImportantClutchGoal` | function | 5354 |
+| `isLateGoal` | function | 5367 |
+| `isMatchPenaltyEvent` | function | 4205 |
+| `isNewSeasonDataState` | function | 22906 |
+| `isOwnGoalEvent` | function | 4295 |
+| `isPenaltyGoalEvent` | function | 4288 |
+| `isPreClubHistoryPlayerName` | function | 2533 |
+| `isPureSGPlayer` | function | 9487 |
+| `isRookieCandidateForSeason` | function | 10292 |
+| `isSameUlmTeamContext` | function | 4234 |
+| `isSeasonDataPreviewStale` | function | 6630 |
+| `isSgOnlyAlltimePlayer` | function | 9479 |
+| `isSgOnlyHallOfFameExcluded` | function | 10314 |
+| `isSyntheticLineupPlayerId` | function | 18585 |
+| `isToolMenuOpen` | function | 23515 |
+| `isTwoPlusTwoPenaltyEvent` | function | 4209 |
+| `isUsableExternalSeasonData` | function | 6205 |
+| `isValidAsOfDate` | function | 3168 |
+| `isValidAsOfStartTime` | function | 3171 |
+| `isVisibleSecondaryTrait` | function | 8796 |
+| `kpiBadge` | function | 14186 |
+| `kpiDelta` | function | 13905 |
+| `kpiItemColor` | function | 13911 |
+| `kpiNiceMax` | function | 14076 |
+| `kpiRadarValue` | function | 13999 |
+| `kpiTrendRows` | function | 14082 |
+| `kpiValueText` | function | 13901 |
+| `lexiconEntry` | function | 15570 |
+| `lexiconUniqueKeys` | function | 15562 |
+| `lineupAverage` | function | 18637 |
+| `lineupBuilderPoolIds` | function | 2300 |
+| `lineupCombinationIds` | function | 19114 |
+| `lineupDirectChemistryScore` | function | 19158 |
+| `lineupEvaluateComplementCandidate` | function | 19165 |
+| `lineupGroupDisplayName` | function | 6909 |
+| `lineupLevelLabel` | function | 18641 |
+| `lineupOpponentDNAForContext` | function | 18738 |
+| `lineupPlayerAnchorConfidence` | function | 19264 |
+| `lineupPlayerAnchorScore` | function | 19244 |
+| `lineupPlayerProfile` | function | 18842 |
+| `lineupRankCandidateIds` | function | 19099 |
+| `lineupRecommendationReason` | function | 19340 |
+| `lineupRoleDnaComplementScore` | function | 19134 |
+| `lineupRosterGamesForPlayer` | function | 18647 |
+| `lineupRowMap` | function | 19096 |
+| `lineupRowMeta` | function | 18614 |
+| `lineupScore` | function | 18631 |
+| `lineupStdDev` | function | 19128 |
+| `linkUiPlayersToRegistry` | function | 3856 |
+| `loadEinsatzCenterMismatchedAutosave` | function | 7320 |
+| `loadSeason` | function | 8462 |
+| `loadSeasonData` | function | 7905 |
+| `loadSeasonForGlobal` | function | 8414 |
+| `loadSeasonManifest` | function | 6137 |
+| `mainNavActiveKeyForPage` | function | 22565 |
+| `markFieldRoleAppearance` | function | 3831 |
+| `matchcenterAddDuoConnection` | function | 16417 |
+| `matchcenterAddPlanItem` | function | 17634 |
+| `matchcenterAddPlanWatch` | function | 17640 |
+| `matchcenterAddUlmDuoConnection` | function | 16568 |
+| `matchcenterAddUlmScoring` | function | 16195 |
+| `matchcenterAnalyzeDirect` | function | 16048 |
+| `matchcenterAnalyzeForm` | function | 16085 |
+| `matchcenterBuildCoachActivationHints` | function | 18382 |
+| `matchcenterBuildCoachAvoidList` | function | 18372 |
+| `matchcenterBuildCoachDangerPatterns` | function | 18354 |
+| `matchcenterBuildCoachHints` | function | 18110 |
+| `matchcenterBuildCoachIfThen` | function | 18362 |
+| `matchcenterBuildCoachKeyActors` | function | 18389 |
+| `matchcenterBuildCoachLevers` | function | 18344 |
+| `matchcenterBuildCoachPriorities` | function | 18337 |
+| `matchcenterBuildGoalieMatchup` | function | 16769 |
+| `matchcenterBuildInsights` | function | 17056 |
+| `matchcenterBuildIntelHeadline` | function | 18126 |
+| `matchcenterBuildIntelligenceDataQuality` | function | 17742 |
+| `matchcenterBuildIntelligenceSignals` | function | 18147 |
+| `matchcenterBuildIntelListFromPlan` | function | 18101 |
+| `matchcenterBuildMatchPlan` | function | 19459 |
+| `matchcenterBuildOneThingToWatch` | function | 18134 |
+| `matchcenterBuildOpponentAlarm` | function | 17991 |
+| `matchcenterBuildOpponentDNA` | function | 17812 |
+| `matchcenterBuildOpponentDuoInsights` | function | 16516 |
+| `matchcenterBuildOpponentDuos` | function | 16471 |
+| `matchcenterBuildPlanConfidence` | function | 17646 |
+| `matchcenterBuildSpecialTeamsMatchup` | function | 16699 |
+| `matchcenterBuildTimingAnalysis` | function | 16895 |
+| `matchcenterBuildTimingInsights` | function | 16884 |
+| `matchcenterBuildUlmDuoInsights` | function | 16666 |
+| `matchcenterBuildUlmDuos` | function | 16623 |
+| `matchcenterBuildUlmPlayerInsights` | function | 16360 |
+| `matchcenterBuildUlmPlayerScouting` | function | 16305 |
+| `matchcenterClassifyUlmGoalEvent` | function | 16184 |
+| `matchcenterCoachAdd` | function | 18274 |
+| `matchcenterCoachCautious` | function | 18271 |
+| `matchcenterCoachGameModel` | function | 18283 |
+| `matchcenterCoachPriorityFromAlarm` | function | 18327 |
+| `matchcenterConfidenceClass` | function | 17621 |
+| `matchcenterDateLabel` | function | 15924 |
+| `matchcenterDefaultSeasonKey` | function | 15962 |
+| `matchcenterDeriveOpponentType` | function | 17925 |
+| `matchcenterDirectContextGames` | function | 16679 |
+| `matchcenterDuoDirectionLabel` | function | 16410 |
+| `matchcenterDuoPairKey` | function | 16373 |
+| `matchcenterEmptyBuckets` | function | 16125 |
+| `matchcenterEmptyTimingStats` | function | 16830 |
+| `matchcenterEnsureOpponentDuo` | function | 16377 |
+| `matchcenterEnsureUlmDuo` | function | 16530 |
+| `matchcenterEnsureUlmPlayer` | function | 16133 |
+| `matchcenterFinalizeOpponentDuos` | function | 16436 |
+| `matchcenterFinalizeUlmDuos` | function | 16587 |
+| `matchcenterFinalizeUlmPlayers` | function | 16236 |
+| `matchcenterFormLine` | function | 17051 |
+| `matchcenterGameLine` | function | 17045 |
+| `matchcenterGoalAbsSeconds` | function | 16817 |
+| `matchcenterGoalieFitScore` | function | 16752 |
+| `matchcenterGoalieKey` | function | 16747 |
+| `matchcenterInferPriority` | function | 17627 |
+| `matchcenterIntelAddAlarm` | function | 17970 |
+| `matchcenterIntelCurve` | function | 17694 |
+| `matchcenterIntelDataLabel` | function | 17739 |
+| `matchcenterIntelDuoRef` | function | 17956 |
+| `matchcenterIntelInverseCurve` | function | 17700 |
+| `matchcenterIntelPct` | function | 17719 |
+| `matchcenterIntelPlayerRef` | function | 17943 |
+| `matchcenterIntelPriorityClass` | function | 17729 |
+| `matchcenterIntelPriorityFromScore` | function | 17723 |
+| `matchcenterIntelPriorityLabel` | function | 17735 |
+| `matchcenterIntelRate` | function | 17715 |
+| `matchcenterIntelWeighted` | function | 17704 |
+| `matchcenterIsFreiburgTuebingenTeamName` | function | 15949 |
+| `matchcenterOpponentMode` | function | 15979 |
+| `matchcenterPct` | function | 16695 |
+| `matchcenterPersonalPenaltyMinutesForSide` | function | 16686 |
+| `matchcenterPlanRateText` | function | 17613 |
+| `matchcenterPlanScoreText` | function | 17609 |
+| `matchcenterPriorityLabel` | function | 17618 |
+| `matchcenterRegisterUlmProfileGame` | function | 16171 |
+| `matchcenterResultClass` | function | 17036 |
+| `matchcenterSeasonHasGames` | function | 15959 |
+| `matchcenterSigned` | function | 15918 |
+| `matchcenterSocialAdd` | function | 18451 |
+| `matchcenterSocialCaption` | function | 18458 |
+| `matchcenterSpecialTeamsForGame` | function | 16682 |
+| `matchcenterStoryAddCandidate` | function | 20696 |
+| `matchcenterStoryAddFact` | function | 20677 |
+| `matchcenterStoryBestClutchDuo` | function | 20921 |
+| `matchcenterStoryBestClutchPlayer` | function | 20877 |
+| `matchcenterStoryCandidateForBudget` | function | 20734 |
+| `matchcenterStoryCategoryForPlanFact` | function | 21006 |
+| `matchcenterStoryCategoryLimit` | function | 20719 |
+| `matchcenterStoryClutchFact` | function | 20854 |
+| `matchcenterStoryClutchPriority` | function | 20955 |
+| `matchcenterStoryCompetitionLabel` | function | 20958 |
+| `matchcenterStoryCurrentStreak` | function | 20801 |
+| `matchcenterStoryDirectFactCandidates` | function | 20971 |
+| `matchcenterStoryDownloadFileName` | function | 19927 |
+| `matchcenterStoryDuoClutchFact` | function | 20931 |
+| `matchcenterStoryDuoClutchTotal` | function | 20913 |
+| `matchcenterStoryDuoFact` | function | 20934 |
+| `matchcenterStoryEstimateFactWeight` | function | 20690 |
+| `matchcenterStoryFactKey` | function | 20684 |
+| `matchcenterStoryFormFact` | function | 20819 |
+| `matchcenterStoryFormFactCandidates` | function | 20830 |
+| `matchcenterStoryInlineStat` | function | 20659 |
+| `matchcenterStoryLastDuelLabel` | function | 20967 |
+| `matchcenterStoryLateGoalsForOutcome` | function | 20850 |
+| `matchcenterStoryLogoBase` | function | 20571 |
+| `matchcenterStoryLogoForOpponent` | function | 20622 |
+| `matchcenterStoryLooksArtificial` | function | 20687 |
+| `matchcenterStoryNameClass` | function | 21127 |
+| `matchcenterStoryNormalizePickOptions` | function | 20723 |
+| `matchcenterStoryPickFactItems` | function | 20744 |
+| `matchcenterStoryPickFacts` | function | 20797 |
+| `matchcenterStoryPlanFactCandidates` | function | 20993 |
+| `matchcenterStoryPlayerClutchFact` | function | 20887 |
+| `matchcenterStoryPlayerClutchTotal` | function | 20869 |
+| `matchcenterStoryRankRows` | function | 20663 |
+| `matchcenterStoryRankText` | function | 20655 |
+| `matchcenterStorySafeLogoUrl` | function | 20577 |
+| `matchcenterStoryShortDuel` | function | 20962 |
+| `matchcenterStoryTableRank` | function | 20637 |
+| `matchcenterStoryUlmTableRank` | function | 20648 |
+| `matchcenterStoryVisibleFacts` | function | 21133 |
+| `matchcenterStoryWinlessStreak` | function | 20810 |
+| `matchcenterTimeValue` | function | 16822 |
+| `matchcenterTimingStatsForGames` | function | 16846 |
+| `matchcenterUlmScoutingConfidence` | function | 16128 |
+| `matchcenterUlmTeamLabelForGame` | function | 17040 |
+| `matchcenterUpdateUlmSeasonRow` | function | 16177 |
+| `matchcenterWindowForSecond` | function | 16839 |
+| `matchdayFixtureCardHtml` | function | 22747 |
+| `matchdayGameCardHtml` | function | 22722 |
+| `matchdayLineupCardHtml` | function | 22715 |
+| `matchdayLineupInfo` | function | 22703 |
+| `matchdayUlmGames` | function | 22694 |
+| `medianOrNull` | function | 4062 |
+| `mergeDuoSet` | function | 4910 |
+| `mergeGoalieSpecialTeamsStats` | function | 4535 |
+| `mergeSpecialTeamsStats` | function | 4170 |
+| `moveGlobalSearch` | function | 23441 |
+| `noGoalStreakGoaliesForGame` | function | 13026 |
+| `normalizeAssistPlayerName` | function | 2893 |
+| `normalizeComparisonItem` | function | 13180 |
+| `normalizeDuoComparisonItem` | function | 13424 |
+| `normalizeEventPlayerRef` | function | 2832 |
+| `normalizeLineupLines` | function | 2303 |
+| `normalizePlayerName` | function | 2520 |
+| `normalizeSecondaryTraits` | function | 5474 |
+| `onGlobalSearchInput` | window | 23435 |
+| `openAllTimePlayers` | window | 8530 |
+| `openComparisonCenter` | window | 8700 |
+| `openDuoProPicker` | window | 11711 |
+| `openEinsatzCenter` | window | 6860 |
+| `openGlobalSearch` | window | 23402 |
+| `openHallOfFame` | window | 8676 |
+| `openLexicon` | window | 8773 |
+| `openLigaGegner` | window | 23159 |
+| `openLineupBuilder` | window | 8751 |
+| `openMatchcenter` | window | 8729 |
+| `openMatchcenterStoryPreview` | window | 2256 |
+| `openMatchday` | window | 22676 |
+| `openMatchdayTimeline` | window | 22668 |
+| `openOverview` | window | 22617 |
+| `openSeason` | window | 8527 |
+| `openToolMenu` | window | 23519 |
+| `overviewCompactTableHtml` | function | 22976 |
+| `overviewCrossSeasonTrendHtml` | function | 23035 |
+| `overviewFormHtml` | function | 22994 |
+| `overviewLastMatchdayText` | function | 22942 |
+| `overviewLineupLinkHtml` | function | 23052 |
+| `overviewMatchcenterLinkHtml` | function | 23049 |
+| `overviewMatchdayEndMs` | function | 22847 |
+| `overviewMatchdayStartMs` | function | 22841 |
+| `overviewNextMatchdayHtml` | function | 22952 |
+| `overviewOpponentLabel` | function | 22930 |
+| `overviewOpponentPreviewHtml` | function | 23044 |
+| `overviewRankChangeTile` | function | 23071 |
+| `overviewRecordHtml` | function | 23028 |
+| `overviewSeasonAwardHtml` | function | 23017 |
+| `overviewSeasonBilanzHtml` | function | 23009 |
+| `p1NarrativeKey` | function | 15838 |
+| `paintGlobalSearchResults` | function | 23394 |
+| `parseAppHash` | function | 3271 |
+| `parseAsOfQueryValue` | function | 3310 |
+| `parseComparisonVariant` | function | 13345 |
+| `parseLastViewState` | function | 3445 |
+| `parseSeasonDataState` | function | 22896 |
+| `pct` | function | 5278 |
+| `pctValue` | function | 12767 |
+| `pdashBestPhase` | function | 14472 |
+| `pdashInsight` | function | 14510 |
+| `pdashInsights` | function | 14513 |
+| `pdashNum` | function | 14456 |
+| `pdashOpponentStrength` | function | 14490 |
+| `pdashOpponentTier` | function | 14484 |
+| `pdashPct` | function | 14460 |
+| `pdashPhaseLabel` | function | 14464 |
+| `pdashTopCount` | function | 14468 |
+| `pdashTopOpponent` | function | 14480 |
+| `pdashTopPartner` | function | 14476 |
+| `penaltyRawText` | function | 4202 |
+| `playerAppearedForUlmStatusInSeasonByName` | function | 10273 |
+| `playerAppearedInSeasonByName` | function | 10262 |
+| `playerExplainAdd` | function | 15146 |
+| `playerExplainConfidence` | function | 15137 |
+| `playerExplainConfidenceLabel` | function | 15143 |
+| `playerExplainContextSentence` | function | 15182 |
+| `playerExplainHeadline` | function | 15172 |
+| `playerExplainRolePhrase` | function | 15163 |
+| `playerExplainStyleSignature` | function | 15151 |
+| `playerRoleInGame` | function | 2705 |
+| `processGame` | function | 2957 |
+| `rAlltimeKpis` | function | 13136 |
+| `rAlltimePlayerDashboard` | function | 14665 |
+| `rAllTimePlayersPage` | function | 15427 |
+| `rankNarratives` | function | 15860 |
+| `rAntiSynergyCompareChip` | function | 12106 |
+| `rAntiSynergyDelta` | function | 12090 |
+| `rAntiSynergyMainDelta` | function | 12153 |
+| `rAntiSynergyMetricRow` | function | 12114 |
+| `rAntiSynergyWinrateRow` | function | 12136 |
+| `rAntiSynergyWinrateText` | function | 12130 |
+| `rAsOfSelector` | function | 23180 |
+| `ratio01` | function | 5279 |
+| `rAvgResponseTimeNote` | function | 12387 |
+| `rCarryPerformanceRows` | function | 10434 |
+| `rClassicRoleTags` | function | 8882 |
+| `rClassicTagTip` | function | 8820 |
+| `rClutch` | function | 9113 |
+| `rClutchBadge` | function | 8782 |
+| `rComparisonCenterPage` | function | 14335 |
+| `rComparisonDashboard` | function | 14286 |
+| `rComparisonDuoSearchBox` | function | 13654 |
+| `rComparisonDuoSuggestionButtons` | function | 13447 |
+| `rComparisonMiniOverview` | function | 14274 |
+| `rComparisonModeSelect` | function | 13675 |
+| `rComparisonRoles` | function | 14278 |
+| `rComparisonStyles` | function | 14297 |
+| `rContextBar` | function | 23263 |
+| `rDifficultConnectionList` | function | 12163 |
+| `rDifficultConnectionListCompact` | function | 12230 |
+| `rDifficultConnectionListCompactLegacy` | function | 12188 |
+| `rDifficultConnectionsCard` | function | 12269 |
+| `rDuoCenterPro` | function | 11553 |
+| `rDuoCompareSummaryCards` | function | 13533 |
+| `rDuoComparisonBars` | function | 13528 |
+| `rDuoComparisonChemistry` | function | 13586 |
+| `rDuoComparisonContext` | function | 13618 |
+| `rDuoComparisonDashboard` | function | 13640 |
+| `rDuoComparisonDetails` | function | 13636 |
+| `rDuoComparisonImpact` | function | 13602 |
+| `rDuoComparisonPage` | function | 13664 |
+| `rDuoComparisonProfile` | function | 13564 |
+| `rDuoProPlayerSelect` | function | 11740 |
+| `rDuoResponseMomentumCard` | function | 12445 |
+| `rDuoRows` | function | 10693 |
+| `recommendLineComplements` | function | 19431 |
+| `recordOverviewVisit` | function | 22915 |
+| `registerPlayerIdentity` | function | 3803 |
+| `registerSeasonRosters` | function | 3836 |
+| `rEinsatzCenterAutosaveBanner` | function | 7282 |
+| `rEinsatzCenterCombo` | function | 6805 |
+| `rEinsatzCenterComboEditor` | function | 7510 |
+| `rEinsatzCenterDraftBanner` | function | 7023 |
+| `rEinsatzCenterDraftMark` | function | 7009 |
+| `rEinsatzCenterDraftStatsHint` | function | 7013 |
+| `rEinsatzCenterEditPage` | function | 7610 |
+| `rEinsatzCenterGameCard` | function | 6814 |
+| `rEinsatzCenterGameEditor` | function | 7557 |
+| `rEinsatzCenterGroup` | function | 6792 |
+| `rEinsatzCenterGroupEditor` | function | 7479 |
+| `rEinsatzCenterPage` | function | 6833 |
+| `rEinsatzCenterRosterSuggestionCard` | function | 7526 |
+| `rEinsatzCenterStats` | function | 6915 |
+| `relative01` | function | 5280 |
+| `removeComparisonDuo` | window | 13498 |
+| `removeComparisonItem` | window | 13410 |
+| `removeEinsatzCenterCombo` | window | 7847 |
+| `removeEinsatzCenterGroup` | window | 7761 |
+| `removeEinsatzCenterGroupPlayer` | window | 7811 |
+| `removeEinsatzCenterRosterPlayer` | window | 7692 |
+| `removeLineupBuilderPlayerFromLine` | window | 2350 |
+| `removeLineupPlayer` | window | 2291 |
+| `rEmptyState` | function | 15886 |
+| `renameEinsatzCenterGroup` | window | 7783 |
+| `render` | function | 21902 |
+| `renderComparisonDuoSuggestions` | function | 13451 |
+| `renderTags` | function | 8890 |
+| `repairRenderedMojibake` | function | 2466 |
+| `resetPlayerRegistrySeason` | function | 3748 |
+| `resolveAssistPlayer` | function | 2938 |
+| `resolveCurrentSeasonKey` | function | 6168 |
+| `resolveGoalScorerPlayer` | function | 2875 |
+| `resolveLineupPlayerName` | function | 6777 |
+| `resolvePlayerRoleView` | function | 9575 |
+| `resolveRosterPlayerByRef` | function | 2844 |
+| `responseExcerpt` | function | 6006 |
+| `responseMomentumAbsSeconds` | function | 10875 |
+| `responseMomentumActor` | function | 10901 |
+| `responseMomentumConfidence` | function | 11034 |
+| `responseMomentumEmptyState` | function | 11039 |
+| `responseMomentumGameRows` | function | 10885 |
+| `responseMomentumGoalActors` | function | 10912 |
+| `responseMomentumPairKey` | function | 11047 |
+| `responseMomentumSide` | function | 10892 |
+| `responseMomentumTime` | function | 10878 |
+| `responseMomentumTooltipFor` | function | 12350 |
+| `restoreEinsatzCenterAutosave` | function | 7256 |
+| `restoreHallOfFameIntroPrevious` | function | 8618 |
+| `resultGoalsAgainstForSide` | function | 4106 |
+| `returnToEinsatzCenterEdit` | window | 7678 |
+| `rGlobalAllTimeStats` | function | 14773 |
+| `rGlobalCareerHeader` | function | 14682 |
+| `rGlobalDevelopment` | function | 14791 |
+| `rGlobalDnaBars` | function | 14426 |
+| `rGlobalDuoNetwork` | function | 14891 |
+| `rGlobalOpponentSpecialist` | function | 15090 |
+| `rGlobalOverview` | function | 14720 |
+| `rGlobalPartnerOpponentPanel` | function | 14668 |
+| `rGlobalProfileTags` | function | 12758 |
+| `rGlobalSearchPanelHtml` | function | 23391 |
+| `rGlobalSearchResultsHtml` | function | 23380 |
+| `rGlobalSearchToggle` | function | 23377 |
+| `rGoalieAnalysis` | function | 10230 |
+| `rGoalieBars` | function | 9858 |
+| `rGoalieDnaBars` | function | 10007 |
+| `rGoalieFirstGoalResistance` | function | 10065 |
+| `rGoalieInsights` | function | 10138 |
+| `rGoalieKpis` | function | 10042 |
+| `rGoalieMiniMetrics` | function | 10059 |
+| `rGoalieMomentum` | function | 10079 |
+| `rGoalieOpponents` | function | 10181 |
+| `rGoalieOverview` | function | 10160 |
+| `rGoaliePhaseProfile` | function | 10121 |
+| `rGoaliePhases` | function | 10178 |
+| `rGoalieRoleTraits` | function | 9999 |
+| `rGoalieScoringRow` | function | 10021 |
+| `rGoalieStability` | function | 10193 |
+| `rGoalieTable` | function | 10222 |
+| `rGoalieTierCards` | function | 10093 |
+| `rHallDuoTemple` | function | 12820 |
+| `rHallGoalieAwardCards` | function | 13060 |
+| `rHallGoalieLegends` | function | 13081 |
+| `rHallGoalieRankCard` | function | 12979 |
+| `rHallOfFameHero` | function | 12771 |
+| `rHallOfFamePage` | function | 15469 |
+| `rHallPodiumList` | function | 12797 |
+| `rHallSGBadge` | function | 12852 |
+| `rIaShell` | function | 23283 |
+| `rIdentityCards` | function | 8856 |
+| `rIdentityTags` | function | 8836 |
+| `rInsights` | function | 9374 |
+| `rInteractiveDuoCenterPro` | function | 11747 |
+| `rKpiCards` | function | 13914 |
+| `rKpiExtendedMetrics` | function | 14061 |
+| `rKpiInfoCards` | function | 14196 |
+| `rKpiMetricCard` | function | 14053 |
+| `rKpiMirrorRows` | function | 13939 |
+| `rKpiObjectMini` | function | 14189 |
+| `rKpiOpponentStrength` | function | 14158 |
+| `rKpiRadar` | function | 14010 |
+| `rKpiShareBars` | function | 14045 |
+| `rKpiTextMetricCard` | function | 14058 |
+| `rKpiTrendCompare` | function | 14091 |
+| `rKPIVergleich` | function | 14260 |
+| `rLexiconPage` | function | 15584 |
+| `rLexiconRows` | function | 15580 |
+| `rLigaGegnerPlaceholderPage` | function | 23163 |
+| `rLineupBuilderAvailablePanel` | function | 20293 |
+| `rLineupBuilderPage` | function | 20469 |
+| `rLineupComplementCards` | function | 20390 |
+| `rLineupMetricPills` | function | 20279 |
+| `rLineupRecommendationCards` | function | 20341 |
+| `rLineupRecommendationMode` | function | 20356 |
+| `rLineupScoreRows` | function | 20175 |
+| `rLineupSimpleCards` | function | 20197 |
+| `rLineupTestLine` | function | 20403 |
+| `rLineupTestMode` | function | 20452 |
+| `rMainNav` | function | 22578 |
+| `rMainNavBottom` | function | 22600 |
+| `rMatchcenterCoachCardList` | function | 19754 |
+| `rMatchcenterCoachIfThen` | function | 19768 |
+| `rMatchcenterCoachSimpleList` | function | 19776 |
+| `rMatchcenterCopyButton` | function | 19846 |
+| `rMatchcenterDetailsSection` | function | 17028 |
+| `rMatchcenterDigitalCoach` | function | 19781 |
+| `rMatchcenterDuoRankCard` | function | 17347 |
+| `rMatchcenterDuoRow` | function | 17323 |
+| `rMatchcenterDuosTab` | function | 17494 |
+| `rMatchcenterDuoWatchCard` | function | 17303 |
+| `rMatchcenterFormCard` | function | 17084 |
+| `rMatchcenterFormSection` | function | 17002 |
+| `rMatchcenterGamesList` | function | 17105 |
+| `rMatchcenterGoalieCard` | function | 17556 |
+| `rMatchcenterGoalieMatchup` | function | 17580 |
+| `rMatchcenterIntelCoachHints` | function | 19740 |
+| `rMatchcenterIntelOverview` | function | 19694 |
+| `rMatchcenterKpi` | function | 17077 |
+| `rMatchcenterLineupBuilder` | function | 20206 |
+| `rMatchcenterLockerList` | function | 19851 |
+| `rMatchcenterLockerRoomSheet` | function | 19863 |
+| `rMatchcenterMatchPlan` | function | 20548 |
+| `rMatchcenterOpponentAlarm` | function | 19672 |
+| `rMatchcenterOpponentDNA` | function | 19639 |
+| `rMatchcenterOpponentDuos` | function | 17451 |
+| `rMatchcenterOpponentScouting` | function | 17264 |
+| `rMatchcenterPage` | function | 21379 |
+| `rMatchcenterPlanItems` | function | 19605 |
+| `rMatchcenterPlanWatch` | function | 19623 |
+| `rMatchcenterPlayerRow` | function | 17138 |
+| `rMatchcenterPlayersTab` | function | 17300 |
+| `rMatchcenterProfileSection` | function | 16982 |
+| `rMatchcenterRankCard` | function | 17162 |
+| `rMatchcenterResponseMomentum` | function | 12472 |
+| `rMatchcenterScoutingSummary` | function | 20504 |
+| `rMatchcenterSocialBlock` | function | 19919 |
+| `rMatchcenterSocialMediaCenter` | function | 20121 |
+| `rMatchcenterSpecialCard` | function | 17497 |
+| `rMatchcenterSpecialTeams` | function | 17506 |
+| `rMatchcenterStoryForm` | function | 21169 |
+| `rMatchcenterStoryFrame` | function | 21252 |
+| `rMatchcenterStoryLogo` | function | 21164 |
+| `rMatchcenterStoryPlayerCard` | function | 21174 |
+| `rMatchcenterStoryPreview` | function | 21182 |
+| `rMatchcenterTabs` | function | 16979 |
+| `rMatchcenterTimeBars` | function | 16906 |
+| `rMatchcenterTiming` | function | 16940 |
+| `rMatchcenterTimingStatsCard` | function | 16920 |
+| `rMatchcenterUlmDuoRankCard` | function | 17402 |
+| `rMatchcenterUlmDuoRow` | function | 17379 |
+| `rMatchcenterUlmDuos` | function | 17408 |
+| `rMatchcenterUlmDuoWatchCard` | function | 17353 |
+| `rMatchcenterUlmImpactCard` | function | 17168 |
+| `rMatchcenterUlmPlayerRow` | function | 17197 |
+| `rMatchcenterUlmRankCard` | function | 17221 |
+| `rMatchcenterUlmScouting` | function | 17227 |
+| `rMatchcenterWatchCard` | function | 17117 |
+| `rMatchdayDetailPage` | function | 22776 |
+| `rMatchdayPage` | function | 22816 |
+| `rMatchdayTimelinePage` | function | 22765 |
+| `rMatchdayTimelineRow` | function | 22757 |
+| `rMatrix` | function | 8986 |
+| `rmTerm` | function | 12357 |
+| `roleGameStableKey` | function | 2747 |
+| `roleTraitLabel` | function | 8793 |
+| `rOppBreakdown` | function | 9278 |
+| `rOpponentIntelBars` | function | 10657 |
+| `rOpponentTopScorerTable` | function | 12611 |
+| `rosterImpactConfidence` | function | 11985 |
+| `rosterImpactConfidenceWeight` | function | 11999 |
+| `rosterPlayerMatches` | function | 2636 |
+| `rOverviewPage` | function | 23147 |
+| `rPdashLabel` | function | 14617 |
+| `rPdashStat` | function | 14620 |
+| `rPenalties` | function | 9259 |
+| `rPhases` | function | 9043 |
+| `rPlayerDash` | function | 14623 |
+| `rPlayerDashStyles` | function | 14605 |
+| `rPlayerExplainItems` | function | 15369 |
+| `rPlayerExplanation` | function | 15374 |
+| `rPlayerResponseMomentumCard` | function | 12426 |
+| `rPlayerRoleSwitch` | function | 9583 |
+| `rRadar` | function | 9063 |
+| `rRes` | const-arrow | 8781 |
+| `rResponseMomentumOverviewCard` | function | 12402 |
+| `rResponseRateDisplay` | function | 12366 |
+| `rRmKpi` | function | 12373 |
+| `rRmTopList` | function | 12391 |
+| `rRoleTraitTip` | function | 8800 |
+| `rRosterImpactStatLine` | function | 12145 |
+| `rRosterStatusBadge` | function | 8809 |
+| `rScoreBreakdown` | function | 15900 |
+| `rSeasonDataPreviewCard` | function | 6649 |
+| `rSeasonDataPreviewContextHint` | function | 23215 |
+| `rSeasonDataPreviewRows` | function | 6639 |
+| `rSeasonDataPreviewStatus` | function | 6636 |
+| `rSeasonDataStateContextHint` | function | 23232 |
+| `rSeasonDuoCenterPro` | function | 11803 |
+| `rSeasonDuoSummary` | function | 9033 |
+| `rSeasonInsightsTab` | function | 9359 |
+| `rSeasonLandingPage` | function | 14704 |
+| `rSeasonPlayerDashboard` | function | 14662 |
+| `rSeasonProfileKpis` | function | 8942 |
+| `rSeasonProfileTagStrip` | function | 8972 |
+| `rSeasonTrendRows` | function | 14386 |
+| `rSocialVideoBlock` | function | 19988 |
+| `rSparkline` | function | 13150 |
+| `rStyleMetricTip` | function | 8805 |
+| `rStyleProfileBars` | function | 8845 |
+| `rTable` | function | 9428 |
+| `rTeamPage` | function | 21528 |
+| `rTeamResponseMomentumCard` | function | 12465 |
+| `rTimeline` | function | 9148 |
+| `rToolMenu` | function | 23505 |
+| `runComparison` | window | 13415 |
+| `runDuoComparison` | window | 13503 |
+| `saveLastView` | function | 3462 |
+| `scoreNarrative` | function | 15841 |
+| `seasonApiUrl` | function | 1855 |
+| `seasonDataPreviewRerender` | function | 6495 |
+| `seasonDataPreviewRow` | function | 6499 |
+| `seasonGameApiUrls` | function | 1873 |
+| `seasonGameHtmlUrls` | function | 1883 |
+| `seasonHasPureUlmTeam` | function | 10307 |
+| `seasonKeyToHashSegment` | function | 3161 |
+| `seasonPathPrefix` | function | 1867 |
+| `seasonRoleKeysForPlayer` | function | 5491 |
+| `seasonRoleTraitsFromClassic` | function | 5486 |
+| `seasonStatNumber` | function | 10497 |
+| `seasonStatSetSize` | function | 10501 |
+| `seedHallOfFameIntroParticles` | function | 8585 |
+| `selectAllLineupAvailable` | window | 2337 |
+| `selectComparisonDuoSuggestion` | window | 13461 |
+| `selectComparisonMode` | window | 13422 |
+| `selectComparisonPlayer` | window | 13379 |
+| `selectDuoProQuick` | window | 11713 |
+| `selectEinsatzCenterEditGame` | window | 7680 |
+| `selectEnforcerKeys` | function | 5503 |
+| `serializeFieldRoleSeasonStats` | function | 3979 |
+| `serializeGoalieSeasonStats` | function | 3956 |
+| `serializeSeasonStats` | function | 3941 |
+| `serializeSpecialTeamsStats` | function | 4167 |
+| `setAntiSynergyView` | window | 2383 |
+| `setComparisonDuoMode` | window | 13432 |
+| `setComparisonDuoPlayer` | window | 13481 |
+| `setComparisonDuoSearch` | window | 13434 |
+| `setComparisonDuoSeasonKey` | window | 13433 |
+| `setComparisonRoleMode` | window | 13385 |
+| `setComparisonVariant` | window | 13390 |
+| `setContextAsOf` | window | 23193 |
+| `setDuoProPickerState` | function | 11682 |
+| `setDuoProSelection` | window | 11732 |
+| `setEinsatzCenterGameNote` | window | 7854 |
+| `setEinsatzCenterGroupPlayerPosition` | window | 7819 |
+| `setEinsatzCenterIncludeDraft` | window | 7679 |
+| `setEinsatzCenterSeason` | window | 6854 |
+| `setGlobalPlayer` | window | 2409 |
+| `setGlobalPlayerDuo` | window | 2410 |
+| `setGlobalTab` | window | 2411 |
+| `setGoalieTab` | window | 2250 |
+| `setLineupActiveLine` | window | 2322 |
+| `setLineupBuilderMode` | window | 2321 |
+| `setLineupBuilderOpponent` | window | 2320 |
+| `setLineupBuilderSeason` | window | 2308 |
+| `setLineupNewPlayerProfile` | window | 2364 |
+| `setMatchcenterContext` | window | 8770 |
+| `setMatchcenterOpponent` | window | 8769 |
+| `setMatchcenterSeason` | window | 8771 |
+| `setMatchcenterTab` | window | 2255 |
+| `setP` | window | 2247 |
+| `setPage` | window | 2393 |
+| `setPlayerRoleView` | window | 2249 |
+| `setSeasonDataPreviewOpen` | window | 6685 |
+| `setSeasonDataPreviewPasteText` | window | 6686 |
+| `setState` | const-arrow | 2235 |
+| `setTab` | window | 2248 |
+| `showLineupComplements` | window | 2363 |
+| `showMainShell` | function | 8377 |
+| `socialDuoFocusLine` | function | 18481 |
+| `socialEnsurePeriod` | function | 18467 |
+| `socialFirstUseful` | function | 18471 |
+| `socialKeyFactLine` | function | 18491 |
+| `socialOpponentLine` | function | 18487 |
+| `socialPlayerFocusLine` | function | 18474 |
+| `socialSentence` | function | 18464 |
+| `socialVideoJobsForMatchday` | function | 20022 |
+| `specialTeamsStateFromActive` | function | 4299 |
+| `stageSeasonDataPreview` | function | 6545 |
+| `stageSeasonDataPreviewFromFile` | function | 6597 |
+| `stageSeasonDataPreviewFromPaste` | function | 6611 |
+| `startApp` | window | 8515 |
+| `startEinsatzCenterDraftMode` | window | 7660 |
+| `startHallOfFameIntro` | function | 8638 |
+| `sumRoleGames` | function | 9551 |
+| `switchMatchdaySeason` | window | 22687 |
+| `switchOverviewSeason` | window | 22634 |
+| `syncHashFromState` | function | 3404 |
+| `t2s` | const-arrow | 2946 |
+| `toggleAntiSynergyHideSgOnly` | window | 2385 |
+| `toggleAntiSynergyShowAll` | window | 2384 |
+| `toggleComparisonPicker` | window | 13409 |
+| `toggleComparisonSgOnly` | window | 13394 |
+| `toggleEinsatzCenterComboPlayer` | window | 7828 |
+| `toggleEinsatzCenterGroupRename` | window | 7769 |
+| `toggleEinsatzCenterRosterSuggestionPlayer` | window | 7700 |
+| `toggleHallOfFamePureSGPlayers` | window | 2258 |
+| `toggleLineupBuilderAvailable` | window | 2323 |
+| `toggleMatchcenterDuoDetails` | window | 2254 |
+| `toggleMatchcenterGames` | window | 8772 |
+| `toggleMatchcenterPlayerDetails` | window | 2253 |
+| `toggleMatchcenterSpecialTeamsGames` | window | 2252 |
+| `toggleSgOnlyAlltime` | window | 2412 |
+| `toggleSpecialTeamsGameDetails` | window | 2251 |
+| `toggleToolMenu` | window | 23534 |
+| `toolMenuElements` | function | 23509 |
+| `toolMenuItemElements` | function | 23512 |
+| `toolMenuOnClick` | function | 23570 |
+| `toolMenuOnKeydown` | function | 23546 |
+| `toPublicPlayerRegistry` | function | 3983 |
+| `uiDatenstandBand` | function | 22386 |
+| `uiDeltaIndicator` | function | 22151 |
+| `uiFormatNumber` | function | 22123 |
+| `uiHinweisKarte` | function | 22215 |
+| `uiInfoIcon` | function | 22169 |
+| `uiIntervallBalken` | function | 22291 |
+| `uiKennzahlKachel` | function | 22181 |
+| `uiKernaussage` | function | 22201 |
+| `uiMethodenbox` | function | 22310 |
+| `uiNotiz` | function | 22327 |
+| `uiObjektseite` | function | 22475 |
+| `uiObjektseiteSortTabs` | function | 22457 |
+| `uiPlatzhalter` | function | 22407 |
+| `uiQuoteText` | function | 22363 |
+| `uiRangliste` | function | 22237 |
+| `uiReliabilityDots` | function | 22136 |
+| `uiVerlauf` | function | 22265 |
+| `uniqueList` | function | 1870 |
+| `updateCoverAllTimeStats` | function | 8404 |
+| `updatePlayerRoleAvailability` | function | 4803 |
+| `validateGameStructure` | function | 6306 |
+| `validateMergedSeason` | function | 6393 |
+| `validateSeasonGames` | function | 6347 |
+| `validateSeasonKey` | function | 6370 |
+| `validateWrapperFormat` | function | 6382 |
+| `variance` | function | 2948 |
+| `viewEinsatzCenterMergedView` | window | 7677 |
+| `warnEventProcessingOnce` | function | 2628 |
+| `withoutHashSync` | function | 3421 |

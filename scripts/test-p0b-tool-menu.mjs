@@ -316,17 +316,22 @@ console.log('== Einbindung und unveränderte Bestandteile ==');
   assertEqual((stripComments(html).match(/rToolMenu\(\)/g) || []).length, 2, 'rToolMenu(): Definition und der eine Aufruf in rIaShell');
   assertTrue(!/Werkzeug|ToolMenu|tool-menu/.test(stripComments(fnSource('rContextBar'))), 'rContextBar enthält nichts vom Werkzeugmenü');
   // Fingerprints der Quelltexte, die dieser Fix ausdrücklich nicht verändern darf (Stand P0b-Fix 4)
+  // exportExcel seit Aufgabe 4k neu gepinnt: Team%-Spalte nutzt jetzt uiQuoteText() (dieselbe
+  // Bruch/Prozent-Regel wie das Bildschirm-Pendant auf der Team-Seite) statt einer eigenen, unabhängigen
+  // Prozentrechnung — behebt, dass dieselbe Kennzahl im Export bei dünner Datenbasis eine andere Zahl
+  // zeigte als auf dem Bildschirm.
   const pinned = {
     rContextBar: ['fn', '8efff4b4a0d75054'], rGlobalSearchToggle: ['fn', '44051ef40d0c9c05'], globalSearchKeyAction: ['fn', 'a5b1d5edb1afd856'],
     globalSearchOnKeydown: ['fn', 'f00e205d446d4362'], initGlobalSearch: ['fn', 'c3d113c0988121f7'], globalSearchIsEditableTarget: ['fn', 'df3b03a7aae567dc'],
-    exportExcel: ['fn', 'fb67952e9ff2dd32'], openLexicon: ['win', 'a2bee718c173adf3'], backToHome: ['win', '189c1cf2b15d7b86'],
+    exportExcel: ['fn', 'ceacff11e457c3b5'], openLexicon: ['win', 'a2bee718c173adf3'], backToHome: ['win', '189c1cf2b15d7b86'],
     openGlobalSearch: ['win', 'f9764bf44087ed75'], closeGlobalSearch: ['win', '8c0759309c57450e'],
   };
   for (const [name, [kind, hash]] of Object.entries(pinned)) assertEqual(sha(kind === 'fn' ? fnSource(name) : winSource(name)), hash, `${name} unverändert (Quelltext-Fingerprint)`);
   const a = html.indexOf('  const hdrHtml=`');
   const endMarker = '</div>\n  </div>`;';
   const hdr = html.slice(a, html.indexOf(endMarker, a) + endMarker.length);
-  assertEqual(sha(hdr.replace('${rIaShell()}', '')), 'f6e68cf15548d02e', 'Legacy-Kopfzeile (hdr/hdr-nav) unverändert');
+  // Hash seit Aufgabe 7b aktualisiert: siehe test-p0b-mobile-nav.mjs (gamesLoadedLabel).
+  assertEqual(sha(hdr.replace('${rIaShell()}', '')), '8e98840a1fd2052c', 'Legacy-Kopfzeile (hdr/hdr-nav) unverändert');
   assertTrue(hdr.includes('<button class="btn-back" onclick="backToHome()">&larr; Cover</button>') && hdr.includes('<button class="btn-exp" onclick="exportExcel()">📥 Excel</button>'), 'Legacy-Buttons Cover und Excel weiterhin vorhanden');
   assertEqual(sha(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), '8381155d5a8c43a4', 'HASH_GLOBAL_PAGES unverändert (keine neue Route)');
   assertTrue(!/tool|werkzeug/i.test(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), 'keine Werkzeugmenü-Route');

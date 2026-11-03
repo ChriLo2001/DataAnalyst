@@ -35,7 +35,7 @@ function assertTrue(cond, label) {
   assertEqual(Boolean(cond), true, label);
 }
 
-const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex').slice(0, 16);
 const stripComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*')).join('\n');
 function fnSource(name) {
@@ -49,17 +49,34 @@ function winSource(name) {
   if (from === -1) throw new Error(`window.${name} nicht gefunden`);
   return html.slice(from, html.indexOf('\n};', from) + 3);
 }
+function constBlock(name) {
+  const from = html.indexOf(`const ${name}=`);
+  if (from === -1) throw new Error(`const ${name} nicht gefunden`);
+  return html.slice(from, html.indexOf('\n};', from) + 3);
+}
 const lineOf = (re) => re.exec(html)?.[0] ?? (() => { throw new Error(`Zeile fehlt: ${re}`); })();
 
 const CARD_FUNCTIONS = ['overviewMatchdayStartMs', 'overviewMatchdayEndMs', 'matchdayAsOfCutoff', 'formatDateDE', 'detectOverviewPhase', 'overviewOpponentLabel', 'overviewLastMatchdayText', 'overviewNextMatchdayHtml', 'overviewCompactTableHtml', 'overviewFormHtml', 'overviewSeasonBilanzHtml', 'overviewSeasonAwardHtml', 'overviewRecordHtml', 'overviewCrossSeasonTrendHtml', 'overviewOpponentPreviewHtml', 'overviewMatchcenterLinkHtml', 'overviewLineupLinkHtml', 'buildOverviewCards', 'rOverviewPage', 'rMatchdayTimelineRow', 'rMatchdayTimelinePage'];
 const overviewSource = CARD_FUNCTIONS.map(fnSource).join('\n');
-const consts = [lineOf(/^const OVERVIEW_PHASE_LABELS=.*$/m), lineOf(/^const OVERVIEW_SESSION_DATA_STATE=.*$/m), lineOf(/^const MATCHDAY_STATUS_LABELS=.*$/m)].join('\n');
+// DATENSTAND_SCHWELLEN seit Aufgabe (b), S2e-Kaltstart-Audit: overviewCompactTableHtml blendet eine
+// Rangliste mit zu wenigen Spielen aus (siehe dortiger Kommentar) und braucht dafür die echte Schwelle.
+const consts = [lineOf(/^const OVERVIEW_PHASE_LABELS=.*$/m), lineOf(/^const OVERVIEW_SESSION_DATA_STATE=.*$/m), lineOf(/^const MATCHDAY_STATUS_LABELS=.*$/m), constBlock('DATENSTAND_SCHWELLEN')].join('\n');
 
 // ── Fixtures ────────────────────────────────────────────────────────────
 const g = (id, date, ended, hg = 0, gg = 0, time = '12:00') => ({ id, date, start_time: time, ended, home_goals: ended ? hg : null, guest_goals: ended ? gg : null });
-const md = (number, date, status, games) => ({ number, date, status, games, teamGames: { 'VfB Ulm': games.map((x) => x.id), 'FBC Heidelberg': games.map((x) => x.id) } });
-const ulmRow = { rank: 3, name: 'VfB Ulm', w: 4, d: 1, l: 2, gf: 30, ga: 20, pts: 13, sp: 7 };
-const table = [{ rank: 1, name: 'A', pts: 20 }, { rank: 2, name: 'B', pts: 15 }, ulmRow];
+// S2e-Kaltstart-Audit (Aufgabe 4): overviewOpponentLabel liest seit dem Fix matchday.seasonKey +
+// matchday.games (echte Ulm-Spiele über matchcenterDetectUlmSide) statt teamGames (das bei einem vollen
+// Spieltag ALLE anderen Teams gelistet hätte, nicht nur Ulms tatsächlichen Gegner — siehe Abschlussbericht).
+const md = (number, date, status, games) => ({
+  number, date, status, seasonKey: '25/26',
+  games: games.map((x) => ({ home_team_name: 'VfB Ulm', guest_team_name: 'FBC Heidelberg', ...x })),
+});
+// sp:11 bei allen drei Zeilen (S2e-Kaltstart-Audit, Aufgabe (b)): overviewCompactTableHtml blendet die
+// Rangliste jetzt aus, wenn eine gezeigte Zeile unter DATENSTAND_SCHWELLEN.spieleGut (10) liegt — siehe
+// eigener Testfall "Aufgabe (b)" unten. Dieses Fixture testet Kartenreihenfolge/-inhalt allgemein, nicht
+// diese Schwelle, darum hier bewusst oberhalb der Schwelle.
+const ulmRow = { rank: 3, name: 'VfB Ulm', w: 4, d: 1, l: 2, gf: 30, ga: 20, pts: 13, sp: 11 };
+const table = [{ rank: 1, name: 'A', pts: 20, sp: 11 }, { rank: 2, name: 'B', pts: 15, sp: 11 }, ulmRow];
 
 function boot({ matchdays = [], standings = [], statGames = [], players = [], events = {}, records = { bestWin: { us: 12, os: 4, opp: 'DJK', seasonKey: '25/26' } }, otherSeasonStandings = 0, seasonKey = '25/26', previewCard = true } = {}) {
   const SEASONS = { [seasonKey]: { data: { players, events, standings } } };
@@ -76,6 +93,12 @@ function boot({ matchdays = [], standings = [], statGames = [], players = [], ev
     getSeasonStatsAsOf: () => ({ standings, statGamesData: statGames }),
     getTeamAllTimeRecords: () => records,
     isUlmTeamName: (n) => /ulm/i.test(String(n)),
+    // S2e-Kaltstart-Audit: dieselben einfachen Stubs wie in test-p0b-global-search.mjs (nicht die echte
+    // Alias-/Saison-Logik aus matchcenter-core.js, die hat ihre eigenen Tests).
+    matchcenterGameTeamName: (g, side) => g?.[`${side}_team_name`] || '',
+    matchcenterIsUlmTeamName: (n) => /ulm/i.test(String(n)),
+    matchcenterDetectUlmSide: (g) => (/ulm/i.test(String(g?.home_team_name)) ? 'home' : /ulm/i.test(String(g?.guest_team_name)) ? 'guest' : null),
+    matchcenterTeamDisplay: (n) => String(n ?? ''),
     detectSide: () => 'home',
     isGamePlayed: (x) => x.ended === true,
     compareGamesChronologically: (a, b) => (`${a.date}${String(a.id).padStart(4, '0')}` < `${b.date}${String(b.id).padStart(4, '0')}` ? -1 : 1),
@@ -178,6 +201,30 @@ console.log('== B: Saison mit Spielen: relevante Karten bleiben, Reihenfolge unv
   assertTrue(![cPause, after, cWeek, cBefore].some((c) => c.themenkarten.some(EMPTY_ONLY)), 'Datenzustand mit Spielen: keine Leerzustandskarte');
 }
 
+// ── B2: Aufgabe (b), S2e-Kaltstart-Audit — Top-5-Rangliste ohne Datenstand-Schutz ──────────
+// Vorher zeigte overviewCompactTableHtml eine Platzierung ungeprüft an, auch direkt nach dem 1. Spieltag
+// (ein Team steht dann zufällig ganz oben). Jetzt gilt dieselbe Regel wie bei rOpponentTraitCard/
+// rankingTrustworthy (Aufgabe 4g): liegt eine gezeigte Zeile unter DATENSTAND_SCHWELLEN.spieleGut (10),
+// wird die GANZE Rangliste ausgeblendet statt mit einem Hinweis gezeigt.
+console.log('== B2: Aufgabe (b) — Rangliste ohne Datenstand-Schutz wird unterhalb der Schwelle ausgeblendet ==');
+{
+  const thinTable = [{ rank: 1, name: 'VfB Ulm', pts: 3, sp: 1 }, { rank: 2, name: 'A', pts: 0, sp: 1 }];
+  const thin = boot({ standings: thinTable });
+  assertEqual(thin.run('overviewCompactTableHtml("25/26")'), '', 'Rangliste nach 1 Spiel (unter der Schwelle): leerer String statt Platzierung');
+
+  const days = [md(1, '2026-03-01', 'abgeschlossen', [g(1, '2026-03-01', true, 3, 1)])];
+  const thinAfter = boot({ matchdays: days, standings: thinTable, statGames: days[0].games });
+  const cThin = thinAfter.cards('2026-03-02T12:00:00');
+  assertEqual(cThin.phase, 'nachDemSpieltag', 'Vorbedingung: Phase "Nach dem Spieltag" (Generalprobe-Fall)');
+  assertEqual(kinds(cThin.themenkarten), ['platzhalter', 'platzhalter', 'keinNaechster'], 'nachDemSpieltag nach 1 Spieltag: Tabellenkarte entfällt, übrige Karten bleiben');
+  assertTrue(!cThin.themenkarten.some(EMPTY_ONLY), 'keine Leerzustandskarte statt der ausgeblendeten Tabelle');
+
+  // Gegenprobe: dieselbe Form, aber alle Zeilen über der Schwelle -> Rangliste bleibt
+  const fullTable = [{ rank: 1, name: 'VfB Ulm', pts: 30, sp: 14 }, { rank: 2, name: 'A', pts: 28, sp: 14 }];
+  const full = boot({ standings: fullTable });
+  assertTrue(full.run('overviewCompactTableHtml("25/26")').length > 0, 'Gegenprobe: dieselbe Form bei Saisonende (sp über der Schwelle) zeigt die Rangliste weiterhin');
+}
+
 // ── C: unvollständiger Spieltag ────────────────────────────────────────
 console.log('== C: unvollständiger Spieltag ==');
 {
@@ -222,7 +269,9 @@ console.log('== D: Spieltage-Seite ohne vorhandene Spieltage ==');
   assertTrue(!EMPTY_ONLY(noPreview.run('rMatchdayTimelinePage("25/26")').replace(/^.*?<\/div>(?=<div class="ia-overview-cards">)/s, '')), 'ohne Vorschau-Karte: weiterhin keine Leerzustandskarte');
   const withDays = boot({ matchdays: [md(1, '2026-03-01', 'abgeschlossen', [g(1, '2026-03-01', true, 1, 0)])] });
   assertTrue(/ia-matchday-timeline/.test(withDays.run('rMatchdayTimelinePage("25/26")')), 'mit Spieltagen: Zeitleiste wird gerendert');
-  assertEqual(sha(fnSource('rMatchdayTimelinePage')), 'de87c6c74645849f', 'rMatchdayTimelinePage unverändert (kein Eingriff nötig)');
+  // S2e-Kaltstart-Audit (Aufgabe 4c): Singular/Plural-Fix ("1 Spieltag" statt "1 Spieltage") hat diese
+  // Funktion absichtlich geändert — Fingerprint entsprechend aktualisiert.
+  assertEqual(sha(fnSource('rMatchdayTimelinePage')), 'f611b4956227c98c', 'rMatchdayTimelinePage: Fingerprint seit S2e aktualisiert (Singular/Plural-Fix)');
 }
 
 // ── Reinheit und Einzelverträge ────────────────────────────────────────
@@ -232,7 +281,9 @@ console.log('== Reinheit, unveränderte Karten, Quelltext ==');
   a.cards('2026-08-01T12:00:00'); a.page();
   assertEqual([a.calls.setState, a.calls.storage], [0, 0], 'kein setState, kein Storage-Zugriff beim Kartenbau');
   assertEqual(a.run('overviewNextMatchdayHtml(null)'), '<div class="ui-notiz">Für diese Saison ist kein weiterer Spieltag terminiert.</div>', 'overviewNextMatchdayHtml(null): Hinweis mit eigener Aussage bleibt unverändert');
-  assertEqual(sha(fnSource('overviewNextMatchdayHtml')), 'a291a38e1b281d4a', 'overviewNextMatchdayHtml unverändert (Fingerprint)');
+  // Hash seit Aufgabe 7b aktualisiert: overviewNextMatchdayHtml nennt jetzt zusätzlich Uhrzeit und Halle je
+  // Ulm-Spiel des nächsten Spieltags (vorher nur Datum + Gegner), siehe Build-Bericht.
+  assertEqual(sha(fnSource('overviewNextMatchdayHtml')), '12f173357e7fef8c', 'overviewNextMatchdayHtml unverändert (Fingerprint)');
   assertEqual(a.run('overviewOpponentPreviewHtml(null)'), '<div class="ui-notiz">Kein bevorstehender Spieltag bekannt.</div>', 'overviewOpponentPreviewHtml(null): unverändert');
   const code = stripComments(CARD_FUNCTIONS.map(fnSource).join('\n'));
   for (const gone of ['noch keine Saisonbilanz', 'noch kein Top-Scorer', 'noch keine Tabelle', 'nicht genügend ausgetragene Spiele', 'Vereinsrekorde liegen', 'saisonübergreifende Entwicklung liegen']) assertTrue(!code.includes(gone), `Leerzustandstext entfernt: "${gone}"`);
@@ -246,12 +297,18 @@ console.log('== Unveränderte Bestandteile (Quelltext-Fingerprints) ==');
 {
   const pinned = {
     rContextBar: ['fn', '8efff4b4a0d75054'], rIaShell: ['fn', '16a2d20a6a21ed7e'], rMainNav: ['fn', '5d960fde923cc354'], rMainNavBottom: ['fn', '1ade76645df4da89'],
-    rAsOfSelector: ['fn', 'b9e2968e358b1839'], getSeasonStatsAsOf: ['fn', '43b9eabfae5d992b'], deriveAsOfForSeason: ['fn', '88cce2f0779a2dc3'], getSeasonDataState: ['fn', 'e6fdb273584f3d3f'],
+    // getSeasonStatsAsOf seit Aufgabe 7b neu gepinnt: baut die Tabelle jetzt aus rawLeagueGames (für
+    // Nullzeilen bei geplanten Spielen) und reicht asOf an buildStandings() durch (siehe Build-Bericht:
+    // Regressionsfund in test-social-video.mjs, seither korrekt behoben).
+    rAsOfSelector: ['fn', 'b9e2968e358b1839'], getSeasonStatsAsOf: ['fn', '6f1ff2b1796022a2'], deriveAsOfForSeason: ['fn', '88cce2f0779a2dc3'], getSeasonDataState: ['fn', 'e6fdb273584f3d3f'],
     computeCurrentAppHash: ['fn', '3c9bad5a17ccbdfe'], parseAppHash: ['fn', 'a41f0760de39e83c'],
     rGlobalSearchToggle: ['fn', '44051ef40d0c9c05'], globalSearchOnKeydown: ['fn', 'f00e205d446d4362'], globalSearchMatch: ['fn', '7ee84c03a37c7b55'],
     rToolMenu: ['fn', '762229fde03b2031'], toolMenuOnKeydown: ['fn', 'ab4998be9b395079'],
     detectOverviewPhase: ['fn', 'feca652a76e5e822'], overviewOpponentPreviewHtml: ['fn', '2a51e05ee239fe3f'], overviewMatchcenterLinkHtml: ['fn', 'c1201a1504d64034'],
-    overviewLineupLinkHtml: ['fn', '06e2392960b9368d'], overviewRankChangeTile: ['fn', 'e31f57e9e108d871'], rMatchdayDetailPage: ['fn', 'd05e5a15eba64ca9'], rOverviewPage: ['fn', '477ae2f11e11a794'],
+    // rMatchdayDetailPage seit Aufgabe 7b neu gepinnt: zusätzliche vollständige Ansetzungsliste (siehe
+    // test-p0b-matchday-headline.mjs für die genaue Begründung). Erneut seit Aufgabe 12: übergibt
+    // seasonKey an matchdayGameCardHtml (Einsatz-Center-Aufstellungsanzeige, siehe dort).
+    overviewLineupLinkHtml: ['fn', '06e2392960b9368d'], overviewRankChangeTile: ['fn', 'e31f57e9e108d871'], rMatchdayDetailPage: ['fn', '3196dbd49cf3167d'], rOverviewPage: ['fn', '477ae2f11e11a794'],
     uiNotiz: ['fn', '8794f37984dad161'], uiRangliste: ['fn', '87bad31d1b07438c'], uiVerlauf: ['fn', '1860fc97704b31af'], uiHinweisKarte: ['fn', '4b4ab6d5f2b46c2c'], uiObjektseite: ['fn', '390b5f722db20998'],
     goToMainNavPoint: ['win', '59d2de50a5f03cda'], openOverview: ['win', 'ee906a0518a9ecf0'], openMatchdayTimeline: ['win', '0baa2da1fa964990'], openMatchday: ['win', 'bca49420ab804f79'],
     openGlobalSearch: ['win', 'f9764bf44087ed75'], openToolMenu: ['win', 'b816957ddf35608f'],

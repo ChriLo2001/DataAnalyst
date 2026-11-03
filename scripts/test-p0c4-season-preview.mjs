@@ -44,7 +44,7 @@ function assertTrue(cond, label) {
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const sha = (s) => createHash('sha256').update(s).digest('hex');
 
-const html = (await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n');
+const html = (await readFile(path.join(REPO_ROOT, 'matchcenter-core.js'), 'utf8') + await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8')).replace(/\r\n/g, '\n'); // seit S2e: geteilte Matchcenter-/Saison-Bausteine liegen in matchcenter-core.js
 function between(startMarker, endMarker) {
   const s = html.indexOf(startMarker);
   const e = html.indexOf(endMarker);

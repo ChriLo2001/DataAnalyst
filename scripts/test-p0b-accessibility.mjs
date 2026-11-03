@@ -107,8 +107,8 @@ console.log('== Unverändert: Variablen und übriges CSS ==');
   const reverted = styleLines.map((l) => (TARGETS.some(([, s]) => l.startsWith(`${s}{`)) ? l.replace(/(^|[{;])color:var\(--text-muted\)/, '$1color:var(--text-faint)') : l)).join('\n');
   // Fingerprint-Basiswert zuletzt nach S1 aktualisiert (neue .mc-feed-*-Regeln, siehe
   // docs/social-video-spezifikation.md) — die 14 P0b-Fix-9-Regeln selbst sind davon unberührt (oben geprüft).
-  assertEqual(sha(reverted), '848d6d943f00c595', 'Style-Block außerhalb der 14 Regeln byte-identisch zum Stand vor dem Fix (Fingerprint, seit S1 aktualisiert)');
-  assertEqual(style.length, 173243, 'Länge des Style-Blocks (Fingerprint, seit S1 aktualisiert: +.mc-feed-*-Regeln)');
+  assertEqual(sha(reverted), 'ae467d3b1dc6ad9d', 'Style-Block außerhalb der 14 Regeln byte-identisch zum Stand vor dem Fix (Fingerprint, seit S2e aktualisiert: Datenstand-Band-CSS ergänzt, siehe ui-datenstand-band)');
+  assertEqual(style.length, 173580, 'Länge des Style-Blocks (Fingerprint, seit S2e aktualisiert: ui-datenstand-band-Regel ergänzt)');
   const remaining = styleLines.filter((l) => /var\(--text-faint\)/.test(l));
   assertEqual(remaining.length, 4, 'verbleibende --text-faint-Verwendungen: genau 4 Zeilen (nur die bewusst unberührten Hover-Regeln)');
   assertTrue(remaining.every((l) => !/(?:^|[{;\s])color:var\(--text-faint\)/.test(l.replace(/border-color:var\(--text-faint\)/g, ''))), 'diese 4 setzen ausschließlich border-color (kein Text)');
@@ -199,6 +199,21 @@ console.log('== Navigationslogik, Bottom-Navigation, Reinheit unverändert ==');
   assertTrue(!/setState|localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest|history\.|location|document\.|window\./.test(stripComments(navSrc)), 'rMainNav-Quelltext: kein setState, Storage, Netzwerk, DOM- oder window-Zugriff');
   assertTrue(!/\bS\.[A-Za-z]+\s*=[^=]|\bS\s*=[^=]/.test(stripComments(navSrc)), 'rMainNav schreibt nicht in S');
   assertEqual(sha(/^const HASH_GLOBAL_PAGES=.*$/m.exec(html)[0]), '8381155d5a8c43a4', 'HASH_GLOBAL_PAGES unverändert (kein Routing-Eingriff)');
+}
+
+console.log('== S2e-Kaltstart-Audit (Aufgabe 4c): aria-label der Saisonvergleichs-Sparkline vollständig ==');
+{
+  // Vorher: uiVerlauf({points,unit:'. Platz'}) ergab aria-label="Verlauf (. Platz)" — unvollständig, weil der
+  // Aufrufer (overviewCrossSeasonTrendHtml) nie eine Zahl einsetzte, sondern den Bindestrich-Rest einer
+  // gedachten "${rank}. Platz"-Interpolation als festen String übergab. Jetzt ein eigenständiger, vollständiger
+  // Text statt eines Fragments.
+  assertTrue(!html.includes(`unit:'. Platz'`), `Quelltext enthält das alte Fragment "unit:'. Platz'" nicht mehr`);
+  const verlaufSrc = fnSource('uiVerlauf');
+  const ctx = vm.createContext({ escAttr: (s) => String(s).replace(/"/g, '&quot;') });
+  vm.runInContext(verlaufSrc, ctx);
+  const out = vm.runInContext(`uiVerlauf({points:[{value:3},{value:1}],unit:'Tabellenplatz je Saison'})`, ctx);
+  assertTrue(out.includes('aria-label="Verlauf (Tabellenplatz je Saison)"'), 'uiVerlauf mit dem neuen unit-Text liefert ein vollständiges aria-label');
+  assertTrue(!/\(\.\s*Platz\)/.test(out), 'kein abgeschnittenes "(. Platz)" mehr im aria-label');
 }
 
 console.log('');

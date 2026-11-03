@@ -20,12 +20,27 @@
 // ein Abgleichtest (scripts/test-social-video.mjs) beweist für ALLE Teams ALLER Saisons, dass beide denselben
 // Schlüssel liefern.
 //
+// S2-NACHTRAG (Canvas-Taint unter file://, bestätigt): eine lokale Kopie unter assets/teams/ allein reicht
+// NICHT aus. Chrome behandelt unter file:// jede lokale Datei als eigene, fremde Herkunft — auch ein per
+// <img src="assets/teams/…"> geladenes Bild von derselben Festplatte verunreinigt das Canvas genauso wie ein
+// externes. Einzig data:-URIs vergiften das Canvas nicht, auch nicht unter file://. Deshalb zusätzlich:
+//   --embed: erzeugt social-video-assets.js (window.SOCIAL_VIDEO_ASSETS, klassisches Skript wie
+//   season-data-embedded.js) mit allen vom Social-Video-Renderer benötigten Bildern als data:-URIs
+//   (assets/teams/*.png der bereits lokal vorhandenen Teams, assets/vfb-ulm-logo-mark.png, assets/spatz.svg).
+//   Der Renderer (index.html) liest ausschließlich aus window.SOCIAL_VIDEO_ASSETS; fehlt ein Eintrag, greift
+//   der bestehende Initialen-Fallback. Die Story-VORSCHAU im Dashboard bleibt unverändert und nutzt weiter
+//   die Dateipfade (sie läuft nie durch ein Canvas, das exportiert wird, und ist über HTTP ohnehin niemals
+//   betroffen — s. docs/social-video-spezifikation.md Abschnitt 3.3).
+//
 // Aufruf:
 //   node scripts/cache-team-logos.mjs            # Dry-Run: listet vorhandene/fehlende Logos, schreibt nichts
 //   node scripts/cache-team-logos.mjs --fetch     # lädt fehlende Logos herunter (einziger Netzwerkzugriff)
 //   node scripts/cache-team-logos.mjs --fetch --force  # überschreibt auch bereits vorhandene Dateien
+//   node scripts/cache-team-logos.mjs --embed            # Dry-Run: zeigt, was in social-video-assets.js eingebettet würde
+//   node scripts/cache-team-logos.mjs --embed --write     # schreibt social-video-assets.js (kein Netzwerkzugriff)
 
 import { readFile, mkdir, writeFile, rename, readdir, stat } from 'node:fs/promises';
+import { inflateSync } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -102,7 +117,7 @@ async function existingLogoFiles(repoRoot) {
   }
 }
 
-async function writeFileAtomic(filePath, buffer) {
+export async function writeFileAtomic(filePath, buffer) {
   await mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp-${process.pid}`;
   await writeFile(tmpPath, buffer);
@@ -118,7 +133,328 @@ async function fetchLogo(url) {
 }
 
 function parseArgs(argv) {
-  return { fetch: argv.includes('--fetch'), force: argv.includes('--force') };
+  return { fetch: argv.includes('--fetch'), force: argv.includes('--force'), embed: argv.includes('--embed'), write: argv.includes('--write') };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// --embed: social-video-assets.js (data:-URIs für den Social-Video-Renderer)
+// ─────────────────────────────────────────────────────────────────────────
+
+const EMBED_MIME_BY_EXT = { '.png': 'image/png', '.svg': 'image/svg+xml' };
+const EMBED_FIXED_PATHS = ['assets/vfb-ulm-logo-mark.png', 'assets/spatz.svg'];
+
+// ─────────────────────────────────────────────────────────────────────────
+// Dunkle Logos lesbar machen (S2c-Auftrag B3) — minimaler PNG-Decoder, reine Node-Kernfunktionen (nur
+// node:zlib für die DEFLATE-Dekompression der IDAT-Chunks), keine Bibliothek (Schutzregel: keine neuen
+// npm-Abhängigkeiten). Unterstützt 8-Bit-Tiefe, kein Interlacing — deckt normale, unkomprimiert-typische
+// Logo-PNGs ab. Liegt eine Datei außerhalb dieses Teilbereichs (z. B. 16-Bit-Tiefe, Adam7-Interlacing), greift
+// sicherheitshalber die Silhouette-Stufe statt eines Absturzes oder einer falschen Analyse.
+// ─────────────────────────────────────────────────────────────────────────
+
+function readPngChunks(buf) {
+  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  if (buf.length < 8 || !buf.subarray(0, 8).equals(sig)) return null;
+  const chunks = [];
+  let offset = 8;
+  while (offset + 8 <= buf.length) {
+    const length = buf.readUInt32BE(offset);
+    const type = buf.toString('ascii', offset + 4, offset + 8);
+    const data = buf.subarray(offset + 8, offset + 8 + length);
+    chunks.push({ type, data });
+    offset += 8 + length + 4; // + CRC
+    if (type === 'IEND') break;
+  }
+  return chunks;
+}
+
+function pngPaeth(a, b, c) {
+  const p = a + b - c;
+  const pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  if (pb <= pc) return b;
+  return c;
+}
+
+/** Entfernt die PNG-Scanline-Filter (Typen 0..4, siehe PNG-Spezifikation) und liefert die rohen Pixel-Bytes
+ * (bitDepth 8, bpp Bytes je Pixel). */
+function pngUnfilter(raw, width, height, bpp) {
+  const stride = width * bpp;
+  const out = Buffer.alloc(height * stride);
+  let rawOffset = 0;
+  for (let y = 0; y < height; y++) {
+    const filterType = raw[rawOffset];
+    rawOffset += 1;
+    const rowStart = y * stride;
+    const prevRowStart = (y - 1) * stride;
+    for (let x = 0; x < stride; x++) {
+      const val = raw[rawOffset + x];
+      const a = x >= bpp ? out[rowStart + x - bpp] : 0;
+      const b = y > 0 ? out[prevRowStart + x] : 0;
+      const c = y > 0 && x >= bpp ? out[prevRowStart + x - bpp] : 0;
+      let recon;
+      if (filterType === 0) recon = val;
+      else if (filterType === 1) recon = val + a;
+      else if (filterType === 2) recon = val + b;
+      else if (filterType === 3) recon = val + Math.floor((a + b) / 2);
+      else if (filterType === 4) recon = val + pngPaeth(a, b, c);
+      else return null; // unbekannter Filtertyp — Datei gilt als nicht unterstützt
+      out[rowStart + x] = recon & 0xff;
+    }
+    rawOffset += stride;
+  }
+  return out;
+}
+
+const PNG_CHANNELS_BY_COLOR_TYPE = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
+
+/** Dekodiert ein PNG zu {width,height,rgba} (ein Uint8/Buffer je R,G,B,A, 0..255), oder
+ * {unsupported:'<grund>'}, wenn Bit-Tiefe/Interlacing/Farbtyp außerhalb des unterstützten Teilbereichs liegen,
+ * oder null, wenn die Datei keine gültige PNG-Signatur hat. */
+export function decodePng(buf) {
+  const chunks = readPngChunks(buf);
+  if (!chunks) return null;
+  const ihdrChunk = chunks.find((c) => c.type === 'IHDR');
+  if (!ihdrChunk) return null;
+  const ihdr = ihdrChunk.data;
+  const width = ihdr.readUInt32BE(0);
+  const height = ihdr.readUInt32BE(4);
+  const bitDepth = ihdr.readUInt8(8);
+  const colorType = ihdr.readUInt8(9);
+  const interlace = ihdr.readUInt8(12);
+  if (bitDepth !== 8) return { unsupported: `Bit-Tiefe ${bitDepth} (nur 8-Bit unterstützt)` };
+  if (interlace !== 0) return { unsupported: 'Adam7-Interlacing (nicht unterstützt)' };
+  const channels = PNG_CHANNELS_BY_COLOR_TYPE[colorType];
+  if (!channels) return { unsupported: `Farbtyp ${colorType} (nicht unterstützt)` };
+  const idat = Buffer.concat(chunks.filter((c) => c.type === 'IDAT').map((c) => c.data));
+  let raw;
+  try {
+    raw = inflateSync(idat);
+  } catch (e) {
+    return { unsupported: `DEFLATE-Fehler: ${e.message}` };
+  }
+  const pixelBytes = pngUnfilter(raw, width, height, channels);
+  if (!pixelBytes) return { unsupported: 'unbekannter Scanline-Filtertyp' };
+  const palette = chunks.find((c) => c.type === 'PLTE')?.data;
+  const trns = chunks.find((c) => c.type === 'tRNS')?.data;
+  const rgba = Buffer.alloc(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const px = i * channels;
+    let r, g, b, a = 255;
+    if (colorType === 0) { r = g = b = pixelBytes[px]; }
+    else if (colorType === 2) { r = pixelBytes[px]; g = pixelBytes[px + 1]; b = pixelBytes[px + 2]; }
+    else if (colorType === 3) {
+      const idx = pixelBytes[px];
+      if (!palette || idx * 3 + 2 >= palette.length) return { unsupported: 'Palette fehlt oder zu kurz' };
+      r = palette[idx * 3]; g = palette[idx * 3 + 1]; b = palette[idx * 3 + 2];
+      a = trns && idx < trns.length ? trns[idx] : 255;
+    } else if (colorType === 4) { r = g = b = pixelBytes[px]; a = pixelBytes[px + 1]; }
+    else { r = pixelBytes[px]; g = pixelBytes[px + 1]; b = pixelBytes[px + 2]; a = pixelBytes[px + 3]; }
+    rgba[i * 4] = r; rgba[i * 4 + 1] = g; rgba[i * 4 + 2] = b; rgba[i * 4 + 3] = a;
+  }
+  return { width, height, rgba };
+}
+
+/** Mittlere relative Luminanz (0..1, Rec.-709-Gewichtung) der NICHT transparenten Bildpunkte. invert=true
+ * misst dieselbe Fläche nach RGB-Invertierung, factor misst sie nach Multiplikation jedes Kanals mit factor
+ * (auf 255 gekappt) — für die beiden Aufhellungs-Prüfstufen. */
+export function meanOpaqueLuminance(rgba, { invert = false, factor = 1 } = {}) {
+  let sum = 0, count = 0;
+  for (let i = 0; i < rgba.length; i += 4) {
+    if (rgba[i + 3] === 0) continue;
+    let r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
+    if (invert) { r = 255 - r; g = 255 - g; b = 255 - b; }
+    if (factor !== 1) { r = Math.min(255, r * factor); g = Math.min(255, g * factor); b = Math.min(255, b * factor); }
+    sum += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    count += 1;
+  }
+  return count ? sum / count : 1;
+}
+
+/** Mittlere HSL-Sättigung der nicht transparenten Bildpunkte — unterscheidet ein (annähernd) einfarbig
+ * schwarz/graues Logo (niedrige Sättigung, Invertieren ist dafür unbedenklich) von einem dunklen, aber
+ * farbigen Logo (z. B. dunkles Vereinsrot) — dort würde Invertieren den Farbton verfälschen (Rot -> Cyan),
+ * deshalb dort stattdessen Aufhellen (Kanal-Multiplikation, farbtonerhaltend). */
+function meanOpaqueSaturation(rgba) {
+  let sum = 0, count = 0;
+  for (let i = 0; i < rgba.length; i += 4) {
+    if (rgba[i + 3] === 0) continue;
+    const r = rgba[i] / 255, g = rgba[i + 1] / 255, b = rgba[i + 2] / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+    const sat = max === min ? 0 : l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
+    sum += sat; count += 1;
+  }
+  return count ? sum / count : 0;
+}
+
+/** Kantenanteil (S2d-Nachtrag): Anteil der nicht transparenten Bildpunkte, an denen die Luminanz zum rechten
+ * bzw. unteren Nachbarn merklich springt — ein grobes, aber brauchbares Maß dafür, ob ein Logo überhaupt
+ * erkennbare innere Struktur hat (scharfe Linien/Flächen) oder nur ein verwaschener, konturarmer Fleck ist.
+ * Invertieren verändert den Kantenanteil NICHT (|invert(a)-invert(b)| = |a-b|) — ein Logo mit wenig Struktur
+ * im Original bleibt auch invertiert strukturarm ("grauer Fleck"), dafür ist keine Aufhellungsstufe die
+ * richtige Antwort, sondern die Knockout-Silhouette aus der Alpha-Maske (klare Kontur statt verwaschener
+ * Fläche). */
+function edgeFraction(rgba, width, height) {
+  const lum = (o) => (0.2126 * rgba[o] + 0.7152 * rgba[o + 1] + 0.0722 * rgba[o + 2]) / 255;
+  let edgeCount = 0, total = 0;
+  for (let y = 0; y < height - 1; y++) {
+    for (let x = 0; x < width - 1; x++) {
+      const i = (y * width + x) * 4;
+      if (rgba[i + 3] === 0) continue;
+      const l0 = lum(i);
+      const iR = i + 4, iB = i + width * 4;
+      const lR = rgba[iR + 3] > 0 ? lum(iR) : l0;
+      const lB = rgba[iB + 3] > 0 ? lum(iB) : l0;
+      total += 1;
+      if (Math.abs(l0 - lR) + Math.abs(l0 - lB) > 0.18) edgeCount += 1;
+    }
+  }
+  return total ? edgeCount / total : 0;
+}
+
+const DARK_LOGO_LUMINANCE_THRESHOLD = 0.45;
+const DARK_LOGO_SATURATION_THRESHOLD = 0.2; // darunter gilt ein Logo als annähernd einfarbig (Invertieren ok)
+const DARK_LOGO_EDGE_THRESHOLD = 0.035; // darunter hat das Original zu wenig erkennbare Struktur für invert/lift
+const DARK_LOGO_MAX_LIFT = 0.6; // mehr verwäscht auch bei realer Struktur sichtbare Kanten zu stark
+
+/** Entscheidet die Lesbarkeits-Stufe für EIN PNG (S2c/S2d-Auftrag B3): 'none' (hell genug), 'invert' (für
+ * annähernd einfarbige dunkle Logos MIT erkennbarer Struktur — Invertieren verfälscht keinen Farbton und
+ * erhält den Kantenanteil unverändert), 'lift' (für farbige dunkle Logos MIT Struktur — Überblendung Richtung
+ * gebrochenes Weiß IM Bild, siehe socialVideoDrawCommand Fall 'image'/Schicht B: anders als eine reine
+ * Kanal-Multiplikation hebt das auch echtes Schwarz an, weil es KEINE Multiplikation ist, sondern eine
+ * Mischung mit Weiß) oder 'silhouette' (zu wenig erkennbare Struktur im Original — dann hilft keine
+ * Aufhellung/Invertierung, siehe edgeFraction — oder Datei außerhalb des unterstützten PNG-Teilbereichs).
+ * forceColorPreserving:true (für das eigene VfB-Wappen, S2d-Auftrag 2: "nie Silhouette, nie invertiert")
+ * überspringt die Silhouette- UND die Invertieren-Stufe und erzwingt 'lift', auch wenn die Struktur-/
+ * Sättigungsprüfung sonst anders entschieden hätte. */
+export function decideLogoTreatment(buf, { forceColorPreserving = false } = {}) {
+  const decoded = decodePng(buf);
+  if (!decoded) return { tier: forceColorPreserving ? 'lift' : 'silhouette', reason: 'keine gültige PNG-Datei', luminance: null };
+  if (decoded.unsupported) return { tier: forceColorPreserving ? 'lift' : 'silhouette', reason: decoded.unsupported, luminance: null };
+  const luminance = meanOpaqueLuminance(decoded.rgba);
+  if (luminance >= DARK_LOGO_LUMINANCE_THRESHOLD) return { tier: 'none', reason: null, luminance };
+  const edgeFrac = edgeFraction(decoded.rgba, decoded.width, decoded.height);
+  if (edgeFrac < DARK_LOGO_EDGE_THRESHOLD && !forceColorPreserving) {
+    return { tier: 'silhouette', reason: `zu geringer Kantenanteil im Original (${edgeFrac.toFixed(3)}) — Form bliebe nach Aufhellen/Invertieren nicht lesbar`, luminance, edgeFraction: edgeFrac };
+  }
+  const saturation = meanOpaqueSaturation(decoded.rgba);
+  if (saturation < DARK_LOGO_SATURATION_THRESHOLD && !forceColorPreserving) {
+    const invertedLuminance = meanOpaqueLuminance(decoded.rgba, { invert: true });
+    if (invertedLuminance >= DARK_LOGO_LUMINANCE_THRESHOLD) return { tier: 'invert', reason: null, luminance, saturation, edgeFraction: edgeFrac, invertedLuminance };
+    return { tier: 'silhouette', reason: 'annähernd einfarbig, auch invertiert unter dem Schwellwert', luminance, saturation, edgeFraction: edgeFrac, invertedLuminance };
+  }
+  // Farbig (oder forceColorPreserving): Richtung gebrochenes Weiß überblenden, bis die Luminanz den
+  // Schwellwert erreicht — Mischung statt Multiplikation hebt auch echtes Schwarz an. a = (T-L)/(1-L), siehe
+  // Herleitung im Build-Bericht; für T<1 und L<1 ist a immer <1, der Schwellwert daher praktisch immer
+  // erreichbar (im Unterschied zur alten Kanal-Multiplikation, bei der echtes Schwarz schwarz blieb).
+  const liftAmount = Math.min(DARK_LOGO_MAX_LIFT, Math.max(0, Number(((DARK_LOGO_LUMINANCE_THRESHOLD - luminance) / Math.max(0.05, 1 - luminance)).toFixed(2))));
+  return { tier: 'lift', reason: null, luminance, saturation, edgeFraction: edgeFrac, liftAmount };
+}
+const EMBED_JS_HEADER =
+  '// Automatisch erzeugt von scripts/cache-team-logos.mjs --embed --write. Nicht von Hand bearbeiten.\n' +
+  '// file://-Fallback für den Social-Video-Renderer: stellt window.SOCIAL_VIDEO_ASSETS (Team-Logos, VfB-Logo,\n' +
+  '// Spatz) als data:-URIs bereit. Grund: unter file:// behandelt Chrome jede lokale Datei als eigene fremde\n' +
+  '// Herkunft — auch ein per <img src="assets/…"> von derselben Festplatte geladenes Bild verunreinigt das\n' +
+  '// Canvas (captureStream()/toDataURL() schlagen danach fehl). data:-URIs haben dieses Problem nicht. Der\n' +
+  '// Renderer liest ausschließlich aus dieser Quelle; fehlt ein Schlüssel, greift der Initialen-Fallback. Die\n' +
+  '// Story-VORSCHAU im Dashboard ist davon unberührt und nutzt weiter die Dateipfade. Klassisches Skript\n' +
+  '// (kein type="module"), damit es auch per Doppelklick lädt (siehe <script src="social-video-assets.js">\n' +
+  '// vor dem Haupt-<script> in index.html). Siehe docs/social-video-spezifikation.md Abschnitt 3.3.\n' +
+  '// window.SOCIAL_VIDEO_ASSET_TREATMENT (S2c/S2d-Auftrag B3, dunkle Logos lesbar machen): {relPath: {tier,\n' +
+  '// factor?}} NUR für Logos unter der Lesbarkeits-Schwelle UND mit erkennbarer innerer Struktur (Kantenanteil\n' +
+  '// im Original) — fehlt ein Schlüssel, bleibt das Bild unverändert. tier "invert" (annähernd einfarbige\n' +
+  '// dunkle Logos MIT Struktur) hellt per Canvas-Filter invert(1) auf; tier "lift" (farbige dunkle Logos MIT\n' +
+  '// Struktur, z. B. Vereinsrot — Invertieren würde den Farbton verfälschen) überblendet im Bild Richtung\n' +
+  '// gebrochenes Weiß (factor = Mischanteil), OHNE den Farbton zu drehen und OHNE echtes Schwarz schwarz zu\n' +
+  '// lassen (anders als eine reine Kanal-Multiplikation); tier "silhouette" (zu wenig erkennbare Struktur im\n' +
+  '// Original, egal welche Farbe) zeichnet eine einfarbig gebrochen-weiße Form aus der Alpha-Maske\n' +
+  '// (socialVideoDrawCommand, Fall \'image\'). Das eigene VfB-Wappen (assets/vfb-ulm-logo-mark.png,\n' +
+  '// assets/teams/vfb-ulm.png) nimmt NIE die Stufen "invert"/"silhouette" — erzwungen "lift", s. u.\n' +
+  '// Siehe Abschlussbericht für die betroffenen Logos je Stufe.\n';
+
+// VfB Ulm tritt immer unter eigenem Namen an — das eigene Wappen darf NIE als Silhouette oder invertiert
+// erscheinen (S2d-Auftrag 2: "nie Silhouette, nie invertiert... Ist das vorhandene Asset dafür zu dunkel,
+// hebe die Helligkeit an, ohne die Form zu verlieren"), deshalb hier mit forceColorPreserving:true.
+const EMBED_FORCE_COLOR_PRESERVING_PATHS = new Set(['assets/vfb-ulm-logo-mark.png', 'assets/teams/vfb-ulm.png']);
+
+async function embedAssetFile(repoRoot, relPath) {
+  const buf = await readFile(path.join(repoRoot, relPath));
+  const ext = path.extname(relPath).toLowerCase();
+  const mime = EMBED_MIME_BY_EXT[ext];
+  if (!mime) throw new Error(`unbekannter Asset-Typ: ${relPath}`);
+  const treatment = ext === '.png'
+    ? decideLogoTreatment(buf, { forceColorPreserving: EMBED_FORCE_COLOR_PRESERVING_PATHS.has(relPath) })
+    : { tier: 'none', reason: null, luminance: null };
+  return { relPath, bytes: buf.length, dataUri: `data:${mime};base64,${buf.toString('base64')}`, treatment };
+}
+
+/** Plant, was --embed einbetten würde: die beiden festen Assets (VfB-Logo, Spatz) plus alle TEAM-Logos, die
+ * bereits lokal in assets/teams/ liegen (dieselbe Menge wie planLogoCache().cached — kein --fetch nötig, rein
+ * lesend). Nicht lesbare/fehlende Dateien landen mit error statt dataUri im Ergebnis (werden beim Schreiben
+ * ausgelassen, der Renderer fällt für diesen Schlüssel auf Initialen zurück). */
+export async function planAssetEmbed(repoRoot = REPO_ROOT) {
+  const plan = await planLogoCache(repoRoot);
+  const teamPaths = plan.cached.map((t) => `assets/teams/${t.key}.png`);
+  const entries = [];
+  for (const relPath of [...EMBED_FIXED_PATHS, ...teamPaths]) {
+    try {
+      entries.push(await embedAssetFile(repoRoot, relPath));
+    } catch (e) {
+      entries.push({ relPath, bytes: 0, dataUri: null, error: e.message });
+    }
+  }
+  return entries;
+}
+
+function formatEmbedReport(entries) {
+  const ok = entries.filter((e) => e.dataUri);
+  const failed = entries.filter((e) => !e.dataUri);
+  const rawBytes = ok.reduce((s, e) => s + e.bytes, 0);
+  const dataUriBytes = ok.reduce((s, e) => s + e.dataUri.length, 0);
+  const lines = [];
+  lines.push('social-video-assets.js — Dry-Run, es wird nichts geschrieben');
+  lines.push(`Einzubettende Dateien: ${ok.length}`);
+  for (const e of ok) {
+    const t = e.treatment;
+    const lum = t?.luminance != null ? `, Luminanz ${t.luminance.toFixed(2)}` : '';
+    lines.push(`   · ${e.relPath}  (${e.bytes} Bytes roh, Lesbarkeits-Stufe: ${t?.tier ?? 'none'}${lum})`);
+  }
+  if (failed.length) {
+    lines.push('');
+    lines.push('Nicht lesbar (werden ausgelassen, Renderer nutzt Initialen-Fallback):');
+    for (const e of failed) lines.push(`   · ${e.relPath}: ${e.error}`);
+  }
+  const affected = ok.filter((e) => e.treatment?.tier && e.treatment.tier !== 'none');
+  lines.push('');
+  if (affected.length) {
+    lines.push(`Dunkle Logos (S2c-Auftrag B3), ${affected.length} betroffen:`);
+    for (const e of affected) {
+      const t = e.treatment;
+      const detail = t.tier === 'invert' ? `invertiert ${t.invertedLuminance?.toFixed(2)}`
+        : t.tier === 'lift' ? `Mischanteil ${t.liftAmount}`
+        : t.reason || '';
+      const edge = t.edgeFraction != null ? `, Kantenanteil ${t.edgeFraction.toFixed(3)}` : '';
+      lines.push(`   · ${e.relPath}: Stufe "${t.tier}" (Luminanz ${t.luminance != null ? t.luminance.toFixed(2) : 'n/a'}, Sättigung ${t.saturation != null ? t.saturation.toFixed(2) : 'n/a'}${edge}, ${detail})`);
+    }
+  } else {
+    lines.push('Dunkle Logos (S2c-Auftrag B3): keine betroffen (alle über dem Schwellwert).');
+  }
+  lines.push('');
+  lines.push(`Gesamtgröße roh: ${rawBytes} Bytes, als Data-URI (Base64): ${dataUriBytes} Bytes (~${Math.round(dataUriBytes / 1024)} KB).`);
+  return lines.join('\n') + '\n';
+}
+
+async function writeEmbeddedAssetsFile(repoRoot, entries) {
+  const ok = entries.filter((e) => e.dataUri);
+  const obj = {};
+  for (const e of ok) obj[e.relPath] = e.dataUri;
+  const treatmentObj = {};
+  for (const e of ok) {
+    if (!e.treatment?.tier || e.treatment.tier === 'none') continue;
+    treatmentObj[e.relPath] = e.treatment.tier === 'lift' ? { tier: 'lift', factor: e.treatment.liftAmount } : { tier: e.treatment.tier };
+  }
+  const body = `${EMBED_JS_HEADER}window.SOCIAL_VIDEO_ASSETS=${JSON.stringify(obj)};\nwindow.SOCIAL_VIDEO_ASSET_TREATMENT=${JSON.stringify(treatmentObj)};\n`;
+  await writeFileAtomic(path.join(repoRoot, 'social-video-assets.js'), Buffer.from(body, 'utf8'));
+  return { count: ok.length, bytes: Buffer.byteLength(body, 'utf8'), treatmentCount: Object.keys(treatmentObj).length };
 }
 
 export async function planLogoCache(repoRoot = REPO_ROOT) {
@@ -146,6 +482,16 @@ function formatPlanReport(plan) {
 
 export async function main(argv = process.argv.slice(2), { stdout = process.stdout, stderr = process.stderr, repoRoot = REPO_ROOT } = {}) {
   const args = parseArgs(argv);
+  if (args.embed) {
+    const entries = await planAssetEmbed(repoRoot);
+    if (!args.write) {
+      stdout.write(formatEmbedReport(entries));
+      return 0;
+    }
+    const result = await writeEmbeddedAssetsFile(repoRoot, entries);
+    stdout.write(`social-video-assets.js geschrieben: ${result.count} Assets, ${result.bytes} Bytes (~${Math.round(result.bytes / 1024)} KB), ${result.treatmentCount} mit Lesbarkeits-Stufe (SOCIAL_VIDEO_ASSET_TREATMENT).\n`);
+    return 0;
+  }
   const plan = await planLogoCache(repoRoot);
   if (!args.fetch) {
     stdout.write(formatPlanReport(plan));

@@ -1,0 +1,12 @@
+# Claude Code Projekt-/Sitzungsdateien — nicht Teil der Anwendung.
+.claude/
+
+# Lokale Export-/Download-Ablage, nicht Teil der Anwendung.
+Claude outputs/
+
+# Schmierzettel-Ablage des Importwegs (Spieltag-Teildateien vor dem Import, siehe
+# scripts/import-season-data.mjs --merge) — Arbeitsdateien, keine Quelle der Wahrheit.
+entwurf/
+
+# Lokales Debug-Werkzeug für die Schriftmetriken-Arbeit, nicht Teil der Anwendung.
+font-metrics-probe.html

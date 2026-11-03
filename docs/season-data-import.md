@@ -163,6 +163,158 @@ eingefügt" statt "ersetzt"). Fehlt `season-data-embedded.js` als Ganzes (z. B.
 allererster Lauf in einem frischen Checkout ohne die Datei), gilt dasselbe:
 die Datei wird neu angelegt, kein Fehler.
 
+## 14. Ein Spieltag ist gespielt — der Weg vom Spielbericht zur App
+
+Dieser Abschnitt ist für den Samstagabend geschrieben, müde, am Handy oder am
+Laptop, ohne dass man das Projekt im Kopf haben muss. Er beschreibt **nur**
+den Fall "ein Spieltag der laufenden Saison ist vorbei, ich will die echten
+Ergebnisse in die App bekommen" — nicht den Erstimport einer ganzen Saison
+(der steht weiter oben).
+
+**Der Engpass ist der Import, nicht die Aufstellung.** Die App leitet den
+Kader für ein Spiel automatisch aus dem importierten Spielbericht ab
+(`rawGames[].players[Seite]` — Vorname, Nachname, Trikotnummer, Position).
+Es gibt keine separate Kaderdatei und keine Notwendigkeit, Spieler von Hand
+einzutragen: sobald ein Spieltag importiert ist, zeigt das Einsatz-Center für
+jedes Spiel dieses Spieltags automatisch eine Karte "📋 Saisonmanager-Kader
+erkannt" mit allen gemeldeten Feld- und Torspielern zum Ein-Klick-Übernehmen.
+
+### 14.1 Daten holen
+
+1. Öffne die öffentliche Saisonmanager-Ligaseite des Verbands (Verbandsliga
+   BW), die Spieltagsübersicht, den gerade gespielten Spieltag.
+2. Für **jedes** Spiel dieses Spieltags (nicht nur die eigenen) das
+   Spielprotokoll öffnen — genau wie beim ursprünglichen Saisonimport. Jedes
+   Spiel liefert ein JSON-Objekt mit denselben Feldern wie die bereits
+   vorhandenen Spiele in `season-data/26-27.json` (`id`, `date`, `events`,
+   `players`, `result`, `result_string`, …).
+3. Alle Spiele dieses einen Spieltags zu **einer** Datei zusammenfassen, im
+   selben Wrapper wie beim Vollimport:
+   ```json
+   { "season": "26/27", "label": "2026/27", "games": [ /* nur die Spiele dieses Spieltags */ ] }
+   ```
+   **Wichtig, und anders als beim Erstimport:** diese Datei muss **nicht**
+   die ganze Saison enthalten — nur den einen Spieltag. Das ist der ganze
+   Sinn von `--merge` (siehe 14.2).
+
+### 14.2 Dateiname und Ablageort
+
+Wie beim Vollimport: außerhalb von `season-data/`, damit ein missglückter
+Versuch nie versehentlich die echte Datei berührt. Empfohlenes Namensschema:
+
+```
+entwurf/26-27-spieltag<N>.json
+```
+
+Beispiel für den ersten Spieltag: `entwurf/26-27-spieltag1.json`.
+
+### 14.3 Befehl
+
+Erst **ohne** `--write` prüfen (reiner Dry-Run, verändert nichts):
+
+```bash
+node scripts/import-season-data.mjs 26/27 entwurf/26-27-spieltag1.json --merge
+```
+
+Steht am Ende **"Ergebnis: Dry-Run OK"**, derselbe Befehl mit `--write
+--update-embedded`:
+
+```bash
+node scripts/import-season-data.mjs 26/27 entwurf/26-27-spieltag1.json --merge --write --update-embedded
+```
+
+`--merge` ist hier entscheidend — **ohne** `--merge` erwartet das Tool die
+komplette Saison und bricht mit "Bekannte Game-ID(s) fehlen in der neuen
+Datei" ab, sobald die Datei nur einen Spieltag enthält (das ist die
+bestehende Sicherheitsprüfung aus Abschnitt "Sicherheitsprüfungen vor jedem
+Schreiben" — sie bleibt bei `--merge` unverändert aktiv, geprüft wird nur
+gegen das Ergebnis NACH dem Zusammenführen, nicht gegen die Teildatei allein,
+siehe `scripts/import-season-data.mjs`, `buildMergeDryRunReport`).
+
+**Was `--merge` tut:** jedes Spiel aus der Teildatei mit bereits bekannter
+ID (z. B. eines, das vorher nur als geplant/"noch nicht ausgetragen" in
+`season-data/26-27.json` stand) wird durch die neue Version **ersetzt**. Jede
+noch nie gesehene ID wird **angehängt**. Kein bestehendes Spiel verschwindet
+je — das bleibt dieselbe harte Regel wie beim Vollimport, nur gegen das
+Merge-Ergebnis geprüft statt gegen die (zwangsläufig viel kleinere)
+Teildatei.
+
+**Verschlechterungsschutz:** `--merge` bricht zusätzlich ab, wenn ein
+**ersetztes** Spiel (bekannte ID) inhaltlich ärmer würde als der bisherige
+Stand — weniger Events, weniger gemeldete Spieler auf einer Seite, oder ein
+verschwindender Endstand. Das fängt den Fall ab, dass eine ältere oder
+halbfertige Datei über ein bereits vollständig importiertes Spiel gelegt
+wird: die Spielanzahl bliebe gleich, der Verlust würde sonst niemandem
+auffallen. Die Fehlermeldung nennt die betroffene Spiel-ID mit beiden Werten
+(z. B. "Events: 16 -> 5"). Rein additive/verbessernde Ersetzungen sind davon
+nie betroffen und laufen unverändert ohne Zusatzflag durch.
+
+Für eine **bewusste** Korrektur (z. B. ein Spielbericht wurde fälschlich zu
+reichhaltig importiert und muss zurückgesetzt werden) erzwingt
+`--allow-downgrade` die Übernahme trotzdem:
+
+```bash
+node scripts/import-season-data.mjs 26/27 entwurf/26-27-korrektur.json --merge --allow-downgrade --write --update-embedded
+```
+
+Das Flag gilt nur für diesen einen Lauf (keine Datei, keine Dauereinstellung)
+und wird im Bericht als Warnung mit der betroffenen ID genannt — nie
+stillschweigend.
+
+### 14.4 Woran du erkennst, dass es geklappt hat
+
+Die Konsole zeigt nach `--write`:
+
+```
+Ergebnis: Validierung OK — season-data/<key>.json wird jetzt mit dem Merge-Ergebnis überschrieben.
+--write: season-data/26-27.json geschrieben (56 Spiele, davon 0 neu/6 aktualisiert durch diesen Teilimport). Kein Commit, kein Push.
+--write: season-data/seasons.json war bereits konsistent, keine Änderung nötig.
+--update-embedded: window.STATIC_SEASON_DATA['26/27'] in season-data-embedded.js ersetzt (56 Spiele). …
+```
+
+Die Gesamtzahl der Spiele (hier 56) bleibt **gleich** — nur "aktualisiert"
+wächst um die Anzahl der Spiele des gerade importierten Spieltags, "neu" ist
+bei einem bereits vollständig geplanten Spielplan normalerweise 0. Steht
+stattdessen "FEHLER" da, wurde **nichts** geschrieben — Ursache lesen (die
+Fehlerliste nennt konkrete Game-IDs/Probleme), Teildatei korrigieren,
+Dry-Run wiederholen.
+
+Danach in der App (lokaler Server, `node scripts/serve.mjs`, siehe oben):
+Spieltagsseite des importierten Spieltags zeigt jetzt den echten Endstand
+statt "noch nicht ausgetragen"; Einsatz-Center → betroffenes Spiel öffnen →
+die Karte "📋 Saisonmanager-Kader erkannt" zeigt die gemeldeten Spieler.
+
+### 14.5 Die vollständige Befehlsfolge
+
+In dieser Reihenfolge abarbeiten:
+
+1. `node scripts/import-season-data.mjs 26/27 entwurf/26-27-spieltagN.json --merge` (Dry-Run, prüfen)
+2. `node scripts/import-season-data.mjs 26/27 entwurf/26-27-spieltagN.json --merge --write --update-embedded` (schreibt `season-data/26-27.json`, pflegt `season-data/seasons.json` mit, bettet in `season-data-embedded.js` ein)
+3. `node scripts/test-import-season-data.mjs` und `node scripts/test-embedded-season-data.mjs` (bestätigen, dass nichts an der Validierungs-/Einbettungslogik überraschend kaputt ist — unabhängig von den konkret importierten Daten)
+4. `git diff` prüfen: nur `season-data/26-27.json` und `season-data-embedded.js` sollten sich geändert haben, mit genau den erwarteten Spielen
+5. **Heute optional, aber nicht auf Dauer:** `node scripts/build-league-model.mjs --write --replicates 200 --seed 1` — aktualisiert `model-data/` (M1–M4, Liga-Modell). Solange kein in der Oberfläche sichtbares Feature `model-data/` ausliest, ändert ein Auslassen dieses Schritts nichts an dem, was in der App zu sehen ist, und kann jederzeit später nachgeholt werden. Das gilt **nur bis M5–M9 in der Oberfläche hängen** — sobald eines dieser Module echte `model-data/`-Werte anzeigt, wird dieser Schritt Pflicht und gehört dann fest in diese Liste (nicht mehr als Punkt 5, sondern vor Schritt 3).
+6. **Nicht nötig:** `node scripts/build-index-map.mjs` — ein reiner Datenimport verändert `index.html` nicht, die Karte bleibt aktuell.
+7. **Nicht nötig für die laufende Saison, bewusst so:** `scripts/p0a-baseline-golden-values.json` auffrischen — die Golden-Baseline deckt ausschließlich **abgeschlossene** Saisons ab (aktuell `21/22` bis `25/26`, siehe `EXPECTED_SEASONS` in `scripts/test-p0a-baseline.mjs`). `26/27` wird dort erst ergänzt, wenn die Saison zu Ende ist und archiviert wird — nicht während der laufenden Saison, auch nicht nach jedem Spieltag.
+8. Manuell committen.
+9. Manuell pushen.
+
+### 14.6 Geprüft am simulierten Fall
+
+Mit einem realistischen Spielbericht für Spieltag 1 der Saison 26/27 (alle 6
+Spiele, echte Ereignis-/Kaderstruktur, gegen eine isolierte Kopie von
+`season-data/` getestet, NICHT gegen die echte Datei) bestätigt:
+
+- Dry-Run meldet korrekt 56 Spiele vorher, 6 in der Teildatei, 56 nach dem
+  Merge, davon 6 aktualisiert, 0 neu, 0 Fehler.
+- Nach `--write`: alle 56 Spiele weiterhin vorhanden, die 6 Spiele des
+  Spieltags tragen jetzt Endstand/Events/Kader, alle anderen Spieltage exakt
+  unverändert.
+- `deriveLineupUlmPlayerIds('26/27')` liefert vorher **0** Spieler-IDs,
+  nachher die 7 real gemeldeten (6 Feld + 1 Torwart).
+- `getSeasonmanagerRosterSuggestion('26/27', 63384)` liefert vorher `null`,
+  nachher die vollständige Kaderliste mit Namen und Trikotnummern — genau die
+  Karte, die im Einsatz-Center als Ein-Klick-Übernahme erscheint.
+
 ## Was dieses Tool bewusst NICHT tut
 
 - Es entscheidet **nicht selbst**, welche Saison `"current"` ist. `--write`

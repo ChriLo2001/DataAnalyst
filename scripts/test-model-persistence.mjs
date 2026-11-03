@@ -13,7 +13,7 @@
 //
 // Aufruf: node scripts/test-model-persistence.mjs
 
-import { mkdir, readFile, writeFile, rm, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rm, stat, readdir } from 'node:fs/promises';
 import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
@@ -126,7 +126,16 @@ let firstRunFiles, firstRunElapsedMs;
 
   const modelDataDir = path.join(sandboxA, 'model-data');
   firstRunFiles = (await listFilesRecursive(modelDataDir)).filter((p) => p.endsWith('.json'));
-  assertEqual(firstRunFiles.length, 12, 'genau 12 JSON-Dateien geschrieben (manifest, alltime, 5× <season>.json, 5× snapshots/<season>.json)');
+  // Aufgabe 3c: nicht mehr fest verdrahtet ("12"), sondern aus dem Manifest/Modell abgeleitet — sonst bricht
+  // diese Prüfung bei jeder neu hinzukommenden Saison (z. B. 26/27 ab der S2e-Kaltstart-Phase). snapshots/
+  // bekommt IMMER eine Datei je Saison im Manifest (auch fast leer, siehe buildSnapshotsFile — eine Saison
+  // ohne abgeschlossenen Spieltag liefert matchdays:[]). model-data/<season>.json (Saisonende-Stand aller
+  // vier Module) entsteht dagegen NUR für Saisons mit mindestens einem Modell-Spiel (siehe buildSeasonFiles:
+  // "continue" bei fehlendem Snapshot) — eine Saison ganz ohne gespieltes Spiel hat noch kein Saisonende.
+  const modelForCounts = await buildLeagueModel(sandboxA);
+  const seasonsWithModelGames = modelForCounts.seasons.filter((s) => s.quality.modelGames > 0).length;
+  const expectedFileCount = 2 /* manifest.json, alltime.json */ + seasonsWithModelGames /* <season>.json */ + modelForCounts.seasons.length /* snapshots/<season>.json, je Saison im Manifest */;
+  assertEqual(firstRunFiles.length, expectedFileCount, `${expectedFileCount} JSON-Dateien geschrieben (2 feste + ${seasonsWithModelGames} <season>.json [nur Saisons mit mindestens einem Modell-Spiel] + ${modelForCounts.seasons.length} snapshots/<season>.json [eine je Saison im Manifest])`);
 
   for (const p of firstRunFiles) {
     if (p.includes(`${path.sep}snapshots${path.sep}`)) {
@@ -280,6 +289,31 @@ console.log('== H) --write und --only schließen sich aus; --write erfordert --r
 }
 
 await rm(sandboxA, { recursive: true, force: true });
+
+// ═════════════════════════════════════════════════════════════════════════
+console.log('== I) Zusatzprüfung (S2e-Kaltstart-Phase): kein Konsument setzt nicht-leeren Snapshot-Inhalt voraus ==');
+{
+  // Befund: seit 26/27 existiert ein fast leerer model-data/snapshots/26-27.json (matchdays:[], 37 Byte,
+  // weil noch kein Spieltag abgeschlossen ist — siehe buildSnapshotsFile). Geprüft: liest irgendeine Stelle
+  // in index.html oder den Skripten "model-data"/"snapshots/" und geht dabei von nicht-leerem Inhalt aus?
+  // Ergebnis: NEIN — aktuell liest NICHTS außer build-league-model.mjs selbst (der Schreiber) und diese
+  // Testdatei überhaupt "model-data"/"snapshots/". Diese Prüfung hält genau das fest, damit ein künftiger,
+  // stillschweigend hinzugefügter Konsument mit einer impliziten Nicht-leer-Annahme hier auffällt.
+  const html = await readFile(path.join(REPO_ROOT, 'index.html'), 'utf8');
+  assertTrue(!/model-data|snapshots\//.test(html), 'index.html liest model-data/snapshots nirgends (kein Konsument im Frontend)');
+
+  const scriptsDir = path.join(REPO_ROOT, 'scripts');
+  const scriptFiles = (await readdir(scriptsDir)).filter((f) => f.endsWith('.mjs') && f !== 'build-league-model.mjs' && f !== 'test-model-persistence.mjs');
+  const consumers = [];
+  for (const f of scriptFiles) {
+    // Zeilenkommentare vorher entfernen (gleiches Muster wie in test-build-league-model.mjs) — sonst meldet
+    // z.B. scripts/spieltag.mjs als falscher Treffer, obwohl dort nur ein Kommentar ausdrücklich bestätigt,
+    // dass dieses Skript model-data/snapshots NICHT anfasst.
+    const src = (await readFile(path.join(scriptsDir, f), 'utf8')).replace(/\/\/.*$/gm, '');
+    if (/model-data[\\/]snapshots|snapshots[\\/]<season>|readFile\([^)]*snapshots/.test(src)) consumers.push(f);
+  }
+  assertEqual(consumers, [], 'kein anderes Skript liest model-data/snapshots (außer dem Schreiber build-league-model.mjs selbst)');
+}
 
 console.log('');
 if (failures > 0) {
