@@ -14,7 +14,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   HALF_LENGTH_SEC, GAME_LENGTH_SEC,
-  parseGameClock, detectSecondHalfConvention, classifyGameClock, gameClockToAbsoluteSeconds,
+  parseClockString, detectSecondHalfConvention, classifyGameClock, gameClockToAbsoluteSeconds,
   resolveGameClockSeconds, findUnclearSecondHalfGames, countDiscardedSecondHalfEvents,
 } from './game-clock.mjs';
 
@@ -37,28 +37,28 @@ console.log('== Konstanten ==');
 assertEqual(HALF_LENGTH_SEC, 1200, 'HALF_LENGTH_SEC = 20:00');
 assertEqual(GAME_LENGTH_SEC, 2400, 'GAME_LENGTH_SEC = 40:00');
 
-console.log('== parseGameClock() — nur noch m:ss/mm:ss mit Doppelpunkt oder Punkt, OHNE Längenprüfung ==');
-assertEqual(parseGameClock('3:25'), 205, 'Doppelpunkt wird gelesen');
-assertEqual(parseGameClock('3.25'), 205, 'Punkt statt Doppelpunkt wird genauso gelesen (Befund 21/22, Spiel 25661)');
-assertEqual(parseGameClock('2.10'), 130, 'Spiel 25664: "2.10" -> 130s');
-assertEqual(parseGameClock('31.41'), 1901, 'Spiel 25693: "31.41" -> 1901s');
-assertEqual(parseGameClock('10.12'), 612, 'Spiel 25694: "10.12" -> 612s');
-assertEqual(parseGameClock('0:00'), 0, '0:00 -> 0');
-assertEqual(parseGameClock('19:59'), 1199, '19:59 -> 1199');
-assertEqual(parseGameClock('40:00'), 2400, '40:00 (= GAME_LENGTH_SEC) ist lesbar');
-// Nachschärfung: die Längengrenze ist periodenbewusst und gehört deshalb NICHT in parseGameClock() (das
+console.log('== parseClockString() — nur noch m:ss/mm:ss mit Doppelpunkt oder Punkt, OHNE Längenprüfung ==');
+assertEqual(parseClockString('3:25'), 205, 'Doppelpunkt wird gelesen');
+assertEqual(parseClockString('3.25'), 205, 'Punkt statt Doppelpunkt wird genauso gelesen (Befund 21/22, Spiel 25661)');
+assertEqual(parseClockString('2.10'), 130, 'Spiel 25664: "2.10" -> 130s');
+assertEqual(parseClockString('31.41'), 1901, 'Spiel 25693: "31.41" -> 1901s');
+assertEqual(parseClockString('10.12'), 612, 'Spiel 25694: "10.12" -> 612s');
+assertEqual(parseClockString('0:00'), 0, '0:00 -> 0');
+assertEqual(parseClockString('19:59'), 1199, '19:59 -> 1199');
+assertEqual(parseClockString('40:00'), 2400, '40:00 (= GAME_LENGTH_SEC) ist lesbar');
+// Nachschärfung: die Längengrenze ist periodenbewusst und gehört deshalb NICHT in parseClockString() (das
 // kennt die Periode nicht) — "41:00" ist als Zeitstring für sich genommen völlig lesbar (65 gültige
 // Minuten:Sekunden), nur in Halbzeit 1/2 ist sie unplausibel. Siehe classifyGameClock() für die Prüfung.
-assertEqual(parseGameClock('41:00'), 2460, '41:00 ist als Zeitstring lesbar — die Längenprüfung ist Sache von classifyGameClock(), nicht von parseGameClock()');
-assertEqual(parseGameClock('12'), null, 'bloße Zahl ohne Trenner -> null (nicht als "12 Minuten" geraten)');
-assertEqual(parseGameClock(41), null, 'bloße Zahl (Number-Typ) ohne Trenner -> ebenfalls null');
-assertEqual(parseGameClock(''), null, 'leerer String -> null');
-assertEqual(parseGameClock(null), null, 'null -> null');
-assertEqual(parseGameClock(undefined), null, 'undefined -> null');
-assertEqual(parseGameClock('abc'), null, 'unlesbarer Text -> null');
-assertEqual(parseGameClock('12:60'), null, 'Sekunden >= 60 -> null (kein NaN)');
-assertEqual(parseGameClock('12:-5'), null, 'negative Sekunden -> null');
-assertTrue(!Number.isNaN(parseGameClock('murks') ?? 0), 'kein Eingabewert liefert NaN (immer null oder eine endliche Zahl)');
+assertEqual(parseClockString('41:00'), 2460, '41:00 ist als Zeitstring lesbar — die Längenprüfung ist Sache von classifyGameClock(), nicht von parseClockString()');
+assertEqual(parseClockString('12'), null, 'bloße Zahl ohne Trenner -> null (nicht als "12 Minuten" geraten)');
+assertEqual(parseClockString(41), null, 'bloße Zahl (Number-Typ) ohne Trenner -> ebenfalls null');
+assertEqual(parseClockString(''), null, 'leerer String -> null');
+assertEqual(parseClockString(null), null, 'null -> null');
+assertEqual(parseClockString(undefined), null, 'undefined -> null');
+assertEqual(parseClockString('abc'), null, 'unlesbarer Text -> null');
+assertEqual(parseClockString('12:60'), null, 'Sekunden >= 60 -> null (kein NaN)');
+assertEqual(parseClockString('12:-5'), null, 'negative Sekunden -> null');
+assertTrue(!Number.isNaN(parseClockString('murks') ?? 0), 'kein Eingabewert liefert NaN (immer null oder eine endliche Zahl)');
 
 console.log('== detectSecondHalfConvention() — Mehrheitsregel, > statt >= an der 20:00-Schwelle ==');
 const g = (events) => ({ id: 1, events });

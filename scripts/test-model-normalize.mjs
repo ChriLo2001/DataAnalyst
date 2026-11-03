@@ -64,7 +64,7 @@ const real = (() => {
     constSource('ULM_TEAM_ALIAS_KEYS'),
     ...['isUlmTeamName', 'detectUlmSide', 'seasonOrderIndex', 'matchcenterSeasonLabel', 'matchcenterSeasonIsUlmTuebingenSgEra',
       'teamAliasSeasonMatches', 'normalizeTeamKey', 'teamAliasRuleMatches', 'isOwnTeam', 'getCanonicalTeamName', 'isYouthGame'].map(fnSource),
-    constSource('HALF_LENGTH_SEC'), constSource('GAME_LENGTH_SEC'), fnSource('parseGameClock'),
+    constSource('HALF_LENGTH_SEC'), constSource('GAME_LENGTH_SEC'), fnSource('parseClockString'),
   ].join('\n');
   const ctx = vm.createContext({ console, SEASON_CONFIG: seasonConfigStub, STATIC_SEASON_DATA: {}, TextDecoder });
   vm.runInContext(code, ctx);
@@ -109,7 +109,7 @@ console.log('== Drift-Test: Node-Regeln gegen die echten Funktionen aus index.ht
   //   "3.25"→205/null [inhaltlich]  ""→null/null  null→null/null  undefined→null/null
   //   " 9:05 "→545/545  "1:2"→62/62  "100:00"→null/null  "31.41"→1901/null [inhaltlich]
   //   "abc"→null/null  41→null/2460 [inhaltlich]  "00:00"→0/0
-  // (Format: Eingabe -> parseGameClock(index.html)/parseClockSeconds(normalize.mjs))
+  // (Format: Eingabe -> parseClockString(index.html)/parseClockSeconds(normalize.mjs))
   //
   // Die vier inhaltlichen Abweichungen sind aber NICHT vier gleichartige Geschmacksunterschiede, sondern
   // zwei verschiedene Dinge:
@@ -124,7 +124,7 @@ console.log('== Drift-Test: Node-Regeln gegen die echten Funktionen aus index.ht
   //   — beim Zusammenlegen braucht DAS eine explizite Entscheidung, keine automatische Angleichung.
   const clockDiffs = [];
   for (const t of ['0:41', '20:00', '12', '5:60', '3.25', '', null, undefined, ' 9:05 ', '1:2', '100:00', '31.41', 'abc', 41, '00:00']) {
-    if (vm.runInContext('parseGameClock', real)(t) !== N.parseClockSeconds(t)) clockDiffs.push(String(t));
+    if (vm.runInContext('parseClockString', real)(t) !== N.parseClockSeconds(t)) clockDiffs.push(String(t));
   }
   assertEqual(clockDiffs, ['12', '3.25', '31.41', '41'], 'Drift clock: NUR die vier namentlich dokumentierten inhaltlichen Abweichungen (siehe Tabelle oben: 2 Fehler im Modellpfad bei Punkt-Zeiten, 2 bewusste Verschärfungen bei bloßen Zahlen — keine davon nur formal) — jede andere Abweichung wäre unbeabsichtigt und lässt diesen Test rot werden');
   for (const f of [{}, { league_name: 'Verbandsliga' }, { league_name: 'U15 Meisterschaft' }, { competition_name: 'Jugend' }, { season: { name: 'Junior Cup' } }, { spielplan_name: 'Nachwuchs' }, { game_type: 'U 17' }]) {

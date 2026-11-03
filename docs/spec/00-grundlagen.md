@@ -83,7 +83,7 @@ Nicht neu erfinden, sondern prüfen und wo möglich in Module auslagern:
 
 - Team-Namens-Normalisierung und SG-Logik: `normalizeTeamName`, `isUlmTeamName`, `detectUlmSide`, `normalizeOpponentNameForAllTime`, `getCanonicalTeamName`
 - Spieler-Identität: `buildPlayerIdentity`, `registerPlayerIdentity`, `getPlayerSourceId`, `resolveGoalScorerPlayer`, `resolveAssistPlayer`
-- Zeit: `parseGameClock`, `goalieEventAbsSeconds`, `getPhaseKey`
+- Zeit: `parseClockString` (vormals `parseGameClock`), `classifyGameClock`, `detectSecondHalfConvention`, `goalieEventAbsSeconds`, `getPhaseKey` (siehe `scripts/game-clock.mjs`)
 - Special Teams: `buildSpecialTeamsForGame`, `buildSpecialTeamsForSeason`
 - Goalies: `buildGoalieGameRecord`, `buildGoalieStatsForSeason`, `buildGoalieAnalysisModel`
 - Spieltag: `getFurtherSameDayUlmGames`

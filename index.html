@@ -2695,17 +2695,32 @@ function isExcludedGoalieAppearance(ref,rosterPlayer,game,seasonKey=''){
     return gameMatches&&seasonMatches&&(sourceMatches||nameMatches);
   });
 }
+// S2f-Auftrag "Rollenzuordnung korrigieren": EINE gemeinsame Stelle, die aus Kadereintrag + Spiel die
+// Rolle bestimmt. Vorher bestimmten isGoalieAppearance/isFieldAppearance die Rolle zwar schon korrekt aus
+// dem Kadereintrag, aber drei ANDERE Stellen (applySeasonScoringToRegistry, getSeasonPlayerFieldBasis,
+// computeMetrics) rieten die Rolle unabhängig voneinander aus Scorerereignissen statt sie von hier zu
+// übernehmen — "wer punktet, ist Feldspieler" war dreimal unabhängig falsch angenommen (siehe Bestandsaufnahme).
+// playerRoleInGame ist jetzt die einzige Stelle, die diese Entscheidung trifft; alle Verbraucher (auch
+// buildPlayerEvents, das die Rolle jetzt pro Event mitführt) rufen sie auf statt selbst zu urteilen.
+function playerRoleInGame(entry,game,seasonKey=''){
+  if(!entry)return null;
+  if(isGoalieRosterEntry(entry))return isExcludedGoalieAppearance(entry,entry,game,seasonKey)?'excludedGoalie':'goalie';
+  return'field';
+}
+function getPlayerGameRole(ref,game,seasonKey=''){
+  const side=detectSide(game);if(!side)return null;
+  const roster=game.players?.[side]||[];
+  const entry=roster.find(p=>rosterPlayerMatches(ref,p));
+  if(!entry)return null;
+  return playerRoleInGame(entry,game,seasonKey);
+}
 function isGoalieAppearance(playerId,game,seasonKey=''){
   const ref=typeof playerId==='object'?playerId:getPlayerRegistryProfile(playerId)||{playerId};
-  const side=detectSide(game);if(!side)return false;
-  const roster=game.players?.[side]||[];
-  return roster.some(p=>rosterPlayerMatches(ref,p)&&isGoalieRosterEntry(p)&&!isExcludedGoalieAppearance(ref,p,game,seasonKey));
+  return getPlayerGameRole(ref,game,seasonKey)==='goalie';
 }
 function isFieldAppearance(playerId,game,seasonKey=''){
   const ref=typeof playerId==='object'?playerId:getPlayerRegistryProfile(playerId)||{playerId};
-  const side=detectSide(game);if(!side)return false;
-  const roster=game.players?.[side]||[];
-  return roster.some(p=>rosterPlayerMatches(ref,p)&&!isGoalieRosterEntry(p));
+  return getPlayerGameRole(ref,game,seasonKey)==='field';
 }
 function getFieldGameIdsForPlayer(ref,gamesData){
   const ids=new Set();
@@ -2928,7 +2943,7 @@ function resolveAssistPlayer(event,playersById=null,roster=[]){
   }
 }
 
-const t2s=t=>parseGameClock(t)??0;
+const t2s=t=>parseClockString(t)??0;
 
 function variance(arr){
   if(!arr.length)return 0;
@@ -3640,12 +3655,17 @@ function createPlayerAnalysisProfile(){
 function emptyPlayerSeasonStats(){
   return{
     games:0,goals:0,assists:0,points:0,penalties:0,penaltyMinutes:0,
+    // S2f: Anteil der Punkte, die als Torhüter entstanden sind — Markierung fuer die Gesamt-Scorerliste
+    // (Auftrag Punkt 4), getrennt gefuehrt statt die Rolle aus dem Scorerereignis zu erraten.
+    goalsAsGoalie:0,assistsAsGoalie:0,
     teams:[],opponents:[],duos:{},
   };
 }
 function emptyGoalieSeasonStats(){
   return{
     games:0,
+    // S2f: eigene Zeile fuer Scorerpunkte als Torhueter (Auftrag Punkt 3), Tore/Vorlagen getrennt.
+    scoring:{goals:0,assists:0},
     goalsAgainst:0,
     goalsAgainstPerGame:0,
     cleanSheets:0,
@@ -3668,6 +3688,7 @@ function emptyGoalieSeasonStats(){
 function emptyGoalieAlltimeStats(){
   return{
     games:0,
+    scoring:{goals:0,assists:0},
     goalsAgainst:0,
     goalsAgainstPerGame:0,
     cleanSheets:0,
@@ -3855,6 +3876,14 @@ function linkUiPlayersToRegistry(players,gamesData,seasonKey){
 }
 
 function applySeasonScoringToRegistry(seasonKey,players,events,penalties){
+  // S2f-Auftrag "Rollenzuordnung korrigieren", Fundstelle A: zählte vorher JEDES Scorerereignis blind als
+  // Feldspiel (markFieldRoleAppearance ohne Rollenprüfung). Tore/Vorlagen/Punkte bleiben unverändert aus
+  // ALLEN Ereignissen (Punkt 2: "nichts geht verloren" — die Vorlage eines Torhüters bleibt Teil seiner
+  // Saison-/Karrierepunktzahl). Die Spielzahl (stats.games) kommt jetzt NICHT mehr von hier, sondern aus
+  // finalizeSeasonAppearanceTotals (Vereinigung der bereits korrekten, kaderbasierten Feld-/Torhüterspiele,
+  // siehe dort) — applySeasonScoringToRegistry bucht nur noch, WELCHER Rollenanteil der Punkte als Torhüter
+  // entstand (Markierung für die Gesamt-Scorerliste, Punkt 4), über e.role, das buildPlayerEvents jetzt
+  // mitführt statt dass hier erneut geraten wird.
   for(const pd of players){
     const profile=PLAYER_REGISTRY.players[pd.playerId];
     if(!profile)continue;
@@ -3864,16 +3893,32 @@ function applySeasonScoringToRegistry(seasonKey,players,events,penalties){
     stats.goals=ev.filter(e=>e.type==='Tor').length;
     stats.assists=ev.filter(e=>e.type==='Vorlage').length;
     stats.points=ev.length;
+    stats.goalsAsGoalie=ev.filter(e=>e.type==='Tor'&&e.role==='goalie').length;
+    stats.assistsAsGoalie=ev.filter(e=>e.type==='Vorlage'&&e.role==='goalie').length;
     stats.penalties=pens.length;
     stats.penaltyMinutes=pens.reduce((s,p)=>s+p.minutes,0);
     for(const e of ev){
-      if(e.gameId){
-        incrementUniqueCounter(stats,'games',e.gameId);
-        markFieldRoleAppearance(profile,seasonKey,e.gameId);
-      }
       addUnique(stats.opponents,e.opponent);
+      if(e.role==='goalie'&&e.gameId){
+        const gstats=ensureGoalieSeasonStats(profile,seasonKey);
+        gstats.scoring=gstats.scoring||{goals:0,assists:0};
+        if(e.type==='Tor')gstats.scoring.goals++;else if(e.type==='Vorlage')gstats.scoring.assists++;
+      }
     }
     profile.statsBySeason[seasonKey]=stats;
+  }
+}
+// S2f: Vereinigung der (bereits kaderbasiert korrekten) Feld- und Torhüterspiele einer Saison —
+// stats.games ist jetzt die Gesamtzahl der Einsätze (Auftrag Punkt 4: "Nenner ist dort die Gesamtzahl der
+// Einsätze, nicht die Feldspiele"), nicht mehr aus Scorerereignissen abgeleitet.
+function finalizeSeasonAppearanceTotals(seasonKey,gamesData){
+  for(const profile of Object.values(PLAYER_REGISTRY.players)){
+    const stats=profile.statsBySeason[seasonKey];
+    if(!stats)continue;
+    const ref={playerId:profile.playerId,sourceId:profile.sourceId,name:profile.name};
+    const fieldIds=getFieldGameIdsForPlayer(ref,gamesData);
+    const goalieIds=getGoalieGameIdsForPlayer(ref,gamesData);
+    stats.games=new Set([...fieldIds,...goalieIds]).size;
   }
 }
 
@@ -3899,6 +3944,8 @@ function serializeSeasonStats(stats){
     goals:stats.goals||0,
     assists:stats.assists||0,
     points:stats.points||0,
+    goalsAsGoalie:stats.goalsAsGoalie||0,
+    assistsAsGoalie:stats.assistsAsGoalie||0,
     penalties:stats.penalties||0,
     penaltyMinutes:stats.penaltyMinutes||0,
     teams:[...(stats.teams||[])],
@@ -3909,6 +3956,7 @@ function serializeSeasonStats(stats){
 function serializeGoalieSeasonStats(stats){
   return{
     games:stats.games||0,
+    scoring:{goals:stats.scoring?.goals||0,assists:stats.scoring?.assists||0},
     goalsAgainst:stats.goalsAgainst||0,
     goalsAgainstPerGame:stats.goalsAgainstPerGame||0,
     cleanSheets:stats.cleanSheets||0,
@@ -3967,30 +4015,36 @@ function aggregateAllTimePlayers(registry=PLAYER_REGISTRY){
   const out={};
   for(const [playerId,profile] of Object.entries(registry.players)){
     const total={games:0,fieldGames:0,goalieGames:0,totalGames:0,goals:0,assists:0,points:0,penalties:0,penaltyMinutes:0,seasons:[...profile.seasons],status:profile.status};
-    const fieldGamesSeen=new Set();
-    const goalieGamesSeen=new Set();
-    for(const [seasonKey,stats] of Object.entries(profile.statsBySeason)){
+    for(const stats of Object.values(profile.statsBySeason)){
       total.goals+=stats.goals||0;
       total.assists+=stats.assists||0;
       total.points+=stats.points||0;
       total.penalties+=stats.penalties||0;
       total.penaltyMinutes+=stats.penaltyMinutes||0;
-      for(const gid of stats._games||[])fieldGamesSeen.add(`${seasonKey}:${gid}`);
     }
-    for(const [seasonKey,stats] of Object.entries(profile.goalieStatsBySeason||{})){
+    // S2f: fieldGamesSeen/goalieGamesSeen kommen jetzt aus den bereits kaderbasiert korrekten
+    // fieldStatsBySeason/goalieStatsBySeason — nicht mehr aus statsBySeason[...]._games (das war die
+    // Scorerereignis-Menge, dieselbe Fehlerquelle wie bei Fundstelle A, nur auf Alltime-Ebene).
+    const fieldGamesSeen=new Set();
+    for(const[seasonKey,stats]of Object.entries(profile.fieldStatsBySeason||{}))
+      for(const gid of stats._games||[])fieldGamesSeen.add(`${seasonKey}:${gid}`);
+    const goalieGamesSeen=new Set();
+    for(const[seasonKey,stats]of Object.entries(profile.goalieStatsBySeason||{}))
       for(const detail of stats.gamesDetail||[]){
         const gid=detail.gameId||detail.id;
         if(gid)goalieGamesSeen.add(`${detail.seasonKey||seasonKey}:${gid}`);
       }
-    }
-    const fieldFallback=Object.values(profile.statsBySeason||{}).reduce((s,st)=>s+(st.games||0),0);
+    const fieldFallback=Object.values(profile.fieldStatsBySeason||{}).reduce((s,st)=>s+(st.games||0),0);
     const goalieFallback=Object.values(profile.goalieStatsBySeason||{}).reduce((s,st)=>s+(st.games||0),0);
     total.fieldGames=fieldGamesSeen.size||fieldFallback;
     total.goalieGames=goalieGamesSeen.size||goalieFallback;
     const totalGamesSeen=new Set([...fieldGamesSeen,...goalieGamesSeen]);
     total.totalGames=totalGamesSeen.size||(total.fieldGames+total.goalieGames);
-    // Keep `games` as field-player games so field-player rates stay clean.
-    total.games=total.fieldGames;
+    // S2f-Auftrag Punkt 4: Nenner fuer "Punkte/Spiel" ist die Gesamtzahl der Einsätze (Feld+Torhüter),
+    // nicht nur die Feldspiele — vorher total.games=total.fieldGames, dadurch war Punkte/Spiel fuer einen
+    // reinen Torhüter mit Scorerpunkt unbestimmt (0 Feldspiele, aber Punkte>0). fieldGames/goalieGames
+    // bleiben als separate, rollen-reine Werte erhalten (mehrere Aufrufer bevorzugen sie explizit vor games).
+    total.games=total.totalGames;
     profile.allTimeStats={...total};
     out[playerId]={playerId,name:profile.name,...total};
   }
@@ -4170,7 +4224,7 @@ function getGameDurationMinutes(game){
   return Math.max(1,min||DEFAULT_GAME_DURATION_MIN);
 }
 function gameDaySortValue(game){
-  const clock=parseGameClock(game?.actual_start_time||game?.start_time||'');
+  const clock=parseClockString(game?.actual_start_time||game?.start_time||'');
   if(clock!==null)return clock;
   const gn=Number(game?.game_number||game?.game_day?.game_day_number);
   if(Number.isFinite(gn))return gn*3600;
@@ -4235,6 +4289,12 @@ function isPenaltyGoalEvent(ev){
   const raw=`${ev?.goal_type||''} ${ev?.goal_type_string||''}`.toLowerCase();
   // Saisonmanager marks penalty goals explicitly; unmarked goals are treated as regular for penalty expiry.
   return raw.includes('penalty')||raw.includes('penaltysch')||raw.includes('strafsto')||raw.includes('strafsch');
+}
+// S2f-Auftrag Punkt 8: Eigentore haben konstruktionsbedingt keinen Schützen auf der eigenen Seite — ein
+// bekannter, gültiger Fall (siehe Spiel 44379, Rückennummer 1000 als Platzhalter), kein Datenfehler.
+function isOwnGoalEvent(ev){
+  const raw=`${ev?.goal_type||''} ${ev?.goal_type_string||''}`.toLowerCase();
+  return raw.includes('owngoal')||raw.includes('eigentor');
 }
 function specialTeamsStateFromActive(active){
   const ulm=!!active.ulm,opp=!!active.opp;
@@ -4709,8 +4769,11 @@ function aggregateGoalieAlltimeStats(registry=PLAYER_REGISTRY){
     const betweenTimes=[];
     const noGoalStretches=[];
     const goalieSpecialTeams=emptyGoalieSpecialTeamsStats();
+    const goalieScoring={goals:0,assists:0};
     for(const stats of Object.values(profile.goalieStatsBySeason||{})){
       total.games+=stats.games||0;
+      goalieScoring.goals+=stats.scoring?.goals||0;
+      goalieScoring.assists+=stats.scoring?.assists||0;
       total.goalsAgainst+=stats.goalsAgainst||0;
       total.cleanSheets+=stats.cleanSheets||0;
       total.lowGoalGames+=stats.lowGoalGames||0;
@@ -4729,6 +4792,7 @@ function aggregateGoalieAlltimeStats(registry=PLAYER_REGISTRY){
     total.avgTimeBetweenGA=avgOrNull(betweenTimes);
     total.longestNoGoalStretch=noGoalStretches.length?Math.max(...noGoalStretches):null;
     total.specialTeams=goalieSpecialTeams;
+    total.scoring=goalieScoring;
     profile.goalieAlltimeStats=total;
     if(total.games>0)out[playerId]={playerId,name:profile.name,...total};
   }
@@ -4896,6 +4960,7 @@ function buildPlayerDataFoundation(seasonKey,{gamesData,players,events,penalties
   linkUiPlayersToRegistry(players,gamesData,seasonKey);
   applySeasonScoringToRegistry(seasonKey,players,events,penalties);
   buildGoalieStatsForSeason(seasonKey,{gamesData,standings});
+  finalizeSeasonAppearanceTotals(seasonKey,gamesData);
   finalizePlayerRegistrySeason(seasonKey);
   const seasonStats=aggregateSeasonStats(seasonKey,{gamesData,players,events,penalties,teamGoalsPerGame,standings});
   PLAYER_REGISTRY.allTime.seasonStats[seasonKey]=seasonStats;
@@ -4962,20 +5027,28 @@ function buildPlayerEvents(label,gamesData){
     // S2e-Auftrag "Spielzeit normalisieren": einmal pro Spiel ermittelt, für getPhaseKey unten.
     // ev.absSeconds kommt bereits korrekt normalisiert aus buildAnnotatedGoalEventsForGame (siehe dort).
     const clockConvention=detectSecondHalfConvention(g);
+    // S2f-Auftrag "Rollenzuordnung korrigieren", Punkt 1: die Rohquelle (buildPlayerEvents) führt die Rolle
+    // jetzt selbst mit, statt dass jeder Verbraucher (applySeasonScoringToRegistry, getSeasonPlayerFieldBasis,
+    // computeMetrics) sie erneut aus dem Scorerereignis errät. `me` ist bereits der Kadereintrag von `label`
+    // in GENAU diesem Spiel — playerRoleInGame entscheidet einmal pro Spiel, nicht pro Ereignis.
+    const role=playerRoleInGame(me,g,g._mcSeasonKey||getActiveSeasonKey())==='goalie'?'goalie':'field';
     for(const ev of processed){
       try{
         if(!ev.isUlm)continue;
         const scorer=getGoalScorerFromEvent(ev,roster);
         const scorerName=pFull(scorer);
         if(!scorer||!scorerName){
-          warnEventProcessingOnce('Tor-Event ohne auflösbaren Schützen übersprungen:',g,ev);
+          // S2f-Auftrag Punkt 8: Eigentore haben per Definition keinen auflösbaren Schützen auf dieser
+          // Seite — ein bekannter, gültiger Fall, keine Warnung wert (anders als ein echtes Tor ohne
+          // zuordenbaren Kadereintrag, das weiterhin gemeldet wird).
+          if(!isOwnGoalEvent(ev))warnEventProcessingOnce('Tor-Event ohne auflösbaren Schützen übersprungen:',g,ev);
           continue;
         }
         const assistants=getAssistPlayersFromEvent(ev,roster).filter(a=>a&&pFull(a)&&!rosterPlayerMatches(a,scorer));
         const assistant=assistants[0]||null;
         const assistantName=pFull(assistant);
         if(rosterPlayerMatches(me,scorer)){
-          events.push({type:'Tor',gameId:g.id,date:g.date,opponent:opp,result:res,
+          events.push({type:'Tor',gameId:g.id,date:g.date,opponent:opp,result:res,role,
             period:ev.period,time:ev.time,absSeconds:ev.absSeconds,phase:getPhaseKey(ev.period,ev.time,clockConvention),
             partner:assistantName||'Solo',
             ctx:ev.ctx,clutch:ev.clutch,uA:ev.uA,oA:ev.oA,isFirst:ev.isFirst,
@@ -4988,7 +5061,7 @@ function buildPlayerEvents(label,gamesData){
           for(const assistant of assistants){
             const assistantName=pFull(assistant);
             if(assistantName&&rosterPlayerMatches(me,assistant)){
-              events.push({type:'Vorlage',gameId:g.id,date:g.date,opponent:opp,result:res,
+              events.push({type:'Vorlage',gameId:g.id,date:g.date,opponent:opp,result:res,role,
                 period:ev.period,time:ev.time,absSeconds:ev.absSeconds,phase:getPhaseKey(ev.period,ev.time,clockConvention),
                 partner:scorerName,
                 ctx:ev.ctx,clutch:null,uA:ev.uA,oA:ev.oA,
@@ -5054,12 +5127,13 @@ function computeMetrics(playerKey,allEvents,allPens,gamesData,standings){
   const ev=allEvents[playerKey]||[];
   const pens=allPens[playerKey]||[];
   const playerRef=S.players.find(pl=>pl.key===playerKey);
+  // S2f-Auftrag "Rollenzuordnung korrigieren", Fundstelle C: vorher wurde fieldGameIds (kaderbasiert
+  // korrekt) zusätzlich mit JEDEM Scorerereignis vereinigt — dieselbe falsche Annahme wie bei Fundstelle A
+  // und B, hier an der Rollenprofil-/Style-Profile-Berechnung (gamesPlayed, impactPerGame, Konstanz).
+  // getFieldGameIdsForPlayer ist bereits die gemeinsame, kaderbasierte Quelle — keine weitere Vereinigung.
   const fieldGameIds=getFieldGameIdsForPlayer(playerRef,gamesData);
-  const teamGameIds=new Set(getPlayedUlmGames(gamesData||[]).map(g=>String(gameStableId(g))));
-  for(const e of ev){
-    if(e.gameId&&(!teamGameIds.size||teamGameIds.has(String(e.gameId))))fieldGameIds.add(String(e.gameId));
-  }
   const goalieGameIds=getGoalieGameIdsForPlayer(playerRef,gamesData);
+  const teamGameIds=new Set(getPlayedUlmGames(gamesData||[]).map(g=>String(gameStableId(g))));
   const gamesPlayed=fieldGameIds.size;
   const goalieGames=goalieGameIds.size;
   const myGameIds=new Set(ev.map(e=>e.gameId).filter(Boolean).map(String).filter(id=>!teamGameIds.size||teamGameIds.has(id)));
@@ -5285,7 +5359,7 @@ function isImportantClutchGoal(e){
 function isDecisiveGoal(e){
   return e?.type==='Tor'&&/Entscheidend/i.test(clutchText(e));
 }
-// S2e-Auftrag "Spielzeit normalisieren": vorher parseGameClock(e.time)>=900 direkt auf dem rohen
+// S2e-Auftrag "Spielzeit normalisieren": vorher parseClockString(e.time)>=900 direkt auf dem rohen
 // Zeitstring, unterstellte also für Halbzeit 2 immer die 'relativ'-Konvention — bei 'durchlaufend'-Spielen
 // galt dadurch JEDES Tor der 2. Halbzeit fälschlich als "spät" (schon der Anstoß zur 2. Halbzeit liegt bei
 // Minute 20, also weit über der alten Schwelle von 900s). Nutzt jetzt e.absSeconds, das buildPlayerEvents
@@ -8826,12 +8900,13 @@ function getSeasonPlayerFieldBasis(pd,seasonKey=getActiveSeasonKey()){
     const gid=String(gameStableId(g));
     if(isFieldAppearance(ref,g,seasonKey))fieldIds.add(gid);
   }
+  // S2f-Auftrag "Rollenzuordnung korrigieren", Fundstelle B: vorher wurden ALLE Scorerereignis-gameIds in
+  // fieldIds vereinigt (dieselbe falsche Annahme wie bei Fundstelle A/C). fieldIds kommt jetzt ausschließlich
+  // aus isFieldAppearance (kaderbasiert); scoringIds ist nur noch eine Diagnosegröße (Spiele MIT Punkt
+  // innerhalb der schon korrekten Feldspiele) für die Konstanz-Berechnung unten, keine Erweiterung des Nenners.
   const scoringIds=new Set((S.events?.[pd?.key]||[])
-    .map(e=>e?.gameId)
-    .filter(Boolean)
-    .map(String)
-    .filter(id=>!teamIds.size||teamIds.has(id)));
-  for(const id of scoringIds)fieldIds.add(id);
+    .filter(e=>e?.role==='field'&&e?.gameId&&fieldIds.has(String(e.gameId)))
+    .map(e=>String(e.gameId)));
   const summary={
     playerId:pd?.playerId||'',
     seasonKey,
@@ -8844,16 +8919,24 @@ function getSeasonPlayerFieldBasis(pd,seasonKey=getActiveSeasonKey()){
   };
   return summary;
 }
+// S2f-Auftrag Punkt 7: dieselbe Schwelle wie die Duo-Analyse (gamesTogether<5, z. B. an den Difficult-
+// Connection-Stellen) — keine neue Schwelle erfunden, nur hierhin übernommen.
+const ROLE_PROFILE_MIN_GAMES=5;
 function getSeasonScopedIdentityProfile(pd,seasonKey=getActiveSeasonKey()){
   const base=pd?.analysisProfile||fallbackIdentityProfile(pd,'season');
   const basis=getSeasonPlayerFieldBasis(pd,seasonKey);
   const availability=basis.teamCount?Math.min(100,Math.round((basis.fieldCount/basis.teamCount)*100)):pctValue(base?.styleProfile?.konstanz);
+  const lowDataBasis=basis.fieldCount<ROLE_PROFILE_MIN_GAMES;
   return{
     ...base,
     scope:'season',
-    styleProfile:{...(base.styleProfile||{}),konstanz:availability},
+    coreRole:lowDataBasis?null:base.coreRole,
+    roles:lowDataBasis?[]:base.roles,
+    traits:lowDataBasis?[]:base.traits,
+    styleProfile:lowDataBasis?{abschluss:0,kreativitaet:0,konstanz:0,gegnerqualitaet:0,teamabhaengigkeit:0}:{...(base.styleProfile||{}),konstanz:availability},
     metrics:{...(base.metrics||{}),gamesPlayed:basis.fieldCount,teamGames:basis.teamCount,gamesWithPts:basis.scoringCount,availability:basis.teamCount?basis.fieldCount/basis.teamCount:0},
     radarBasis:basis,
+    lowDataBasis,
   };
 }
 function rSeasonProfileKpis(pd,seasonKey=getActiveSeasonKey()){
@@ -8861,26 +8944,42 @@ function rSeasonProfileKpis(pd,seasonKey=getActiveSeasonKey()){
   const goals=ev.filter(e=>e.type==='Tor').length;
   const assists=ev.filter(e=>e.type==='Vorlage').length;
   const points=goals+assists;
-  const basis=getSeasonPlayerFieldBasis(pd,seasonKey);
-  const fieldGames=basis.fieldCount||0;
-  const ppg=fieldGames?points/fieldGames:0;
+  // S2f-Auftrag Punkt 4: Nenner ist die Gesamtzahl der Einsätze (Feld+Torhüter), nicht die Feldspiele —
+  // damit ist Punkte/Spiel auch definiert, wenn alle Punkte als Torhüter entstanden (0 Feldspiele). Punkte
+  // selbst bleiben unverändert aus ALLEN Rollen (Punkt 2: nichts geht verloren).
+  const roleSummary=getPlayerSeasonRoleGameSummary(pd.playerId,seasonKey);
+  const totalGames=roleSummary.totalCount||0;
+  const ppg=totalGames?points/totalGames:0;
+  const goalsAsGoalie=ev.filter(e=>e.role==='goalie'&&e.type==='Tor').length;
+  const assistsAsGoalie=ev.filter(e=>e.role==='goalie'&&e.type==='Vorlage').length;
+  const pointsAsGoalie=goalsAsGoalie+assistsAsGoalie;
   const teamTotal=Object.values(S.teamGoalsPerGame||{}).reduce((s,v)=>s+(Number(v)||0),0);
   const teamShare=teamTotal?points/teamTotal*100:0;
   const cells=[
-    {cls:'c4',value:fieldGames,label:'Spiele'},
+    {cls:'c4',value:totalGames,label:'Spiele'},
     {cls:'c1',value:goals,label:'Tore'},
     {cls:'c2',value:assists,label:'Assists'},
     {cls:'c3',value:points,label:'Punkte'},
     {cls:'c5',value:ppg.toFixed(2),label:'Punkte/Spiel'},
     {cls:'cr',value:`${teamShare.toFixed(0)}%`,label:'Teamanteil'},
   ];
-  return`<div class="stats season-profile-kpis">${cells.map(c=>`<div class="sc ${c.cls}"><div class="sv">${c.value}</div><div class="sl">${c.label}</div></div>`).join('')}</div>`;
+  // S2f-Auftrag Punkt 4: bei gemischten Rollen in einer Saison muss erkennbar bleiben, welcher Teil der
+  // Punkte aus welcher Rolle stammt — Markierung statt stiller Vermischung.
+  const goalieNote=pointsAsGoalie?`<div class="season-profile-kpi-note" style="font-size:11px;color:var(--tx3);margin-top:6px">davon ${pointsAsGoalie} Punkt${pointsAsGoalie===1?'':'e'} als Torhüter (${goalsAsGoalie} Tore, ${assistsAsGoalie} Vorlagen)</div>`:'';
+  return`<div class="stats season-profile-kpis">${cells.map(c=>`<div class="sc ${c.cls}"><div class="sv">${c.value}</div><div class="sl">${c.label}</div></div>`).join('')}</div>${goalieNote}`;
 }
 
 function rSeasonProfileTagStrip(pd,seasonKey=getActiveSeasonKey()){
   const profile=getSeasonScopedIdentityProfile(pd,seasonKey);
-  const classicPd={...pd,analysisProfile:profile};
-  return rIdentityCards(profile)+rClassicRoleTags(classicPd);
+  // S2f-Auftrag Punkt 7: unterhalb der Schwelle kein Rollentyp/Style Profile OHNE Hinweis — rIdentityCards
+  // selbst hat keinen "zu wenig Daten"-Zustand (coreRole:null würde sonst stillschweigend auf
+  // BALANCED_PLAYER zurückfallen), also hier explizit durch einen Hinweis ersetzen statt die Karte zu
+  // zeigen. rClassicRoleTags bekommt leere classicTags, damit sein bestehender Leer-Hinweis greift.
+  const identityBlock=profile.lowDataBasis
+    ?`<div class="team-card" style="margin-bottom:14px"><div class="team-card-title" style="color:#94a3b8">Core Role</div><div class="noev" style="padding:4px 0">Zu wenig Feldspiele in dieser Saison (unter ${ROLE_PROFILE_MIN_GAMES}) für ein belastbares Rollenprofil.</div></div>`
+    :rIdentityCards(profile);
+  const classicPd={...pd,analysisProfile:profile,classicTags:profile.lowDataBasis?{types:[],status:[],all:[]}:pd.classicTags};
+  return identityBlock+rClassicRoleTags(classicPd);
 }
 
 // ── MATRIX ────────────────────────────────────────────
@@ -9331,8 +9430,11 @@ function rTable(pd){
   if(!ev.length)return'<div class="noev">Keine Scorer-Ereignisse gefunden.</div>';
   const rows=ev.map((e,i)=>{
     const pc=PCOL[e.phase]||'#64748b';
+    // S2f-Auftrag Punkt 4: Torhüterpunkte erscheinen hier weiterhin (nichts wird gefiltert), aber markiert,
+    // damit bei gemischten Rollen in einer Saison erkennbar bleibt, woher der Punkt stammt.
+    const roleBadge=e.role==='goalie'?' <span class="bdg th-tip" data-tip="Dieser Punkt entstand als Torhüter, nicht als Feldspieler." style="background:#14b8a622;color:#14b8a6;border:1px solid #14b8a644">TW</span>':'';
     return`<tr><td class="mono" style="color:var(--tx3)">${i+1}</td>
-      <td><span class="bdg ${e.type==='Tor'?'bt':'bv'}">${e.type}</span></td>
+      <td><span class="bdg ${e.type==='Tor'?'bt':'bv'}">${e.type}</span>${roleBadge}</td>
       <td class="mono">${e.date||''}</td>
       <td>${e.opponent}</td>
       <td>${e.type==='Tor'?e.partner==='Solo'?'<span class="bdg bs">Solo</span>':e.partner:'<span style="color:var(--tx3)">—</span>'}</td>
@@ -9457,9 +9559,13 @@ function getPlayerRoleAvailability(playerId,{name='',seasonKey=getActiveSeasonKe
   const isAlltime=context==='alltime';
   const fieldGames=sumRoleGames(profile,'field',isAlltime?null:seasonKey);
   const goalieGames=sumRoleGames(profile,'goalie',isAlltime?null:seasonKey);
-  const fieldFallback=isAlltime?(getPlayerAlltimeStats(playerId).points||0):(getPlayerSeasonStats(playerId,seasonKey).points||0);
+  // S2f-Auftrag Punkt 5: "Rolle nicht anbieten, wenn es sie nicht gibt" — der frühere Punkte-Fallback
+  // (field:fieldGames>0||points>0) war eine VIERTE, unabhängige Stelle mit derselben falschen Annahme
+  // "wer punktet, ist Feldspieler": ein reiner Torhüter mit Scorerpunkt bekam dadurch rolesAvailable.field
+  // trotz 0 echter Feldspiele. fieldStatsBySeason/getFieldGameIdsForPlayer (Punkt 1) sind kaderbasiert
+  // bereits vollständig — kein Fallback über Punkte nötig.
   return{
-    field:fieldGames>0||fieldFallback>0,
+    field:fieldGames>0,
     goalie:goalieGames>0,
     fieldGames,
     goalieGames,
@@ -9530,7 +9636,7 @@ function goalieEventSecondInPeriod(ev){
   const p=Number(ev?.period);
   const abs=Number(ev?.absSeconds);
   if(Number.isFinite(p)&&Number.isFinite(abs))return abs-(Math.max(1,Math.floor(p))-1)*1200;
-  return parseGameClock(ev?.time);
+  return parseClockString(ev?.time);
 }
 function goaliePctText(value){
   const n=Number(value);
@@ -9912,6 +10018,27 @@ function rGoalieDnaBars(stats){
     <div class="goalie-dna-value">${available?`${val}/100`:'?'}</div>
   </div>`).join('')}</div>`;
 }
+function rGoalieScoringRow(stats){
+  // S2f-Auftrag Punkte 3+4: eigene, klar markierte Zeile für Scorerpunkte als Torhüter — Tore und Vorlagen
+  // getrennt, mit einem eigenen (immer definierten) Punkte/Spiel-Wert über die Torhüterspiele. Nenner ist
+  // hier bewusst die Gesamtzahl der Torhütereinsätze (stats.games), nicht die Feldspiele, weil diese Zeile
+  // ausschließlich den Torhüteranteil beschreibt.
+  const goals=stats.scoring?.goals||0,assists=stats.scoring?.assists||0;
+  const points=goals+assists;
+  if(!points)return'';
+  const games=stats.games||0;
+  const ppg=games?points/games:0;
+  return`<div class="goalie-card" style="margin-top:10px">
+    <div class="goalie-card-title">Scorerpunkte als Torhüter</div>
+    <div class="goalie-mini-grid">
+      <div class="goalie-metric"><div class="goalie-metric-val">${goals}</div><div class="goalie-metric-lbl">Tore</div></div>
+      <div class="goalie-metric"><div class="goalie-metric-val">${assists}</div><div class="goalie-metric-lbl">Vorlagen</div></div>
+      <div class="goalie-metric"><div class="goalie-metric-val">${points}</div><div class="goalie-metric-lbl">Punkte</div></div>
+      <div class="goalie-metric"><div class="goalie-metric-val">${ppg.toFixed(2)}</div><div class="goalie-metric-lbl">Punkte/Spiel (Torhüter)</div></div>
+    </div>
+    <div class="goalie-note">Erzielt in ${games} Torhütereinsätzen; fließt unverändert in die Saison-/Karrierepunktzahl des Spielers ein.</div>
+  </div>`;
+}
 function rGoalieKpis(stats){
   const kpis=[
     ['Spiele',stats.games||0,'Goalie-Einsätze','#14b8a6'],
@@ -10034,6 +10161,7 @@ function rGoalieOverview(stats){
   const model=buildGoalieAnalysisModel(stats);
   return`<div class="goalie-dashboard">
     ${rGoalieKpis(stats)}
+    ${rGoalieScoringRow(stats)}
     <div>${rGoalieInsights(stats)}</div>
     <div class="goalie-section-grid">
       ${rGoalieRoleTraits(stats)}
@@ -12880,14 +13008,67 @@ function rHallGoalieRankCard(title,rows,{color='#14b8a6',format=null,hint='',emp
     <div class="hof-goalie-rest">${restRows||'<div class="noev" style="padding:10px 0 2px;font-size:11px">Keine weiteren Einträge.</div>'}</div>
   </div>`;
 }
+// S2e-Auftrag "Spielzeit normalisieren, Hall-of-Fame-Karte 'Längste Nullphase'": ersetzt die bisherige
+// Berechnung (Maximum der PRO-GOALIE-PRO-SAISON innerhalb-eines-Spiels-Werte, siehe longestNoGoalRows
+// unten) durch den spielübergreifenden Rekord aus buildCrossGameNoGoalStreak (Teil B, Browser-Port in
+// matchcenter-core.js). Regel (Auftrag Punkt 2): Bestwert über ALLE Saisons, nur Ulmer Mannschaft bzw.
+// Ulmer Spieler, mit Saisonangabe — keine Sonderstellung der laufenden Saison, `current` fließt nie ein
+// (siehe buildCrossGameNoGoalStreak: `current` wird hier gar nicht gelesen, nur `longestOverall`).
+//
+// Befund (Auftrag Punkt 6): die alte Karte zeigte 34:11 (25/26) statt der spielinternen 35:33 aus 22/23,
+// weil die Hall of Fame NICHT die SG-Jahre 21/22-23/24 als Ganzes ausschließt, sondern auf Ulmer SPIELER
+// filtert (isHallOfFameEligiblePlayer/isPureSGPlayer) — geprüft: der Torhüter der 22/23-Phase ist Jannis
+// Löhmann (Spiel 29293, SG Sparks Ulm-Tübingen vs. DJK Giants Karlsruhe-Ost), dessen einzige Saison 22/23
+// ist (nie unter "VfB Ulm" gespielt) — ein "reiner SG-Spieler" nach genau dieser Regel, deshalb aus der
+// Hall of Fame ausgeschlossen. Die neue Rechnung wendet dieselbe Regel an: der spielübergreifende Rekord
+// einer Saison gilt nur, wenn ALLE daran beteiligten Torhüter Hall-of-Fame-berechtigt sind — sonst zählt
+// die nächstbeste Saison (siehe buildHallOfFameLongestNoGoalStreak unten).
+function noGoalStreakGoaliesForGame(game,side){
+  const roster=game?.players?.[side]||[];
+  const seasonKey=game?._mcSeasonKey||'';
+  return roster
+    .filter(p=>isGoalieRosterEntry(p)&&!isExcludedGoalieAppearance(p,p,game,seasonKey))
+    .map(p=>({name:pFull(p),profile:getPlayerRegistryProfile(getPlayerSourceId(p),pFull(p))}))
+    .filter(entry=>entry.name);
+}
+function buildHallOfFameLongestNoGoalStreak(){
+  const candidates=[];
+  for(const seasonKey of Object.keys(SEASONS)){
+    const games=SEASONS[seasonKey]?.data?.rawGames||[];
+    if(!games.length)continue;
+    const r=buildCrossGameNoGoalStreak(games);
+    if(!r.longestOverall)continue;
+    const gameMap=new Map(games.map(g=>[g.id,g]));
+    const goalieEntries=new Map();
+    for(const gameId of r.longestOverallGames){
+      const g=gameMap.get(gameId);
+      if(!g)continue;
+      const side=noGoalStreakSideFor(g);
+      if(!side)continue;
+      for(const entry of noGoalStreakGoaliesForGame(g,side))goalieEntries.set(entry.name,entry);
+    }
+    if(!goalieEntries.size)continue;
+    candidates.push({seasonKey,value:r.longestOverall,games:r.longestOverallGames,goalies:[...goalieEntries.values()]});
+  }
+  candidates.sort((a,b)=>b.value-a.value);
+  for(const candidate of candidates){
+    const allEligible=candidate.goalies.every(entry=>entry.profile&&isHallOfFameEligiblePlayer(entry.profile));
+    if(allEligible)return{...candidate,goalieNames:candidate.goalies.map(g=>g.name)};
+  }
+  return null;
+}
 function rHallGoalieAwardCards({gamesRows,gaaRows,longestNoGoalRows,maxFirstRows,pkRows,topteamRows}){
+  const streakRecord=buildHallOfFameLongestNoGoalStreak();
+  const streakRow=streakRecord?{name:streakRecord.goalieNames.join(' & '),seasonKey:streakRecord.seasonKey,context:`Saison ${hallGoalieSeasonLabel(streakRecord.seasonKey)}`}:null;
   const awards=[
     {kicker:'Die Wand',row:gaaRows[0],value:r=>`${hallGoalieNum(r.gaa,2)} GT/S`,color:'#38bdf8',ctx:r=>`${r.games} Spiele · ${r.goalsAgainst} Gegentore`},
     {kicker:'Startanker',row:maxFirstRows[0],value:r=>hallGoalieTime(r.maxTimeToFirstGA),color:'#fbbf24',ctx:r=>`Längste Startphase · ${r.context}`},
     {kicker:'Penalty-Kill-Rückhalt',row:pkRows[0],value:r=>`${hallGoalieNum(r.pk.rate*100,0)}%`,color:'#10b981',ctx:r=>`${r.pk.kills}/${r.pk.situations} Unterzahlen überstanden`},
     {kicker:'Dauerbrenner im Tor',row:gamesRows[0],value:r=>hallGoalieNum(r.games),color:'#14b8a6',ctx:r=>`${r.goalsAgainst} Gegentore · ${hallGoalieNum(r.gaa,2)} GT/S`},
     {kicker:'Big-Game-Rückhalt',row:topteamRows[0],value:r=>`${hallGoalieNum(r.topteam.gaa,2)} GT/S`,color:'#8b5cf6',ctx:r=>`${r.topteam.games} Spiele gegen Topteams`},
-    {kicker:'Längste Nullphase',row:longestNoGoalRows[0],value:r=>hallGoalieTime(r.longestNoGoalStretch),color:'#ef4444',ctx:r=>`Am Stück ohne Gegentor · ${r.context}`},
+    // Auftrag Punkt 4: Untertitel nennt immer "spielübergreifend" + Saison, oder die Karte entfällt ganz
+    // (kein Datenargument-Fallback auf eine andere Formulierung) — siehe streakRecord-Prüfung via .filter(a=>a.row) unten.
+    {kicker:'Längste Nullphase',row:streakRow,value:()=>hallGoalieTime(streakRecord.value),color:'#ef4444',ctx:()=>`Am Stück ohne Gegentor, spielübergreifend · Saison ${hallGoalieSeasonLabel(streakRecord.seasonKey)}`},
   ].filter(a=>a.row);
   if(!awards.length)return'';
   return`<div class="hof-goalie-awards">${awards.map(a=>`<div class="hof-goalie-award th-tip" style="--gcol:${a.color}" title="${hallGoalieTooltip(a.row,a.kicker,hallGoalieExplainForLabel(a.kicker))}" data-tip="${hallGoalieTooltip(a.row,a.kicker,hallGoalieExplainForLabel(a.kicker))}">

@@ -6,7 +6,7 @@
 // Befund (siehe Auftragsbericht): die 2. Halbzeit wird in den Saisondateien uneinheitlich
 // erfasst — mal RELATIV zum Beginn der 2. Halbzeit (0:00-20:00), mal DURCHLAUFEND als
 // Fortsetzung der Spielzeit (20:00-40:00). Vier Ereignisse in 21/22 verwenden zusätzlich
-// einen Punkt statt Doppelpunkt ("3.25" statt "3:25") — tolerant in parseGameClock()
+// einen Punkt statt Doppelpunkt ("3.25" statt "3:25") — tolerant in parseClockString()
 // behandelt. Bloße Zahlen ohne Trenner werden bewusst NICHT akzeptiert: sie waren nie
 // eindeutig als Minuten:Sekunden von einer reinen Minutenangabe zu unterscheiden, also
 // lieber `null` als geraten.
@@ -20,8 +20,8 @@
 // (21/22 25682: 1, 21/22 25693: 1, 22/23 29268: 2, 23/24 32748: 0) — siehe
 // scripts/test-game-clock.mjs für die Belege gegen die echten Saisondateien.
 //
-// Bereichsprüfung ist periodenbewusst (siehe classifyGameClock()), NICHT in parseGameClock()
-// selbst: parseGameClock() kennt die Periode nicht und darf deshalb keine Längengrenze
+// Bereichsprüfung ist periodenbewusst (siehe classifyGameClock()), NICHT in parseClockString()
+// selbst: parseClockString() kennt die Periode nicht und darf deshalb keine Längengrenze
 // durchsetzen, die nur für Halbzeit 1/2 gilt. GAME_LENGTH_SEC (40:00) ist die Obergrenze für
 // Ereignisse in Halbzeit 1 oder 2 — für period >= 3 (Verlängerung, Penalty-Schießen) gilt sie
 // NICHT, diese Perioden sind von dieser Funktion bewusst noch nicht unterstützt
@@ -52,7 +52,7 @@ export const GAME_LENGTH_SEC = 40 * 60; // 40:00 Gesamtspielzeit (2 Halbzeiten) 
  * Längenprüfung hier (siehe classifyGameClock()): diese Funktion kennt die Periode nicht und
  * darf deshalb keine Grenze durchsetzen, die nur für bestimmte Perioden gilt.
  */
-export function parseGameClock(raw) {
+export function parseClockString(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
   const s = String(raw).trim();
   const m = s.match(/^(\d{1,2})[:.](\d{1,2})$/);
@@ -85,7 +85,7 @@ export function detectSecondHalfConvention(game) {
   let relativVotes = 0;
   for (const ev of (game?.events || [])) {
     if (Number(ev?.period) !== 2) continue;
-    const s = parseGameClock(ev?.time);
+    const s = parseClockString(ev?.time);
     if (s === null) continue;
     if (s > HALF_LENGTH_SEC) durchlaufendVotes++;
     else relativVotes++;
@@ -101,7 +101,7 @@ export function detectSecondHalfConvention(game) {
  * Ergebnis benennt, statt ihn in einem einzigen stillen `null` zu verstecken (Auftrag:
  * "dürfen nicht still auf null fallen"). Liefert `{status, absSec}`:
  *   'ok'                  — absSec gesetzt, alles in Ordnung.
- *   'unparseable'         — Zeitstring nicht lesbar (parseGameClock liefert null).
+ *   'unparseable'         — Zeitstring nicht lesbar (parseClockString liefert null).
  *   'unknownPeriod'       — Periode fehlt/keine Zahl.
  *   'unsupportedPeriod'   — period >= 3 (Verlängerung, Penalty-Schießen): absichtlich noch
  *                           nicht unterstützt, siehe Moduldoku oben — expliziter Abbruch statt
@@ -119,7 +119,7 @@ export function detectSecondHalfConvention(game) {
  */
 export function classifyGameClock(period, time, convention) {
   const p = Number(period);
-  const s = parseGameClock(time);
+  const s = parseClockString(time);
   if (!Number.isFinite(p)) return { status: 'unknownPeriod', absSec: null };
   if (s === null) return { status: 'unparseable', absSec: null };
   if (convention === 'unklar') return { status: 'gameExcluded', absSec: null };

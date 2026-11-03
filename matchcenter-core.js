@@ -182,17 +182,19 @@ function gameStableId(g){
 // Browser-Port von scripts/game-clock.mjs (S2e-Auftrag "Spielzeit normalisieren", nachgeschärfte
 // Fassung mit Mehrheitsregel + periodenbewusster Bereichsprüfung) — die dortigen Doc-Kommentare
 // (Mehrheitsregel, echtes Größer an der 20:00-Schwelle, Punkt-statt-Doppelpunkt-Fälle, Herkunft der
-// Konstanten, warum GAME_LENGTH_SEC nicht in parseGameClock geprüft wird) gelten unverändert auch
-// hier. parseGameClock/getPhaseKey hießen schon vorher so; die restlichen sechs Namen (Konstanten +
-// 5 Funktionen) sind bytegleich zu game-clock.mjs übernommen.
+// Konstanten, warum GAME_LENGTH_SEC nicht in parseClockString geprüft wird) gelten unverändert auch
+// hier. getPhaseKey hieß schon vorher so; parseClockString hieß bis zur Nachschärfung "parseGameClock"
+// (umbenannt, weil der alte Name nahelegte, sie prüfe auch die Spielbedeutung — sie parst nur den
+// Zeitstring, siehe eigener Docblock); die restlichen sechs Namen (Konstanten + 5 Funktionen) sind
+// bytegleich zu game-clock.mjs übernommen.
 //
 // Bewusst NICHT angefasst (eigener, vertagter Schritt — siehe Auftrag): scripts/model/normalize.mjs
 // hat eine eigene, unabhängige Version dieser Logik (parseClockSeconds/detectGameTimeFormat/
-// eventTiming), drift-getestet gegen parseGameClock hier in scripts/test-model-normalize.mjs. Die
+// eventTiming), drift-getestet gegen parseClockString hier in scripts/test-model-normalize.mjs. Die
 // Zusammenlegung beider Pfade ist beschlossen, aber bewusst auf einen eigenen Schritt vertagt.
 const HALF_LENGTH_SEC=20*60;
 const GAME_LENGTH_SEC=40*60;
-function parseGameClock(raw){
+function parseClockString(raw){
   if(raw===undefined||raw===null||raw==='')return null;
   const s=String(raw).trim();
   const m=s.match(/^(\d{1,2})[:.](\d{1,2})$/);
@@ -207,7 +209,7 @@ function detectSecondHalfConvention(game){
   let relativVotes=0;
   for(const ev of(game?.events||[])){
     if(Number(ev?.period)!==2)continue;
-    const s=parseGameClock(ev?.time);
+    const s=parseClockString(ev?.time);
     if(s===null)continue;
     if(s>HALF_LENGTH_SEC)durchlaufendVotes++;
     else relativVotes++;
@@ -221,7 +223,7 @@ function detectSecondHalfConvention(game){
 // vorkommt" — und 'outOfRange' als eigene Kategorie, getrennt von 'unparseable').
 function classifyGameClock(period,time,convention){
   const p=Number(period);
-  const s=parseGameClock(time);
+  const s=parseClockString(time);
   if(!Number.isFinite(p))return{status:'unknownPeriod',absSec:null};
   if(s===null)return{status:'unparseable',absSec:null};
   if(convention==='unklar')return{status:'gameExcluded',absSec:null};
@@ -273,6 +275,85 @@ function getPhaseKey(period,time,convention='relativ'){
   const within=p===1?absSec:absSec-HALF_LENGTH_SEC;
   if(within<=600)return`${p}.D 0-10min`;
   return`${p}.D 10-20min`;
+}
+// Browser-Port von scripts/no-goal-streak.mjs (S2e-Auftrag "Spielzeit normalisieren", Teil B) —
+// "längste Zeit ohne Gegentor, spielübergreifend". Die dortigen Doc-Kommentare (drei Abbruchfälle,
+// Schreibweisen-Befund) gelten unverändert auch hier. EIN bewusster Unterschied zur Node-Fassung: dort
+// gilt isEffectivelyEnded() aus game-status.mjs als "beendet"; hier gilt dieselbe Prüfung, die die App für
+// alles andere auch verwendet — classifyGameForStats(game).countsForStats (isGamePlayed) — statt eine
+// zweite, separate Definition von "beendet" einzuführen. ULM_TEAM_ALIASES (siehe oben) statt einer
+// eigenen Namensliste. sideFor/goalsAgainstAbsSeconds sind bytegleich zur Node-Fassung übernommen.
+function noGoalStreakSideFor(game){
+  if(isUlmTeamName(game?.home_team_name))return'home';
+  if(isUlmTeamName(game?.guest_team_name))return'guest';
+  return null;
+}
+function noGoalStreakGoalsAgainstAbsSeconds(game,side){
+  const convention=detectSecondHalfConvention(game);
+  const opponentSide=side==='home'?'guest':'home';
+  const result=[];
+  for(const ev of(game?.events||[])){
+    if(ev?.event_type!=='goal'||ev?.event_team!==opponentSide)continue;
+    const{status,absSec}=classifyGameClock(ev?.period,ev?.time,convention);
+    if(status!=='ok')return null;
+    result.push(absSec);
+  }
+  result.sort((a,b)=>a-b);
+  return result;
+}
+function buildCrossGameNoGoalStreak(games){
+  const rows=(games||[]).filter(g=>noGoalStreakSideFor(g)!==null);
+  const sorted=[...rows].sort(compareGamesChronologically);
+  let running=0;
+  let runningGames=[];
+  let longestOverall=0;
+  let longestOverallGames=[];
+  let longestWithinGame=0;
+  const breaks=[];
+  const closeRunning=()=>{
+    if(running>longestOverall){longestOverall=running;longestOverallGames=runningGames.slice();}
+    running=0;runningGames=[];
+  };
+  for(let i=0;i<sorted.length;i++){
+    const game=sorted[i];
+    const ended=classifyGameForStats(game).countsForStats;
+    if(!ended){
+      const hasLaterEnded=sorted.slice(i+1).some(other=>classifyGameForStats(other).countsForStats);
+      if(!hasLaterEnded)continue;
+      closeRunning();
+      breaks.push({reason:'missingGame',gameId:game?.id??null,date:game?.date??''});
+      continue;
+    }
+    const side=noGoalStreakSideFor(game);
+    const goals=noGoalStreakGoalsAgainstAbsSeconds(game,side);
+    if(goals===null){
+      closeRunning();
+      breaks.push({reason:'unresolvableClock',gameId:game?.id??null,date:game?.date??''});
+      continue;
+    }
+    if(!goals.length){
+      running+=GAME_LENGTH_SEC;
+      runningGames.push(game?.id??null);
+      longestWithinGame=Math.max(longestWithinGame,GAME_LENGTH_SEC);
+      continue;
+    }
+    running+=goals[0];
+    runningGames.push(game?.id??null);
+    if(running>longestOverall){longestOverall=running;longestOverallGames=runningGames.slice();}
+    longestWithinGame=Math.max(longestWithinGame,goals[0]);
+    for(let j=1;j<goals.length;j++){
+      const gap=goals[j]-goals[j-1];
+      if(gap>longestOverall){longestOverall=gap;longestOverallGames=[game?.id??null];}
+      longestWithinGame=Math.max(longestWithinGame,gap);
+    }
+    const tail=GAME_LENGTH_SEC-goals[goals.length-1];
+    longestWithinGame=Math.max(longestWithinGame,tail);
+    running=tail;
+    runningGames=[game?.id??null];
+  }
+  if(running>longestOverall){longestOverall=running;longestOverallGames=runningGames.slice();}
+  const currentGames=runningGames.slice();
+  return{longestOverall,longestOverallGames,longestWithinGame,current:running,currentGames,breaks};
 }
 function isYouthGame(g){
   const YOUTH=/\bU\s*\d{2}\b|Jugend|Junior|Youth|Nachwuchs/i;
@@ -860,7 +941,7 @@ function matchcenterPenaltyMinutes(ev){
   const m=raw.match(/(\d+)/);
   return m?Number(m[1]):0;
 }
-// S2e-Auftrag "Spielzeit normalisieren": vorher parseGameClock(ev.time)>=900 direkt auf dem rohen
+// S2e-Auftrag "Spielzeit normalisieren": vorher parseClockString(ev.time)>=900 direkt auf dem rohen
 // Zeitstring, unterstellte für Halbzeit 2 immer die 'relativ'-Konvention (gleiche Fehlerklasse wie
 // isLateGoal in index.html). convention kommt jetzt vom Aufrufer (einmal pro Spiel ermittelt).
 function matchcenterIsLateGoalEvent(ev,convention){

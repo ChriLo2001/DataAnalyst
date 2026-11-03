@@ -59,7 +59,7 @@ const FUNCTIONS = [
   'normalizeTeamName', 'normalizeTeamKey', 'teamAliasRuleMatches', 'teamAliasSeasonMatches',
   'matchcenterSeasonIsUlmTuebingenSgEra', 'isOwnTeam', 'getCanonicalTeamName', 'isFreiburgTuebingenSgName',
   'isMannheimLudwigshafenSgName', 'normalizeOpponentNameForAllTime', 'isUlmTeamName', 'seasonOrderIndex',
-  'pFull', 'normalizePlayerDisplayName', 'gameStableId', 'parseGameClock', 'getPhaseKey', 'isYouthGame', 'gameStatusText', 'gameScore',
+  'pFull', 'normalizePlayerDisplayName', 'gameStableId', 'parseClockString', 'getPhaseKey', 'isYouthGame', 'gameStatusText', 'gameScore',
   'classifyGameForStats', 'getRelevantSeasonGames', 'buildStandings', 'normalizeGame', 'formatDateDE',
   'compareGamesChronologically', 'buildMatchdays', 'matchdayAsOfCutoff', 'getSeasonMatchdays', 'isGameAtOrBeforeAsOf', 'getSeasonStatsAsOf',
   'matchcenterSeasonLabel',
