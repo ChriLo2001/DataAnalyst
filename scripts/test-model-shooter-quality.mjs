@@ -560,15 +560,22 @@ console.log('== N. Determinismus und Eingabereihenfolge ==');
 // ══ O. Reale Daten (nur Zählungen und Struktur, keine Koeffizienten-Pins) ═══
 console.log('== O. Reale M0-Daten: Rauchtest ==');
 {
+  // S2g-Auftrag "Modelltests gegen abgeschlossene Saisons festnageln": dieselbe Regel wie
+  // scripts/test-p0a-baseline.mjs (EXPECTED_SEASONS) — exakte Werte-Pins gelten nur für die abgeschlossenen
+  // Saisons 21/22–25/26, nicht für alles, was buildLeagueModel() gerade lädt.
+  const EXPECTED_SEASONS = ['21/22', '22/23', '23/24', '24/25', '25/26'];
   const model = await buildLeagueModel();
-  const data = { teamGames: model.seasons.flatMap((s) => s.teamGames), goalEvents: model.seasons.flatMap((s) => s.goalEvents), rosterEntries: model.seasons.flatMap((s) => s.rosterEntries) };
-  const r = Q.fitShooterQuality(data);
+  const archivedSeasons = model.seasons.filter((s) => EXPECTED_SEASONS.includes(s.seasonKey));
+  const data = { teamGames: archivedSeasons.flatMap((s) => s.teamGames), goalEvents: archivedSeasons.flatMap((s) => s.goalEvents), rosterEntries: archivedSeasons.flatMap((s) => s.rosterEntries) };
+  // asOf ausdrücklich gesetzt (Saisonende 25/26), nicht aus den Daten abgeleitet — siehe test-model-team-strength.mjs.
+  const REAL_ASOF = { date: '2026-04-11', inclusive: true };
+  const r = Q.fitShooterQuality(data, { asOf: REAL_ASOF });
   // unabhängige Zählung aus den M0-Ereignissen
   const ev = data.goalEvents;
   const own = ev.filter((e) => e.isOwnGoal).length; const na = ev.filter((e) => e.isNotAssigned).length; const pen = ev.filter((e) => e.isPenaltyShot).length;
   const rosterGoals = ev.filter((e) => !e.isOwnGoal && !e.isNotAssigned && e.derived.scorerMatch === 'roster').length;
   assertEqual([ev.length, own, na, pen, rosterGoals], [3251, 22, 3, 24, 3226], 'Vorbedingung (eigene Zählung): 3251 Tore, 22 Eigentore, 3 not_assigned, 24 Strafschuss-Tore, 3226 Tore mit Kaderschützen');
-  assertEqual(data.rosterEntries.length > 0 && model.seasons.reduce((a, s) => a + s.penaltyShotEvents.length, 0), 24, 'penaltyShotEvents: 24 Ereignisse (dieselben wie die Strafschuss-Tore in goalEvents)');
+  assertEqual(data.rosterEntries.length > 0 && archivedSeasons.reduce((a, s) => a + s.penaltyShotEvents.length, 0), 24, 'penaltyShotEvents: 24 Ereignisse (dieselben wie die Strafschuss-Tore in goalEvents)');
   const sumGoals = r.players.reduce((a, p) => a + p.goals, 0);
   assertEqual([sumGoals, r.quality.goals.withoutPlayerRow, sumGoals + r.quality.goals.withoutPlayerRow], [3225, 1, 3226], 'Σ Spielertore = 3225; 1 Tor eines Kaderspielers ohne playerId hat keine Spielerzeile; 3225 + 1 = 3226 Tore mit Kaderschützen');
   assertEqual([r.quality.goals.own, r.quality.goals.notAssigned, r.quality.goals.penaltyShot, r.quality.goals.attributed, r.quality.goals.unmatched], [22, 3, 24, 3225, 0], '22 Eigentore und 3 not_assigned fließen nicht in Spielertore; 24 Strafschuss-Tore genau einmal (in den 3225 enthalten)');

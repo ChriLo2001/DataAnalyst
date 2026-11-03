@@ -102,6 +102,22 @@ globalThis.fetch = () => { fetchCalls++; throw new Error('Netzwerkzugriff im Tes
 const model = await buildLeagueModel();
 const bySeason = Object.fromEntries(model.seasons.map((s) => [s.seasonKey, s]));
 
+// S2g-Auftrag "Modelltests gegen abgeschlossene Saisons festnageln": derselbe Sandbox-Mechanismus, den
+// Aufgabe 3c schon für die GUARDED-/Inhalts-Hash-Prüfung weiter unten baute (gefiltertes Manifest, NUR
+// status:'archived', über denselben main()/loadSeasonFiles()-Code) — jetzt vorgezogen, damit auch die
+// Werte-Pins für M1/M2/M3/M4 unten darüber laufen können, statt über das volle, mit der laufenden Saison
+// wachsende Repo. Keine zweite Regel: exakt dieselbe archivedManifest-Definition wie am Ende dieser Datei
+// (Aufgabe 3c), nur einmal gebaut und ab hier wiederverwendet.
+const archivedSandbox = path.join(os.tmpdir(), 'p1a-archived-only-sandbox');
+await rm(archivedSandbox, { recursive: true, force: true });
+await mkdir(path.join(archivedSandbox, 'season-data'), { recursive: true });
+const archivedManifest = { seasons: realManifest.seasons.filter((s) => s.status === 'archived') };
+await writeFile(path.join(archivedSandbox, 'season-data', 'seasons.json'), JSON.stringify(archivedManifest), 'utf8');
+for (const entry of archivedManifest.seasons) {
+  await writeFile(path.join(archivedSandbox, 'season-data', entry.file), await readFile(path.join(REPO_ROOT, 'season-data', entry.file), 'utf8'), 'utf8');
+}
+const archivedModel = await buildLeagueModel(archivedSandbox);
+
 console.log('== Qualitätskennzahlen der archivierten Saisons (Pins aus der READ-ONLY-Analyse) ==');
 {
   assertEqual(model.seasons.map((s) => s.seasonKey), realManifest.seasons.map((s) => s.key), 'Saisons in Manifest-Reihenfolge (abgeleitet aus season-data/seasons.json, nicht fest verdrahtet)');
@@ -327,7 +343,10 @@ console.log('== Drift: Team-Normalisierung gegen die echten Funktionen aus index
 
 console.log('== Verlustfreiheit und Ebenen an den echten Daten (unabhängig aus den Rohdateien geprüft) ==');
 {
-  const seasons = await loadSeasonFiles();
+  // S2g: Verlustfreiheit ist ein exakter Werte-Pin (checkedGoals/checkedGames unten) — gilt deshalb nur für
+  // die archivierten Saisons (Aufgabe 3c-Grundsatz), sonst wächst er mit jedem Spieltagsimport der
+  // laufenden Saison und bricht regelmäßig, obwohl an den archivierten Saisons nichts geändert wurde.
+  const seasons = (await loadSeasonFiles()).filter((s) => ARCHIVED_SEASON_KEYS.includes(s.season));
   let checkedGoals = 0, checkedPenalties = 0, checkedGames = 0;
   const bad = { goals: [], deltas: [], penalties: [], games: [] };
   for (const raw of seasons) {
@@ -418,16 +437,25 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   await main(['--only=M1'], { stdout: m1b.stream });
   assertEqual(m1a.text, m1b.text, '--only M1: zwei Läufe (auch als --only=M1) byte-identisch');
   assertTrue(m1a.text.includes('UNABGESTIMMTE PLATZHALTER') && m1a.text.includes('halfLifeDays=365, ridge=1') && m1a.text.includes('keine M9-Akzeptanz'), 'M1-Bericht kennzeichnet H = 365 und Ridge als unabgestimmte Platzhalter und behauptet keine M9-Akzeptanz');
-  assertTrue(m1a.text.includes('Host-Verteilung im Fit (Team-Spiel-Zeilen): true 24, false 88, null 330') && m1a.text.includes('Zeilen im Fit: 442 (Eingabe 444'), 'M1-Bericht: 442 Zeilen im Fit, Host-Verteilung true 24 / false 88 / null 330');
-  assertTrue(m1a.text.includes('Input: 112 bekannte Host-Zeilen = 24 Ausrichter + 88 kein Ausrichter; β_host wird nur durch die Ausrichter-Zeilen bestimmt; 330 Zeilen mit null nicht verwendet'), 'M1-Bericht: Stufe 2 nimmt 112 bekannte Host-Zeilen als Input (24 + 88), β_host wird nur durch die Ausrichter-Zeilen bestimmt, 330 null-Zeilen nicht verwendet');
   assertTrue(m1a.text.includes('zweistufig (O2)') && m1a.text.includes('null wird nicht als false gelesen') && m1a.text.includes('NICHT mit einer gemeinsamen Regression identisch'), 'M1-Bericht dokumentiert die O2-Konsequenz ausdrücklich');
+  // S2g: exakte Werte-Pins (Host-Verteilung, Zeilen im Fit, order-null-Ausschlüsse, JSON-Felder) gelten nur
+  // für archivierte Saisons — eigener Lauf über archivedSandbox statt über das mit 26/27 wachsende Repo.
+  // asOf wird NICHT aus den Daten abgeleitet (das wäre bei archivierten Daten zwar zufällig derselbe Wert,
+  // aber ein Test soll nicht von einer Ableitung abhängen, die zufällig stimmt) — siehe --asof-Pin unten.
+  const m1aArch = capture(); const m1cArch = capture();
+  await main(['--only', 'M1'], { stdout: m1aArch.stream, repoRoot: archivedSandbox });
+  assertTrue(m1aArch.text.includes('Host-Verteilung im Fit (Team-Spiel-Zeilen): true 24, false 88, null 330') && m1aArch.text.includes('Zeilen im Fit: 442 (Eingabe 444'), 'M1-Bericht (archivierte Saisons): 442 Zeilen im Fit, Host-Verteilung true 24 / false 88 / null 330');
+  assertTrue(m1aArch.text.includes('Input: 112 bekannte Host-Zeilen = 24 Ausrichter + 88 kein Ausrichter; β_host wird nur durch die Ausrichter-Zeilen bestimmt; 330 Zeilen mit null nicht verwendet'), 'M1-Bericht (archivierte Saisons): Stufe 2 nimmt 112 bekannte Host-Zeilen als Input (24 + 88), β_host wird nur durch die Ausrichter-Zeilen bestimmt, 330 null-Zeilen nicht verwendet');
   // 21/22 hat nach der Datenqualitäts-Ausnahme keine gameOrderOfDay=null-Zeilen mehr
   // (siehe Spielfilter-Block oben) — nur noch 24/25 ×2 bleibt ausgeschlossen.
-  assertTrue(!m1a.text.includes('order-null-excluded 21/22') && m1a.text.includes('order-null-excluded 24/25 ×2'), 'M1-Bericht: gameOrderOfDay-null-Ausschlüsse mit Saison und Anzahl (nur noch 24/25 ×2, 21/22 entfällt)');
+  assertTrue(!m1aArch.text.includes('order-null-excluded 21/22') && m1aArch.text.includes('order-null-excluded 24/25 ×2'), 'M1-Bericht (archivierte Saisons): gameOrderOfDay-null-Ausschlüsse mit Saison und Anzahl (nur noch 24/25 ×2, 21/22 entfällt)');
+  await main(['--only', 'M1', '--json'], { stdout: m1cArch.stream, repoRoot: archivedSandbox });
+  const m1jsonArch = JSON.parse(m1cArch.text);
+  assertEqual(canonicalJson([m1jsonArch.snapshots[0].fit.quality.hostDistribution, m1jsonArch.snapshots[0].fit.stage2.rows, m1jsonArch.options.placeholders]), canonicalJson([{ true: 24, false: 88, null: 330 }, { host: 24, notHost: 88, unknownExcluded: 330 }, ['halfLifeDays', 'ridge']]), '--only M1 --json (archivierte Saisons): Host-Verteilung, Stufe-2-Zeilen und Platzhalter-Kennzeichnung');
+  assertTrue(!/NaN|Infinity/.test(m1cArch.text) && !/-?d+.d{9,}/.test(m1cArch.text), '--only M1 --json (archivierte Saisons): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   await main(['--only', 'M1', '--json'], { stdout: m1c.stream });
   const m1json = JSON.parse(m1c.text);
-  assertEqual(canonicalJson([m1json.snapshots[0].fit.quality.hostDistribution, m1json.snapshots[0].fit.stage2.rows, m1json.options.placeholders]), canonicalJson([{ true: 24, false: 88, null: 330 }, { host: 24, notHost: 88, unknownExcluded: 330 }, ['halfLifeDays', 'ridge']]), '--only M1 --json: Host-Verteilung, Stufe-2-Zeilen und Platzhalter-Kennzeichnung');
-  assertTrue(!/NaN|Infinity/.test(m1c.text) && !/-?d+.d{9,}/.test(m1c.text), '--only M1 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
+  assertTrue(!/NaN|Infinity/.test(m1c.text) && !/-?d+.d{9,}/.test(m1c.text), '--only M1 --json (volles Repo): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   const b1 = capture(); const b2 = capture();
   assertEqual(await main(['--only', 'M1', '--replicates', '20', '--seed', '3'], { stdout: b1.stream }), 0, '--only M1 --replicates 20 --seed 3: Exit 0');
   await main(['--only', 'M1', '--replicates=20', '--seed=3'], { stdout: b2.stream });
@@ -447,16 +475,20 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   await main(['--only=M2'], { stdout: m2b.stream });
   assertEqual(m2a.text, m2b.text, '--only M2: zwei Läufe (auch als --only=M2) byte-identisch');
   assertTrue(m2a.text.includes('UNABGESTIMMTER PLATZHALTER') && m2a.text.includes('halfLifeDays=365') && m2a.text.includes('Kaderspiel') && m2a.text.includes('Pseudo-Spiele-Modell') && m2a.text.includes('Prior-Unsicherheit ist nicht im ci90') && m2a.text.includes('Keine Gegnerbereinigung'), 'M2-Bericht: H = 365 unabgestimmt, Kaderspiel, Pseudo-Spiele-Modell, keine Prior-Unsicherheit im ci90, keine Gegnerbereinigung');
-  assertTrue(m2a.text.includes('Status: ok · Spieler: 270 · Kaderplätze (Spieler-Spiele): 3674'), 'M2-Bericht: 270 Spieler, 3674 Kaderplätze');
-  assertTrue(m2a.text.includes('Spielern zugeordnet 3225 (davon Strafschuss 24) · Eigentore 22 · not_assigned 3 · ohne Spielerzeile 1'), 'M2-Bericht: 3225 Tore zugeordnet (24 Strafschuss), 22 Eigentore, 3 not_assigned, 1 Tor ohne Spielerzeile');
-  assertTrue(m2a.text.includes('von Goalies (keinem Feldspieler zugerechnet) 76') && m2a.text.includes('assists-by-goalies-not-attributed ×76') && m2a.text.includes('roster-missing-player-id ×2'), 'M2-Bericht: Goalie-Assists und Kaderzeilen ohne playerId als Warnung');
+  // S2g: Spieler-/Tore-Zählungen sind exakte Werte-Pins — archivierte Saisons, eigener Lauf (siehe M1 oben).
+  const m2aArch = capture(); const m2cArch = capture();
+  await main(['--only', 'M2'], { stdout: m2aArch.stream, repoRoot: archivedSandbox });
+  assertTrue(m2aArch.text.includes('Status: ok · Spieler: 270 · Kaderplätze (Spieler-Spiele): 3674'), 'M2-Bericht (archivierte Saisons): 270 Spieler, 3674 Kaderplätze');
+  assertTrue(m2aArch.text.includes('Spielern zugeordnet 3225 (davon Strafschuss 24) · Eigentore 22 · not_assigned 3 · ohne Spielerzeile 1'), 'M2-Bericht (archivierte Saisons): 3225 Tore zugeordnet (24 Strafschuss), 22 Eigentore, 3 not_assigned, 1 Tor ohne Spielerzeile');
+  assertTrue(m2aArch.text.includes('von Goalies (keinem Feldspieler zugerechnet) 76') && m2aArch.text.includes('assists-by-goalies-not-attributed ×76') && m2aArch.text.includes('roster-missing-player-id ×2'), 'M2-Bericht (archivierte Saisons): Goalie-Assists und Kaderzeilen ohne playerId als Warnung');
+  await main(['--only', 'M2', '--json'], { stdout: m2cArch.stream, repoRoot: archivedSandbox });
+  const m2jsonArch = JSON.parse(m2cArch.text);
+  assertEqual([m2jsonArch.snapshots.length, m2jsonArch.snapshots[0].label, m2jsonArch.snapshots[0].fit.players.length, m2jsonArch.snapshots[1].fit.players, m2jsonArch.snapshots[1].fit.playerCount, m2jsonArch.options.placeholders], [6, 'all', 270, undefined, 113, ['halfLifeDays']], '--only M2 --json (archivierte Saisons): 6 Stände, Spielerliste nur im Hauptstand, Saisonende-Stände mit playerCount');
+  assertEqual([m2jsonArch.snapshots[0].fit.players.reduce((a, p) => a + p.goals, 0), m2jsonArch.snapshots[0].fit.quality.goals.attributed, m2jsonArch.snapshots[0].fit.status], [3225, 3225, 'ok'], '--only M2 --json (archivierte Saisons): Σ Spielertore = 3225 = zugeordnete Tore');
+  assertTrue(!/NaN|Infinity/.test(m2cArch.text) && !/\d+\.\d{9,}/.test(m2cArch.text), '--only M2 --json (archivierte Saisons): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   await main(['--only', 'M2', '--json'], { stdout: m2c.stream });
   await main(['--only=M2', '--json'], { stdout: m2d.stream });
   assertEqual(m2c.text, m2d.text, '--only M2 --json: zwei Läufe byte-identisch');
-  const m2json = JSON.parse(m2c.text);
-  assertEqual([m2json.snapshots.length, m2json.snapshots[0].label, m2json.snapshots[0].fit.players.length, m2json.snapshots[1].fit.players, m2json.snapshots[1].fit.playerCount, m2json.options.placeholders], [6, 'all', 270, undefined, 113, ['halfLifeDays']], '--only M2 --json: 6 Stände, Spielerliste nur im Hauptstand, Saisonende-Stände mit playerCount');
-  assertEqual([m2json.snapshots[0].fit.players.reduce((a, p) => a + p.goals, 0), m2json.snapshots[0].fit.quality.goals.attributed, m2json.snapshots[0].fit.status], [3225, 3225, 'ok'], '--only M2 --json: Σ Spielertore = 3225 = zugeordnete Tore');
-  assertTrue(!/NaN|Infinity/.test(m2c.text) && !/\d+\.\d{9,}/.test(m2c.text), '--only M2 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   for (const [args, label] of [[['--only', 'M2', '--replicates', '30', '--seed', '1'], '--only M2 mit --replicates/--seed (gehören zu M1)'], [['--only', 'M2', '--write'], '--only M2 --write']]) {
     const e = capture();
     assertEqual(await main(args, { stdout: e.stream, stderr: e.stream }), 2, `${label}: Exit 2 mit Meldung`);
@@ -469,24 +501,30 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   await main(['--only=M3'], { stdout: m3b.stream });
   assertEqual(m3a.text, m3b.text, '--only M3: zwei Läufe (auch als --only=M3) byte-identisch');
   assertTrue(m3a.text.includes('Mindestspiele für Rang (Akzeptanzkriterium): 4') && m3a.text.includes('ohne defense[eigenesTeam]-Term') && m3a.text.includes('gegnerspezifisch') && m3a.text.includes('HZ-Split ausschließlich über period') && m3a.text.includes('highLeverageGA ist aktuell immer null (M6 existiert nicht)') && m3a.text.includes('shorthandedVsEqual ist aktuell immer null'), 'M3-Bericht: Mindestspiele-Schwelle 4, Variante A ohne defense-Term, gegnerspezifische Weak-Referenz, period-HZ-Split, highLeverageGA/shorthandedVsEqual als bewusst null erklärt');
-  assertTrue(m3a.text.includes('Status: ok · Goalies: 43 · Rangliste: 23'), 'M3-Bericht: 43 Goalies, 23 in der Rangliste (Realdaten)');
-  assertTrue(m3a.text.includes('Team-Spiele im Fenster: 444 · Solo 381 · Shared 61 · ohne Goalie 2'), 'M3-Bericht: 444/381/61/2 Team-Spiel-Zeilen');
+  // S2g: Goalie-/Team-Spiel-Zählungen sind exakte Werte-Pins — archivierte Saisons, eigener Lauf (siehe M1 oben).
+  const m3aArch = capture(); const m3cArch = capture();
+  await main(['--only', 'M3'], { stdout: m3aArch.stream, repoRoot: archivedSandbox });
+  assertTrue(m3aArch.text.includes('Status: ok · Goalies: 43 · Rangliste: 23'), 'M3-Bericht (archivierte Saisons): 43 Goalies, 23 in der Rangliste');
+  assertTrue(m3aArch.text.includes('Team-Spiele im Fenster: 444 · Solo 381 · Shared 61 · ohne Goalie 2'), 'M3-Bericht (archivierte Saisons): 444/381/61/2 Team-Spiel-Zeilen');
+  await main(['--only', 'M3', '--json'], { stdout: m3cArch.stream, repoRoot: archivedSandbox });
+  const m3jsonArch = JSON.parse(m3cArch.text);
+  assertEqual([m3jsonArch.snapshots.length, m3jsonArch.snapshots[0].label, m3jsonArch.snapshots[0].fit.players.length, m3jsonArch.snapshots[0].fit.rankList.length, m3jsonArch.snapshots[1].fit.players, m3jsonArch.snapshots[1].fit.rankList, m3jsonArch.snapshots[1].fit.playerCount, m3jsonArch.snapshots[1].fit.rankListCount, m3jsonArch.options.minGamesForRank], [6, 'all', 43, 23, undefined, undefined, 17, 8, 4], '--only M3 --json (archivierte Saisons): 6 Stände, Goalie-/Rangliste nur im Hauptstand, Saisonende-Stände mit playerCount/rankListCount (21/22: 17 Goalies, 8 in der Rangliste)');
+  const q3 = m3jsonArch.snapshots[0].fit.quality;
+  assertEqual([q3.teamGames.total, q3.teamGames.solo, q3.teamGames.shared, q3.teamGames.none, m3jsonArch.snapshots[0].fit.players.filter((p) => p.games > 0).length, m3jsonArch.snapshots[0].fit.players.filter((p) => p.games > 0 && p.games < 4).length, m3jsonArch.snapshots[0].fit.players.filter((p) => p.games === 0).length], [444, 381, 61, 2, 39, 16, 4], '--only M3 --json (archivierte Saisons): Realdaten-Plausibilität (Team-Spiele 444/381/61/2; Goalies mit ≥1 Solo-Spiel 39, davon <4 Solo-Spiele 16, ganz ohne Solo-Spiel 4)');
+  assertTrue(m3jsonArch.snapshots[0].fit.players.every((p) => p.highLeverageGA === null), '--only M3 --json (archivierte Saisons): highLeverageGA überall null');
+  assertTrue(m3jsonArch.snapshots[0].fit.players.every((p) => p.splits.shorthandedVsEqual === null), '--only M3 --json (archivierte Saisons): shorthandedVsEqual überall null');
+  assertTrue(m3jsonArch.snapshots[0].fit.warnings.some((w) => w.code === 'shorthanded-split-not-available') && m3jsonArch.snapshots[0].fit.warnings.some((w) => w.code === 'team-games-without-goalie' && w.count === 2), '--only M3 --json (archivierte Saisons): Warnungen shorthanded-split-not-available und team-games-without-goalie ×2');
+  const samplePlayer = m3jsonArch.snapshots[0].fit.players.find((p) => p.playerId === 166);
+  assertEqual(Object.keys(samplePlayer).sort(), ['confidence', 'expectedGA', 'games', 'goalsAgainst', 'highLeverageGA', 'name', 'playerId', 'sharedGames', 'splits', 'teams', 'tve', 'tveCI90', 'tvePerGame', 'weakShooterGA', 'weakShooterGAExpected'].sort(), '--only M3 --json (archivierte Saisons): Goalie-Objekt hat exakt das Runde-1-Schema (kein Feld ergänzt/entfernt)');
+  assertEqual(Object.keys(samplePlayer.splits).sort(), ['concededShortlyAfterOwnGoal', 'hz1vsHz2', 'kaderStufe', 'order1vs2', 'shorthandedVsEqual'].sort(), '--only M3 --json (archivierte Saisons): splits-Objekt hat exakt das Runde-1-Schema');
+  assertTrue(!/NaN|Infinity/.test(m3cArch.text) && !/\d+\.\d{9,}/.test(m3cArch.text), '--only M3 --json (archivierte Saisons): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
+  // S2g-Auftrag Punkt 2: asOf wird für die archivierten Saisons ausdrücklich erwartet (Saisonende 25/26,
+  // 2026-04-11) statt sich auf die Ableitung zu verlassen — identisch über M1/M2/M3 hinweg (Hauptstand).
+  assertEqual([m3jsonArch.snapshots[0].fit.asOf, m1jsonArch.snapshots[0].fit.asOf, m2jsonArch.snapshots[0].fit.asOf], [{ date: '2026-04-11', inclusive: true }, { date: '2026-04-11', inclusive: true }, { date: '2026-04-11', inclusive: true }], '--only M3 (archivierte Saisons): identisches asOf wie M1 und M2 (Hauptstand, Saisonende 25/26)');
   await main(['--only', 'M3', '--json'], { stdout: m3c.stream });
   await main(['--only=M3', '--json'], { stdout: m3d.stream });
   assertEqual(m3c.text, m3d.text, '--only M3 --json: zwei Läufe byte-identisch');
-  const m3json = JSON.parse(m3c.text);
-  assertEqual([m3json.snapshots.length, m3json.snapshots[0].label, m3json.snapshots[0].fit.players.length, m3json.snapshots[0].fit.rankList.length, m3json.snapshots[1].fit.players, m3json.snapshots[1].fit.rankList, m3json.snapshots[1].fit.playerCount, m3json.snapshots[1].fit.rankListCount, m3json.options.minGamesForRank], [6, 'all', 43, 23, undefined, undefined, 17, 8, 4], '--only M3 --json: 6 Stände, Goalie-/Rangliste nur im Hauptstand, Saisonende-Stände mit playerCount/rankListCount (21/22: 17 Goalies, 8 in der Rangliste)');
-  const q3 = m3json.snapshots[0].fit.quality;
-  assertEqual([q3.teamGames.total, q3.teamGames.solo, q3.teamGames.shared, q3.teamGames.none, m3json.snapshots[0].fit.players.filter((p) => p.games > 0).length, m3json.snapshots[0].fit.players.filter((p) => p.games > 0 && p.games < 4).length, m3json.snapshots[0].fit.players.filter((p) => p.games === 0).length], [444, 381, 61, 2, 39, 16, 4], '--only M3 --json: Realdaten-Plausibilität (Team-Spiele 444/381/61/2; Goalies mit ≥1 Solo-Spiel 39, davon <4 Solo-Spiele 16, ganz ohne Solo-Spiel 4)');
-  assertTrue(m3json.snapshots[0].fit.players.every((p) => p.highLeverageGA === null), '--only M3 --json: highLeverageGA überall null');
-  assertTrue(m3json.snapshots[0].fit.players.every((p) => p.splits.shorthandedVsEqual === null), '--only M3 --json: shorthandedVsEqual überall null');
-  assertTrue(m3json.snapshots[0].fit.warnings.some((w) => w.code === 'shorthanded-split-not-available') && m3json.snapshots[0].fit.warnings.some((w) => w.code === 'team-games-without-goalie' && w.count === 2), '--only M3 --json: Warnungen shorthanded-split-not-available und team-games-without-goalie ×2');
-  const samplePlayer = m3json.snapshots[0].fit.players.find((p) => p.playerId === 166);
-  assertEqual(Object.keys(samplePlayer).sort(), ['confidence', 'expectedGA', 'games', 'goalsAgainst', 'highLeverageGA', 'name', 'playerId', 'sharedGames', 'splits', 'teams', 'tve', 'tveCI90', 'tvePerGame', 'weakShooterGA', 'weakShooterGAExpected'].sort(), '--only M3 --json: Goalie-Objekt hat exakt das Runde-1-Schema (kein Feld ergänzt/entfernt)');
-  assertEqual(Object.keys(samplePlayer.splits).sort(), ['concededShortlyAfterOwnGoal', 'hz1vsHz2', 'kaderStufe', 'order1vs2', 'shorthandedVsEqual'].sort(), '--only M3 --json: splits-Objekt hat exakt das Runde-1-Schema');
-  assertTrue(!/NaN|Infinity/.test(m3c.text) && !/\d+\.\d{9,}/.test(m3c.text), '--only M3 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
-  // asOf identisch zu M1/M2 (dieselben m1json/m2json wie oben im selben Testlauf)
-  assertEqual([m3json.snapshots[0].fit.asOf, m1json.snapshots[0].fit.asOf, m2json.snapshots[0].fit.asOf], [{ date: '2026-04-11', inclusive: true }, { date: '2026-04-11', inclusive: true }, { date: '2026-04-11', inclusive: true }], '--only M3: identisches asOf wie M1 und M2 (Hauptstand)');
+  assertTrue(!/NaN|Infinity/.test(m3c.text) && !/\d+\.\d{9,}/.test(m3c.text), '--only M3 --json (volles Repo): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   const bg1 = capture(); const bg2 = capture();
   assertEqual(await main(['--only', 'M3', '--replicates', '20', '--seed', '3'], { stdout: bg1.stream }), 0, '--only M3 --replicates 20 --seed 3: Exit 0');
   await main(['--only', 'M3', '--replicates=20', '--seed=3'], { stdout: bg2.stream });
@@ -505,23 +543,33 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   assertEqual(m4a.text, m4b.text, '--only M4: zwei Läufe (auch als --only=M4 --replicates=20 --seed=3) byte-identisch');
   assertTrue(m4a.text.includes('Bootstrap: 20 Wiederholungen, Seed 3, 90-%-Perzentilintervall, Spielebene (beide Teamzeilen gemeinsam, wie M1) — bei M4 PFLICHT (kein Nur-Punktschätzung-Pfad, ein gemeinsamer Bootstrap für Liga- und Team-Ebene)'), 'M4-Bericht: Bootstrap ist bei M4 als Pflicht (kein Nur-Punktschätzung-Pfad) gekennzeichnet');
   assertTrue(m4a.text.includes('Hinweis: Load Index ist NICHT implementiert (M0 liefert keine belastbare Information über gleichzeitig auf dem Feld stehende Feldspieler).'), 'M4-Bericht: Load Index ausdrücklich als nicht implementiert gekennzeichnet, mit Begründung');
-  assertTrue(m4a.text.includes('Status: ok') && m4a.text.includes('Teams: 11 · Spieler: 269 · Fresh-vs-Tired-Beobachtungen: 40'), 'M4-Bericht: Status ok, 11 Teams, 269 Spieler, 40 Fresh-vs-Tired-Beobachtungen (Realdaten)');
-  assertTrue(m4a.text.includes('Fresh-vs-Tired: fresh n=20 Ø-Tordifferenz -1.250 · tired n=20 Ø-Tordifferenz +1.250'), 'M4-Bericht: Fresh-vs-Tired-Zusammenfassung (20 fresh, 20 tired, symmetrische Ø-Tordifferenz)');
-  assertTrue(m4a.text.includes('Warnungen: 10') && m4a.text.includes('player-assist-by-goalie-not-attributed ×76') && m4a.text.includes('fresh-vs-tired-same-order-excluded ×400'), 'M4-Bericht: 10 Warnungen, inkl. Fresh-vs-Tired-Warnungen auf oberster Ebene (Audit-Fix)');
+  // S2g: Team-/Spieler-/Warnungszählungen und Fresh-vs-Tired-Werte sind exakte Werte-Pins — archivierte
+  // Saisons, eigener Lauf (siehe M1 oben). --replicates/--seed bleiben wie am echten CLI-Pfad gesetzt.
+  const m4aArch = capture(); const m4cArch = capture();
+  await main(['--only', 'M4', '--replicates', '20', '--seed', '3'], { stdout: m4aArch.stream, repoRoot: archivedSandbox });
+  assertTrue(m4aArch.text.includes('Status: ok') && m4aArch.text.includes('Teams: 11 · Spieler: 269 · Fresh-vs-Tired-Beobachtungen: 40'), 'M4-Bericht (archivierte Saisons): Status ok, 11 Teams, 269 Spieler, 40 Fresh-vs-Tired-Beobachtungen');
+  assertTrue(m4aArch.text.includes('Fresh-vs-Tired: fresh n=20 Ø-Tordifferenz -1.250 · tired n=20 Ø-Tordifferenz +1.250'), 'M4-Bericht (archivierte Saisons): Fresh-vs-Tired-Zusammenfassung (20 fresh, 20 tired, symmetrische Ø-Tordifferenz)');
+  assertTrue(m4aArch.text.includes('Warnungen: 10') && m4aArch.text.includes('player-assist-by-goalie-not-attributed ×76') && m4aArch.text.includes('fresh-vs-tired-same-order-excluded ×400'), 'M4-Bericht (archivierte Saisons): 10 Warnungen, inkl. Fresh-vs-Tired-Warnungen auf oberster Ebene');
+  await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--json'], { stdout: m4cArch.stream, repoRoot: archivedSandbox });
+  const m4jsonArch = JSON.parse(m4cArch.text);
+  assertEqual([m4jsonArch.snapshots.length, m4jsonArch.snapshots[0].label, m4jsonArch.options.replicates, m4jsonArch.options.seed], [1, 'all', 20, 3], '--only M4 --json (archivierte Saisons): genau ein Stand ("all", keine Saison-Snapshots), --replicates/--seed korrekt an M4 durchgereicht');
+  const m4fitArch = m4jsonArch.snapshots[0].fit;
+  assertEqual(Object.keys(m4fitArch).sort(), ['asOf', 'asOfGameDate', 'freshVsTired', 'league', 'model', 'players', 'quality', 'status', 'teams', 'warnings'].sort(), '--only M4 --json (archivierte Saisons): volles fitFatigue()-Ausgabeschema');
+  assertTrue(!('loadIndex' in m4fitArch), '--only M4 --json (archivierte Saisons): loadIndex ist NICHT im Ergebnis vorhanden (bewusst nicht implementiert)');
+  // S2g-Auftrag Punkt 2: asOf ausdrücklich erwartet (Saisonende 25/26), nicht aus der Ableitung übernommen.
+  assertEqual([m4fitArch.model, m4fitArch.status, m4fitArch.asOf, m4fitArch.teams.length, m4fitArch.players.length, m4fitArch.freshVsTired.observations.length], ['M4-fatigue', 'ok', { date: '2026-04-11', inclusive: true }, 11, 269, 40], '--only M4 --json (archivierte Saisons): model/status/asOf (identisch zu M1/M2/M3, Saisonende 25/26) sowie Team-/Spieler-/Fresh-vs-Tired-Zähler');
+  assertEqual(m4fitArch.asOf, m1jsonArch.snapshots[0].fit.asOf, '--only M4 (archivierte Saisons): identisches asOf wie M1/M2/M3 (Hauptstand)');
+  assertEqual(m4fitArch.freshVsTired.summary, { fresh: { meanGoalDiff: -1.25, meanM1AdjustedGoalDiff: -0.99075857, n: 20 }, tired: { meanGoalDiff: 1.25, meanM1AdjustedGoalDiff: 0.99075857, n: 20 } }, '--only M4 --json (archivierte Saisons): Fresh-vs-Tired-Zusammenfassung (symmetrisch)');
+  assertEqual(m4fitArch.warnings, [{ code: 'goal-credit-unknown-excluded', count: 6 }, { code: 'abs-sec-null-excluded-from-segments', count: 11 }, { code: 'team-level-opponent-order-unknown', count: 2 }, { code: 'player-missing-player-id', count: 2 }, { code: 'player-goal-without-roster-row', count: 1 }, { code: 'player-assist-without-roster-row', count: 1 }, { code: 'player-assist-by-goalie-not-attributed', count: 76 }, { code: 'fresh-vs-tired-own-order-unknown', count: 2 }, { code: 'fresh-vs-tired-opponent-order-unknown', count: 2 }, { code: 'fresh-vs-tired-same-order-excluded', count: 400 }], '--only M4 --json (archivierte Saisons): vollständige, exakte Warnungsliste auf oberster Ebene');
+  assertEqual([m4fitArch.quality.teamGames, m4fitArch.quality.bootstrap, m4fitArch.quality.teamLevel, m4fitArch.quality.player.comparison], [{ eligible: 442, excludedM1Unavailable: 0, excludedOrderNull: 2, excludedOutsideCutoff: 0 }, { failed: 0, replicates: 20, usable: 20 }, { eligible: 440, excludedM1Unavailable: 0, excludedOpponentOrderUnknown: 2, teams: 11 }, { eligible: 114, insufficient: 155, players: 269 }], '--only M4 --json (archivierte Saisons): Qualitätskennzahlen');
+  assertTrue(!/NaN|Infinity/.test(m4cArch.text) && !/\d+\.\d{9,}/.test(m4cArch.text), '--only M4 --json (archivierte Saisons): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--json'], { stdout: m4c.stream });
   await main(['--only=M4', '--replicates=20', '--seed=3', '--json'], { stdout: m4d.stream });
   assertEqual(m4c.text, m4d.text, '--only M4 --json: zwei Läufe byte-identisch');
   const m4json = JSON.parse(m4c.text);
-  assertEqual([m4json.snapshots.length, m4json.snapshots[0].label, m4json.options.replicates, m4json.options.seed], [1, 'all', 20, 3], '--only M4 --json: genau ein Stand ("all", keine Saison-Snapshots), --replicates/--seed korrekt an M4 durchgereicht');
   const m4fit = m4json.snapshots[0].fit;
-  assertEqual(Object.keys(m4fit).sort(), ['asOf', 'asOfGameDate', 'freshVsTired', 'league', 'model', 'players', 'quality', 'status', 'teams', 'warnings'].sort(), '--only M4 --json: volles fitFatigue()-Ausgabeschema (model/status/asOf/league/teams/players/freshVsTired/quality/warnings)');
-  assertTrue(!('loadIndex' in m4fit), '--only M4 --json: loadIndex ist NICHT im Ergebnis vorhanden (bewusst nicht implementiert)');
-  assertEqual([m4fit.model, m4fit.status, m4fit.asOf, m4fit.teams.length, m4fit.players.length, m4fit.freshVsTired.observations.length], ['M4-fatigue', 'ok', { date: '2026-04-11', inclusive: true }, 11, 269, 40], '--only M4 --json: model/status/asOf (identisch zu M1/M2/M3) sowie Team-/Spieler-/Fresh-vs-Tired-Zähler (Realdaten)');
-  assertEqual(m4fit.asOf, m1json.snapshots[0].fit.asOf, '--only M4: identisches asOf wie M1/M2/M3 (Hauptstand)');
-  assertEqual(m4fit.freshVsTired.summary, { fresh: { meanGoalDiff: -1.25, meanM1AdjustedGoalDiff: -0.99075857, n: 20 }, tired: { meanGoalDiff: 1.25, meanM1AdjustedGoalDiff: 0.99075857, n: 20 } }, '--only M4 --json: Fresh-vs-Tired-Zusammenfassung (Realdaten, symmetrisch)');
-  assertEqual(m4fit.warnings, [{ code: 'goal-credit-unknown-excluded', count: 6 }, { code: 'abs-sec-null-excluded-from-segments', count: 11 }, { code: 'team-level-opponent-order-unknown', count: 2 }, { code: 'player-missing-player-id', count: 2 }, { code: 'player-goal-without-roster-row', count: 1 }, { code: 'player-assist-without-roster-row', count: 1 }, { code: 'player-assist-by-goalie-not-attributed', count: 76 }, { code: 'fresh-vs-tired-own-order-unknown', count: 2 }, { code: 'fresh-vs-tired-opponent-order-unknown', count: 2 }, { code: 'fresh-vs-tired-same-order-excluded', count: 400 }], '--only M4 --json: vollständige, exakte Warnungsliste auf oberster Ebene (inkl. Fresh-vs-Tired-Warnungen, Audit-Fix)');
-  assertEqual([m4fit.quality.teamGames, m4fit.quality.bootstrap, m4fit.quality.teamLevel, m4fit.quality.player.comparison], [{ eligible: 442, excludedM1Unavailable: 0, excludedOrderNull: 2, excludedOutsideCutoff: 0 }, { failed: 0, replicates: 20, usable: 20 }, { eligible: 440, excludedM1Unavailable: 0, excludedOpponentOrderUnknown: 2, teams: 11 }, { eligible: 114, insufficient: 155, players: 269 }], '--only M4 --json: Qualitätskennzahlen (Realdaten-Pins)');
-  assertTrue(!/NaN|Infinity/.test(m4c.text) && !/\d+\.\d{9,}/.test(m4c.text), '--only M4 --json: keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
+  assertEqual(m4fit.asOf, m1json.snapshots[0].fit.asOf, '--only M4 (volles Repo): identisches asOf wie M1 (Hauptstand, beide aus den vollen, mit 26/27 wachsenden Daten abgeleitet)');
+  assertTrue(!/NaN|Infinity/.test(m4c.text) && !/\d+\.\d{9,}/.test(m4c.text), '--only M4 --json (volles Repo): keine NaN/Infinity und höchstens 8 Nachkommastellen (Rundung an der Ausgabegrenze)');
   const w4 = capture();
   assertEqual([await main(['--only', 'M4', '--replicates', '20', '--seed', '3', '--write'], { stdout: w4.stream, stderr: w4.stream }), /--write und --only schließen sich aus/.test(w4.text)], [2, true], '--write und --only M4 zusammen werden abgelehnt (--write berechnet immer alle vier Module)');
   const m4proc = execFileSync(process.execPath, [path.join(REPO_ROOT, 'scripts', 'build-league-model.mjs'), '--only', 'M4', '--replicates', '20', '--seed', '3'], { encoding: 'utf8' });
@@ -537,15 +585,8 @@ console.log('== Dry-Run: nichts geschrieben, nichts verändert, kein Netzwerk ==
   // mit gefiltertem Manifest) — nicht "ein Hash pro archivierter Saison einzeln", weil M1/M2 ein
   // zeitgewichtetes Fit ÜBER alle eingehenden Saisons ZUSAMMEN sind (anders als M0s Quality-Block lässt sich
   // das nicht verlustfrei in unabhängige Pro-Saison-Teile zerlegen, ohne das Fit selbst zu verändern).
-  const archivedSandbox = path.join(os.tmpdir(), 'p1a-archived-only-sandbox');
-  await rm(archivedSandbox, { recursive: true, force: true });
-  await mkdir(path.join(archivedSandbox, 'season-data'), { recursive: true });
-  const archivedManifest = { seasons: realManifest.seasons.filter((s) => s.status === 'archived') };
-  await writeFile(path.join(archivedSandbox, 'season-data', 'seasons.json'), JSON.stringify(archivedManifest), 'utf8');
-  for (const entry of archivedManifest.seasons) {
-    await writeFile(path.join(archivedSandbox, 'season-data', entry.file), await readFile(path.join(REPO_ROOT, 'season-data', entry.file), 'utf8'), 'utf8');
-  }
-  const archivedModel = await buildLeagueModel(archivedSandbox);
+  // archivedSandbox/archivedManifest/archivedModel: siehe oben, direkt nach dem Bau von model — jetzt schon
+  // seit der Qualitätskennzahlen-Sektion wiederverwendet, hier nicht erneut gebaut (keine zweite Definition).
   // Eigene, dedizierte Prüfung (Aufgabe 3c, 3. Punkt): der Eingabe-Hash der archivierten Saisons für sich
   // genommen ist die Aussage, die wirklich schützt ("an abgeschlossenen Saisons hat sich nichts geändert") —
   // unabhängig von jeder Berichtsformatierung oder Modul-Rechenlogik. Empirisch verifiziert: identisch zum

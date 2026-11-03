@@ -191,6 +191,7 @@ log λ_i = μ + attack[a] − defense[b] + β_order·O_i + β_le6·K6_i + β_ge9
 - **Vorhersage eines Spieltags**: alle Zeilen mit Datum < erstes Datum des Spieltags (`asOfBeforeMatchday`, exclusive).
 - Die Spieltagsnummer wird nur nachgeschlagen, um ein Datum zu bestimmen; sie ist keine Zeitachse. Das ist nötig, weil Spieltagsnummern nicht chronologisch sind (21/22: Spieltag 9 vor Spieltag 8; 24/25: Spieltag 2 an zwei Terminen, 27.10. und 07.12., mit Spieltag 1 am 09.11. dazwischen). Mehrtägige Spieltage und Nachholspiele werden über die tatsächlichen Spieldaten eingeordnet; spätere Spiele beeinflussen einen früheren Stand nie.
 - Leerer Stand (kein Spiel im Schnitt): gültiger Zustand `estimable = false` mit Warnung `empty-asof`, ohne NaN/Infinity; `predictDuel` liefert `available: false`.
+- **Testkonvention (S2g):** exakte Werte-Pins in den Tests gelten nur für abgeschlossene Saisons, mit ausdrücklich gesetztem `asOf` (Saisonende der letzten abgeschlossenen Saison) statt der aus den Daten abgeleiteten Voreinstellung — sonst wandert der Pin mit jedem Spieltagsimport der laufenden Saison mit. Die laufende Saison wird stattdessen über Eigenschaften geprüft (`scripts/test-model-full-data-properties.mjs`: auflösbare Tor-Ereignisse, keine NaN/Infinity, keine Spieler ohne Saison, keine doppelten Spiel-IDs), nicht über exakte Zahlen.
 
 ### Ergebnisobjekt (`fitTeamStrength`)
 

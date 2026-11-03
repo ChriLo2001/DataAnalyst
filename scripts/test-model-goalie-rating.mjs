@@ -383,9 +383,16 @@ console.log('== M. Eingabereihenfolge ändert das Ergebnis nicht ==');
 // ══ N. Realdaten-Rauchtest ═══════════════════════════════════════════════
 console.log('== N. Reale M0-Daten: Rauchtest gegen erwartete Plausibilitätswerte ==');
 {
+  // S2g-Auftrag "Modelltests gegen abgeschlossene Saisons festnageln": dieselbe Regel wie
+  // scripts/test-p0a-baseline.mjs (EXPECTED_SEASONS) — exakte Werte-Pins gelten nur für die abgeschlossenen
+  // Saisons 21/22–25/26, nicht für alles, was buildLeagueModel() gerade lädt.
+  const EXPECTED_SEASONS = ['21/22', '22/23', '23/24', '24/25', '25/26'];
   const model = await buildLeagueModel();
-  const data = { teamGames: model.seasons.flatMap((s) => s.teamGames), goalEvents: model.seasons.flatMap((s) => s.goalEvents), rosterEntries: model.seasons.flatMap((s) => s.rosterEntries) };
-  const r = G.fitGoalieRating(data);
+  const archivedSeasons = model.seasons.filter((s) => EXPECTED_SEASONS.includes(s.seasonKey));
+  const data = { teamGames: archivedSeasons.flatMap((s) => s.teamGames), goalEvents: archivedSeasons.flatMap((s) => s.goalEvents), rosterEntries: archivedSeasons.flatMap((s) => s.rosterEntries) };
+  // asOf ausdrücklich gesetzt (Saisonende 25/26), nicht aus den Daten abgeleitet — siehe test-model-team-strength.mjs.
+  const REAL_ASOF = { date: '2026-04-11', inclusive: true };
+  const r = G.fitGoalieRating(data, { asOf: REAL_ASOF });
   assertEqual(r.status, 'ok', 'echte Daten: M1 schätzbar, Status ok');
   assertEqual(r.players.length, 43, '43 Goalies');
   assertEqual(r.quality.teamGames.total, 444, '444 Team-Spiel-Zeilen im Fenster');

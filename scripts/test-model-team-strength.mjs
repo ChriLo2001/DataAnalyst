@@ -359,10 +359,19 @@ console.log('== D3 / O2: null-Host bleibt in Stufe 1, Stufe 2 nur bekannte Zeile
 }
 
 console.log('== D3 an den echten Daten: Verteilung 312 / 24 / 88 (ohne Kopplung an Koeffizienten) ==');
+// S2g-Auftrag "Modelltests gegen abgeschlossene Saisons festnageln": dieselbe Regel wie
+// scripts/test-p0a-baseline.mjs (EXPECTED_SEASONS) — exakte Werte-Pins gelten nur für die abgeschlossenen
+// Saisons 21/22–25/26, nicht für alles, was buildLeagueModel() gerade lädt (das wüchse mit jedem
+// Spieltagsimport der laufenden Saison und würde diese Pins regelmäßig wieder rot machen).
+const EXPECTED_SEASONS = ['21/22', '22/23', '23/24', '24/25', '25/26'];
 const realModel = await buildLeagueModel();
-const realRows = realModel.seasons.flatMap((s) => s.teamGames);
+const realRows = realModel.seasons.filter((s) => EXPECTED_SEASONS.includes(s.seasonKey)).flatMap((s) => s.teamGames);
+// asOf ausdrücklich gesetzt (Saisonende 25/26), nicht aus den Daten abgeleitet: auch wenn der abgeleitete
+// Wert bei archivierten Daten zufällig derselbe wäre, soll der Test nicht von einer Ableitung abhängen,
+// die zufällig stimmt.
+const REAL_ASOF = { date: '2026-04-11', inclusive: true };
 {
-  const fit = M.fitTeamStrength(realRows);
+  const fit = M.fitTeamStrength(realRows, { asOf: REAL_ASOF });
   assertEqual(fit.quality.hostDistribution, { true: 24, false: 88, null: 330 }, 'Host-Verteilung im Fit: true 24, false 88, null 330');
   assertEqual([fit.games, fit.quality.rows.input, fit.quality.rows.excludedOrderNull], [442, 444, 2], '442 Zeilen im Fit (444 M0-Zeilen, 2 mit gameOrderOfDay = null)');
   assertEqual(fit.quality.orderNullBySeason, { '24/25': 2 }, 'ausgeschlossene Zeilen nach Saison: 24/25 ×2 (21/22 hat nach der Datenqualitäts-Ausnahme keine gameOrderOfDay=null-Zeilen mehr)');
