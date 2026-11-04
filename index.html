@@ -21525,6 +21525,28 @@ function rMatchcenterPage(){
     ${tabContent}
   </div>`;
 }
+// S2h-Auftrag "laufende Nullphase auf die Saisonseite": buildCrossGameNoGoalStreak().current — die seit
+// dem letzten Gegentor laufende, noch nicht beendete spielübergreifende Serie (Gegenstück zu
+// longestOverall, das nur in der Hall of Fame erscheint und nur abgeschlossene Serien zeigt, siehe
+// buildHallOfFameLongestNoGoalStreak). Ausdrücklich NICHT in der Hall of Fame — current fließt dort nie
+// ein. Nur für die laufende Saison (CURRENT_SEASON_KEY): bei einer archivierten Saison ist "laufend"
+// bedeutungslos, die Karte entfällt dort ganz (keine Umdeutung als "letzte Serie der Saison" — das wäre
+// eine andere Aussage, die hier nicht beauftragt ist). Beschriftung trägt immer beides, "läuft noch" UND
+// "spielübergreifend" (Auftrag Punkt 2) — ohne messbare Spielbasis erscheint die Karte gar nicht, nie mit
+// nur einem der beiden Worte. Datenbasis: dieselben Ulm-Spiele wie der Rest der Seite (gamesData), nicht
+// SEASONS[...].rawGames — buildCrossGameNoGoalStreak filtert ohnehin selbst auf Ulm-Beteiligung.
+function rTeamNoGoalStreakCard(seasonKey,games){
+  if(seasonKey!==CURRENT_SEASON_KEY)return'';
+  const countedGames=(games||[]).filter(g=>noGoalStreakSideFor(g)!==null&&classifyGameForStats(g).countsForStats).length;
+  if(!countedGames)return'';
+  const r=buildCrossGameNoGoalStreak(games);
+  return`<div class="team-card" style="margin-bottom:18px;border-top:2.5px solid #2dd4bf">
+    <div class="team-card-title" style="color:#2dd4bf">Läuft noch: ohne Gegentor</div>
+    <div class="sv" style="font-size:28px;margin-top:4px">${goalieTime(r.current)}</div>
+    <div class="sl" style="margin-top:2px">spielübergreifend, seit dem letzten Gegentor</div>
+    ${uiDatenstandBand({count:countedGames,threshold:DATENSTAND_SCHWELLEN.modellSpiele})}
+  </div>`;
+}
 function rTeamPage(){
   const gamesData=S.gamesData||[],st=S.standings||[],players=S.players||[];
   // Games list
@@ -21833,6 +21855,8 @@ function rTeamPage(){
     <div class="sc c1"><div class="sv">${gf}:${ga}</div><div class="sl">Tore</div></div>
     <div class="sc cr"><div class="sv">${diff>0?'+':''}${diff}</div><div class="sl">Differenz</div></div>
   </div>
+
+  ${rTeamNoGoalStreakCard(S.activeSeasonKey,gamesData)}
 
   <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-bottom:22px;align-items:start" class="team-2col">
     <!-- Games list -->
