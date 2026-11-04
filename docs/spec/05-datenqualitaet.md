@@ -15,6 +15,24 @@ Unabhängig von den Modulen, als eigene kleine Aufgaben:
 3. **Zeitformat:** ✅ Erledigt (S2e-Auftrag "Spielzeit normalisieren"). Kumulierte Zeit in Halbzeit 2 wurde NICHT korrekt behandelt (`goalieEventAbsSeconds`/`getPhaseKey` unterstellten für Halbzeit 2 immer die relative Lesart). Zentral behoben in `scripts/game-clock.mjs` (Browser-Port in `matchcenter-core.js`): Mehrheitsregel je Spiel entscheidet relativ/durchlaufend/unklar, widersprechende Einzelereignisse werden verworfen statt falsch gerechnet, `parseClockString` (vorher `parseGameClock`) liest zusätzlich Punkt statt Doppelpunkt. Alle Phasen- und Timing-Auswertungen umgeleitet (siehe dortiger Bericht für die betroffenen Stellen).
 4. **Timeouts:** Events werden in M0/M7 genutzt. Im Dashboard mindestens in der Spielansicht anzeigen.
 5. **Datenstand:** Sichtbarer Hinweis „Daten bis Spieltag X (Datum)“.
+6. **Strafenlogik (S2i-Auftrag "Strafenklassifikation zusammenführen"):** Die Regeln stammen von Chris, nicht recherchiert — maßgeblich, trägt die Unterscheidung Spieler-/Mannschaftsstrafe, vorher nur als Zahlen im Code ohne Begründung vorhanden:
+
+   | Strafe | gegen den Spieler | gegen die Mannschaft |
+   |---|---|---|
+   | 2 Minuten | 2 Minuten | 2 Minuten Unterzahl |
+   | 2+2 | 4 Minuten | zweimal 2 Minuten, einzeln durch ein Tor ablösbar |
+   | 10 Minuten | 10 Minuten | 2 Minuten Unterzahl |
+   | Matchstrafe (MS) | ganzes Spiel | wie 2+2: zweimal 2 Minuten |
+
+   Es gibt keine 5-Minuten-Strafe in der Praxis (0 von 288 archivierten Strafen); der Code behält den Fall als unerreichten Platzhalter.
+
+   Umgesetzt über `classifyPenaltyType(ev)` (index.html) — **eine** Klassifikation statt vorher drei unabhängiger (`isMatchPenaltyEvent`, `getSpecialTeamsPenaltyChunks`, `getPenaltyDisciplineType` entschieden dieselbe Frage mit eigenen Textmustern; „MS" traf `\bms\b`, aber nicht `includes('match')` — die eine echte Matchstrafe im Archiv, `penalty_ms_full`, 25/26 Spiel 44415, bekam dadurch nur eine 2-Minuten-Überzahlchance statt zwei). Primär auf `penalty_type` geschlüsselt (Rohcode des Saisonmanagers, bei allen 288 archivierten Strafen vorhanden und eindeutig), Text (`penalty_type_string`/`event_type`/`penalty_reason_string`) nur als Rückfallebene. Ein über beide Wege unbestimmbarer Typ gilt als `unknown` und wird über den bestehenden Diagnosekanal (`stats.diagnostics.unknownPenaltyDurations`) gemeldet, statt stillschweigend als 2-Minuten-Überzahlchance (`[120]`) geraten zu werden.
+
+   **Nicht geändert, bewusst offen:** `getPenaltyPersonalMinutes` behandelt eine Matchstrafe nicht als feste Zahl, sondern rechnet "Rest des laufenden Spiels + volle Dauer etwaiger weiterer Spiele am selben Tag" in Minuten — eine genuine Annäherung an „ganzes Spiel", aber nur im vollen Pfad mit Spielkontext; der isolierte Basiswert (`getPenaltyBasePersonalMinutes`, nur Rückfall bei unlesbarer Zeit, sowie die ungenutzte `disciplineMinutes`-Markierung) liefert für eine Matchstrafe weiterhin den Platzhalter 4. Ob und wie „ganzes Spiel" als eigene Zahl geführt werden soll, ist eine Entscheidung von Chris, keine stillschweigende Annahme dieser Phase.
+
+   **Vorher/Nachher an den echten Daten:** Die einzige betroffene Strafe (Spiel 44415) liegt in einem Spiel ohne Ulm-Beteiligung (Breisgau Bandits – Floorball Mannheim) — `buildSpecialTeamsForGame`/`buildSpecialTeamsForSeason` verarbeiten ausschließlich Spiele mit Ulm-Seite (`detectSide(game)`). Die Korrektur ändert daher an keiner heute sichtbaren Stelle einen Wert (Team-Seite Special Teams, die zwei Goalie-Hall-of-Fame-Einträge „Penalty-Kill-Rückhalt"/„Unterzahlstärke", Matchcenter-Gegnerhinweise) — nicht, weil die Korrektur wirkungslos wäre, sondern weil die einzige Matchstrafe im Archiv nie in die Ulm-bezogene Auswertung einfließt. Wird erst sichtbar, sobald eine Matchstrafe in einem Ulm-Spiel vorkommt.
+
+   **Tatsächliche Spielerzahl (3 gegen 3, 2 gegen 2 bei sich aufhebenden Strafen):** Keine Stelle zeigt das — nur die Zustände Überzahl/Unterzahl/Gleichstand/normal (`specialTeamsStateFromActive`). Kommt im Archiv nie vor (keine gleichzeitigen Strafen gegen beide Mannschaften), nur gemeldet, nicht gebaut.
 
 ---
 

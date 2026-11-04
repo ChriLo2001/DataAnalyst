@@ -4202,21 +4202,39 @@ const DEFAULT_GAME_DURATION_SEC=DEFAULT_GAME_DURATION_MIN*60;
 function penaltyRawText(ev){
   return`${ev?.penalty_type||''} ${ev?.penalty_type_string||''} ${ev?.event_type||''} ${ev?.penalty_reason_string||''}`.toLowerCase();
 }
-function isMatchPenaltyEvent(ev){
+// S2i-Auftrag "Strafenklassifikation zusammenführen": EINE Stelle, die aus einem Strafereignis den Typ
+// bestimmt (match/2+2/10min/5min/2min/unknown) — vorher entschieden isMatchPenaltyEvent und
+// getSpecialTeamsPenaltyChunks dieselbe Frage unabhängig voneinander (und getPenaltyDisciplineType ein
+// drittes Mal): "MS" traf \bms\b, aber nicht includes('match') — die eine Matchstrafe im Archiv
+// (penalty_ms_full, 25/26 Spiel 44415) bekam dadurch nur eine 2-Minuten-Überzahlchance statt zwei. Primär
+// auf penalty_type geschlüsselt (Chris: "primär auf penalty_type schlüsseln, Text nur als
+// Rückfallebene") — die Saisonmanager-Rohcodes sind durchgehend vorhanden und eindeutig (siehe
+// Bestandsaufnahme: alle 288 Strafen tragen einen von vier bekannten Codes). Die Textheuristik
+// (penaltyRawText, inkl. \bms\b) bleibt NUR als Rückfall, falls penalty_type fehlt oder unbekannt ist.
+// Ein Typ, der auch über den Text nicht bestimmbar ist, wird als 'unknown' gemeldet statt geraten —
+// getSpecialTeamsPenaltyChunks liest das und meldet es über den bestehenden
+// stats.diagnostics.unknownPenaltyDurations-Kanal, statt still auf [120] durchzufallen.
+const PENALTY_TYPE_CODES={penalty_ms_full:'match',penalty_2and2:'2+2',penalty_10:'10min',penalty_5:'5min',penalty_2:'2min'};
+function classifyPenaltyType(ev){
+  const code=ev?.penalty_type;
+  if(code&&Object.prototype.hasOwnProperty.call(PENALTY_TYPE_CODES,code))return{type:PENALTY_TYPE_CODES[code],source:'penalty_type'};
   const raw=penaltyRawText(ev);
-  return raw.includes('match')||raw.includes('matchstrafe')||/\bms\b/.test(raw);
+  if(raw.includes('match')||raw.includes('matchstrafe')||/\bms\b/.test(raw))return{type:'match',source:'text'};
+  if(raw.includes('2+2')||raw.includes('2 + 2')||raw.includes('penalty_2_2')||raw.includes('penalty_4'))return{type:'2+2',source:'text'};
+  if(raw.includes('penalty_10')||/\b10\s*(?:'|min|minute)?\b/.test(raw))return{type:'10min',source:'text'};
+  if(raw.includes('penalty_5')||/\b5\s*(?:'|min|minute)?\b/.test(raw))return{type:'5min',source:'text'};
+  if(raw.includes('penalty_2')||/\b2\s*(?:'|min|minute)?\b/.test(raw))return{type:'2min',source:'text'};
+  return{type:'unknown',source:'text'};
+}
+function isMatchPenaltyEvent(ev){
+  return classifyPenaltyType(ev).type==='match';
 }
 function isTwoPlusTwoPenaltyEvent(ev){
-  const raw=penaltyRawText(ev);
-  return raw.includes('2+2')||raw.includes('2 + 2')||raw.includes('penalty_2_2')||raw.includes('penalty_4');
+  return classifyPenaltyType(ev).type==='2+2';
 }
 function getPenaltyDisciplineType(ev){
-  const raw=penaltyRawText(ev);
-  if(isMatchPenaltyEvent(ev))return'match';
-  if(isTwoPlusTwoPenaltyEvent(ev))return'2+2';
-  if(raw.includes('penalty_10')||/\b10\s*(?:'|min|minute)?\b/.test(raw))return'10min';
-  if(raw.includes('penalty_5')||/\b5\s*(?:'|min|minute)?\b/.test(raw))return'5min';
-  return'2min';
+  const type=classifyPenaltyType(ev).type;
+  return type==='unknown'?'2min':type;
 }
 function getGameDurationMinutes(game){
   const sec=goalieGameDurationSeconds(game);
@@ -4275,15 +4293,14 @@ function getPenaltyPersonalMinutes(ev,game,gamesData){
 function getPenaltyDisciplineMinutes(ev){
   return getPenaltyBasePersonalMinutes(ev);
 }
+// Chris' Tabelle (Mannschaft/Überzahl-Seite, siehe docs/spec/05-datenqualitaet.md Punkt 6): match und 2+2
+// sind je zwei einzeln durch ein Tor ablösbare 2-Minuten-Häppchen; 10min und 2min sind je EINE
+// 2-Minuten-Überzahlchance (die 10 bzw. das Minutenmaß darüber hinaus ist reine Spielerstrafe, siehe
+// getPenaltyBasePersonalMinutes). 'unknown' liefert bewusst [] — kein geratener Platzhalter.
+const PENALTY_SPECIAL_TEAMS_CHUNKS={match:[120,120],'2+2':[120,120],'10min':[120],'5min':[300],'2min':[120]};
 function getSpecialTeamsPenaltyChunks(ev){
-  const raw=penaltyRawText(ev);
-  if(!raw.includes('penalty')&&!raw.includes("'")&&!raw.includes('min')&&!raw.includes('match'))return[];
-  if(raw.includes('match')||raw.includes('matchstrafe'))return[120,120];
-  if(raw.includes('2+2')||raw.includes('2 + 2')||raw.includes('penalty_2_2')||raw.includes('penalty_4'))return[120,120];
-  if(raw.includes('penalty_10')||/\b10\s*(?:'|min|minute)?\b/.test(raw))return[120];
-  if(raw.includes('penalty_5')||/\b5\s*(?:'|min|minute)?\b/.test(raw))return[300];
-  if(raw.includes('penalty_2')||/\b2\s*(?:'|min|minute)?\b/.test(raw))return[120];
-  return[120];
+  const type=classifyPenaltyType(ev).type;
+  return PENALTY_SPECIAL_TEAMS_CHUNKS[type]||[];
 }
 function isPenaltyGoalEvent(ev){
   const raw=`${ev?.goal_type||''} ${ev?.goal_type_string||''}`.toLowerCase();
