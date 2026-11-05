@@ -101,11 +101,12 @@ console.log('== Reale Prüffälle: penalty_type je Fall, Chunks, Discipline-Minu
       return null;
     };
     const msCase = find(44415, 'penalty_ms_full');
+    const games = SEASONS['25/26']?.data?.rawGames || [];
     return {
-      ms: msCase ? { penalty_type: msCase.ev.penalty_type, type: classifyPenaltyType(msCase.ev).type, chunks: getSpecialTeamsPenaltyChunks(msCase.ev), personalMinutes: getPenaltyBasePersonalMinutes(msCase.ev) } : null,
+      ms: msCase ? { penalty_type: msCase.ev.penalty_type, type: classifyPenaltyType(msCase.ev).type, chunks: getSpecialTeamsPenaltyChunks(msCase.ev), personalMinutes: getPenaltyPersonalMinutes(msCase.ev, games.find(g=>String(g.id)==='44415'), games) } : null,
     };
   })()`, sandbox, { timeout: 15000 });
-  assertEqual(out.ms, { penalty_type: 'penalty_ms_full', type: 'match', chunks: [120, 120], personalMinutes: 4 }, '25/26 Spiel 44415 (MS, Rückennummer 17): klassifiziert als match, Special-Teams-Häppchen [120,120] (vorher [120] — der behobene Fehler), Basis-Personalminuten unverändert 4');
+  assertEqual(out.ms, { penalty_type: 'penalty_ms_full', type: 'match', chunks: [120, 120], personalMinutes: 40 }, '25/26 Spiel 44415 (MS, Rückennummer 17): klassifiziert als match, Special-Teams-Häppchen [120,120] (vorher [120] — der behobene Fehler), Personalminuten = volle Spiellänge 40 (vorher Platzhalter 4)');
 }
 
 console.log('== Beide Schreibweisen (2\'/2 Minuten, 2+2/2+2 Minuten) klassifizieren identisch ==');
@@ -172,16 +173,52 @@ console.log('== Unbekannter penalty_type: keine stille [120]-Vermutung, sondern 
   assertEqual(out.unknownPenaltyDurations.length, 1, 'buildSpecialTeamsForGame meldet den Fall über stats.diagnostics.unknownPenaltyDurations, statt ihn stillschweigend als 2 Minuten zu werten');
 }
 
-console.log('== getPenaltyBasePersonalMinutes: Ist-Zustand je Typ unveraendert (2min=2, 2+2=4, 10min=10, 5min=5, match=4 als Platzhalter) ==');
+console.log('== getPenaltyBasePersonalMinutes: Ist-Zustand je Nicht-Match-Typ unveraendert (2min=2, 2+2=4, 10min=10, 5min=5) ==');
 {
   const out = vm.runInContext(`([
     getPenaltyBasePersonalMinutes({penalty_type:'penalty_2'}),
     getPenaltyBasePersonalMinutes({penalty_type:'penalty_2and2'}),
     getPenaltyBasePersonalMinutes({penalty_type:'penalty_10'}),
     getPenaltyBasePersonalMinutes({penalty_type:'penalty_5'}),
-    getPenaltyBasePersonalMinutes({penalty_type:'penalty_ms_full'}),
   ])`, sandbox, { timeout: 15000 });
-  assertEqual(out, [2, 4, 10, 5, 4], 'Basis-Personalminuten je Typ: 2/4/10/5/4 — die "4" bei Matchstrafe ist nur der Rückfallwert von getPenaltyPersonalMinutes bei unlesbarer Zeit, nicht "ganzes Spiel" als Zahl (siehe Bericht)');
+  assertEqual(out, [2, 4, 10, 5], 'Basis-Personalminuten je Nicht-Match-Typ: 2/4/10/5 — fuer Matchstrafen gibt es seit dem S2i-Nachtrag keinen isolierten Basiswert mehr (der einzige verbliebene Aufrufer schliesst match vorher ueber !isMatchPenaltyEvent aus)');
+}
+
+console.log('== S2i-Nachtrag "Matchstrafe — den zweiten Wert angleichen": ganzer Spieltag, zeitpunktunabhaengig ==');
+{
+  const out = vm.runInContext(`(function(){
+    const games = SEASONS['25/26']?.data?.rawGames || [];
+    const g = games.find(x => String(x.id) === '44415');
+    const ev = (g.events||[]).find(e => e.event_type==='penalty' && e.penalty_type==='penalty_ms_full');
+    const normal = getPenaltyPersonalMinutes(ev, g, games);
+    const garbledTime = getPenaltyPersonalMinutes({...ev, time: 'nicht lesbar'}, g, games);
+    const missingTime = getPenaltyPersonalMinutes({...ev, time: undefined}, g, games);
+    return { normal, garbledTime, missingTime, gameMinutes: getGameDurationMinutes(g) };
+  })()`, sandbox, { timeout: 15000 });
+  assertEqual(out.normal, out.gameMinutes, '25/26 Spiel 44415 (die einzige Matchstrafe im Archiv): Personalminuten = volle Spiellaenge (40), kein verkuerzter Platzhalter');
+  assertEqual(out.garbledTime, out.normal, 'bei unlesbarer Ereigniszeit liefert derselbe Weg denselben Wert, keinen kleineren Ruckfall');
+  assertEqual(out.missingTime, out.normal, 'auch bei komplett fehlender Zeit: identischer Wert — der Zeitpunkt ist fuer eine Matchstrafe bedeutungslos');
+}
+
+console.log('== Synthetisch: Matchstrafe + ein weiteres Ulm-Spiel am selben Tag -> beide Spiellaengen zusammen ==');
+{
+  const out = vm.runInContext(`(function(){
+    const g1 = {
+      id: 900020, date: '2026-01-10', home_team_name: 'VfB Ulm', guest_team_name: 'Testgegner A',
+      home_goals: '5', guest_goals: '3', ended: true, start_time: '10:00',
+      events: [ { event_id: 1, event_type: 'penalty', event_team: 'home', period: 1, time: '5:00', number: 7, penalty_type: 'penalty_ms_full', penalty_type_string: 'MS', penalty_reason_string: 'sonst. Vergehen' } ],
+    };
+    const g2 = {
+      id: 900021, date: '2026-01-10', home_team_name: 'VfB Ulm', guest_team_name: 'Testgegner B',
+      home_goals: '2', guest_goals: '2', ended: true, start_time: '14:00',
+      events: [],
+    };
+    const games = [g1, g2];
+    const ev = g1.events[0];
+    const minutes = getPenaltyPersonalMinutes(ev, g1, games);
+    return { minutes, expected: getGameDurationMinutes(g1) + getGameDurationMinutes(g2) };
+  })()`, sandbox, { timeout: 15000 });
+  assertEqual(out.minutes, out.expected, 'Matchstrafe im ersten von zwei Ulm-Spielen desselben Tages: Personalminuten = Spiellaenge beider Spiele zusammen (80), nicht nur des laufenden');
 }
 
 console.log('');

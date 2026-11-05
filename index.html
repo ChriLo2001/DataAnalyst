@@ -4272,9 +4272,12 @@ function getFurtherSameDayUlmGames(game,gamesData){
 function getPenaltySpecialTeamsMinutes(ev){
   return getSpecialTeamsPenaltyChunks(ev).reduce((sum,sec)=>sum+(Number(sec)||0),0)/60;
 }
+// S2i-Nachtrag "Matchstrafe — den zweiten Wert angleichen": eine Matchstrafe hat keinen eigenen
+// Basiswert mehr — "ganzer Spieltag" lässt sich nicht ohne Spielkontext (welches Spiel, welche weiteren
+// Spiele desselben Tages) beziffern. Der einzige verbliebene Aufrufer (getPenaltyPersonalMinutes)
+// schließt match über !isMatchPenaltyEvent(ev) ohnehin aus, bevor er hierher kommt.
 function getPenaltyBasePersonalMinutes(ev){
   const type=getPenaltyDisciplineType(ev);
-  if(type==='match')return 4;
   if(type==='2+2')return 4;
   if(type==='10min')return 10;
   if(type==='5min')return 5;
@@ -4282,16 +4285,16 @@ function getPenaltyBasePersonalMinutes(ev){
 }
 function getPenaltyPersonalMinutes(ev,game,gamesData){
   if(!isMatchPenaltyEvent(ev))return getPenaltyBasePersonalMinutes(ev);
-  const durationSec=getGameDurationMinutes(game)*60;
-  const eventSec=goalieEventAbsSeconds(ev,detectSecondHalfConvention(game));
-  if(eventSec===null)return getPenaltyBasePersonalMinutes(ev);
-  const restCurrent=Math.max(0,Math.ceil((durationSec-eventSec)/60));
+  // Chris: eine Matchstrafe kostet den Spieler den ganzen Spieltag — das laufende Spiel UND jedes
+  // weitere Spiel desselben Tages —, unabhängig davon, in welcher Minute sie ausgesprochen wurde. Der
+  // Zeitpunkt des Ereignisses ist deshalb für diese Rechnung bedeutungslos; "Rest des Spiels" ist immer
+  // die VOLLE Spiellänge, nicht die Zeit ab dem Ereignis. Dadurch ist der Wert auch bei unlesbarer Zeit
+  // exakt berechenbar — kein kleinerer Rückfallwert mehr nötig oder vorhanden (vorher
+  // getPenaltyBasePersonalMinutes()=4, ein zweiter, kleinerer Platzhalter für dieselbe Frage).
+  const currentGameMinutes=getGameDurationMinutes(game);
   const furtherGames=getFurtherSameDayUlmGames(game,gamesData);
   const furtherMinutes=furtherGames.reduce((sum,g)=>sum+getGameDurationMinutes(g),0);
-  return restCurrent+furtherMinutes;
-}
-function getPenaltyDisciplineMinutes(ev){
-  return getPenaltyBasePersonalMinutes(ev);
+  return currentGameMinutes+furtherMinutes;
 }
 // Chris' Tabelle (Mannschaft/Überzahl-Seite, siehe docs/spec/05-datenqualitaet.md Punkt 6): match und 2+2
 // sind je zwei einzeln durch ein Tor ablösbare 2-Minuten-Häppchen; 10min und 2min sind je EINE
@@ -4445,7 +4448,6 @@ function buildSpecialTeamsForGame(game,seasonKey){
         durationSec,
         penaltyType:ev.penalty_type||ev.event_type||'penalty',
         specialTeamsDurationSec:durationSec,
-        disciplineMinutes:getPenaltyDisciplineMinutes(ev),
         sourcePenalty:{eventId:ev.event_id??null,period:ev.period??null,time:ev.time||'',chunk:index+1,chunks:chunks.length},
       });
     });
